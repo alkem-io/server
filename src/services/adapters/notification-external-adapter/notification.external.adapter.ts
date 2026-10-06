@@ -79,9 +79,11 @@ import { NotificationInputCollaborationCalloutContributionCreated } from '../not
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
 import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
+import { NotificationEventPayloadSpaceCollaborationCalloutFormResponse } from './notification.event.payload.callout.form.response.bridge';
 import {
   NotificationEventPayloadOrganizationAssociateActor,
   NotificationEventPayloadOrganizationAssociateInvitation,
+  NotificationEventPayloadOrganizationAssociateInvitationPlatform,
 } from './notification.event.payload.organization.associate.bridge';
 
 interface CalloutContributionPayload {
@@ -616,6 +618,51 @@ export class NotificationExternalAdapter {
     };
 
     return payload;
+  }
+
+  /**
+   * Payload of BOTH Form response events (admin event and submitter receipt).
+   * Link-only: the callout name and URL, when it was submitted and the
+   * visibility in force — never an answer, a prompt or a question.
+   */
+  public async buildSpaceCollaborationCalloutFormResponsePayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    callout: ICallout,
+    formResponse: {
+      id: string;
+      submittedAt: Date;
+      visibility: 'ADMINS' | 'MEMBERS';
+    }
+  ): Promise<NotificationEventPayloadSpaceCollaborationCalloutFormResponse> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
+    // Project only the contributor fields: the base payload's triggeredBy
+    // also carries the submitter's name parts and email.
+    const { id, profile, type } = spacePayload.triggeredBy;
+    return {
+      ...spacePayload,
+      callout: {
+        id: callout.id,
+        displayName: callout.framing.profile.displayName,
+        url: calloutURL,
+      },
+      formResponse: {
+        id: formResponse.id,
+        submittedAt: formResponse.submittedAt.toISOString(),
+        visibility: formResponse.visibility,
+      },
+      submitter: { id, profile, type },
+    };
   }
 
   async buildSpaceCollaborationCalloutPostContributionCommentPayload(
@@ -1353,6 +1400,56 @@ export class NotificationExternalAdapter {
       ),
       ...organizationPayload,
     };
+    return payload;
+  }
+
+  /**
+   * Organization invitation to an address with no account: one synthetic
+   * recipient carrying only the email (same shape the Space email invitation
+   * uses), no invitee contributor.
+   */
+  async buildOrganizationAssociatePlatformInvitationPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    invitedUserEmail: string,
+    organizationID: string,
+    extraRoles: RoleName[],
+    welcomeMessage?: string
+  ): Promise<NotificationEventPayloadOrganizationAssociateInvitationPlatform> {
+    const recipients: UserPayload[] = [
+      {
+        email: invitedUserEmail,
+        firstName: '',
+        lastName: '',
+        id: '',
+        type: ActorType.USER,
+        profile: {
+          url: '',
+          displayName: '',
+        },
+      },
+    ];
+    const organizationPayload = await this.buildOrganizationPayload(
+      eventType,
+      triggeredBy,
+      [],
+      organizationID
+    );
+    const organization = await this.actorLookupService.getFullActorByIdOrFail(
+      organizationID,
+      { relations: { profile: true } }
+    );
+    const payload: NotificationEventPayloadOrganizationAssociateInvitationPlatform =
+      {
+        extraRoles: extraRoles.map(role => role.toString()),
+        welcomeMessage,
+        organizationUrl:
+          this.urlGeneratorService.createUrlForOrganizationNameID(
+            organization.nameID
+          ),
+        ...organizationPayload,
+        recipients,
+      };
     return payload;
   }
 

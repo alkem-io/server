@@ -655,6 +655,39 @@ describe('InputCreatorService', () => {
       expect(result).toBeNull();
     });
 
+    it('should return null for a FORM framing callout (not templatable) and log the skip', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'form-callout-1',
+        nameID: 'my-form',
+        sortOrder: 2,
+        framing: {
+          id: 'framing-form',
+          type: CalloutFramingType.FORM,
+          profile: {
+            displayName: 'Form',
+            description: '',
+            tagsets: [],
+          },
+        },
+        contributionDefaults: {},
+        settings: {},
+        classification: { tagsets: [] },
+      });
+      const logger = (service as any).logger;
+
+      const result =
+        await service.buildCreateCalloutInputFromCallout('form-callout-1');
+
+      expect(result).toBeNull();
+      expect(logger.debug).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Skipping FORM callout'),
+          calloutId: 'form-callout-1',
+        }),
+        expect.any(String)
+      );
+    });
+
     it('should return null for a COLLABORA_DOCUMENT framing callout (not templatable)', async () => {
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
         id: 'doc-callout-1',

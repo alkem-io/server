@@ -8,6 +8,7 @@ import { DESIGN_VERSION_CURRENT_DEFAULT } from './user.settings.design.version.c
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettings } from './user.settings.interface';
 import {
+  DEFAULT_FORM_RESPONSE_CHANNELS,
   DEFAULT_INVITATION_RESPONSE_CHANNELS,
   DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
   DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
@@ -167,6 +168,28 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
       this.notification.space.admin.communityInvitationResponse = {
         ...(this.notification.space.admin.communityNewMember ??
           DEFAULT_INVITATION_RESPONSE_CHANNELS),
+      };
+    }
+  }
+
+  /**
+   * Defend on read for the "a Form response was submitted" space-admin
+   * notification preference. A `user_settings` row that predates the backfill
+   * migration or was inserted by an old pod during a rolling deploy lacks
+   * this key; without this hook the non-null GraphQL field would surface a
+   * null and crash the recipients batch. Runs for every entity load
+   * regardless of query path.
+   */
+  @AfterLoad()
+  applyFormResponseNotificationDefaults() {
+    if (!this.notification?.space?.admin) {
+      return;
+    }
+    if (
+      !this.notification.space.admin.collaborationCalloutFormResponseReceived
+    ) {
+      this.notification.space.admin.collaborationCalloutFormResponseReceived = {
+        ...DEFAULT_FORM_RESPONSE_CHANNELS,
       };
     }
   }

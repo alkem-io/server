@@ -90,6 +90,8 @@ describe('UserSettingsService', () => {
             communicationMessageReceived: defaultNotificationSetting(),
             collaborationCalloutContributionCreated:
               defaultNotificationSetting(),
+            collaborationCalloutFormResponseReceived:
+              defaultNotificationSetting(),
           },
           communicationUpdates: defaultNotificationSetting(),
           collaborationCalloutContributionCreated: defaultNotificationSetting(),
@@ -705,6 +707,26 @@ describe('UserSettingsService', () => {
       expect(
         result.notification.space.admin.communityApplicationReceived.email
       ).toBe(true);
+    });
+
+    it('should update admin.collaborationCalloutFormResponseReceived notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          space: {
+            admin: {
+              collaborationCalloutFormResponseReceived: { push: false },
+            },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.space.admin.collaborationCalloutFormResponseReceived
+          .push
+      ).toBe(false);
     });
 
     it('should update communicationUpdates notification', () => {

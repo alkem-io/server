@@ -60,7 +60,7 @@ export class OrganizationAuthorizationService {
           authorization: true,
           profile: { authorization: true },
           credentials: true,
-          groups: { authorization: true },
+          groups: { authorization: true, profile: true },
           verification: { authorization: true },
           roleSet: true,
         },

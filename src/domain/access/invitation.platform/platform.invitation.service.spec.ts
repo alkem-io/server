@@ -333,13 +333,32 @@ describe('PlatformInvitationService', () => {
 
       expect(platformInvitationRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { email: 'user@test.com' },
+          where: { email: 'user@test.com', profileCreated: false },
         })
       );
     });
   });
 
   describe('getExistingPlatformInvitationForRoleSet', () => {
+    it('should only consider open (not yet consumed) invitations', async () => {
+      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([]);
+
+      await service.getExistingPlatformInvitationForRoleSet(
+        'USER@test.com',
+        'roleset-1'
+      );
+
+      expect(platformInvitationRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            email: 'user@test.com',
+            profileCreated: false,
+            roleSet: { id: 'roleset-1' },
+          }),
+        })
+      );
+    });
+
     it('should return the invitation when exactly one exists', async () => {
       const mockInvitation = { id: 'inv-1' } as PlatformInvitation;
       vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([
@@ -374,12 +393,17 @@ describe('PlatformInvitationService', () => {
         mockInvitations
       );
 
-      await expect(
-        service.getExistingPlatformInvitationForRoleSet(
-          'user@test.com',
-          'roleset-1'
-        )
-      ).rejects.toThrow(RoleSetMembershipException);
+      const error = await service
+        .getExistingPlatformInvitationForRoleSet('user@test.com', 'roleset-1')
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(RoleSetMembershipException);
+      expect(error.message).not.toContain('user@test.com');
+      expect(JSON.stringify(error.details)).not.toContain('user@test.com');
+      expect(error.details).toEqual({
+        roleSetID: 'roleset-1',
+        platformInvitationIDs: ['inv-1', 'inv-2'],
+      });
     });
 
     it('should search with lowercase email', async () => {
@@ -394,10 +418,64 @@ describe('PlatformInvitationService', () => {
         expect.objectContaining({
           where: {
             email: 'user@test.com',
+            profileCreated: false,
             roleSet: { id: 'roleset-1' },
           },
         })
       );
+    });
+  });
+
+  describe('findOpenForRoleSet', () => {
+    it('should query only open invitations of the role set', async () => {
+      const open = [{ id: 'inv-1' }] as PlatformInvitation[];
+      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue(open);
+
+      const result = await service.findOpenForRoleSet('roleset-1');
+
+      expect(result).toBe(open);
+      expect(platformInvitationRepository.find).toHaveBeenCalledWith({
+        where: { roleSet: { id: 'roleset-1' }, profileCreated: false },
+        relations: { roleSet: true },
+      });
+    });
+  });
+
+  describe('deleteAllForEmail', () => {
+    const buildManager = (found: unknown[]) => {
+      const em = {
+        find: vi.fn().mockResolvedValue(found),
+        remove: vi.fn().mockResolvedValue(undefined),
+      };
+      return em;
+    };
+
+    it('should remove the policy and the row of every match and return the count', async () => {
+      const policyA = { id: 'pol-a' };
+      const invA = { id: 'inv-a', authorization: policyA };
+      const invB = { id: 'inv-b' };
+      const em = buildManager([invA, invB]);
+
+      const count = await service.deleteAllForEmail('a@test.com', em as any);
+
+      expect(count).toBe(2);
+      expect(em.remove).toHaveBeenCalledWith(policyA);
+      expect(em.remove).toHaveBeenCalledWith(invA);
+      expect(em.remove).toHaveBeenCalledWith(invB);
+      expect(em.remove).toHaveBeenCalledTimes(3);
+    });
+
+    it('should look the address up trimmed and lowercased', async () => {
+      const em = buildManager([]);
+
+      const count = await service.deleteAllForEmail('  A@Test.COM ', em as any);
+
+      expect(count).toBe(0);
+      expect(em.find).toHaveBeenCalledWith(
+        PlatformInvitation,
+        expect.objectContaining({ where: { email: 'a@test.com' } })
+      );
+      expect(em.remove).not.toHaveBeenCalled();
     });
   });
 });

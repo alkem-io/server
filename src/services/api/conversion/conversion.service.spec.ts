@@ -154,6 +154,9 @@ describe('ConversionService', () => {
         async (s: unknown) => s as never
       );
 
+      vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue(
+        []
+      );
       vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
       vi.mocked(
         _namingService.getReservedNameIDsLevelZeroSpaces

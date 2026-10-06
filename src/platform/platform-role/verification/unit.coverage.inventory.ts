@@ -229,6 +229,7 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
     gateSpecs: [
       'src/domain/collaboration/callout/callout.resolver.mutations.spec.ts',
       'src/domain/collaboration/callout-contribution/callout.contribution.move.resolver.mutations.spec.ts',
+      'src/domain/collaboration/callout-form/callout.form.resolver.mutations.spec.ts',
       'src/domain/space/space/space.resolver.mutations.spec.ts',
       'src/library/innovation-pack/innovation.pack.resolver.mutations.spec.ts',
       'src/domain/innovation-hub/innovation.hub.resolver.mutations.spec.ts',

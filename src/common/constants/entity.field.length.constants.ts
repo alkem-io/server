@@ -16,6 +16,12 @@ export const NAMEID_MAX_LENGTH = 25;
 export const NAMEID_MIN_LENGTH = 5;
 // polls
 export const POLL_OPTIONS_MAX_COUNT = 10;
+// callout forms
+export const FORM_QUESTIONS_MIN_COUNT = 1;
+export const FORM_QUESTIONS_MAX_COUNT = 50;
+export const FORM_QUESTION_OPTIONS_MIN_COUNT = 2;
+export const FORM_QUESTION_OPTIONS_MAX_COUNT = 20;
+export const FORM_RESPONSES_PAGE_MAX = 50;
 // role set invitations: caps EACH invitee field independently
 // (`invitedActorIDs` and `invitedUserEmails` each carry their own
 // `@ArrayMaxSize`), so a single mutation's worst-case fan-out is 2x this

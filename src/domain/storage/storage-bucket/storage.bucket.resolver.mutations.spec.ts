@@ -170,7 +170,8 @@ describe('StorageBucketResolverMutations', () => {
       const bucket = {
         id: 'bucket-conversation',
         authorization: { id: 'auth-bucket' },
-        storageAggregator: { type: StorageAggregatorType.CONVERSATION },
+        storageAggregator: null,
+        directStorageOwner: { type: StorageAggregatorType.CONVERSATION },
       };
       const fileUpload = {
         createReadStream: () => vi.fn(),

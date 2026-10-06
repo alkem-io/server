@@ -200,7 +200,7 @@ export class CalloutsSetResolverMutations {
       defaults.draftWhiteboardID = undefined;
     }
 
-    // CONTRIBUTORS and SPACES framings are admin-only and collaboration-only
+    // CONTRIBUTORS, SPACES and FORM framings are admin-only and collaboration-only
     // (FR-004a/FR-004d/FR-004f, R5): reject on non-COLLABORATION callouts sets and
     // require CREATE (space admin) even when allowMembersToCreateCallouts maps
     // CREATE_CALLOUT to CONTRIBUTE. SPACES is NOT level-restricted — an admin may
@@ -209,7 +209,8 @@ export class CalloutsSetResolverMutations {
     const restrictedFramingType = calloutData.framing?.type;
     if (
       restrictedFramingType === CalloutFramingType.CONTRIBUTORS ||
-      restrictedFramingType === CalloutFramingType.SPACES
+      restrictedFramingType === CalloutFramingType.SPACES ||
+      restrictedFramingType === CalloutFramingType.FORM
     ) {
       this.assertAdminOnlyCollaborationFraming(
         actorContext,
@@ -284,10 +285,13 @@ export class CalloutsSetResolverMutations {
       };
     }
 
+    // The only caller that grants the FORM placement capability, and only
+    // after the admin-only guard above has passed for a FORM framing.
     const callout = await this.calloutsSetService.createCalloutOnCalloutsSet(
       calloutData,
       actorContext,
-      actorContext.actorID
+      actorContext.actorID,
+      { allowFormFraming: true }
     );
 
     // callout needs to be saved to apply the authorization policy

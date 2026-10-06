@@ -322,6 +322,84 @@ describe('CalloutService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
+    it('rejects framing type FORM without a form definition', async () => {
+      const calloutData = createCalloutInput({
+        framing: {
+          type: CalloutFramingType.FORM,
+          profile: { displayName: 'Test', tagsets: [] },
+          tags: [],
+        },
+      });
+
+      await expect(
+        service.createCallout(
+          calloutData,
+          tagsetTemplates,
+          storageAggregator,
+          actorContextData.actorContext
+        )
+      ).rejects.toThrow(ValidationException);
+      expect(framingService.createCalloutFraming).not.toHaveBeenCalled();
+    });
+
+    it('rejects a form definition on any other framing type', async () => {
+      const calloutData = createCalloutInput({
+        framing: {
+          type: CalloutFramingType.NONE,
+          profile: { displayName: 'Test', tagsets: [] },
+          tags: [],
+          form: { questions: [] },
+        },
+      });
+
+      await expect(
+        service.createCallout(
+          calloutData,
+          tagsetTemplates,
+          storageAggregator,
+          actorContextData.actorContext
+        )
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('threads the placement capability to the framing factory, and passes nothing by default', async () => {
+      const formData = createCalloutInput({
+        framing: {
+          type: CalloutFramingType.FORM,
+          profile: { displayName: 'Test', tagsets: [] },
+          tags: [],
+          form: { questions: [{ prompt: 'Q', type: 'short_text' }] },
+        },
+      });
+      await service.createCallout(
+        formData,
+        tagsetTemplates,
+        storageAggregator,
+        actorContextData.actorContext,
+        'user-1',
+        undefined,
+        { allowFormFraming: true }
+      );
+      expect(framingService.createCalloutFraming).toHaveBeenLastCalledWith(
+        formData.framing,
+        storageAggregator,
+        actorContextData.actorContext,
+        'user-1',
+        { allowFormFraming: true }
+      );
+
+      await service.createCallout(
+        createCalloutInput(),
+        tagsetTemplates,
+        storageAggregator,
+        actorContextData.actorContext,
+        'user-1'
+      );
+      expect(
+        vi.mocked(framingService.createCalloutFraming).mock.lastCall?.[4]
+      ).toBeUndefined();
+    });
+
     it('should throw ValidationException when whiteboard data is provided but framing type is not WHITEBOARD', async () => {
       const calloutData = createCalloutInput({
         framing: {
