@@ -3,6 +3,7 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -18,6 +19,7 @@ import { CalloutFormResponseService } from '../callout-form-response/callout.for
 import { DeleteCalloutFormResponseInput } from '../callout-form-response/dto/callout.form.response.dto.delete';
 import { DeletedCalloutFormResponse } from '../callout-form-response/dto/callout.form.response.dto.deleted';
 import { SubmitCalloutFormResponseInput } from '../callout-form-response/dto/callout.form.response.dto.submit';
+import { CalloutFormErrorCode } from './callout.form.error.codes';
 import { ICalloutForm } from './callout.form.interface';
 import { CALLOUT_FORM_OWNER_RELATIONS } from './callout.form.owner.relations';
 import { FormResponseAccessService } from './callout.form.response.access.service';
@@ -51,7 +53,19 @@ export class CalloutFormResolverMutations {
       formData.formID,
       CALLOUT_FORM_OWNER_RELATIONS
     );
-    this.formResponseAccess.assertCanModerate(actorContext, callout);
+    if (callout.isTemplate && !callout.calloutsSet) {
+      // A standalone callout template has no callouts set, so there is no
+      // moderation authority to check: its Form is a definition edited by
+      // whoever may update the template callout.
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update Form on callout template: ${callout.id}`
+      );
+    } else {
+      this.formResponseAccess.assertCanModerate(actorContext, callout);
+    }
 
     return this.calloutFormService.updateCalloutForm(formData);
   }
@@ -79,6 +93,15 @@ export class CalloutFormResolverMutations {
       AuthorizationPrivilege.CONTRIBUTE,
       `respond to Form on callout: ${callout.id}`
     );
+    // A template's Form (a callout template or a Post inside a space
+    // template) is a definition: it never collects responses.
+    if (callout.isTemplate) {
+      throw new ValidationException(
+        'A Form in a template does not accept responses',
+        LogContext.COLLABORATION,
+        { code: CalloutFormErrorCode.FORM_TEMPLATE_NOT_RESPONDABLE }
+      );
+    }
 
     const { response, visibility } =
       await this.calloutFormResponseService.submitResponse(

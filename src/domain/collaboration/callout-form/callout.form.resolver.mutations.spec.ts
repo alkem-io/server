@@ -8,6 +8,7 @@ import { PlatformAuditCategory } from '@domain/community/user-email-change/enums
 import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
+import { CalloutFormErrorCode } from './callout.form.error.codes';
 import { CALLOUT_FORM_OWNER_RELATIONS } from './callout.form.owner.relations';
 import { CalloutFormResolverMutations } from './callout.form.resolver.mutations';
 
@@ -103,6 +104,67 @@ describe('CalloutFormResolverMutations', () => {
     });
   });
 
+  describe('updateCalloutForm on a template', () => {
+    const formData = { formID: 'form-1', settings: {} } as any;
+    const standaloneTemplate = {
+      ...callout,
+      isTemplate: true,
+      calloutsSet: null,
+    };
+
+    it('authorizes a standalone callout template by UPDATE on the template callout, not by moderation', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue(
+        standaloneTemplate
+      );
+      calloutFormService.updateCalloutForm.mockResolvedValue({ id: 'form-1' });
+
+      expect(await resolver.updateCalloutForm(actor, formData)).toEqual({
+        id: 'form-1',
+      });
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actor,
+        standaloneTemplate.authorization,
+        AuthorizationPrivilege.UPDATE,
+        expect.any(String)
+      );
+      expect(formResponseAccess.assertCanModerate).not.toHaveBeenCalled();
+    });
+
+    it('is forbidden without UPDATE on the template and never reaches the service', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue(
+        standaloneTemplate
+      );
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw forbidden();
+      });
+
+      await expect(
+        resolver.updateCalloutForm(actor, formData)
+      ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+      expect(calloutFormService.updateCalloutForm).not.toHaveBeenCalled();
+    });
+
+    it('keeps the callouts-set moderation path for a Form inside a template content space', async () => {
+      const contentSpaceTemplate = {
+        ...callout,
+        isTemplate: true,
+        calloutsSet: { type: 'collaboration', authorization: { id: 'cs' } },
+      };
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue(
+        contentSpaceTemplate
+      );
+      calloutFormService.updateCalloutForm.mockResolvedValue({ id: 'form-1' });
+
+      await resolver.updateCalloutForm(actor, formData);
+
+      expect(formResponseAccess.assertCanModerate).toHaveBeenCalledWith(
+        actor,
+        contentSpaceTemplate
+      );
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+    });
+  });
+
   describe('submitCalloutFormResponse', () => {
     const responseData = {
       formID: 'form-1',
@@ -116,6 +178,29 @@ describe('CalloutFormResolverMutations', () => {
       },
       visibility: CalloutFormResponseVisibility.ADMINS,
     };
+
+    it('rejects a response to a template Form before storing anything, even when CONTRIBUTE is granted', async () => {
+      // A Form inside a template content space sits in a COLLABORATION
+      // callouts set and inherits the template's policy, so CONTRIBUTE can be
+      // granted; it is still a definition, never a live Form.
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        isTemplate: true,
+        calloutsSet: { type: 'collaboration', collaboration: {} },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await expect(
+        resolver.submitCalloutFormResponse(actor, responseData)
+      ).rejects.toMatchObject({
+        details: { code: CalloutFormErrorCode.FORM_TEMPLATE_NOT_RESPONDABLE },
+      });
+      expect(responseService.submitResponse).not.toHaveBeenCalled();
+      expect(
+        notificationAdapter.spaceCollaborationCalloutFormResponseSubmitted
+      ).not.toHaveBeenCalled();
+      expect(contributionReporter.formResponseSubmitted).not.toHaveBeenCalled();
+    });
 
     it('requires CONTRIBUTE on the Post', async () => {
       authorizationService.grantAccessOrFail.mockImplementation(() => {
