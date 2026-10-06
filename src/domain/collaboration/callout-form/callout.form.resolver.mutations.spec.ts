@@ -37,6 +37,7 @@ describe('CalloutFormResolverMutations', () => {
   const notificationAdapter = {
     spaceCollaborationCalloutFormResponseSubmitted: vi.fn(),
   };
+  const contributionReporter = { formResponseSubmitted: vi.fn() };
   const platformResourceAuditService = { recordEventForActor: vi.fn() };
   const logger = { error: vi.fn() };
   let resolver: CalloutFormResolverMutations;
@@ -44,8 +45,15 @@ describe('CalloutFormResolverMutations', () => {
   const actor = { actorID: 'actor-1', credentials: [] } as any;
   const callout = {
     id: 'callout-1',
+    nameID: 'q4-planning-post',
     authorization: { id: 'callout-auth' },
     settings: { visibility: CalloutVisibility.PUBLISHED },
+    framing: { form: { title: 'Q4 planning' } },
+    calloutsSet: {
+      collaboration: {
+        space: { id: 'subspace-1', levelZeroSpaceID: 'l0-space' },
+      },
+    },
   } as any;
 
   beforeEach(() => {
@@ -60,6 +68,7 @@ describe('CalloutFormResolverMutations', () => {
       calloutFormService as any,
       responseService as any,
       notificationAdapter as any,
+      contributionReporter as any,
       platformResourceAuditService as any,
       logger as any
     );
@@ -201,6 +210,61 @@ describe('CalloutFormResolverMutations', () => {
       expect(
         notificationAdapter.spaceCollaborationCalloutFormResponseSubmitted
       ).not.toHaveBeenCalled();
+      expect(contributionReporter.formResponseSubmitted).not.toHaveBeenCalled();
+    });
+
+    it('loads the Form row with the owner relations, for its title', async () => {
+      responseService.submitResponse.mockResolvedValue(stored);
+      await resolver.submitCalloutFormResponse(actor, responseData);
+      expect(calloutFormService.getCalloutForFormOrFail).toHaveBeenCalledWith(
+        'form-1',
+        {
+          ...CALLOUT_FORM_OWNER_RELATIONS,
+          framing: { profile: true, form: true },
+        }
+      );
+    });
+
+    it('reports one FORM_RESPONSE_SUBMITTED per stored response: response id, Form title, level-zero space, submitter — no content', async () => {
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await resolver.submitCalloutFormResponse(actor, responseData);
+
+      expect(contributionReporter.formResponseSubmitted).toHaveBeenCalledTimes(
+        1
+      );
+      expect(contributionReporter.formResponseSubmitted).toHaveBeenCalledWith(
+        { id: 'response-1', name: 'Q4 planning', space: 'l0-space' },
+        actor
+      );
+      expect(
+        JSON.stringify(contributionReporter.formResponseSubmitted.mock.calls)
+      ).not.toContain('SECRET-ANSWER');
+    });
+
+    it("names the event after the Post's nameID when the Form has no title", async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        framing: { form: { title: null } },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await resolver.submitCalloutFormResponse(actor, responseData);
+
+      expect(contributionReporter.formResponseSubmitted).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'q4-planning-post' }),
+        actor
+      );
+    });
+
+    it('does not report when CONTRIBUTE is denied', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw forbidden();
+      });
+      await expect(
+        resolver.submitCalloutFormResponse(actor, responseData)
+      ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+      expect(contributionReporter.formResponseSubmitted).not.toHaveBeenCalled();
     });
   });
 
@@ -374,6 +438,7 @@ describe('CalloutFormResolverMutations', () => {
             calloutFormService as any,
             responseService as any,
             notificationAdapter as any,
+            contributionReporter as any,
             realAudit,
             logger as any
           );

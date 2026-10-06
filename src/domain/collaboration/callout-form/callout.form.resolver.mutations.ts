@@ -9,6 +9,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -32,6 +33,7 @@ export class CalloutFormResolverMutations {
     private calloutFormService: CalloutFormService,
     private calloutFormResponseService: CalloutFormResponseService,
     private notificationAdapterSpace: NotificationSpaceAdapter,
+    private contributionReporter: ContributionReporterService,
     private platformResourceAuditService: PlatformResourceAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -65,7 +67,11 @@ export class CalloutFormResolverMutations {
   ): Promise<ICalloutFormResponse> {
     const callout = await this.calloutFormService.getCalloutForFormOrFail(
       responseData.formID,
-      CALLOUT_FORM_OWNER_RELATIONS
+      // The Form row itself only for its title, which names the analytics event.
+      {
+        ...CALLOUT_FORM_OWNER_RELATIONS,
+        framing: { profile: true, form: true },
+      }
     );
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -106,6 +112,22 @@ export class CalloutFormResolverMutations {
           LogContext.NOTIFICATIONS
         );
       });
+
+    // Kibana (server#6585): metadata only — the response id, the Form title
+    // (or the Post's nameID) and the level-zero space; never an answer, a
+    // prompt or an option label. The reporter never throws.
+    const levelZeroSpaceID =
+      callout.calloutsSet?.collaboration?.space?.levelZeroSpaceID;
+    if (levelZeroSpaceID) {
+      this.contributionReporter.formResponseSubmitted(
+        {
+          id: response.id,
+          name: callout.framing?.form?.title || callout.nameID,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    }
 
     return response;
   }

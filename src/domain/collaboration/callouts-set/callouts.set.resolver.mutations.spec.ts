@@ -669,6 +669,64 @@ describe('CalloutsSetResolverMutations', () => {
 
         expect(contributionReporter.calloutCreated).toHaveBeenCalled();
         expect(contributionReporter.taskBoardCreated).not.toHaveBeenCalled();
+        expect(contributionReporter.calloutFormCreated).not.toHaveBeenCalled();
+      });
+
+      it('reports calloutFormCreated in addition to calloutCreated for a Form Post, named after the Form title', async () => {
+        const callout = {
+          id: 'callout-1',
+          nameID: 'q4-planning-post',
+          settings: { visibility: CalloutVisibility.PUBLISHED },
+          framing: {
+            type: CalloutFramingType.FORM,
+            form: { title: 'Q4 planning' },
+          },
+        } as any;
+        setupCollaborationCalloutHappyPath(callout);
+        const taskBoardService = (resolver as any).taskBoardService;
+        vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(false);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-1',
+        } as any);
+
+        expect(contributionReporter.calloutCreated).toHaveBeenCalledWith(
+          { id: 'callout-1', name: 'q4-planning-post', space: 'space-1' },
+          actorContext
+        );
+        expect(contributionReporter.calloutFormCreated).toHaveBeenCalledTimes(
+          1
+        );
+        expect(contributionReporter.calloutFormCreated).toHaveBeenCalledWith(
+          { id: 'callout-1', name: 'Q4 planning', space: 'space-1' },
+          actorContext
+        );
+        expect(contributionReporter.calloutPollCreated).not.toHaveBeenCalled();
+      });
+
+      it("names calloutFormCreated after the Post's nameID when the Form has no title, also for a draft", async () => {
+        const callout = {
+          id: 'callout-1',
+          nameID: 'untitled-form-post',
+          settings: { visibility: CalloutVisibility.DRAFT },
+          framing: { type: CalloutFramingType.FORM, form: { title: null } },
+        } as any;
+        setupCollaborationCalloutHappyPath(callout);
+        const taskBoardService = (resolver as any).taskBoardService;
+        vi.mocked(taskBoardService.isTaskBoard).mockReturnValue(false);
+        const contributionReporter = (resolver as any).contributionReporter;
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-1',
+        } as any);
+
+        expect(contributionReporter.calloutFormCreated).toHaveBeenCalledWith(
+          { id: 'callout-1', name: 'untitled-form-post', space: 'space-1' },
+          actorContext
+        );
       });
 
       it('reports calloutCreated + calloutPollCreated exactly as today for a poll callout — zero taskBoardCreated (precedent non-interaction)', async () => {
