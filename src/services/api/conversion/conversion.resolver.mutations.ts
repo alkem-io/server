@@ -3,6 +3,7 @@ import { LogContext } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import {
   RelationshipNotFoundException,
@@ -10,6 +11,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -436,7 +438,7 @@ export class ConversionResolverMutations {
       relations: {
         collaboration: {
           calloutsSet: {
-            callouts: true,
+            callouts: { framing: true },
           },
         },
       },
@@ -471,6 +473,21 @@ export class ConversionResolverMutations {
       );
     }
     const targetCalloutsSet = virtualContributor.knowledgeBase.calloutsSet;
+
+    // The transfer loop below is not transactional: a Form found halfway would
+    // leave the earlier callouts already moved. Reject up front so the source
+    // space stays untouched.
+    if (
+      space.collaboration.calloutsSet.callouts.some(
+        callout => callout.framing?.type === CalloutFramingType.FORM
+      )
+    ) {
+      throw new ValidationException(
+        'A space with a Form callout cannot be converted to a knowledge base',
+        LogContext.CONVERSION,
+        { code: CalloutFormErrorCode.FORM_TRANSFER_NOT_ALLOWED }
+      );
+    }
 
     // Transfer is authorized, now try to execute it
     for (const callout of space.collaboration.calloutsSet.callouts) {

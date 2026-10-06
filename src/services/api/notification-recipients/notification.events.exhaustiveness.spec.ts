@@ -320,6 +320,10 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       // FR-003/D-2): in-app is permanently OFF regardless of user settings.
       USER_CONVERSATION_MESSAGE_DIRECT: 'NOT_SUPPORTED_IN_APP_EVENTS',
       USER_CONVERSATION_MESSAGE_GROUP: 'NOT_SUPPORTED_IN_APP_EVENTS',
+      // The Form response receipt is email-only, also enforced by
+      // NOT_SUPPORTED_IN_APP_EVENTS.
+      USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT:
+        'NOT_SUPPORTED_IN_APP_EVENTS',
       // Email-only security signals — dispatched solely through
       // notificationExternalAdapter.sendExternalNotifications; no producer
       // calls sendInAppNotifications for them.

@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -12,6 +15,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
+import { getDraftCalloutPlatformReadCredentials } from './callout.platform.read.credentials';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 import { TaskBoardService } from './task-board/task.board.service';
@@ -257,6 +261,95 @@ describe('CalloutAuthorizationService', () => {
       ).toHaveBeenCalledWith('class-1', callout.authorization);
     });
 
+    it('builds the DRAFT read rule from the shared platform helper, the space admins with parents and the creator', async () => {
+      const callout = makeCallout({
+        settings: {
+          visibility: CalloutVisibility.DRAFT,
+          contribution: { allowedTypes: [] },
+          framing: { commentsEnabled: false },
+        },
+        isTemplate: false,
+        createdBy: 'creator-1',
+        calloutsSet: {
+          collaboration: {
+            space: {
+              id: 'space-1',
+              community: { roleSet: { id: 'rs-1' } },
+            },
+          },
+        },
+      });
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.cloneAuthorizationPolicy
+      ).mockReturnValue({
+        id: 'cloned-auth',
+        credentialRules: [],
+        privilegeRules: [],
+      } as any);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRule
+      ).mockReturnValue({ grantedPrivileges: ['READ'], criterias: [] } as any);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        roleSetService.getCredentialsForRoleWithParents
+      ).mockResolvedValue([
+        { type: 'space-admin', resourceID: 'space-1' },
+        { type: 'space-admin', resourceID: 'parent-1' },
+      ] as any);
+      vi.mocked(
+        (service as any).calloutFramingAuthorizationService
+          .applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        { id: 'parent-auth', credentialRules: [], privilegeRules: [] } as any,
+        platformRolesAccess
+      );
+
+      const draftRule = vi
+        .mocked(authorizationPolicyService.createCredentialRule)
+        .mock.calls.find(
+          ([, , name]) => name === 'Callout read access for draft callouts'
+        );
+      expect(draftRule?.[0]).toEqual([AuthorizationPrivilege.READ]);
+      expect(draftRule?.[1]).toEqual([
+        ...getDraftCalloutPlatformReadCredentials(),
+        { type: 'space-admin', resourceID: 'space-1' },
+        { type: 'space-admin', resourceID: 'parent-1' },
+        {
+          type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+          resourceID: 'creator-1',
+        },
+      ]);
+    });
+
+    it('lists the platform draft readers in one place: the shared helper (Global Admin + Global Support today)', () => {
+      expect(getDraftCalloutPlatformReadCredentials()).toEqual([
+        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+      ]);
+      const authorizationSource = readFileSync(
+        resolve(__dirname, 'callout.service.authorization.ts'),
+        'utf8'
+      );
+      expect(authorizationSource).not.toContain(
+        'AuthorizationCredential.GLOBAL_SUPPORT'
+      );
+      expect(authorizationSource).toContain(
+        'getDraftCalloutPlatformReadCredentials'
+      );
+    });
+
     it('should handle DRAFT visibility with space admin credentials', async () => {
       const callout = makeCallout({
         settings: {
@@ -411,6 +504,93 @@ describe('CalloutAuthorizationService', () => {
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ]),
         expect.any(String)
+      );
+    });
+  });
+
+  describe('callout-creator rule', () => {
+    const platformRolesAccess = { roles: [] } as any;
+
+    const setup = (framingType: CalloutFramingType) => {
+      const callout = {
+        id: 'callout-1',
+        authorization: {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+        },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          visibility: CalloutVisibility.PUBLISHED,
+          contribution: { allowedTypes: [] },
+          framing: { commentsEnabled: false },
+        },
+        framing: { id: 'framing-1', type: framingType, profile: { id: 'p-1' } },
+        createdBy: 'creator-1',
+        isTemplate: false,
+      } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRule
+      ).mockReturnValue({ grantedPrivileges: [], cascade: true } as any);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mockReturnValue({ grantedPrivileges: [], cascade: true } as any);
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
+    };
+
+    const creatorRuleCalls = () =>
+      vi
+        .mocked(authorizationPolicyService.createCredentialRule)
+        .mock.calls.filter(([, criteria]) =>
+          (criteria as { resourceID: string }[]).some(
+            c => c.resourceID === 'creator-1'
+          )
+        );
+
+    it('grants no creator CRUD on a Form, so a demoted creator cannot delete it', async () => {
+      vi.mocked(authorizationPolicyService.createCredentialRule).mockClear();
+      setup(CalloutFramingType.FORM);
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      expect(creatorRuleCalls()).toHaveLength(0);
+    });
+
+    it('keeps the creator CRUD rule on other framings', async () => {
+      vi.mocked(authorizationPolicyService.createCredentialRule).mockClear();
+      setup(CalloutFramingType.NONE);
+
+      await service.applyAuthorizationPolicy(
+        'callout-1',
+        undefined,
+        platformRolesAccess
+      );
+
+      expect(creatorRuleCalls()).toHaveLength(1);
+      expect(creatorRuleCalls()[0][0]).toEqual(
+        expect.arrayContaining([
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ])
       );
     });
   });

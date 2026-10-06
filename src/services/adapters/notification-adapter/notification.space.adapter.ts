@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
@@ -38,6 +39,7 @@ import { CalloutReactionEmailSuppressionService } from './callout.reaction.email
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputCollaborationCalloutComment } from './dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
+import { NotificationInputCalloutFormResponseSubmitted } from './dto/space/notification.dto.input.space.collaboration.callout.form.response';
 import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
 import { NotificationInputCollaborationCalloutReaction } from './dto/space/notification.dto.input.space.collaboration.callout.reaction';
@@ -208,6 +210,156 @@ export class NotificationSpaceAdapter {
         }
       );
     }
+  }
+
+  /**
+   * A Form response was submitted. Two independent events, both link-only:
+   *  - the admin event: admins of the exact (sub)space, minus the submitter
+   *    on every channel (an admin who responds is not notified of their own
+   *    response);
+   *  - the submitter receipt: email only, fixed channels, NOT filtered by the
+   *    submitter (the recipient is the trigger).
+   * Neither carries an answer. The receipt is still attempted when the admin
+   * part fails.
+   */
+  public async spaceCollaborationCalloutFormResponseSubmitted(
+    eventData: NotificationInputCalloutFormResponseSubmitted
+  ): Promise<void> {
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        eventData.callout.id
+      );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+    const formResponse = {
+      id: eventData.response.id,
+      submittedAt: eventData.response.createdDate,
+      visibility:
+        eventData.visibility === CalloutFormResponseVisibility.MEMBERS
+          ? ('MEMBERS' as const)
+          : ('ADMINS' as const),
+    };
+
+    const results = await Promise.allSettled([
+      this.notifyAdminsOfFormResponse(eventData, space, formResponse),
+      this.sendFormResponseReceipt(eventData, space, formResponse),
+    ]);
+    const failed = results.find(result => result.status === 'rejected');
+    if (failed) {
+      throw (failed as PromiseRejectedResult).reason;
+    }
+  }
+
+  private async notifyAdminsOfFormResponse(
+    eventData: NotificationInputCalloutFormResponseSubmitted,
+    space: ISpace,
+    formResponse: {
+      id: string;
+      submittedAt: Date;
+      visibility: 'ADMINS' | 'MEMBERS';
+    }
+  ): Promise<void> {
+    const event =
+      NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE;
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id
+    );
+
+    const emailRecipients = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (emailRecipients.length > 0) {
+      const payload =
+        await this.notificationExternalAdapter.buildSpaceCollaborationCalloutFormResponsePayload(
+          event,
+          eventData.triggeredBy,
+          emailRecipients,
+          space,
+          eventData.callout,
+          formResponse
+        );
+      this.notificationExternalAdapter.sendExternalNotifications(
+        event,
+        payload
+      );
+    }
+
+    const inAppReceiverIDs = recipients.inAppRecipients
+      .filter(recipient => recipient.id !== eventData.triggeredBy)
+      .map(recipient => recipient.id);
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationCallout = {
+        type: NotificationEventPayload.SPACE_COLLABORATION_CALLOUT,
+        spaceID: space.id,
+        calloutID: eventData.callout.id,
+      };
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.SPACE_ADMIN,
+        eventData.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
+
+    const pushRecipients = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipients.length > 0) {
+      const calloutName =
+        eventData.callout.framing?.profile?.displayName ?? 'a callout';
+      const submitterName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipients,
+        event,
+        {
+          title: `New Form response in ${spaceName}`,
+          body: `${submitterName} responded to "${calloutName}"`,
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
+        }
+      );
+    }
+  }
+
+  private async sendFormResponseReceipt(
+    eventData: NotificationInputCalloutFormResponseSubmitted,
+    space: ISpace,
+    formResponse: {
+      id: string;
+      submittedAt: Date;
+      visibility: 'ADMINS' | 'MEMBERS';
+    }
+  ): Promise<void> {
+    const event =
+      NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT;
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      space.id,
+      eventData.triggeredBy
+    );
+    if (recipients.emailRecipients.length === 0) {
+      return;
+    }
+    const payload =
+      await this.notificationExternalAdapter.buildSpaceCollaborationCalloutFormResponsePayload(
+        event,
+        eventData.triggeredBy,
+        recipients.emailRecipients,
+        space,
+        eventData.callout,
+        formResponse
+      );
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCommunityCalendarEventCreated(
