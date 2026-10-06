@@ -53,7 +53,8 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    actorContext: ActorContext
+    actorContext: ActorContext,
+    options?: { allowFormFraming?: boolean }
   ): Promise<ICollaboration> {
     if (
       !collaborationData.calloutsSetData ||
@@ -160,7 +161,8 @@ export class CollaborationService {
           storageAggregator,
           actorContext,
           actorContext.actorID,
-          collaborationData.parentSpaceId
+          collaborationData.parentSpaceId,
+          options
         );
     }
 

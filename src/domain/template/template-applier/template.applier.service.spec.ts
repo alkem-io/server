@@ -304,6 +304,11 @@ describe('TemplateApplierService', () => {
       );
 
       expect(calloutsSetService.addCallouts).toHaveBeenCalled();
+      // Applying a space template is a template carrier: its Form Posts may
+      // be copied into the target collaboration.
+      expect(calloutsSetService.addCallouts.mock.lastCall?.[6]).toEqual({
+        allowFormFraming: true,
+      });
     });
 
     it('should update innovation flow states from source template', async () => {

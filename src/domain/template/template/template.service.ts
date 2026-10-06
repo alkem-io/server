@@ -249,11 +249,17 @@ export class TemplateService {
         }
         this.overrideCalloutSettingsForTemplate(templateData.calloutData);
         templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;
+        // A callout template lives in a templates set, never in a callouts
+        // set: it has no audience and no responses, so a Form here is only a
+        // definition and may be captured.
         template.callout = await this.calloutService.createCallout(
           templateData.calloutData!,
           [],
           storageAggregator,
-          actorContext
+          actorContext,
+          undefined,
+          undefined,
+          { allowFormFraming: true }
         );
         break;
       }
@@ -726,7 +732,9 @@ export class TemplateService {
         calloutsFromSourceCollaboration,
         storageAggregator,
         actorContext,
-        userID
+        userID,
+        undefined,
+        { allowFormFraming: true }
       );
       templateContentSpace.collaboration.calloutsSet.callouts?.push(
         ...newCallouts

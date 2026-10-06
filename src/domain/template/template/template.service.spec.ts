@@ -7,11 +7,13 @@ import {
 import { CalloutContributionDefaultSourceService } from '@domain/collaboration/callout/callout.contribution.default.source.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
+import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { actorContextData } from '@test/data/actorContext.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -334,6 +336,10 @@ describe('TemplateService', () => {
 
       // The calloutData should have been mutated to set isTemplate=true
       expect(calloutData.isTemplate).toBe(true);
+      // A callout template is a template carrier: a Form framing is allowed.
+      expect(calloutService.createCallout.mock.lastCall?.[6]).toEqual({
+        allowFormFraming: true,
+      });
     });
 
     it('should walk nested callout content for CALLOUT template type', async () => {
@@ -768,6 +774,50 @@ describe('TemplateService', () => {
       const result = await service.delete({ id: 'tpl-1' } as ITemplate);
 
       expect(result.id).toBe('tpl-1');
+    });
+  });
+
+  describe('updateTemplateContentSpaceFromSpace', () => {
+    it('grants the FORM capability when copying the source callouts into the template', async () => {
+      const innovationFlowService = (service as any)
+        .innovationFlowService as Mocked<InnovationFlowService>;
+      const inputCreatorService = (service as any)
+        .inputCreatorService as Mocked<InputCreatorService>;
+      innovationFlowService.updateInnovationFlowStates.mockResolvedValue({
+        states: [],
+      } as any);
+      inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
+        [{ framing: { type: 'form' } }] as any
+      );
+      calloutsSetService.addCallouts.mockResolvedValue([]);
+      templateContentSpaceService.save.mockImplementation(
+        async (entity: any) => entity
+      );
+
+      await (service as any).updateTemplateContentSpaceFromSpace(
+        {
+          id: 'space-1',
+          collaboration: {
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [{ id: 'form-callout' }] },
+          },
+        },
+        {
+          id: 'tcs-1',
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [] },
+          },
+        },
+        true,
+        actorContextData.actorContext,
+        'user-1'
+      );
+
+      expect(calloutsSetService.addCallouts.mock.lastCall?.[6]).toEqual({
+        allowFormFraming: true,
+      });
     });
   });
 
