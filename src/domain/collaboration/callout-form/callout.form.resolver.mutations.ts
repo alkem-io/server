@@ -43,7 +43,7 @@ export class CalloutFormResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutForm, {
     description:
-      'Update the definition and/or the settings of a Form. Requires the privilege to create callouts on the collection the Post is in (space admin), the same as creating a Form. Serialized against submissions.',
+      'Update the definition and/or the settings of a Form. Requires the privilege to create callouts on the collection the Post is in (space admin), the same as creating a Form; for a Form in a standalone callout template, the privilege to update that template callout instead. Serialized against submissions.',
   })
   async updateCalloutForm(
     @CurrentActor() actorContext: ActorContext,
@@ -73,7 +73,7 @@ export class CalloutFormResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutFormResponse, {
     description:
-      'Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form rejects the submission while the member holds any response. acknowledgedVisibility is the audience the respondent was shown.',
+      'Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form rejects the submission while the member holds any response; a Form that is part of a template never accepts responses. acknowledgedVisibility is the audience the respondent was shown.',
   })
   async submitCalloutFormResponse(
     @CurrentActor() actorContext: ActorContext,
