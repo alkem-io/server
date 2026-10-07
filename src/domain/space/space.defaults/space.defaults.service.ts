@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -7,6 +8,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
 import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
@@ -35,6 +38,7 @@ export class SpaceDefaultsService {
     private calloutsSetService: CalloutsSetService,
     private platformTemplatesService: PlatformTemplatesService,
     private templatesManagerService: TemplatesManagerService,
+    private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -157,6 +161,7 @@ export class SpaceDefaultsService {
 
   public async getTemplateSpaceContentToAugmentFrom(
     spaceLevel: SpaceLevel,
+    actorContext: ActorContext,
     spaceTemplateID?: string,
     spaceL0TemplatesManager?: ITemplatesManager
   ): Promise<string> {
@@ -164,8 +169,20 @@ export class SpaceDefaultsService {
     let templateWithSpaceContent: ITemplate | undefined;
 
     if (spaceTemplateID) {
-      templateWithSpaceContent =
-        await this.templateService.getTemplateOrFail(spaceTemplateID);
+      templateWithSpaceContent = await this.templateService.getTemplateOrFail(
+        spaceTemplateID,
+        { relations: { authorization: true } }
+      );
+      // A caller-chosen template is copied into the new space wholesale —
+      // callouts, whiteboards and their media — so the creator must be able to
+      // read it. The resolvers only authorize creating on the target. Checked
+      // before anything about the template is used.
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        templateWithSpaceContent.authorization,
+        AuthorizationPrivilege.READ,
+        `create space from template: ${spaceTemplateID}`
+      );
     } else {
       switch (spaceLevel) {
         case SpaceLevel.L0:

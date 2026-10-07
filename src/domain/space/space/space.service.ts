@@ -1447,6 +1447,7 @@ export class SpaceService {
     const templateContentSpaceID =
       await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
         spaceData.level,
+        actorContext,
         spaceData.spaceTemplateID
       );
 
@@ -1551,6 +1552,7 @@ export class SpaceService {
       templateContentSubspaceID =
         await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
           subspaceData.level,
+          actorContext,
           subspaceData.spaceTemplateID,
           levelZeroSpace.templatesManager
         );
