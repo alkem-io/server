@@ -4,14 +4,13 @@ import type { TreeId } from './cascade.model';
 import type { GateExpr } from './gate.model';
 
 /**
- * 027-platform-role-redesign (T040b, research C14/D24, contracts/
- * privilege-map.md §"A-row → surfaces") — the machine-readable census: every
- * GraphQL mutation / field / MCP tool this feature's 21 live global-role
- * families (A1-A21, minus the removed A18) actually gate, one entry per
- * surface. This is the SINGLE source for `test-suites`' matrix generation,
- * this repo's own unit-coverage inventory (T070a) and drift detector
- * (`surface.drift.spec.ts`, T052a) — read `contracts/privilege-map.md`
- * first; this file is its executable form, not a paraphrase of it.
+ * The machine-readable census: every GraphQL mutation / field / MCP tool the
+ * 21 live global-role families (A1-A21, minus the removed A18) actually gate,
+ * one entry per surface. It is the single source for this repo's unit-coverage
+ * inventory (`unit.coverage.inventory.ts`) and drift detector
+ * (`surface.drift.spec.ts`). `test-suites` keeps its own hand-maintained
+ * capability table and cites this file only as provenance — nothing there
+ * imports or generates from it.
  *
  * `A20` (all upper-case) is intentionally NOT part of `ARowId` as written —
  * it IS: `ARowId` is `'A1' … 'A21' | 'A20b'`, 22 members. `A20b` re-uses

@@ -10,7 +10,6 @@ import {
 import {
   grantedCredentials,
   isManagedPrivilege,
-  PRIVILEGE_GRANTS,
   TREE_SCOPED_PRIVILEGE_GRANTS,
 } from './privilege.grants';
 
@@ -130,9 +129,3 @@ function dedupe(
 ): readonly AuthorizationCredential[] {
   return [...new Set(credentials)];
 }
-
-/** Re-exported for consumers (`test-suites` T007a, this repo's
- * `reachability.spec.ts` T070m) that need to distinguish "this privilege
- * has an explicit grant-set declaration" from "it is cascade-only" without
- * importing `privilege.grants.ts` directly. */
-export { PRIVILEGE_GRANTS };
