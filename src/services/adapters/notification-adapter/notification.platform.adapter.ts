@@ -79,10 +79,10 @@ export class NotificationPlatformAdapter {
   ): Promise<void> {
     // Routine `Feature …` entitlement grants must not produce a
     // platform-admin notification — the fail-closed assignment audit trail
-    // is the compensating control for those. This is a deny-list on the
-    // Feature family (not an allow-list on the Platform family) because two
-    // emitters still call this during the 027 role-redesign transition and
-    // the legacy credential grant/revoke path must keep emitting.
+    // is the compensating control for those. On 027 Slice B the platform-role
+    // mutations are the only emitter, so the observable behaviour is
+    // "Platform … only"; the guard stays a deny-list on the Feature family so
+    // a role added later emits by default instead of going silent.
     if (FEATURE_FAMILY_ROLES.has(eventData.role as RoleName)) {
       this.logger.verbose?.(
         `Suppressed platform-admin role-change notification for a Feature-family grant: ${eventData.role}`,

@@ -2148,7 +2148,7 @@ describe('NotificationRecipientsService', () => {
         // actor-only/info, AS6 never-throws. AS2 (stale-policy) and AS3
         // (provisioning-gap) are covered by the sibling tests above — they
         // cannot be staged live on a freshly-bootstrapped stack because
-        // admin@alkem.io always holds the legacy trio + PLATFORM_USERS_ADMIN.
+        // bootstrap gives admin@alkem.io routed roles (Roles + Users Admin).
         it.each([
           NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED,
           NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,

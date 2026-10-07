@@ -136,7 +136,7 @@ describe('NotificationPlatformAdapter', () => {
       expect(externalAdapter.sendExternalNotifications).toHaveBeenCalled();
     });
 
-    it('065: still emits for a legacy credential change through the retiring mutations (Slice A transition audience is not suppressed)', async () => {
+    it('065: still emits for a non-Feature slug it does not know (deny-list, not allow-list)', async () => {
       mockRecipients([{ id: 'admin-1' }], [{ id: 'admin-1' }]);
       vi.mocked(
         externalAdapter.buildPlatformGlobalRoleChangedNotificationPayload
@@ -146,7 +146,7 @@ describe('NotificationPlatformAdapter', () => {
         triggeredBy: 'user-1',
         userID: 'user-2',
         type: RoleChangeType.ADDED,
-        role: 'global-support',
+        role: 'platform-role-added-later',
       } as any);
 
       expect(notificationAdapter.getNotificationRecipients).toHaveBeenCalled();
@@ -199,6 +199,34 @@ describe('NotificationPlatformAdapter', () => {
         .calls[0];
       expect(pushCall[2].body).toContain('Platform Resource Admin');
       expect(pushCall[2].body).not.toContain('platform-resource-admin');
+    });
+
+    it('065: passes the resolved push list through unfiltered — resolution owns actor exclusion', async () => {
+      const pushRecipients = [{ id: 'user-1' }, { id: 'admin-1' }];
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients,
+      } as any);
+      vi.mocked(
+        externalAdapter.buildPlatformGlobalRoleChangedNotificationPayload
+      ).mockResolvedValue({} as any);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        profile: { displayName: 'Someone' },
+      } as any);
+
+      await adapter.platformGlobalRoleChanged({
+        triggeredBy: 'user-1',
+        userID: 'user-2',
+        type: RoleChangeType.ADDED,
+        role: 'platform-resource-admin',
+      } as any);
+
+      expect(
+        vi.mocked(pushAdapter.sendPushNotifications).mock.calls[0][0]
+      ).toEqual(pushRecipients);
     });
   });
 
@@ -330,6 +358,32 @@ describe('NotificationPlatformAdapter', () => {
   });
 
   describe('platformUserRemoved', () => {
+    it('065: passes the resolved push list through unfiltered — resolution owns actor exclusion', async () => {
+      const pushRecipients = [{ id: 'admin-1' }, { id: 'admin-2' }];
+      vi.mocked(
+        notificationAdapter.getNotificationRecipients
+      ).mockResolvedValue({
+        emailRecipients: [],
+        inAppRecipients: [],
+        pushRecipients,
+      } as any);
+      vi.mocked(
+        externalAdapter.buildPlatformUserRemovedNotificationPayload
+      ).mockResolvedValue({} as any);
+
+      await adapter.platformUserRemoved({
+        triggeredBy: 'admin-1',
+        user: {
+          profile: { displayName: 'Test User' },
+          email: 'test@example.com',
+        },
+      } as any);
+
+      expect(
+        vi.mocked(pushAdapter.sendPushNotifications).mock.calls[0][0]
+      ).toEqual(pushRecipients);
+    });
+
     it('should send external and in-app notifications', async () => {
       mockRecipients([{ id: 'admin-1' }], [{ id: 'admin-1' }]);
       vi.mocked(
