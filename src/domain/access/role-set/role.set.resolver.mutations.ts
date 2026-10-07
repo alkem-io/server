@@ -319,13 +319,10 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
-
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeRemoveOrganization(
       actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.GRANT,
-      `remove community role organization: ${roleSet.id}`
+      roleSet,
+      roleData.actorID
     );
 
     await this.roleSetService.removeActorFromRole(
@@ -476,7 +473,11 @@ export class RoleSetResolverMutations {
         );
         break;
       case ActorType.ORGANIZATION:
-        await this.authorizeRemoveOrganization(actorContext, roleSet);
+        await this.authorizeRemoveOrganization(
+          actorContext,
+          roleSet,
+          roleData.actorID
+        );
         break;
       case ActorType.VIRTUAL_CONTRIBUTOR:
         await this.authorizeRemoveVirtualContributor(
@@ -671,15 +672,25 @@ export class RoleSetResolverMutations {
     );
   }
 
+  // Space admins pass through the role set's own GRANT rules; the organization's
+  // own admins and owners pass through the extended policy, which grants GRANT
+  // to holders of the ACCOUNT_ADMIN credential on the organization's account.
   private async authorizeRemoveOrganization(
     actorContext: ActorContext,
-    roleSet: IRoleSet
+    roleSet: IRoleSet,
+    organizationID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
+    const extendedAuthorization =
+      await this.roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval(
+        roleSet,
+        organizationID
+      );
+
     this.authorizationService.grantAccessOrFail(
       actorContext,
-      roleSet.authorization,
+      extendedAuthorization,
       AuthorizationPrivilege.GRANT,
       `remove community role organization: ${roleSet.id}`
     );
