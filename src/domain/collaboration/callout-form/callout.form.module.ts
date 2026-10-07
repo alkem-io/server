@@ -4,6 +4,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.module';
 import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { CalloutFormResponseModule } from '../callout-form-response/callout.form.response.module';
 import { CalloutForm } from './callout.form.entity';
@@ -19,6 +20,7 @@ import { CalloutFormService } from './callout.form.service';
     AuthorizationPolicyModule,
     RoleSetModule,
     NotificationAdapterModule,
+    ContributionReporterModule,
     PlatformResourceAuditModule,
     CalloutFormResponseModule,
     TypeOrmModule.forFeature([CalloutForm]),
