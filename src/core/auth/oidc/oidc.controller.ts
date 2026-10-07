@@ -319,8 +319,8 @@ export class OidcController {
       // zero-interaction form of SEC-079-01 is closed by workspace#082's
       // app-mode Kratos session clear on the query leg of `/login` above.
       // Residual class and current disposition:
-      // specs/082-app-handoff-scheme-squat/spec.md §6 (owner) -- do not restate
-      // them here. A verified callback stays ruled out by operator decision,
+      // specs/082-app-handoff-scheme-squat/spec.md §6. A verified callback
+      // stays ruled out by operator decision,
       // because a device-wide App Links claim is not acceptable with this many
       // alkem.io links. Do NOT tighten this by guessing at another header:
       // measure it on a device first, which is the step whose absence caused
@@ -608,8 +608,8 @@ export class OidcController {
       // jar. workspace#082 closes the zero-interaction form of this by
       // clearing the Kratos session on the app-mode query leg of `/login`.
       // Residual class and current disposition:
-      // specs/082-app-handoff-scheme-squat/spec.md §6 (owner) and ADR 0020's
-      // 2026-10-07 amendment -- do not restate them here. The narrowing, if it is
+      // specs/082-app-handoff-scheme-squat/spec.md §6 and ADR 0020's
+      // 2026-10-07 amendment. The narrowing, if it is
       // ever taken, is an Android-only verified App Link; the iOS 15 target
       // cannot use one, which is why the scheme stays.
       res.redirect(302, `${appMode.scheme}:/auth/callback?code=${code}`);
@@ -812,9 +812,8 @@ export class OidcController {
 
   /**
    * workspace#082 FR-001 (server#6545) — ONE owner of the Kratos SSO clear, shared by the
-   * app-mode `/login` query leg and the app-mode `/callback` exit. server#6315: a Set-Cookie
-   * that mismatches name, domain OR path does not fail — it stores a SECOND cookie and leaves
-   * the original alive, so one shape is the whole point.
+   * app-mode `/login` query leg and the app-mode `/callback` exit. Two shapes would not fail:
+   * see the `{name, domain, path}` note at the `/callback` call site (server#6315).
    */
   private clearKratosSessionCookie(res: Response): void {
     res.cookie(this.kratosSessionCookieName, '', {
