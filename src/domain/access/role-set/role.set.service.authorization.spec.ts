@@ -1,9 +1,17 @@
+import { CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL } from '@common/constants';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -22,6 +30,7 @@ describe('RoleSetAuthorizationService', () => {
   let platformInvitationAuthorizationService: PlatformInvitationAuthorizationService;
   let licenseAuthorizationService: LicenseAuthorizationService;
   let virtualActorLookupService: VirtualActorLookupService;
+  let organizationLookupService: OrganizationLookupService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -59,6 +68,9 @@ describe('RoleSetAuthorizationService', () => {
     );
     virtualActorLookupService = module.get<VirtualActorLookupService>(
       VirtualActorLookupService
+    );
+    organizationLookupService = module.get<OrganizationLookupService>(
+      OrganizationLookupService
     );
   });
 
@@ -288,6 +300,78 @@ describe('RoleSetAuthorizationService', () => {
       expect(virtualActorLookupService.getAccountOrFail).toHaveBeenCalledWith(
         'vc-1'
       );
+    });
+  });
+
+  describe('extendAuthorizationPolicyForOrganizationRemoval', () => {
+    const mockAuth = { id: 'auth-1' } as any;
+    const mockRoleSet = { id: 'rs-1', authorization: mockAuth } as any;
+
+    it('grants GRANT to account admins of the organization being removed, on a clone', async () => {
+      const rule = { name: CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL };
+      const clone = { id: 'auth-clone' };
+      (
+        organizationLookupService.getOrganizationAccountIdOrFail as Mock
+      ).mockResolvedValue('account-1');
+      (authorizationPolicyService.createCredentialRule as Mock).mockReturnValue(
+        rule
+      );
+      (
+        authorizationPolicyService.cloneAuthorizationPolicy as Mock
+      ).mockReturnValue(clone);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as Mock
+      ).mockReturnValue({ id: 'updated-auth' });
+
+      const result =
+        await service.extendAuthorizationPolicyForOrganizationRemoval(
+          mockRoleSet,
+          'org-1'
+        );
+
+      expect(result).toEqual({ id: 'updated-auth' });
+      expect(
+        organizationLookupService.getOrganizationAccountIdOrFail
+      ).toHaveBeenCalledWith('org-1');
+      expect(
+        authorizationPolicyService.createCredentialRule
+      ).toHaveBeenCalledWith(
+        [AuthorizationPrivilege.GRANT],
+        [
+          {
+            type: AuthorizationCredential.ACCOUNT_ADMIN,
+            resourceID: 'account-1',
+          },
+        ],
+        CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL
+      );
+      expect(
+        authorizationPolicyService.cloneAuthorizationPolicy
+      ).toHaveBeenCalledWith(mockAuth);
+      expect(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).toHaveBeenCalledWith(clone, [rule]);
+    });
+
+    it('rejects without extending the policy when the actor is not an organization', async () => {
+      (
+        organizationLookupService.getOrganizationAccountIdOrFail as Mock
+      ).mockRejectedValue(
+        new EntityNotFoundException(
+          'Organization not found',
+          LogContext.COMMUNITY
+        )
+      );
+
+      await expect(
+        service.extendAuthorizationPolicyForOrganizationRemoval(
+          mockRoleSet,
+          'user-1'
+        )
+      ).rejects.toThrow(EntityNotFoundException);
+      expect(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).not.toHaveBeenCalled();
     });
   });
 });

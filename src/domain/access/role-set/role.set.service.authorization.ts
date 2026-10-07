@@ -1,4 +1,5 @@
 import {
+  CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
   CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
   CREDENTIAL_RULE_ROLESET_VIRTUAL_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
@@ -18,6 +19,7 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Injectable } from '@nestjs/common';
 import { IRoleSet } from './role.set.interface';
@@ -31,6 +33,7 @@ export class RoleSetAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private virtualActorLookupService: VirtualActorLookupService,
+    private organizationLookupService: OrganizationLookupService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
@@ -240,6 +243,42 @@ export class RoleSetAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  /**
+   * Organization ADMIN/OWNER hold the implicit ACCOUNT_ADMIN credential on the
+   * organization's account (see RoleSetService.getCredentialForOrganizationImplicitRole),
+   * so they may remove their own organization. The clone is never persisted.
+   */
+  public async extendAuthorizationPolicyForOrganizationRemoval(
+    roleSet: IRoleSet,
+    organizationToBeRemovedID: string
+  ): Promise<IAuthorizationPolicy> {
+    const accountID =
+      await this.organizationLookupService.getOrganizationAccountIdOrFail(
+        organizationToBeRemovedID
+      );
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: accountID,
+    };
+
+    const organizationSelfRemovalRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.GRANT],
+        [accountAdminCredential],
+        CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL
+      );
+
+    const clonedRoleSetAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        roleSet.authorization
+      );
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      clonedRoleSetAuthorization,
+      [organizationSelfRemovalRule]
+    );
   }
 
   private appendPrivilegeRules(
