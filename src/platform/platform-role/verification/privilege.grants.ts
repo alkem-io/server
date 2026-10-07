@@ -107,7 +107,7 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     anchor: 'role-set',
     owningCredentials: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
   },
-  // --- A2 (T034) — wholly new privilege.
+  // --- A2 — wholly new privilege.
   [AuthorizationPrivilege.FEATURE_ROLE_ASSIGN]: {
     anchor: 'role-set',
     owningCredentials: [
@@ -115,7 +115,7 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
       AuthorizationCredential.PLATFORM_ROLES_ADMIN,
     ],
   },
-  // --- A20 (T034).
+  // --- A20.
   [AuthorizationPrivilege.PLATFORM_ROLE_HOLDERS_READ]: {
     anchor: 'role-set',
     owningCredentials: [
@@ -131,8 +131,7 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     owningCredentials: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
   },
   // --- A7/A8's platform-side branch, and the root rule's own replacement
-  // grant (T036, reversed at the ninth analyze pass — FR-004/SC-004,
-  // spec-server-1 fix). The root rule's credential list
+  // grant. The root rule's credential list
   // (`cascade.model.ts`'s `ROOT_CASCADE.credentials`) is declared there, not
   // duplicated here, since this privilege's reachability is ENTIRELY
   // cascade-carried (no separate non-root grant exists for it).
@@ -140,12 +139,12 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     anchor: 'root',
     owningCredentials: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
   },
-  // --- A4/A5 (T035, T061/T062).
+  // --- A4/A5.
   [AuthorizationPrivilege.PLATFORM_USERS_ADMIN]: {
     anchor: 'platform',
     owningCredentials: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
   },
-  // --- A7 (T037). Wholly new capability (research C2).
+  // --- A7. Wholly new capability.
   [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES]: {
     anchor: 'account',
     owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
@@ -164,7 +163,7 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     anchor: 'platform',
     owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
   },
-  // --- A15 forum (T035).
+  // --- A15 forum.
   [AuthorizationPrivilege.PLATFORM_FORUM_MANAGE]: {
     anchor: 'platform',
     owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
@@ -302,7 +301,7 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
       owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
     },
     // A13 — license-plan / license-policy CRUD, re-anchored (in intent,
-    // not in literal gate) onto `platform-settings-admin` (T040). The six
+    // not in literal gate) onto `platform-settings-admin`. The six
     // A13 resolvers check a resolver-local synthetic policy
     // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) that grants bare
     // CREATE/UPDATE/DELETE to exactly {platform-settings-admin} — NOT the

@@ -19,7 +19,7 @@ import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
 
-/** T058 — A10's declared owner (T045's grant, `platform.service.authorization.ts`). */
+/** A10's declared owner (the PLATFORM_SETTINGS_ADMIN grant, `platform.service.authorization.ts`). */
 const A10_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
 ];

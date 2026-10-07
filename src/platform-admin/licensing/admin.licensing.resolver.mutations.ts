@@ -22,7 +22,7 @@ import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.licen
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 
-/** T058 — A12's declared owner (T037/T040's grant). */
+/** A12's declared owner (the licensing-framework GRANT). */
 const A12_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
 ];

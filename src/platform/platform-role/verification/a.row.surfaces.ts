@@ -942,8 +942,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       kind: 'graphql-mutation',
       // corr-server-9 fix: this surface is checked on the CalloutsSet's OWN
       // authorization (callouts.set.service.authorization.ts) — a
-      // DIFFERENT credential rule, with a DIFFERENT legacy reacher, than
-      // the `account` tree the other four A9 transfer mutations share.
+      // DIFFERENT credential rule than the `account` tree the other four A9
+      // transfer mutations share.
       tree: 'callouts-set',
       // Both TRANSFER_RESOURCE_OFFER and TRANSFER_RESOURCE_ACCEPT are
       // literally checked (AND, not OR — GateExpr has no `allOf`).
@@ -958,9 +958,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         ],
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      // GLOBAL_SUPPORT_MANAGER, not GLOBAL_SUPPORT (corr-server-9 fix) —
-      // the callouts-set rule's actual legacy reacher; GLOBAL_SUPPORT never
-      // reaches this surface (its account-tree grants are cascade:false).
     },
     ...(
       [
@@ -1278,17 +1275,10 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // this feature's dedicated one. corr-server-7/corr-server-10 fix: that bare
   // CRUD check is now against a resolver-local SYNTHETIC in-memory policy
   // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) granting exactly
-  // {platform-settings-admin, global-admin, global-support,
-  // global-license-manager, global-platform-manager} — NOT
-  // `licensingFramework.authorization`, which inherits the root policy and
-  // would otherwise let `platform-content-full-access` reach these surfaces
-  // via T036a's CRUD cascade, a family SC-004's exception does not cover.
-  // GLOBAL_ADMIN is now an EXPLICIT legacy reacher (it previously reached
-  // A13 only via that same undeclared root cascade). GLOBAL_SUPPORT is too
-  // (corr-server-12 fix): pre-feature, these resolvers checked
-  // `licensingFramework.authorization` directly, which inherits
-  // `platform.authorization` and its `globalSupportPlatformAdmin`
-  // `cascade: true` rule — a reach the census likewise omitted until now.
+  // {platform-settings-admin} — NOT `licensingFramework.authorization`,
+  // which inherits the root policy and would otherwise let
+  // `platform-content-full-access` reach these surfaces via the root rule's
+  // CRUD cascade, a family the content-full-access exception does not cover.
   A13: (
     [
       [

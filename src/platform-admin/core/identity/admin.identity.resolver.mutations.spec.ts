@@ -112,13 +112,9 @@ describe('AdminIdentityResolverMutations', () => {
 
   // 027-platform-role-redesign (sec-server-4 fix): wires the REAL
   // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `identityDeletePolicy` is a genuine, hardcoded
-  // [PLATFORM_USERS_ADMIN, GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER] policy —
-  // NOT the shared platform policy, whose PLATFORM_USERS_ADMIN grant set
-  // additively widens to also admit global-support/global-license-manager
-  // (A4's legacy reachers). Asserts those two are denied THIS surface,
-  // which they never held pre-feature (PLATFORM_SETTINGS_ADMIN's reach was
-  // {GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER} only).
+  // `identityDeletePolicy` is a genuine, hardcoded [PLATFORM_USERS_ADMIN]
+  // policy — NOT the shared platform policy. Asserts that non-owning platform
+  // roles are denied THIS surface and the owning role is allowed.
   describe('identityDeletePolicy — real-engine integration', () => {
     let realResolver: AdminIdentityResolverMutations;
     let realAdminIdentityService: Record<string, Mock>;

@@ -19,7 +19,7 @@ import { CurrentActor } from '@src/common/decorators';
 import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
-/** T063 — A5's declared owner (T062's grant). */
+/** A5's declared owner (the PLATFORM_USERS_ADMIN grant). */
 const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
 ];

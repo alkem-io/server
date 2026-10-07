@@ -29,7 +29,7 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
   // Role attribution never produces `platform_admin`: an actor holding a real
   // role that is not this surface's owner gets a throw, not a silent
   // attribution to the coarse tier.
-  it('the platform_admin carve-out has expired — a non-owning role no longer falls back to it', () => {
+  it('throws for a non-owning platform role rather than attributing it to platform_admin', () => {
     expect(() =>
       resolveInitiatorRole({
         actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
@@ -45,7 +45,7 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
     expect(result).toBe(PlatformAuditInitiatorRole.SYSTEM);
   });
 
-  it('throws on a genuine empty intersection (neither owning role nor legacy credential)', () => {
+  it('throws when the actor holds no owning role', () => {
     expect(() =>
       resolveInitiatorRole({
         actorCredentialTypes: [AuthorizationCredential.SPACE_MEMBER],
@@ -54,10 +54,14 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
     ).toThrow(/empty intersection/);
   });
 
-  it('throws when the actor holds a non-owning role for this surface', () => {
+  it('throws when the actor holds several platform roles, none of them owning this surface', () => {
     expect(() =>
       resolveInitiatorRole({
-        actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
+        actorCredentialTypes: [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ],
         intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
       })
     ).toThrow(/empty intersection/);
@@ -92,7 +96,7 @@ describe('resolveInitiatorRoleBestEffort (corr-server-3/qual-server-1 fix)', () 
   // `self` is its documented last-resort attribution, and the point of this
   // function existing at all is that an audit write must never take down the
   // operation it is recording.
-  it('degrades to self rather than throwing, now that the legacy-broad fallback is empty', () => {
+  it('degrades to self rather than throwing for a non-owning platform role', () => {
     const result = resolveInitiatorRoleBestEffort({
       actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],

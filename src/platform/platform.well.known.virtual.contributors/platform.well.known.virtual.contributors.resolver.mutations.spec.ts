@@ -25,8 +25,7 @@ import { PlatformWellKnownVirtualContributorsService } from './platform.well.kno
  * GLOBAL_LICENSE_MANAGER}). Consolidation therefore grants each member the
  * UNION, and GLOBAL_PLATFORM_MANAGER gains a mutation it never held.
  *
- * The resolver pins its own check to this surface's own pre-feature set plus
- * the owning role. These tests wire the REAL AuthorizationPolicyService +
+ * The resolver pins its own check to the owning role alone. These tests wire the REAL AuthorizationPolicyService +
  * AuthorizationService so the constructor builds a genuine policy — a mocked
  * `grantAccessOrFail` would assert nothing about who the pin actually admits.
  *
@@ -102,6 +101,18 @@ describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
       await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
 
       expect(wellKnownService.setMapping).toHaveBeenCalled();
+      // The configuration audit row is attributed to the owning role.
+      expect(
+        configurationAuditService.recordChangeForActor
+      ).toHaveBeenCalledWith(
+        actor,
+        [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+        expect.objectContaining({
+          setting: `wellKnownVirtualContributor:${mappingData.wellKnown}`,
+          newValue: mappingData.virtualContributorID,
+          outcome: 'success',
+        })
+      );
     });
   });
 });

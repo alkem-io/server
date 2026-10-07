@@ -48,11 +48,11 @@ import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.baseline.license.plan';
 
-/** T058 — A9's declared owner (T037's TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
+/** A9's declared owner (the TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
 const A9_TRANSFER_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
 ];
-/** T058 — A12's declared owner (ACCOUNT_LICENSE_MANAGE grant). */
+/** A12's declared owner (the ACCOUNT_LICENSE_MANAGE grant). */
 const A12_BASELINE_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
 ];

@@ -20,24 +20,14 @@ import { PlatformWellKnownVirtualContributorsService } from './platform.well.kno
 @InstrumentResolver()
 @Resolver()
 export class PlatformWellKnownVirtualContributorsResolverMutations {
-  /** sec-server-23 fix (2026-07-31): this mutation checks
-   * PLATFORM_SETTINGS_ADMIN against THIS resolver-local, hardcoded
-   * IN_MEMORY policy rather than the shared platform policy, whose
-   * PLATFORM_SETTINGS_ADMIN grant set the A10 consolidation widened to the
-   * UNION of the family's pre-feature reachers.
-   *
-   * This surface's own pre-feature gate was the PLATFORM_ADMIN catch-all,
-   * granted to {GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER} — NOT
-   * GLOBAL_PLATFORM_MANAGER, which held PLATFORM_SETTINGS_ADMIN and so
-   * reached the family's OTHER surfaces. Checking the shared policy would
-   * hand it this one too, which is a capability grant, not an additive
-   * re-anchoring.
+  /** This mutation checks PLATFORM_SETTINGS_ADMIN against THIS
+   * resolver-local, hardcoded IN_MEMORY policy, scoped to the
+   * PLATFORM_SETTINGS_ADMIN credential alone, rather than against the shared
+   * platform policy.
    *
    * Same shape as `emailChangePolicy`
-   * (admin.user.email.change.resolver.mutations.ts, sec-server-7) and
-   * `accountDeletePolicy` (admin.users.resolver.mutations.ts, sec-server-4).
-   * Do NOT replace this with `getPlatformAuthorizationPolicy()` — that IS
-   * the widened policy. */
+   * (admin.user.email.change.resolver.mutations.ts) and
+   * `accountDeletePolicy` (admin.users.resolver.mutations.ts). */
   private wellKnownVirtualContributorSetPolicy: IAuthorizationPolicy;
 
   constructor(

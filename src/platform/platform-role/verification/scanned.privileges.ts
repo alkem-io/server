@@ -8,11 +8,11 @@ import { privilegesNamedByGate } from './gate.model';
  * exporting from a `*.spec.ts` file; the derivation itself belongs
  * conceptually to the drift detector, not to the model layer (T040c/T040d).
  *
- * Baseline CRUD verbs plus the retiring catch-all are excluded even though
+ * Baseline CRUD verbs (and GRANT) are excluded even though
  * they are named in some census gate expressions (A6/A7/A8's `anyOf` owner
  * branch, A9's three resolver-local-policy conversion mutations, A13's
  * bare-CRUD-gated license definitions, A16's plain `READ`) — see
- * `surface.drift.spec.ts`'s doc comment, stated limit 2, for why: these six
+ * `surface.drift.spec.ts`'s doc comment, stated limit 2, for why: these five
  * are the vocabulary reused by every ordinary, non-administrative gate
  * across this ~3k-file codebase, and scanning them by literal privilege
  * name would flag dozens of files unrelated to this feature's eight admin

@@ -77,7 +77,7 @@ describe('reachability.spec.ts (T070m, FR-034/SC-019)', () => {
 
     describe(aRow, () => {
       if (surfaces.length === 0) {
-        it('A18 — retired in both slices, no surfaces to check', () => {
+        it('A18 — retired, no surfaces to check', () => {
           expect(surfaces).toHaveLength(0);
         });
         return;
@@ -115,7 +115,7 @@ describe('reachability.spec.ts (T070m, FR-034/SC-019)', () => {
     assertReachabilityEquals('A16', surface);
   });
 
-  it('A17: EMPTY intent derives to ZERO reachers at Slice B — owned by the entity admin, no global role', () => {
+  it('A17: EMPTY intent derives to ZERO reachers — owned by the entity admin, no global role', () => {
     for (const surface of A_ROW_SURFACES.A17) {
       expect(surface.intendedOwners).toHaveLength(0);
       expect(reachers(surface)).toHaveLength(0);

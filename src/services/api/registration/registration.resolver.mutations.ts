@@ -36,7 +36,7 @@ import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-use
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RegistrationService } from './registration.service';
 
-/** T063 — A5's declared owner (T062's grant). */
+/** A5's declared owner (the PLATFORM_USERS_ADMIN grant). */
 const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
 ];
@@ -44,14 +44,9 @@ const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
 @InstrumentResolver()
 @Resolver()
 export class RegistrationResolverMutations {
-  /** sec-server-4 fix: `deleteUser`'s admin branch checks PLATFORM_USERS_ADMIN
-   * against THIS resolver-local policy — scoped to `PLATFORM_USERS_ADMIN`
-   * ALONE, no legacy credentials — rather than `user.authorization`, whose
-   * PLATFORM_USERS_ADMIN grant set is additively widened (A4's email-change
-   * legacy reachers) to also admit global-support/global-license-manager/
-   * global-platform-manager. None of the three ever held deleteUser
-   * pre-feature (only GLOBAL_ADMIN, via the separate legacy-admin branch
-   * above, and self). */
+  /** `deleteUser`'s admin branch checks PLATFORM_USERS_ADMIN against THIS
+   * resolver-local policy, scoped to the `PLATFORM_USERS_ADMIN` credential
+   * alone, rather than against `user.authorization`. */
   private platformUsersAdminDeleteUserPolicy: IAuthorizationPolicy;
 
   constructor(

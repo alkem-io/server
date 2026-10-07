@@ -404,7 +404,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('PLATFORM_ROLE_HOLDERS_READ (T034, A20): EXACTLY {platform-roles-admin, platform-audit-reader} plus the three legacy broad grants', async () => {
+    it('PLATFORM_ROLE_HOLDERS_READ (A20): EXACTLY {platform-roles-admin, platform-audit-reader}', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -463,7 +463,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('PLATFORM_USERS_ADMIN (T061/T062, A4/A5, on the platform tree): EXACTLY {platform-users-admin} plus the union of A4 and A5 legacy reachers', async () => {
+    it('PLATFORM_USERS_ADMIN (A4/A5, on the platform tree): EXACTLY {platform-users-admin}', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 

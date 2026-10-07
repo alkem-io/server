@@ -74,7 +74,7 @@ const LICENSE_PLUS_ROLES: readonly RoleName[] = [
   RoleName.FEATURE_VC_CAMPAIGN,
 ];
 
-/** Roles the assignment rule engine governs (T030-T032a): all 13 target
+/** Roles the assignment rule engine governs: all 13 target
  * roles. Any other RoleName is rejected by `rejectNonPlatformRoleOrFail`. */
 const RULE_ENGINE_GOVERNED_ROLES: ReadonlySet<RoleName> = new Set([
   ...PLATFORM_FAMILY_ROLES,
