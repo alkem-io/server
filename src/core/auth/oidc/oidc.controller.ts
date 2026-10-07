@@ -255,6 +255,7 @@ export class OidcController {
     // nothing and leaves `/callback` with no availability branch at all.
     let appChallenge: string | undefined;
     let carriedReturnTo: string | undefined;
+    let carriedIssuedAt: number | undefined;
     if (Object.keys(req.query).length === 0) {
       // FR-003 — the Kratos `registration.after.oidc` re-entry is a BARE
       // `/login` with no query string, which is exactly why a query-only flag
@@ -281,6 +282,12 @@ export class OidcController {
           if (carried.app_challenge) {
             appChallenge = carried.app_challenge;
             carriedReturnTo = carried.returnTo;
+            // workspace#082 SEC-082-01 — carry the ORIGINAL issue time, never a fresh
+            // one. `signPreAuthCookie` derives `exp` from it, so recomputing it here let
+            // an attacker page that re-navigates the victim through this ungated leg on a
+            // timer keep a planted `app_challenge` alive indefinitely. Spec §6 R-2 bounds
+            // the plant at PRE_AUTH_COOKIE_MAX_AGE_S; this line is what makes that true.
+            carriedIssuedAt = carried.issued_at;
           }
         } catch {
           // An expired or tampered cookie simply does not carry a flow
@@ -391,7 +398,7 @@ export class OidcController {
     const nonce = generators.nonce();
     const codeVerifier = generators.codeVerifier();
     const codeChallenge = generators.codeChallenge(codeVerifier);
-    const issuedAt = Math.floor(Date.now() / 1000);
+    const issuedAt = carriedIssuedAt ?? Math.floor(Date.now() / 1000);
 
     const cookieJws = await signPreAuthCookie(
       {

@@ -804,14 +804,15 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
   // string, so a flag passed only as a query parameter is lost on exactly the
   // leg stickiness exists for — and `returnTo` is rebuilt from the query
   // alone, so carrying only the challenge would still drop the destination.
-  it('carries both the challenge and the returnTo across a query-less re-entry', async () => {
+  it('carries the challenge, the returnTo and the original issue time across a query-less re-entry', async () => {
+    const plantedAt = Math.floor(Date.now() / 1000) - 300;
     const cookie = await signPreAuthCookie(
       {
         state: 's',
         nonce: 'n',
         code_verifier: 'v',
         returnTo: '/spaces/alkemio',
-        issued_at: Math.floor(Date.now() / 1000),
+        issued_at: plantedAt,
         app_challenge: APP_CHALLENGE,
       },
       PRE_AUTH_KEY
@@ -823,6 +824,10 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(payload.returnTo).toBe('/spaces/alkemio');
+    // workspace#082 SEC-082-01 — RED before the fix: re-signing with a fresh issue time
+    // refreshes the JWS `exp`, so re-navigating a victim through this ungated leg on a
+    // timer keeps a planted challenge alive past the 600 s bound spec §6 R-2 claims.
+    expect(payload.issued_at).toBe(plantedAt);
     expectNoKratosClear(res);
   });
 
