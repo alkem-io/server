@@ -57,96 +57,29 @@ const BREAK_GLASS_USER_POLICY: PlatformRoleActorPolicy = {
 };
 
 /**
- * The pre-existing (legacy) role rows, unchanged in value — extracted from
- * `createPlatformRoles()`'s original hardcoded array so both the seed
- * migration and `role.credential.map.spec.ts` (T011) read the same list.
- * Slice B (T081) removes these from the fresh-bootstrap list; Slice A keeps
- * them untouched (additive, FR-007's `{owning role} ∪ legacy` rule).
+ * The role rows that pre-date this feature AND survive it (T081, Slice B).
+ *
+ * Two remain of the original twelve:
+ *  - `registered` — the baseline non-admin tier. Not part of the decomposed
+ *    admin vocabulary and never was.
+ *  - `platform-operations-admin` — spec 032's role, already single-purpose;
+ *    027 changes its grant sets, not its existence.
+ *
+ * The other ten went with T077's enum removals, and the
+ * `1785000000005-DropLegacyPlatformRoles` migration deletes their stored rows
+ * (and every credential naming them) on existing installs. A fresh bootstrap
+ * therefore never creates them — which is the whole of T081.
+ *
+ * Both C1 defect rows (`global-spaces-reader` and `global-community-reader`,
+ * whose stored `credentialType` matched no `AuthorizationCredential` member)
+ * were in the deleted ten, so the silent void is closed by removal rather than
+ * by repair — research D1's decision, now executed.
  */
-export const LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS: PlatformRoleSeedDefinition[] =
+export const BASELINE_PLATFORM_ROLE_SEED_DEFINITIONS: PlatformRoleSeedDefinition[] =
   [
-    {
-      name: 'global-admin',
-      credentialType: 'global-admin',
-      userPolicy: { minimum: 1, maximum: -1 },
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      name: 'global-support',
-      credentialType: 'global-support',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      name: 'global-license-manager',
-      credentialType: 'global-license-manager',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      // C1 silent-void defect (research): the seeded credential.type
-      // 'global-spaces-reader' does NOT match AuthorizationCredential
-      // .GLOBAL_SPACES_READER's value 'global-spaces-read'. Left exactly as
-      // seeded today — this feature's fix is structural (T009/T010: the
-      // canonical map resolves the CORRECT type regardless of what a stored
-      // row carries), not a repair migration (T069, D1: no repair ships).
-      name: 'global-spaces-reader',
-      credentialType: 'global-spaces-reader',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      name: 'platform-beta-tester',
-      credentialType: 'beta-tester',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      name: 'platform-vc-campaign',
-      credentialType: 'vc-campaign',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      name: 'platform-assistant-access',
-      credentialType: 'assistant-access',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      // C1 silent-void defect: seeded 'global-community-reader' vs
-      // AuthorizationCredential.GLOBAL_COMMUNITY_READ's 'global-community-read'.
-      // See the note on 'global-spaces-reader' above — same fix, same reason.
-      name: 'global-community-reader',
-      credentialType: 'global-community-reader',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
     {
       name: 'registered',
       credentialType: 'global-registered',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      name: 'global-platform-manager',
-      credentialType: 'global-platform-manager',
-      userPolicy: ORDINARY_USER_POLICY,
-      organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
-      virtualContributorPolicy: NO_VC_POLICY,
-    },
-    {
-      name: 'global-support-manager',
-      credentialType: 'global-support-manager',
       userPolicy: ORDINARY_USER_POLICY,
       organizationPolicy: PLATFORM_HOLDER_KIND_ORG_POLICY,
       virtualContributorPolicy: NO_VC_POLICY,

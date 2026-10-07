@@ -1,7 +1,6 @@
 import {
   CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
   CREDENTIAL_RULE_ROLESET_VIRTUAL_REMOVAL,
-  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
 } from '@common/constants';
 import {
@@ -148,28 +147,18 @@ export class RoleSetAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdminAddMembers =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN
-      );
-    newRules.push(globalAdminAddMembers);
-
-    const globalAdminAddOrganizations =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.BETA_TESTER,
-        ],
-        'assign-organization-global-admins-beta-testers'
-      );
-    newRules.push(globalAdminAddOrganizations);
+    // 027-platform-role-redesign (T076, Slice B): both blanket
+    // entry-role-assign rules are DELETED, not re-anchored.
+    //
+    // They granted `{global-admin, global-support, beta-tester}` the right to
+    // add members and organizations to ANY community role-set. No target role
+    // inherits that: spec §Target global role model row 2 denies Content Full
+    // Access role assignment outright ("it can never elevate anyone, itself
+    // included"), and row 1's Roles Admin owns PLATFORM role assignment and
+    // nothing else (FR-003). Community membership stays with the space's or
+    // organization's own admins — their rules are unchanged — plus Platform
+    // Support where the space sets `allowPlatformSupportAsAdmin`, which arrives
+    // through `platformRolesAccess`, per space, rather than as a standing grant.
 
     //
     const updatedAuthorization =

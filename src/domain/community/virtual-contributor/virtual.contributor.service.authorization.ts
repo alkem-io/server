@@ -1,7 +1,6 @@
 import {
   CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
-  CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
   CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
@@ -197,27 +196,25 @@ export class VirtualContributorAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global admins to manage platform settings
+    // 027-platform-role-redesign (T074/T076): the VC's platform-settings rule
+    // moves off `{global-admin, global-support}` + `PLATFORM_ADMIN` onto
+    // Platform Operations Admin. The only setting behind it is
+    // `promptGraphEditingEnabled` — assistant-capability config, which spec
+    // §Target global role model row 5 (A11) owns. `updateVirtualContributor-
+    // PlatformSettings` checks the same privilege against this policy.
     const platformSettings =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS
       );
     platformSettings.cascade = false;
     newRules.push(platformSettings);
 
-    // Allow Global Spaces Read to view VCs
-    const globalSpacesReader =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
-        CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ
-      );
-    newRules.push(globalSpacesReader);
+    // 027-platform-role-redesign (T076): the `global-community-read` READ rule
+    // is deleted with the credential. Reading VCs across the platform is now
+    // Platform Spaces Reader's (row 9) through `platformRolesAccess`, or
+    // Content Full Access's through the root rule's cascading READ.
 
     const accountAdminManage =
       this.authorizationPolicyService.createCredentialRule(
@@ -228,25 +225,20 @@ export class VirtualContributorAuthorizationService {
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.CONTRIBUTE,
           AuthorizationPrivilege.RECEIVE_NOTIFICATIONS,
+          // 027-platform-role-redesign (T078, FR-020, A17): renaming is owned
+          // by the ENTITY admin — for a VC, its account's admin.
+          AuthorizationPrivilege.UPDATE_NAMEID,
         ],
         [accountAdminCredential],
         CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE
       );
     newRules.push(accountAdminManage);
 
-    // TODO: rule that for now allows global support ability to manage VCs, this to be removed later
-    const globalSupportManage =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [AuthorizationCredential.GLOBAL_SUPPORT],
-        CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE
-      );
-    newRules.push(globalSupportManage);
+    // 027-platform-role-redesign (T076): the "TODO: to be removed later"
+    // blanket-CRUD grant to `global-support` is removed here — this is the
+    // later. A platform role reaching VC content now does so through the root
+    // content rule (`platform-content-full-access`, FR-004), which is the
+    // controlled replacement for exactly this kind of standing CRUD grant.
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       updatedAuthorization,

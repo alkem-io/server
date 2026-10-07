@@ -12,7 +12,7 @@ export const GLOBAL_POLICY_ADMIN_STORAGE_GRANT =
 // `global-*` role branch of assign/removePlatformRoleFromUser is pinned to
 // this resolver-local, hardcoded [GLOBAL_ADMIN] policy — mirrors the FR-022
 // pin in admin.authorization.resolver.mutations.ts (T034a) — so that T034's
-// widening of GRANT_GLOBAL_ADMINS to PLATFORM_ROLES_ADMIN on the shared
+// widening of PLATFORM_ROLES_ASSIGN to PLATFORM_ROLES_ADMIN on the shared
 // roleSet.authorization cannot reach legacy role assignment.
 export const GLOBAL_POLICY_PLATFORM_ROLE_LEGACY_GRANT_GLOBAL_ADMIN =
   'globalPolicy-platformRoleLegacyGrantGlobalAdmin';

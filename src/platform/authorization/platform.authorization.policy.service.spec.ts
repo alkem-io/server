@@ -109,31 +109,39 @@ describe('PlatformAuthorizationPolicyService', () => {
   // runs a test — vi.restoreAllMocks() in the outer beforeEach happens
   // BEFORE the module (and therefore the service) is constructed, so the
   // history is fresh and belongs entirely to this instantiation.
-  describe('createRootCredentialRules (T036, research D5/D6, FR-007(e))', () => {
-    const callsFor = (credential: AuthorizationCredential) =>
-      vi
-        .mocked(authorizationPolicyService.createCredentialRuleUsingTypesOnly)
-        .mock.calls.filter(([, types]) =>
-          (types as AuthorizationCredential[]).includes(credential)
-        );
+  describe('createRootCredentialRules (T072, research D5/D6, FR-007(e))', () => {
+    const allCalls = () =>
+      vi.mocked(authorizationPolicyService.createCredentialRuleUsingTypesOnly)
+        .mock.calls;
 
-    it('grants GLOBAL_ADMIN the untouched CRUD+GRANT god-mode rule, unchanged by this feature', () => {
-      const calls = callsFor(AuthorizationCredential.GLOBAL_ADMIN).filter(
-        ([privileges]) =>
-          (privileges as AuthorizationPrivilege[]).includes(
-            AuthorizationPrivilege.GRANT
-          )
+    const callsFor = (credential: AuthorizationCredential) =>
+      allCalls().filter(([, types]) =>
+        (types as AuthorizationCredential[]).includes(credential)
       );
-      expect(calls).toHaveLength(1);
-      const [privileges, types] = calls[0];
-      expect(privileges).toEqual([
-        AuthorizationPrivilege.CREATE,
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.UPDATE,
-        AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.GRANT,
-      ]);
-      expect(types).toEqual([AuthorizationCredential.GLOBAL_ADMIN]);
+
+    // 027-platform-role-redesign (T072, Slice B): the god mode is GONE.
+    // These two are the feature's headline assertions — the root policy
+    // grants exactly one credential rule, and GRANT has left the
+    // inheritance root entirely (research D6). A regression here is not a
+    // failing test, it is the re-creation of the thing this feature
+    // removed, so both assert on the WHOLE call history rather than on a
+    // filtered subset that a second rule could hide inside.
+    it('builds exactly ONE root credential rule — the god-mode rule is gone', () => {
+      // T077 (Slice B): the second assertion used to read
+      // `callsFor(GLOBAL_ADMIN)).toHaveLength(0)` — the god-mode rule's
+      // credential. `global-admin` no longer exists, so the surviving rule is
+      // asserted positively instead: exactly one rule, and it belongs to
+      // Content Full Access alone.
+      expect(allCalls()).toHaveLength(1);
+      expect(
+        callsFor(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)
+      ).toHaveLength(1);
+    });
+
+    it('grants no GRANT at the inheritance root — no credential can grant by cascade (D6)', () => {
+      for (const [privileges] of allCalls()) {
+        expect(privileges).not.toContain(AuthorizationPrivilege.GRANT);
+      }
     });
 
     // 027-platform-role-redesign (ninth `/speckit-analyze` pass, FR-004/
@@ -163,21 +171,15 @@ describe('PlatformAuthorizationPolicyService', () => {
       // entity renames the spec explicitly denies it.
       expect(privileges).not.toContain(AuthorizationPrivilege.UPDATE_NAMEID);
 
-      // Slice A additive reach: GLOBAL_ADMIN keeps its pre-existing content
-      // cascade through this rule too. GLOBAL_SUPPORT is deliberately
-      // ABSENT (sec-server-3/corr-server-2 fix) — unlike GLOBAL_ADMIN, it
-      // never held blanket CRUD across the seven root-inheriting trees;
-      // adding it here would bypass the per-space
-      // `allowPlatformSupportAsAdmin` consent gate for both reads and A8
-      // deletions.
-      expect(types).toEqual(
-        expect.arrayContaining([
-          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-          AuthorizationCredential.GLOBAL_ADMIN,
-        ])
-      );
-      expect(types).not.toContain(AuthorizationCredential.GLOBAL_SUPPORT);
-      expect(types).toHaveLength(2);
+      // Slice B (T072): the rule's credential list is exactly the owning
+      // role. `global-admin` is gone from it, and `global-support` was never
+      // in it (sec-server-3/corr-server-2 fix) — it never held blanket CRUD
+      // across the seven root-inheriting trees, and adding it would bypass
+      // the per-space `allowPlatformSupportAsAdmin` consent gate for both
+      // reads and A8 deletions.
+      expect(types).toEqual([
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+      ]);
     });
   });
 });

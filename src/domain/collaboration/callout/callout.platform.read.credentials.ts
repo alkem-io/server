@@ -6,21 +6,27 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
  * reachable. This is the single definition: the draft-Post read rule and the
  * Form response access owner both build on it, so a change to the platform
  * roles (for example the split of Global Support) reaches both at once.
+ *
+ * 027-platform-role-redesign (T076, Slice B): empty. The two legacy global
+ * credentials are gone; platform-wide read of a draft Post arrives through the
+ * root content rule and, per space, through `platformRolesAccess` — no
+ * hardcoded global reader.
  */
 export const getDraftCalloutPlatformReadCredentials =
-  (): ICredentialDefinition[] => [
-    { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-    { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
-  ];
+  (): ICredentialDefinition[] => [];
 
 /**
  * The platform credential types that may change who publishes a Post
  * (UPDATE_CALLOUT_PUBLISHER). Kept next to the draft read list so every
  * platform credential of a callout rule lives in one place.
+ *
+ * 027-platform-role-redesign (T038, A8; legacy reachers dropped at Slice B,
+ * T076): Platform Content Full Access, and Platform Resource Admin (operator
+ * amendment 2026-10-07). The order is the audit attribution order: a holder
+ * of both is recorded as Content Full Access.
  */
 export const getCalloutPublisherPlatformCredentialTypes =
   (): AuthorizationCredential[] => [
-    AuthorizationCredential.GLOBAL_ADMIN,
-    AuthorizationCredential.GLOBAL_SUPPORT,
     AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+    AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
   ];

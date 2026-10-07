@@ -1613,28 +1613,22 @@ export class RoleSetService {
 
   /**
    * Whether `actorID` currently holds standing to offer ADMIN / OWNER on an
-   * organization role set: organization ADMIN or OWNER, or a platform
-   * GLOBAL_ADMIN / GLOBAL_SUPPORT credential.
+   * organization role set: organization ADMIN or OWNER.
+   *
+   * 027-platform-role-redesign (T076, Slice B): the platform arm is gone. The
+   * `{global-admin, global-support}` direct-assign rule on organization role
+   * sets was removed with the legacy roles, and no target role inherits it
+   * (`organization.service.authorization.ts`), so no platform credential
+   * confers this standing any more.
    */
   private async mayStillOfferOrganizationRoles(
     actorID: string,
     roleSet: IRoleSet
   ): Promise<boolean> {
-    if (
+    return (
       (await this.isInRole(actorID, roleSet, RoleName.ADMIN)) ||
       (await this.isInRole(actorID, roleSet, RoleName.OWNER))
-    ) {
-      return true;
-    }
-    for (const type of [
-      AuthorizationCredential.GLOBAL_ADMIN,
-      AuthorizationCredential.GLOBAL_SUPPORT,
-    ]) {
-      if (await this.actorService.hasValidCredential(actorID, { type })) {
-        return true;
-      }
-    }
-    return false;
+    );
   }
 
   public async isInRole(
@@ -2412,11 +2406,9 @@ export class RoleSetService {
     //
     // "May still offer" means holding the standing that granted
     // ROLESET_ENTRY_ROLE_INVITE on an organization role set: an organization
-    // ADMIN / OWNER, or a platform GLOBAL_ADMIN / GLOBAL_SUPPORT (who hold
-    // ROLESET_ENTRY_ROLE_ASSIGN on every organization —
-    // `organization.service.authorization.ts`). Without the platform arm an
-    // invitation legitimately issued by platform support would silently lose
-    // its offered roles on accept.
+    // ADMIN / OWNER. (Slice B, T076: the legacy platform arm — global-admin /
+    // global-support holding ROLESET_ENTRY_ROLE_ASSIGN on every organization —
+    // is gone with those roles; no target role inherits it.)
     const extraRoles = opts.extraRoles ?? [];
     let offererMayStillOffer: boolean | undefined;
     if (

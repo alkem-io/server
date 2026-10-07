@@ -518,12 +518,29 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
-      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
-      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
       case NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getGlobalAdminCriteria();
+        credentialCriteria = this.getPlatformRoleCriteria([
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ]);
+        break;
+      }
+      case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getPlatformRoleCriteria([
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        ]);
+        break;
+      }
+      case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED: {
+        privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
+        credentialCriteria = this.getPlatformRoleCriteria([
+          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+        ]);
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
@@ -1038,20 +1055,23 @@ export class NotificationRecipientsService {
     ];
   }
 
-  private getGlobalAdminCriteria(): CredentialsSearchInput[] {
-    return [
-      {
-        type: AuthorizationCredential.GLOBAL_ADMIN,
-        resourceID: '',
-      },
-      {
-        type: AuthorizationCredential.GLOBAL_SUPPORT,
-        resourceID: '',
-      },
-      {
-        type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        resourceID: '',
-      },
-    ];
+  /**
+   * 027-platform-role-redesign (T076, routing amended 2026-10-05): the legacy
+   * global credentials that used to define "platform admin" for NOTIFICATION
+   * RECIPIENT purposes are gone. This is a notification-routing question, not
+   * an authorization one — "who should be told when something platform-wide
+   * happens" — so each platform-admin event names the roles that act on it:
+   * Support and Users Admin for user and space lifecycle, License Manager for a
+   * new space (it licenses it), and Roles Admin ALONE for a role change.
+   * Content Full Access receives none of them (operator ruling), Audit Reader
+   * must never be a recipient (it reviews the trail, it does not operate), and
+   * Spaces Reader is a service account with no inbox. Every role named here
+   * must also be in the platform `RECEIVE_NOTIFICATIONS_ADMIN` rule, or the
+   * privilege filter drops it.
+   */
+  private getPlatformRoleCriteria(
+    credentialTypes: AuthorizationCredential[]
+  ): CredentialsSearchInput[] {
+    return credentialTypes.map(type => ({ type, resourceID: '' }));
   }
 }

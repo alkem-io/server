@@ -63,7 +63,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin InnovationHubs'
       );
       expect(result).toEqual(hubs);
@@ -80,7 +80,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin InnovationPacks'
       );
       expect(result).toEqual(packs);
@@ -109,7 +109,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin Spaces'
       );
       expect(result).toEqual(spaces);
@@ -127,7 +127,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         'platformAdmin Users'
       );
       expect(result).toEqual(paginatedUsers);
@@ -159,7 +159,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin Organizations'
       );
       expect(result).toEqual(paginatedOrgs);
@@ -177,7 +177,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin Virtual Contributors'
       );
       expect(result).toEqual(vcs);
@@ -209,21 +209,22 @@ describe('PlatformAdminResolverFields', () => {
         new AuthorizationPolicyRuleCredential(
           [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
           [
-            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-            AuthorizationCredential.GLOBAL_ADMIN,
-            AuthorizationCredential.GLOBAL_SUPPORT,
-            AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          ].map(type => ({ type, resourceID: '' })),
+            {
+              type: AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+              resourceID: '',
+            },
+          ],
           'platform-operations-admin-rule'
         ),
         new AuthorizationPolicyRuleCredential(
-          [AuthorizationPrivilege.PLATFORM_ADMIN],
+          [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS],
           [
-            AuthorizationCredential.GLOBAL_ADMIN,
-            AuthorizationCredential.GLOBAL_SUPPORT,
-            AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          ].map(type => ({ type, resourceID: '' })),
-          'platform-admin-rule'
+            {
+              type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+              resourceID: '',
+            },
+          ],
+          'platform-content-full-access-rule'
         ),
       ];
       return policy;
@@ -283,7 +284,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         'platformAdmin Communication'
       );
       expect(result).toEqual({});
@@ -297,7 +298,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         'platformAdmin Identity'
       );
       expect(result).toEqual({});
@@ -344,12 +345,13 @@ describe('PlatformAdminResolverFields', () => {
 
       await resolver.spaces(actorContext, {} as any);
 
-      // Falls through to the unchanged catch-all check, which the real
+      // Falls through to the family's own primary privilege (Slice B: the
+      // PLATFORM_ADMIN catch-all is retired), which the real
       // AuthorizationService would reject for this actor.
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         'platformAdmin Spaces'
       );
     });
@@ -363,7 +365,7 @@ describe('PlatformAdminResolverFields', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         'platformAdmin Users'
       );
     });
@@ -413,29 +415,34 @@ describe('PlatformAdminResolverFields', () => {
         [
           'spaces',
           'platformAdmin Spaces',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
           () => resolver.spaces(actorContext, {} as any),
         ],
         [
           'accounts',
           'platformAdmin Accounts',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
           () => resolver.accounts(actorContext),
         ],
         [
           'virtualContributors',
           'platformAdmin Virtual Contributors',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
           () => resolver.virtualContributors(actorContext, {} as any),
         ],
         [
           'users',
           'platformAdmin Users',
+          AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
           () => resolver.users(actorContext, { first: 10 } as any),
         ],
         [
           'identity',
           'platformAdmin Identity',
+          AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
           () => resolver.identity(actorContext),
         ],
-      ])('does NOT reach %s — falls through to the catch-all', async (_field, msg, call) => {
+      ])('does NOT reach %s — falls through to the family primary privilege', async (_field, msg, primary, call) => {
         platformAdminService.getAllSpaces.mockResolvedValue([]);
         platformAdminService.getAllAccounts.mockResolvedValue([]);
         platformAdminService.getAllVirtualContributors.mockResolvedValue([]);
@@ -446,7 +453,7 @@ describe('PlatformAdminResolverFields', () => {
         expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
           actorContext,
           platformPolicy,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
+          primary,
           msg
         );
       });
@@ -498,29 +505,34 @@ describe('PlatformAdminResolverFields', () => {
         [
           'accounts',
           'platformAdmin Accounts',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
           () => resolver.accounts(actorContext),
         ],
         [
           'innovationPacks',
           'platformAdmin InnovationPacks',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
           () => resolver.innovationPacks(actorContext),
         ],
         [
           'innovationHubs',
           'platformAdmin InnovationHubs',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
           () => resolver.innovationHubs(actorContext),
         ],
         [
           'virtualContributors',
           'platformAdmin Virtual Contributors',
+          AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
           () => resolver.virtualContributors(actorContext, {} as any),
         ],
         [
           'identity',
           'platformAdmin Identity',
+          AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
           () => resolver.identity(actorContext),
         ],
-      ])('does NOT reach %s — falls through to the catch-all', async (_field, msg, call) => {
+      ])('does NOT reach %s — falls through to the family primary privilege', async (_field, msg, primary, call) => {
         platformAdminService.getAllAccounts.mockResolvedValue([]);
         platformAdminService.getAllInnovationPacks.mockResolvedValue([]);
         platformAdminService.getAllInnovationHubs.mockResolvedValue([]);
@@ -531,7 +543,7 @@ describe('PlatformAdminResolverFields', () => {
         expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
           actorContext,
           platformPolicy,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
+          primary,
           msg
         );
       });

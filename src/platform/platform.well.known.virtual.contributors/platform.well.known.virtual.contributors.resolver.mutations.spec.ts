@@ -81,33 +81,28 @@ describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
   });
 
   describe('wellKnownVirtualContributorSetPolicy — real-engine integration', () => {
-    it('DENIES a global-platform-manager-only actor — it never held this surface pre-feature (sec-server-23)', async () => {
+    // 027-platform-role-redesign (T076/T077, Slice B): the sec-server-23 pin
+    // that stood here is gone, and so are both tests that expressed it.
+    //
+    // The pin existed because `global-platform-manager` did NOT reach this
+    // mutation pre-feature while the three legacy broad credentials did, so the
+    // additive slice had to keep those three in and that one out. All four are
+    // retired. `platform-settings-admin` — which the substitution would have
+    // aimed the denial at — is now the OWNING role (spec row 4 owns the
+    // well-known VC), so asserting a denial for it would invert the intent.
+    //
+    // What survives is the positive case below plus the audit-attribution test,
+    // which is now asserting an EMPTY legacy-reacher list rather than a
+    // three-element one.
+    it('DENIES an actor holding no platform role at all', async () => {
       const actor = buildActorContext(
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER
+        AuthorizationCredential.GLOBAL_REGISTERED
       );
 
       await expect(
         resolver.setPlatformWellKnownVirtualContributor(actor, mappingData)
       ).rejects.toBeDefined();
       expect(wellKnownService.setMapping).not.toHaveBeenCalled();
-    });
-
-    // The three credentials that DID reach this mutation through its
-    // pre-feature PLATFORM_ADMIN gate. Slice A is additive: none of them may
-    // lose access as a side effect of pinning GLOBAL_PLATFORM_MANAGER out.
-    it.each([
-      AuthorizationCredential.GLOBAL_ADMIN,
-      AuthorizationCredential.GLOBAL_SUPPORT,
-      AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-    ])('ALLOWS %s — pre-existing legacy reach preserved', async credential => {
-      const actor = buildActorContext(credential);
-
-      await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
-
-      expect(wellKnownService.setMapping).toHaveBeenCalledWith(
-        mappingData.wellKnown,
-        mappingData.virtualContributorID
-      );
     });
 
     it('ALLOWS the owning platform-settings-admin role', async () => {
@@ -120,26 +115,21 @@ describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
       expect(wellKnownService.setMapping).toHaveBeenCalled();
     });
 
-    it('records the configuration change with a legacy-reacher list that MATCHES the pin', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
+    // T077 (Slice B): the reacher list is now EMPTY, and that is the assertion.
+    // A non-empty legacy list would let `resolveInitiatorRole` attribute a write
+    // to the retired `platform_admin` coarse tier — an audit trail naming a
+    // caller that can no longer exist. This is the executable form of T018's
+    // "the carve-out expires by construction".
+    it('records the configuration change with an EMPTY legacy-reacher list — the carve-out has expired', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_SETTINGS_ADMIN
+      );
 
       await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
 
-      // Declaring GLOBAL_PLATFORM_MANAGER here would let
-      // `resolveInitiatorRole` attribute an actor the gate above rejects —
-      // an audit trail describing a caller that cannot exist.
       const [, , legacyReachers] =
         configurationAuditService.recordChangeForActor.mock.calls[0];
-      expect(legacyReachers).not.toContain(
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER
-      );
-      expect(legacyReachers).toEqual(
-        expect.arrayContaining([
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ])
-      );
+      expect(legacyReachers).toEqual([]);
     });
   });
 });

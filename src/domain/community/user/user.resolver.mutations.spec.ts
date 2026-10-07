@@ -294,30 +294,8 @@ describe('UserResolverMutations', () => {
     });
   });
 
-  describe('updateUserPlatformSettings', () => {
-    it('should check PLATFORM_ADMIN privilege and update settings', async () => {
-      const mockUser = { id: 'user-1', authorization: { id: 'auth-1' } };
-      const updatedUser = { id: 'user-1', nameID: 'new-name' };
-
-      userService.getUserByIdOrFail.mockResolvedValue(mockUser);
-      authorizationService.grantAccessOrFail.mockResolvedValue(undefined);
-      userService.updateUserPlatformSettings.mockResolvedValue(updatedUser);
-
-      const actorContext = { actorID: 'admin-1' } as any;
-      const updateData = { userID: 'user-1', nameID: 'new-name' };
-
-      const result = await resolver.updateUserPlatformSettings(
-        actorContext,
-        updateData as any
-      );
-
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-        actorContext,
-        mockUser.authorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
-        expect.any(String)
-      );
-      expect(result).toBe(updatedUser);
-    });
-  });
+  // 027-platform-role-redesign (T078, FR-020): the `updateUserPlatformSettings`
+  // suites are gone with the mutation. `nameID` is covered by the actor
+  // service's `updateNameID`; `email` has no replacement by design — writing
+  // user.email directly was the bug FR-020 removes.
 });

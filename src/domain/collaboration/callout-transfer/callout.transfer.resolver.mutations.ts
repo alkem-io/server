@@ -141,10 +141,7 @@ export class CalloutTransferResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      [
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
-      ],
+      [],
       {
         resourceKind: 'callout',
         resourceId: callout.id,

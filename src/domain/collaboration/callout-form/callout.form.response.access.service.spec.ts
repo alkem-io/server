@@ -44,11 +44,8 @@ const calloutAuthorization = () => {
         cred(AuthorizationCredential.SPACE_MEMBER, PARENT),
         cred(AuthorizationCredential.SPACE_ADMIN, SUBSPACE),
         cred(AuthorizationCredential.SPACE_ADMIN, PARENT),
-        cred(AuthorizationCredential.GLOBAL_ADMIN),
-        cred(AuthorizationCredential.GLOBAL_SUPPORT),
         cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS),
         cred(AuthorizationCredential.PLATFORM_SUPPORT),
-        cred(AuthorizationCredential.GLOBAL_SPACES_READER),
         cred(AuthorizationCredential.PLATFORM_SPACES_READER),
         cred(AuthorizationCredential.USER_SELF_MANAGEMENT, CREATOR),
         cred(AuthorizationCredential.USER_SELF_MANAGEMENT, 'user-other'),
@@ -69,7 +66,6 @@ const calloutsSetAuthorization = () => {
       criterias: [
         cred(AuthorizationCredential.SPACE_ADMIN, SUBSPACE),
         cred(AuthorizationCredential.SPACE_ADMIN, PARENT),
-        cred(AuthorizationCredential.GLOBAL_ADMIN),
       ],
       cascade: true,
       name: 'create',
@@ -159,18 +155,6 @@ describe('FormResponseAccessService', () => {
         'OWN',
       ],
       [
-        'global admin',
-        actor('u5', cred(AuthorizationCredential.GLOBAL_ADMIN)),
-        'ALL',
-        'ALL',
-      ],
-      [
-        'global support',
-        actor('u6', cred(AuthorizationCredential.GLOBAL_SUPPORT)),
-        'ALL',
-        'ALL',
-      ],
-      [
         'platform content full access',
         actor('u7', cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)),
         'OWN',
@@ -179,12 +163,6 @@ describe('FormResponseAccessService', () => {
       [
         'platform support',
         actor('u8', cred(AuthorizationCredential.PLATFORM_SUPPORT)),
-        'OWN',
-        'OWN',
-      ],
-      [
-        'global spaces reader',
-        actor('u9', cred(AuthorizationCredential.GLOBAL_SPACES_READER)),
         'OWN',
         'OWN',
       ],
@@ -280,7 +258,7 @@ describe('FormResponseAccessService', () => {
       ).toBe('NONE');
     });
 
-    it('fails closed to the platform list when the roleSet is missing', async () => {
+    it('fails closed when the roleSet is missing — the platform list is empty at Slice B (T076)', async () => {
       const noRoleSet = callout({
         calloutsSet: {
           type: CalloutsSetType.COLLABORATION,
@@ -296,11 +274,14 @@ describe('FormResponseAccessService', () => {
       ).toBe('OWN');
       expect(
         await service.resolveScope(
-          actor('u5', cred(AuthorizationCredential.GLOBAL_ADMIN)),
+          actor(
+            'u7',
+            cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)
+          ),
           form(CalloutFormResponseVisibility.ADMINS),
           noRoleSet
         )
-      ).toBe('ALL');
+      ).toBe('OWN');
     });
 
     it('takes the platform readers from the shared draft-Post helper', async () => {
@@ -309,7 +290,7 @@ describe('FormResponseAccessService', () => {
       );
       const spy = vi.spyOn(helper, 'getDraftCalloutPlatformReadCredentials');
       await service.resolveScope(
-        actor('u5', cred(AuthorizationCredential.GLOBAL_ADMIN)),
+        actor('u7', cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)),
         form(CalloutFormResponseVisibility.ADMINS),
         callout()
       );
@@ -330,11 +311,6 @@ describe('FormResponseAccessService', () => {
         true,
       ],
       [
-        'global admin',
-        actor('u5', cred(AuthorizationCredential.GLOBAL_ADMIN)),
-        true,
-      ],
-      [
         'creator without CREATE',
         actor(
           CREATOR,
@@ -343,8 +319,8 @@ describe('FormResponseAccessService', () => {
         false,
       ],
       [
-        'global support without CREATE',
-        actor('u6', cred(AuthorizationCredential.GLOBAL_SUPPORT)),
+        'platform support without CREATE',
+        actor('u8', cred(AuthorizationCredential.PLATFORM_SUPPORT)),
         false,
       ],
       [

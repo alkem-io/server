@@ -103,17 +103,6 @@ trustGateway:
   # Local host-run default; deployments must set TRUST_GATEWAY_URL to the cluster Service.
   url: ${TRUST_GATEWAY_URL}:http://localhost:8080
 
-licensing:
-  wingback:
-    enabled: ${LICENSING_WINGBACK_ENABLED}:false
-    key: ${LICENSING_WINGBACK_API_KEY}
-    endpoint: ${LICENSING_WINGBACK_API_ENDPOINT}
-    retries: ${LICENSING_WINGBACK_RETRY}:3
-    timeout: ${LICENSING_WINGBACK_TIMEOUT}:30000
-    webhook_secret:
-      name: ${LICENSING_WINGBACK_WEBHOOK_SECRET_NAME}:wb-secret
-      value: ${LICENSING_WINGBACK_WEBHOOK_SECRET_VALUE}
-
 ## identity ##
 
 # Defines all authentication and authorization configuration.

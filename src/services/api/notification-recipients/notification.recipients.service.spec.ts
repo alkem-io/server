@@ -201,7 +201,10 @@ describe('NotificationRecipientsService', () => {
           },
         },
         credentials: [
-          { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+          {
+            type: AuthorizationCredential.PLATFORM_USERS_ADMIN,
+            resourceID: '',
+          },
         ],
       } as unknown as IUser;
 
@@ -290,25 +293,68 @@ describe('NotificationRecipientsService', () => {
       );
     });
 
-    it('should use global admin criteria for PLATFORM_ADMIN_SPACE_CREATED', async () => {
-      await service.getRecipients({
-        eventType: NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
-      });
+    // 027-platform-role-redesign (T076, Slice B; routing amended 2026-10-05):
+    // the recipient set moved off `{global-admin, global-support,
+    // global-license-manager}`. This is a notification-ROUTING question — who
+    // should be told when something platform-wide happens — so each event
+    // names the roles that act on it. Content Full Access receives none of
+    // them (operator ruling), Audit Reader is deliberately excluded (it reviews
+    // the trail, it does not operate) and so is Spaces Reader (a service
+    // account with no inbox); asserting the exact array per event is what
+    // keeps any of them from creeping back in.
+    it.each([
+      [
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED,
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ],
+      ],
+      [
+        NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ],
+      ],
+      [
+        NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION,
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ],
+      ],
+      [
+        NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        ],
+      ],
+      [
+        NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED,
+        [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
+      ],
+    ])('routes %s to exactly %j — never Content Full Access, Audit Reader or Spaces Reader', async (eventType, expectedTypes) => {
+      await service.getRecipients({ eventType });
 
-      expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            type: AuthorizationCredential.GLOBAL_ADMIN,
-          }),
-          expect.objectContaining({
-            type: AuthorizationCredential.GLOBAL_SUPPORT,
-          }),
-          expect.objectContaining({
-            type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          }),
-        ]),
-        undefined,
-        expect.any(Object)
+      const [criteria] = (
+        userLookupService.usersWithCredentials as unknown as {
+          mock: { calls: [{ type: AuthorizationCredential }[]][] };
+        }
+      ).mock.calls[0];
+      const types = criteria.map(c => c.type);
+
+      expect(types).toEqual(expectedTypes);
+      expect(types).not.toContain(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+      expect(types).not.toContain(
+        AuthorizationCredential.PLATFORM_AUDIT_READER
+      );
+      expect(types).not.toContain(
+        AuthorizationCredential.PLATFORM_SPACES_READER
       );
     });
 

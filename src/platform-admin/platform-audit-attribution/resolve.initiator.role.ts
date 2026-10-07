@@ -47,17 +47,23 @@ const CREDENTIAL_TO_INITIATOR_ROLE: Partial<
     PlatformAuditInitiatorRole.PLATFORM_AUDIT_READER,
 };
 
-/** Legacy broad credentials that reach an audited surface ONLY through the
- * Slice A additive union, not because they own the action. Used as the
- * DEFAULT legacy-reacher set — callers may narrow it per-surface via
- * `legacyReachers` (the census's declared value for that surface, once
- * T040b exists) when a surface's legacy reach differs. */
+/** Legacy broad credentials that reached an audited surface ONLY through the
+ * Slice A additive union, never because they owned the action.
+ *
+ * EMPTY at Slice B, and permanently so. T077 removed the three credentials this
+ * held (`global-admin`, `global-support`, `global-license-manager`) and every
+ * census surface now declares `legacyReachers: []`, so the fallback below is
+ * unreachable by construction — which is exactly how T018 said the FR-025
+ * `platform_admin` carve-out would expire: not by deleting the enum value, but
+ * by deleting the credentials that could produce it.
+ *
+ * `PlatformAuditInitiatorRole.PLATFORM_ADMIN` therefore stays in the DB enum
+ * (dropping a Postgres enum value is not a forward-only ALTER) but no NEW row
+ * can carry it. Historical rows written during the additive slice keep it, and
+ * must remain readable — which is why the value is not removed from the
+ * TypeScript enum either. */
 export const DEFAULT_LEGACY_BROAD_CREDENTIALS: readonly AuthorizationCredential[] =
-  [
-    AuthorizationCredential.GLOBAL_ADMIN,
-    AuthorizationCredential.GLOBAL_SUPPORT,
-    AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  ];
+  [];
 
 export interface ResolveInitiatorRoleInput {
   /** The acting operator's credentials. Omit entirely for a

@@ -73,6 +73,11 @@ export class FormResponseAccessService {
       }
     }
     // A missing roleSet leaves the platform list only: the check fails closed.
+    // That list is empty at Slice B (T076), and a rule without criteria
+    // throws rather than denying — so fail closed before building it.
+    if (criteria.length === 0) {
+      return actorContext.actorID ? 'OWN' : 'NONE';
+    }
 
     const readAll = new AuthorizationPolicy(AuthorizationPolicyType.IN_MEMORY);
     this.authorizationPolicyService.appendCredentialAuthorizationRules(

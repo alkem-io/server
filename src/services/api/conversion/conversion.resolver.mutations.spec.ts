@@ -101,7 +101,7 @@ describe('ConversionResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         expect.anything(),
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
         expect.any(String)
       );
       expect(
