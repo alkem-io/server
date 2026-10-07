@@ -1,9 +1,12 @@
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { PlatformAuditCategory } from '@domain/community/user-email-change/enums/platform.audit.category';
 import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
@@ -423,6 +426,135 @@ describe('CalloutFormResolverMutations', () => {
             'response-1'
           );
           expect(auditLogger.error).toHaveBeenCalled();
+        });
+      });
+
+      // FR-019 (content deletions are recorded): Platform Support moderates
+      // only through a Space's `allowPlatformSupportAsAdmin` grant, which
+      // carries no privilege of its own — so its deletes must be recognised
+      // from the policy, like Content Full Access's are.
+      describe('with the real authorization service — who moderated', () => {
+        const cred = (type: string, resourceID = '') => ({ type, resourceID });
+        const moderation = [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ];
+        // The callouts set of a Space that allows platform support as admin:
+        // the space-admin rule, the consent-gated platform-support rule, and
+        // the root content rule cascading Content Full Access.
+        const setAuthorization = () => {
+          const policy = new AuthorizationPolicy(
+            AuthorizationPolicyType.CALLOUTS_SET
+          );
+          policy.credentialRules = [
+            {
+              grantedPrivileges: moderation,
+              criterias: [cred(AuthorizationCredential.SPACE_ADMIN, 'space-1')],
+              cascade: true,
+              name: 'space-admin',
+            },
+            {
+              grantedPrivileges: [...moderation, AuthorizationPrivilege.GRANT],
+              criterias: [cred(AuthorizationCredential.PLATFORM_SUPPORT)],
+              cascade: true,
+              name: 'platform-support-as-admin',
+            },
+            {
+              grantedPrivileges: [
+                ...moderation,
+                AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+              ],
+              criterias: [
+                cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS),
+              ],
+              cascade: true,
+              name: 'root-content',
+            },
+          ] as any;
+          policy.privilegeRules = [] as any;
+          return policy;
+        };
+        const moderator = (...credentials: ReturnType<typeof cred>[]) =>
+          ({ actorID: 'moderator-1', credentials }) as any;
+
+        const run = async (actorContext: any) => {
+          const repository = { create: vi.fn(entry => entry), save: vi.fn() };
+          const realResolver = new CalloutFormResolverMutations(
+            new AuthorizationService(logger as any),
+            formResponseAccess as any,
+            calloutFormService as any,
+            responseService as any,
+            notificationAdapter as any,
+            new PlatformResourceAuditService(
+              repository as any,
+              { error: vi.fn() } as any
+            ),
+            logger as any
+          );
+          calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+            ...callout,
+            calloutsSet: { authorization: setAuthorization() },
+          });
+          await realResolver.deleteCalloutFormResponse(
+            actorContext,
+            deleteData
+          );
+          expect(responseService.deleteResponse).toHaveBeenCalledWith(
+            'response-1'
+          );
+          return repository.create.mock.calls.map(([row]) => row);
+        };
+
+        it('audits a Platform Support delete under the space consent grant', async () => {
+          const rows = await run(
+            moderator(cred(AuthorizationCredential.PLATFORM_SUPPORT))
+          );
+          expect(rows).toHaveLength(1);
+          expect(rows[0]).toMatchObject({
+            category: PlatformAuditCategory.PLATFORM_RESOURCE,
+            outcome: PlatformAuditOutcome.RESOURCE_DELETED,
+            initiatorUserId: 'moderator-1',
+            initiatorRole: PlatformAuditInitiatorRole.PLATFORM_SUPPORT,
+            details: {
+              resourceKind: 'callout-form-response',
+              resourceId: 'response-1',
+              respondentUserId: 'respondent-1',
+            },
+          });
+        });
+
+        it('audits a Content Full Access delete as Content Full Access', async () => {
+          const rows = await run(
+            moderator(
+              cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)
+            )
+          );
+          expect(rows).toHaveLength(1);
+          expect(rows[0].initiatorRole).toBe(
+            PlatformAuditInitiatorRole.PLATFORM_CONTENT_FULL_ACCESS
+          );
+        });
+
+        it('writes one row, as Content Full Access, for a holder of both roles', async () => {
+          const rows = await run(
+            moderator(
+              cred(AuthorizationCredential.PLATFORM_SUPPORT),
+              cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)
+            )
+          );
+          expect(rows).toHaveLength(1);
+          expect(rows[0].initiatorRole).toBe(
+            PlatformAuditInitiatorRole.PLATFORM_CONTENT_FULL_ACCESS
+          );
+        });
+
+        it('does not audit the space’s own admin', async () => {
+          const rows = await run(
+            moderator(cred(AuthorizationCredential.SPACE_ADMIN, 'space-1'))
+          );
+          expect(rows).toHaveLength(0);
         });
       });
     });

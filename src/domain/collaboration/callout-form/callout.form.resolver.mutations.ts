@@ -6,6 +6,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
@@ -127,7 +128,7 @@ export class CalloutFormResolverMutations {
       !!response.createdBy &&
       !!actorContext.actorID &&
       response.createdBy === actorContext.actorID;
-    let moderatedAsPlatformRole = false;
+    let moderatedAs: AuthorizationCredential | undefined;
     let calloutID: string | undefined;
     if (!isOwner) {
       const callout = await this.calloutFormService.getCalloutForFormOrFail(
@@ -136,15 +137,9 @@ export class CalloutFormResolverMutations {
       );
       this.formResponseAccess.assertCanModerate(actorContext, callout);
       calloutID = callout.id;
-      // 027-platform-role-redesign (A8): the platform branch is read from the
-      // authorization RESULT — does the callouts set's policy grant the
-      // actor PLATFORM_CONTENT_FULL_ACCESS — never re-derived from the
-      // actor's roles. A space admin moderating their own space does not hold
-      // it, so only platform-derived moderation is audited below.
-      moderatedAsPlatformRole = this.authorizationService.isAccessGranted(
+      moderatedAs = this.platformModerator(
         actorContext,
-        callout.calloutsSet?.authorization,
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+        callout.calloutsSet?.authorization
       );
     }
 
@@ -152,10 +147,10 @@ export class CalloutFormResolverMutations {
     // Audit ONLY the platform moderation branch (never an owner withdrawal or
     // ordinary space-admin moderation), after the delete has applied; the
     // writer is fail-open. The row carries ids only — never an answer.
-    if (moderatedAsPlatformRole) {
+    if (moderatedAs) {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
-        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [moderatedAs],
         // Slice B (T076): no legacy reachers remain.
         [],
         {
@@ -169,5 +164,45 @@ export class CalloutFormResolverMutations {
       );
     }
     return { id: deleteData.responseID };
+  }
+
+  /**
+   * The platform role a moderation delete was authorized through, read from
+   * the callouts set's policy RESULT — never re-derived from the actor's
+   * roles — or undefined for the space's own admins, who are not audited.
+   *
+   * 027-platform-role-redesign (A8): Content Full Access carries its own
+   * privilege. Platform Support moderates only through a Space's
+   * `allowPlatformSupportAsAdmin` grant, which carries none (FR-019: content
+   * deletions are recorded) — so ask whether its credential ALONE grants the
+   * moderation CREATE. Content Full Access wins for a holder of both.
+   */
+  private platformModerator(
+    actorContext: ActorContext,
+    calloutsSetAuthorization: IAuthorizationPolicy | undefined
+  ): AuthorizationCredential | undefined {
+    if (
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        calloutsSetAuthorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      )
+    ) {
+      return AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS;
+    }
+    const supportCredentials = (actorContext.credentials ?? []).filter(
+      credential => credential.type === AuthorizationCredential.PLATFORM_SUPPORT
+    );
+    if (
+      supportCredentials.length > 0 &&
+      this.authorizationService.isAccessGrantedForCredentials(
+        supportCredentials,
+        calloutsSetAuthorization,
+        AuthorizationPrivilege.CREATE
+      )
+    ) {
+      return AuthorizationCredential.PLATFORM_SUPPORT;
+    }
+    return undefined;
   }
 }
