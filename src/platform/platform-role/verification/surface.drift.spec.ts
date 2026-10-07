@@ -100,18 +100,12 @@ function scanFile(repoRelativePath: string): FileScan {
   return { hasGateCall, scannedPrivileges, content };
 }
 
-/** Every (non-placeholder) `file` value declared anywhere in the census,
- * mapped to every entry declared at that file — across all 22 rows. A
- * placeholder (A17's two `(T078, Slice B — …)` strings) is never a real
- * path and is excluded; it can never be scanned in from disk, so excluding
- * it here only avoids a confusing `fs.readFileSync` attempt. */
+/** Every `file` value declared anywhere in the census, mapped to every
+ * entry declared at that file — across all 22 rows. */
 function censusEntriesByFile(): ReadonlyMap<string, readonly SurfaceRef[]> {
   const byFile = new Map<string, SurfaceRef[]>();
   for (const surfaces of Object.values(A_ROW_SURFACES)) {
     for (const surface of surfaces) {
-      if (surface.file.startsWith('(')) {
-        continue; // not-yet-created (Slice B) surface — see a.row.surfaces.ts
-      }
       const existing = byFile.get(surface.file) ?? [];
       existing.push(surface);
       byFile.set(surface.file, existing);
