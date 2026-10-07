@@ -4,6 +4,7 @@ import {
   buildFakeTokenSet,
   createOidcHarness,
   extractCookie,
+  KRATOS_SESSION_COOKIE_NAME,
   type OidcHarness,
 } from './oidc-test-harness';
 
@@ -85,6 +86,13 @@ describe('GET /api/auth/oidc/logout + /api/auth/oidc/id-token-hint (FR-017c + FR
     );
     expect(clearing).not.toBeNull();
     expect(clearing!.toLowerCase()).toMatch(/max-age=0\b/);
+
+    // workspace#082 V2 [AC3.2] — /logout is untouched by 082: it clears alkemio_session and
+    // delegates Hydra's own session to the end-session endpoint. The app-mode clear must not
+    // leak here.
+    expect(
+      extractCookie(res.header['set-cookie'], KRATOS_SESSION_COOKIE_NAME)
+    ).toBeNull();
   });
 
   // FR-017d idempotency pin (T074) — covers T071's idempotent-logout fix

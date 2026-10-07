@@ -656,6 +656,21 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(res.statusCode).toBe(302);
+    // workspace#082 U0 [AC1.1/FR-001] — the app-mode QUERY leg clears the
+    // Kratos SSO cookie, with the full {name, domain, path} triple and
+    // Max-Age=0. server#6315: a mismatch on any one of the three stores a
+    // SECOND cookie and leaves the original alive. This is the ONE assertion in
+    // 082 that is RED before the production edit.
+    const clearedOnLogin = res.cookies.find(
+      (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+    );
+    expect(clearedOnLogin).toBeDefined();
+    expect(clearedOnLogin.value).toBe('');
+    expect(clearedOnLogin.opts).toEqual({
+      domain: COOKIE_CONFIG.domain,
+      path: '/',
+      maxAge: 0,
+    });
   });
 
   // SEC-079-02 — app mode establishes no session in THIS jar and clears the
@@ -697,6 +712,12 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBeUndefined();
     expect(res.statusCode).toBe(302);
+    // workspace#082 U2 [FR-001/FR-002] — this leg must emit no Kratos clear.
+    expect(
+      res.cookies.some(
+        (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+      )
+    ).toBe(false);
   });
 
   it('refuses app mode for a same-origin link click, which carries a Referer', async () => {
@@ -741,6 +762,12 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     expect(payload.app_challenge).toBeUndefined();
     expect(attempted.res.statusCode).toBe(web.res.statusCode);
     expect(attempted.res.redirectedTo).toBe(web.res.redirectedTo);
+    // workspace#082 U2 [FR-001/FR-002] — this leg must emit no Kratos clear.
+    expect(
+      attempted.res.cookies.some(
+        (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+      )
+    ).toBe(false);
   });
 
   it('does NOT enter app mode when no Redis client is wired', async () => {
@@ -756,6 +783,12 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     expect(payload.app_challenge).toBeUndefined();
     expect(attempted.res.statusCode).toBe(web.res.statusCode);
     expect(attempted.res.redirectedTo).toBe(web.res.redirectedTo);
+    // workspace#082 U2 [FR-001/FR-002] — this leg must emit no Kratos clear.
+    expect(
+      attempted.res.cookies.some(
+        (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+      )
+    ).toBe(false);
   });
 
   it.each([
@@ -771,6 +804,12 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBeUndefined();
     expect(res.statusCode).toBe(302);
+    // workspace#082 U2 [FR-001/FR-002] — this leg must emit no Kratos clear.
+    expect(
+      res.cookies.some(
+        (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+      )
+    ).toBe(false);
   });
 
   // Kratos' registration.after.oidc re-enters a BARE /login with no query
@@ -796,6 +835,12 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(payload.returnTo).toBe('/spaces/alkemio');
+    // workspace#082 U1 [FR-001/FR-002] — this leg must emit no Kratos clear.
+    expect(
+      res.cookies.some(
+        (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+      )
+    ).toBe(false);
   });
 
   it('carries nothing forward from a query-less re-entry in web mode', async () => {
@@ -839,6 +884,12 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBeUndefined();
     expect(payload.returnTo).toBe('/x');
+    // workspace#082 U2 [FR-001/FR-002] — this leg must emit no Kratos clear.
+    expect(
+      res.cookies.some(
+        (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+      )
+    ).toBe(false);
   });
 });
 

@@ -315,12 +315,16 @@ export class OidcController {
       //
       // RESIDUAL, owed to alkem-io/server#6545: `rel="noreferrer"` or a
       // `Referrer-Policy: no-referrer` on the attacker's own page strips it, so
-      // this raises the cost of the attack rather than closing it. It is a
-      // stopgap for a flow whose real fix is app attestation or a verified
-      // callback — the latter ruled out by operator decision, because a
-      // device-wide App Links claim is not acceptable with this many alkem.io
-      // links. Do NOT tighten this by guessing at another header: measure it on
-      // a device first, which is the step whose absence caused the original bug.
+      // this raises the cost of the attack rather than closing it. The
+      // zero-interaction form of SEC-079-01 is closed by workspace#082's
+      // app-mode Kratos session clear on the query leg of `/login` above.
+      // Residual class and current disposition:
+      // specs/082-app-handoff-scheme-squat/spec.md §6 (owner) -- do not restate
+      // them here. A verified callback stays ruled out by operator decision,
+      // because a device-wide App Links claim is not acceptable with this many
+      // alkem.io links. Do NOT tighten this by guessing at another header:
+      // measure it on a device first, which is the step whose absence caused
+      // the original bug.
       (typeof req.headers.referer !== 'string' ||
         req.headers.referer.length === 0)
     ) {
@@ -328,6 +332,14 @@ export class OidcController {
       // an abandoned app flow in the same jar cannot bleed into it. The
       // query-less branch above is the leg where that guarantee does not hold.
       appChallenge = appChallengeRaw;
+
+      // workspace#082 FR-001 (server#6545) — an app-initiated authorize must not be
+      // able to spend an ambient Kratos session. Mechanism, provenance and residuals:
+      // specs/082-app-handoff-scheme-squat/spec.md §1-§2.
+      //
+      // NOT on the query-less leg above: Kratos returns to a BARE /login after social
+      // registration, and clearing there would destroy the session it just created (FR-002).
+      this.clearKratosSessionCookie(res);
     }
 
     // App mode is the one decision in this flow with no observable trace: both
@@ -564,11 +576,7 @@ export class OidcController {
       // any one of the three does not fail, it stores a SECOND cookie and
       // leaves the original alive — which is how a session survived sign-out
       // in every environment that configures a domain.
-      res.cookie(this.kratosSessionCookieName, '', {
-        domain: this.sessionCookieDomain,
-        path: '/',
-        maxAge: 0,
-      });
+      this.clearKratosSessionCookie(res);
       this.clearPreAuthCookie(res);
 
       let code: string;
@@ -597,8 +605,11 @@ export class OidcController {
       // by whoever started the flow. So the verifier binding defeats
       // INTERCEPTION of a legitimate flow, but not a flow an attacker-installed
       // app initiates itself against a live Kratos session in the shared Chrome
-      // jar. Owed to spec §9 as a named residual under the existing operator /
-      // security-owner gate — NOT yet recorded there. The narrowing, if it is
+      // jar. workspace#082 closes the zero-interaction form of this by
+      // clearing the Kratos session on the app-mode query leg of `/login`.
+      // Residual class and current disposition:
+      // specs/082-app-handoff-scheme-squat/spec.md §6 (owner) and ADR 0020's
+      // 2026-10-07 amendment -- do not restate them here. The narrowing, if it is
       // ever taken, is an Android-only verified App Link; the iOS 15 target
       // cannot use one, which is why the scheme stays.
       res.redirect(302, `${appMode.scheme}:/auth/callback?code=${code}`);
@@ -796,6 +807,20 @@ export class OidcController {
       request_id: ctx.correlationId,
       granted_scope: bundle.scope,
       rp_id: ctx.rpId,
+    });
+  }
+
+  /**
+   * workspace#082 FR-001 (server#6545) — ONE owner of the Kratos SSO clear, shared by the
+   * app-mode `/login` query leg and the app-mode `/callback` exit. server#6315: a Set-Cookie
+   * that mismatches name, domain OR path does not fail — it stores a SECOND cookie and leaves
+   * the original alive, so one shape is the whole point.
+   */
+  private clearKratosSessionCookie(res: Response): void {
+    res.cookie(this.kratosSessionCookieName, '', {
+      domain: this.sessionCookieDomain,
+      path: '/',
+      maxAge: 0,
     });
   }
 
