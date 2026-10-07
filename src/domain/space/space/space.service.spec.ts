@@ -95,6 +95,39 @@ describe('SpaceService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('createSpace (from a template)', () => {
+    it('grants the FORM capability when creating the collaboration', async () => {
+      const deps = service as any;
+      vi.spyOn(Space, 'create').mockImplementation(
+        (input: any) => Object.assign(new Space(), input) as any
+      );
+      (spaceRepository as any).manager = {
+        transaction: vi.fn().mockResolvedValue(undefined),
+      };
+      deps.spaceDefaultsService.createCollaborationInput.mockImplementation(
+        async (data: any) => data
+      );
+      const stop = new Error('stop after createCollaboration');
+      deps.collaborationService.createCollaboration.mockRejectedValue(stop);
+
+      await expect(
+        deps.createSpace(
+          {
+            level: SpaceLevel.L1,
+            about: { profileData: { displayName: 'Sub' } },
+            collaborationData: { calloutsSetData: {} },
+          },
+          { settings: {}, about: {} },
+          { actorID: 'creator-1' }
+        )
+      ).rejects.toBe(stop);
+
+      expect(
+        deps.collaborationService.createCollaboration.mock.lastCall?.[3]
+      ).toEqual({ allowFormFraming: true });
+    });
+  });
+
   describe('adminUpdateSpaceVisibility + the protected nameID section (T078)', () => {
     it('should invalidate URL cache when nameID is updated for L0 space', async () => {
       // Arrange

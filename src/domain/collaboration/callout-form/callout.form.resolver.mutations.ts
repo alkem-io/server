@@ -3,12 +3,15 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
+import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -17,6 +20,7 @@ import { CalloutFormResponseService } from '../callout-form-response/callout.for
 import { DeleteCalloutFormResponseInput } from '../callout-form-response/dto/callout.form.response.dto.delete';
 import { DeletedCalloutFormResponse } from '../callout-form-response/dto/callout.form.response.dto.deleted';
 import { SubmitCalloutFormResponseInput } from '../callout-form-response/dto/callout.form.response.dto.submit';
+import { CalloutFormErrorCode } from './callout.form.error.codes';
 import { ICalloutForm } from './callout.form.interface';
 import { CALLOUT_FORM_OWNER_RELATIONS } from './callout.form.owner.relations';
 import { FormResponseAccessService } from './callout.form.response.access.service';
@@ -32,6 +36,7 @@ export class CalloutFormResolverMutations {
     private calloutFormService: CalloutFormService,
     private calloutFormResponseService: CalloutFormResponseService,
     private notificationAdapterSpace: NotificationSpaceAdapter,
+    private contributionReporter: ContributionReporterService,
     private platformResourceAuditService: PlatformResourceAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -39,7 +44,7 @@ export class CalloutFormResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutForm, {
     description:
-      'Update the definition and/or the settings of a Form. Requires the privilege to create callouts on the collection the Post is in (space admin), the same as creating a Form. Serialized against submissions.',
+      'Update the definition and/or the settings of a Form. Requires the privilege to create callouts on the collection the Post is in (space admin), the same as creating a Form; for a Form in a standalone callout template, the privilege to update that template callout instead. Serialized against submissions.',
   })
   async updateCalloutForm(
     @CurrentActor() actorContext: ActorContext,
@@ -49,7 +54,19 @@ export class CalloutFormResolverMutations {
       formData.formID,
       CALLOUT_FORM_OWNER_RELATIONS
     );
-    this.formResponseAccess.assertCanModerate(actorContext, callout);
+    if (callout.isTemplate && !callout.calloutsSet) {
+      // A standalone callout template has no callouts set, so there is no
+      // moderation authority to check: its Form is a definition edited by
+      // whoever may update the template callout.
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update Form on callout template: ${callout.id}`
+      );
+    } else {
+      this.formResponseAccess.assertCanModerate(actorContext, callout);
+    }
 
     return this.calloutFormService.updateCalloutForm(formData);
   }
@@ -57,7 +74,7 @@ export class CalloutFormResolverMutations {
   @UseGuards(GraphqlGuard)
   @Mutation(() => ICalloutFormResponse, {
     description:
-      'Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form rejects the submission while the member holds any response. acknowledgedVisibility is the audience the respondent was shown.',
+      'Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form rejects the submission while the member holds any response; a Form that is part of a template never accepts responses. acknowledgedVisibility is the audience the respondent was shown.',
   })
   async submitCalloutFormResponse(
     @CurrentActor() actorContext: ActorContext,
@@ -65,7 +82,11 @@ export class CalloutFormResolverMutations {
   ): Promise<ICalloutFormResponse> {
     const callout = await this.calloutFormService.getCalloutForFormOrFail(
       responseData.formID,
-      CALLOUT_FORM_OWNER_RELATIONS
+      // The Form row itself only for its title, which names the analytics event.
+      {
+        ...CALLOUT_FORM_OWNER_RELATIONS,
+        framing: { profile: true, form: true },
+      }
     );
     this.authorizationService.grantAccessOrFail(
       actorContext,
@@ -73,6 +94,18 @@ export class CalloutFormResolverMutations {
       AuthorizationPrivilege.CONTRIBUTE,
       `respond to Form on callout: ${callout.id}`
     );
+    // A template's Form (a callout template or a Post inside a space
+    // template) is a definition: it never collects responses. The owning
+    // collaboration is the authoritative owner; the callout's own flag can
+    // lag it (callouts added to a template set outside createCollaboration,
+    // legacy rows).
+    if (callout.isTemplate || callout.calloutsSet?.collaboration?.isTemplate) {
+      throw new ValidationException(
+        'A Form in a template does not accept responses',
+        LogContext.COLLABORATION,
+        { code: CalloutFormErrorCode.FORM_TEMPLATE_NOT_RESPONDABLE }
+      );
+    }
 
     const { response, visibility } =
       await this.calloutFormResponseService.submitResponse(
@@ -107,6 +140,22 @@ export class CalloutFormResolverMutations {
         );
       });
 
+    // Kibana (server#6585): metadata only — the response id, the Form title
+    // (or the Post's nameID) and the level-zero space; never an answer, a
+    // prompt or an option label. The reporter never throws.
+    const levelZeroSpaceID =
+      callout.calloutsSet?.collaboration?.space?.levelZeroSpaceID;
+    if (levelZeroSpaceID) {
+      this.contributionReporter.formResponseSubmitted(
+        {
+          id: response.id,
+          name: callout.framing?.form?.title || callout.nameID,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    }
+
     return response;
   }
 
@@ -127,7 +176,7 @@ export class CalloutFormResolverMutations {
       !!response.createdBy &&
       !!actorContext.actorID &&
       response.createdBy === actorContext.actorID;
-    let moderatedAsPlatformRole = false;
+    let moderatedAs: AuthorizationCredential | undefined;
     let calloutID: string | undefined;
     if (!isOwner) {
       const callout = await this.calloutFormService.getCalloutForFormOrFail(
@@ -136,15 +185,9 @@ export class CalloutFormResolverMutations {
       );
       this.formResponseAccess.assertCanModerate(actorContext, callout);
       calloutID = callout.id;
-      // 027-platform-role-redesign (A8): the platform branch is read from the
-      // authorization RESULT — does the callouts set's policy grant the
-      // actor PLATFORM_CONTENT_FULL_ACCESS — never re-derived from the
-      // actor's roles. A space admin moderating their own space does not hold
-      // it, so only platform-derived moderation is audited below.
-      moderatedAsPlatformRole = this.authorizationService.isAccessGranted(
+      moderatedAs = this.platformModerator(
         actorContext,
-        callout.calloutsSet?.authorization,
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+        callout.calloutsSet?.authorization
       );
     }
 
@@ -152,10 +195,10 @@ export class CalloutFormResolverMutations {
     // Audit ONLY the platform moderation branch (never an owner withdrawal or
     // ordinary space-admin moderation), after the delete has applied; the
     // writer is fail-open. The row carries ids only — never an answer.
-    if (moderatedAsPlatformRole) {
+    if (moderatedAs) {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
-        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [moderatedAs],
         // Slice B (T076): no legacy reachers remain.
         [],
         {
@@ -169,5 +212,45 @@ export class CalloutFormResolverMutations {
       );
     }
     return { id: deleteData.responseID };
+  }
+
+  /**
+   * The platform role a moderation delete was authorized through, read from
+   * the callouts set's policy RESULT — never re-derived from the actor's
+   * roles — or undefined for the space's own admins, who are not audited.
+   *
+   * 027-platform-role-redesign (A8): Content Full Access carries its own
+   * privilege. Platform Support moderates only through a Space's
+   * `allowPlatformSupportAsAdmin` grant, which carries none (FR-019: content
+   * deletions are recorded) — so ask whether its credential ALONE grants the
+   * moderation CREATE. Content Full Access wins for a holder of both.
+   */
+  private platformModerator(
+    actorContext: ActorContext,
+    calloutsSetAuthorization: IAuthorizationPolicy | undefined
+  ): AuthorizationCredential | undefined {
+    if (
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        calloutsSetAuthorization,
+        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
+      )
+    ) {
+      return AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS;
+    }
+    const supportCredentials = (actorContext.credentials ?? []).filter(
+      credential => credential.type === AuthorizationCredential.PLATFORM_SUPPORT
+    );
+    if (
+      supportCredentials.length > 0 &&
+      this.authorizationService.isAccessGrantedForCredentials(
+        supportCredentials,
+        calloutsSetAuthorization,
+        AuthorizationPrivilege.CREATE
+      )
+    ) {
+      return AuthorizationCredential.PLATFORM_SUPPORT;
+    }
+    return undefined;
   }
 }

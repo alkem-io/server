@@ -21,9 +21,12 @@ export const getDraftCalloutPlatformReadCredentials =
  * platform credential of a callout rule lives in one place.
  *
  * 027-platform-role-redesign (T038, A8; legacy reachers dropped at Slice B,
- * T076): Platform Content Full Access alone.
+ * T076): Platform Content Full Access, and Platform Resource Admin (operator
+ * amendment 2026-10-07). The order is the audit attribution order: a holder
+ * of both is recorded as Content Full Access.
  */
 export const getCalloutPublisherPlatformCredentialTypes =
   (): AuthorizationCredential[] => [
     AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+    AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
   ];

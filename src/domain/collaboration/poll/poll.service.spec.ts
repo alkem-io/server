@@ -920,3 +920,101 @@ describe('PollService — updateStatus (T093)', () => {
     expect(mockPollRepository.save).toHaveBeenCalled();
   });
 });
+
+describe('PollService — getCalloutContextForPoll', () => {
+  let service: PollService;
+  const getRawOne = vi.fn();
+  const queryBuilder = {
+    innerJoin: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    addSelect: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    getRawOne,
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        PollService,
+        {
+          provide: getRepositoryToken(Poll),
+          useValue: { createQueryBuilder: vi.fn(() => queryBuilder) },
+        },
+        { provide: getRepositoryToken(PollOption), useValue: {} },
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    service = module.get(PollService);
+  });
+
+  it('returns the template flag for a poll on a template callout, even without a creator', async () => {
+    getRawOne.mockResolvedValue({
+      calloutID: 'template-callout',
+      createdBy: null,
+      isTemplate: true,
+    });
+
+    await expect(service.getCalloutContextForPoll('poll-1')).resolves.toEqual({
+      calloutID: 'template-callout',
+      createdBy: null,
+      isTemplate: true,
+    });
+    expect(queryBuilder.addSelect).toHaveBeenCalledWith(
+      'callout."isTemplate"',
+      'isTemplate'
+    );
+  });
+
+  it('treats a poll on a callout inside a template collaboration as a template poll even when the callout flag is false', async () => {
+    getRawOne.mockResolvedValue({
+      calloutID: 'callout-in-template',
+      createdBy: null,
+      isTemplate: false,
+      collaborationIsTemplate: true,
+    });
+
+    await expect(service.getCalloutContextForPoll('poll-1')).resolves.toEqual(
+      expect.objectContaining({
+        calloutID: 'callout-in-template',
+        isTemplate: true,
+      })
+    );
+    expect(queryBuilder.leftJoin).toHaveBeenCalledWith(
+      'collaboration',
+      'collab',
+      'collab."calloutsSetId" = callout."calloutsSetId"'
+    );
+    expect(queryBuilder.addSelect).toHaveBeenCalledWith(
+      'collab."isTemplate"',
+      'collaborationIsTemplate'
+    );
+  });
+
+  it('keeps a poll on a live callout in a live collaboration non-template', async () => {
+    getRawOne.mockResolvedValue({
+      calloutID: 'callout-1',
+      createdBy: 'user-1',
+      isTemplate: false,
+      collaborationIsTemplate: false,
+    });
+
+    await expect(service.getCalloutContextForPoll('poll-1')).resolves.toEqual(
+      expect.objectContaining({ calloutID: 'callout-1', isTemplate: false })
+    );
+  });
+
+  it('still requires a creator for a poll on a live callout', async () => {
+    getRawOne.mockResolvedValue({
+      calloutID: 'callout-1',
+      createdBy: null,
+      isTemplate: false,
+    });
+
+    await expect(service.getCalloutContextForPoll('poll-1')).rejects.toThrow(
+      'Could not resolve callout context for poll'
+    );
+  });
+});

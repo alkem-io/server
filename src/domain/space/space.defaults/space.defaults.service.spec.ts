@@ -1,4 +1,6 @@
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { SpaceLevel } from '@common/enums/space.level';
+import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { TemplateService } from '@domain/template/template/template.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
@@ -393,6 +395,70 @@ describe('SpaceDefaultsService', () => {
 
       // Assert
       expect(result.calloutsSetData.calloutsData).toEqual([]);
+    });
+
+    it('refuses a FORM callout sent with the create request, before reading the template', async () => {
+      const collaborationData = {
+        calloutsSetData: {
+          calloutsData: [{ framing: { type: CalloutFramingType.FORM } }],
+        },
+        addCallouts: true,
+      } as unknown as Parameters<
+        SpaceDefaultsService['createCollaborationInput']
+      >[0];
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockReset();
+
+      await expect(
+        service.createCollaborationInput(collaborationData, {
+          id: 'template-1',
+        } as unknown as Parameters<
+          SpaceDefaultsService['createCollaborationInput']
+        >[1])
+      ).rejects.toMatchObject({
+        details: { code: CalloutFormErrorCode.FORM_FRAMING_NOT_ALLOWED },
+      });
+      expect(
+        inputCreatorService.buildCreateCollaborationInputFromCollaboration
+      ).not.toHaveBeenCalled();
+    });
+
+    it('keeps a FORM callout that comes from the template', async () => {
+      const collaborationData = {
+        innovationFlowData: {
+          states: [{ displayName: 's1' }],
+          settings: { maximumNumberOfStates: 8, minimumNumberOfStates: 1 },
+        },
+        calloutsSetData: { calloutsData: [] },
+        addCallouts: true,
+      } as unknown as Parameters<
+        SpaceDefaultsService['createCollaborationInput']
+      >[0];
+      const formCallout = { framing: { type: CalloutFramingType.FORM } };
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue(
+        {
+          innovationFlowData: { states: [], settings: {} },
+          calloutsSetData: { calloutsData: [formCallout] },
+        } as unknown as Awaited<
+          ReturnType<
+            InputCreatorService['buildCreateCollaborationInputFromCollaboration']
+          >
+        >
+      );
+      calloutsSetService.moveCalloutsToDefaultFlowState.mockReset();
+
+      const result = await service.createCollaborationInput(collaborationData, {
+        id: 'template-1',
+        collaboration: {
+          id: 'collab-1',
+          innovationFlow: {
+            settings: { maximumNumberOfStates: 8, minimumNumberOfStates: 1 },
+          },
+        },
+      } as unknown as Parameters<
+        SpaceDefaultsService['createCollaborationInput']
+      >[1]);
+
+      expect(result.calloutsSetData.calloutsData).toContain(formCallout);
     });
 
     it('should call moveCalloutsToDefaultFlowState with valid flow state names', async () => {

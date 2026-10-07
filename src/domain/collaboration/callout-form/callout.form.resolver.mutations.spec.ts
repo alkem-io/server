@@ -1,13 +1,17 @@
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutFormResponseVisibility } from '@common/enums/callout.form.response.visibility';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { PlatformAuditCategory } from '@domain/community/user-email-change/enums/platform.audit.category';
 import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
+import { CalloutFormErrorCode } from './callout.form.error.codes';
 import { CALLOUT_FORM_OWNER_RELATIONS } from './callout.form.owner.relations';
 import { CalloutFormResolverMutations } from './callout.form.resolver.mutations';
 
@@ -37,6 +41,7 @@ describe('CalloutFormResolverMutations', () => {
   const notificationAdapter = {
     spaceCollaborationCalloutFormResponseSubmitted: vi.fn(),
   };
+  const contributionReporter = { formResponseSubmitted: vi.fn() };
   const platformResourceAuditService = { recordEventForActor: vi.fn() };
   const logger = { error: vi.fn() };
   let resolver: CalloutFormResolverMutations;
@@ -44,8 +49,15 @@ describe('CalloutFormResolverMutations', () => {
   const actor = { actorID: 'actor-1', credentials: [] } as any;
   const callout = {
     id: 'callout-1',
+    nameID: 'q4-planning-post',
     authorization: { id: 'callout-auth' },
     settings: { visibility: CalloutVisibility.PUBLISHED },
+    framing: { form: { title: 'Q4 planning' } },
+    calloutsSet: {
+      collaboration: {
+        space: { id: 'subspace-1', levelZeroSpaceID: 'l0-space' },
+      },
+    },
   } as any;
 
   beforeEach(() => {
@@ -60,6 +72,7 @@ describe('CalloutFormResolverMutations', () => {
       calloutFormService as any,
       responseService as any,
       notificationAdapter as any,
+      contributionReporter as any,
       platformResourceAuditService as any,
       logger as any
     );
@@ -94,6 +107,67 @@ describe('CalloutFormResolverMutations', () => {
     });
   });
 
+  describe('updateCalloutForm on a template', () => {
+    const formData = { formID: 'form-1', settings: {} } as any;
+    const standaloneTemplate = {
+      ...callout,
+      isTemplate: true,
+      calloutsSet: null,
+    };
+
+    it('authorizes a standalone callout template by UPDATE on the template callout, not by moderation', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue(
+        standaloneTemplate
+      );
+      calloutFormService.updateCalloutForm.mockResolvedValue({ id: 'form-1' });
+
+      expect(await resolver.updateCalloutForm(actor, formData)).toEqual({
+        id: 'form-1',
+      });
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actor,
+        standaloneTemplate.authorization,
+        AuthorizationPrivilege.UPDATE,
+        expect.any(String)
+      );
+      expect(formResponseAccess.assertCanModerate).not.toHaveBeenCalled();
+    });
+
+    it('is forbidden without UPDATE on the template and never reaches the service', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue(
+        standaloneTemplate
+      );
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw forbidden();
+      });
+
+      await expect(
+        resolver.updateCalloutForm(actor, formData)
+      ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+      expect(calloutFormService.updateCalloutForm).not.toHaveBeenCalled();
+    });
+
+    it('keeps the callouts-set moderation path for a Form inside a template content space', async () => {
+      const contentSpaceTemplate = {
+        ...callout,
+        isTemplate: true,
+        calloutsSet: { type: 'collaboration', authorization: { id: 'cs' } },
+      };
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue(
+        contentSpaceTemplate
+      );
+      calloutFormService.updateCalloutForm.mockResolvedValue({ id: 'form-1' });
+
+      await resolver.updateCalloutForm(actor, formData);
+
+      expect(formResponseAccess.assertCanModerate).toHaveBeenCalledWith(
+        actor,
+        contentSpaceTemplate
+      );
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+    });
+  });
+
   describe('submitCalloutFormResponse', () => {
     const responseData = {
       formID: 'form-1',
@@ -107,6 +181,57 @@ describe('CalloutFormResolverMutations', () => {
       },
       visibility: CalloutFormResponseVisibility.ADMINS,
     };
+
+    it('rejects a response to a template Form before storing anything, even when CONTRIBUTE is granted', async () => {
+      // A Form inside a template content space sits in a COLLABORATION
+      // callouts set and inherits the template's policy, so CONTRIBUTE can be
+      // granted; it is still a definition, never a live Form.
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        isTemplate: true,
+        calloutsSet: { type: 'collaboration', collaboration: {} },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await expect(
+        resolver.submitCalloutFormResponse(actor, responseData)
+      ).rejects.toMatchObject({
+        details: { code: CalloutFormErrorCode.FORM_TEMPLATE_NOT_RESPONDABLE },
+      });
+      expect(responseService.submitResponse).not.toHaveBeenCalled();
+      expect(
+        notificationAdapter.spaceCollaborationCalloutFormResponseSubmitted
+      ).not.toHaveBeenCalled();
+      expect(contributionReporter.formResponseSubmitted).not.toHaveBeenCalled();
+    });
+
+    it('rejects a response when the Post carries no template flag but its collaboration is a template (legacy or directly created rows)', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        isTemplate: false,
+        calloutsSet: { collaboration: { isTemplate: true } },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await expect(
+        resolver.submitCalloutFormResponse(actor, responseData)
+      ).rejects.toMatchObject({
+        details: { code: CalloutFormErrorCode.FORM_TEMPLATE_NOT_RESPONDABLE },
+      });
+      expect(responseService.submitResponse).not.toHaveBeenCalled();
+    });
+
+    it('still accepts a response on a live Post (neither the Post nor its collaboration is a template)', async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        isTemplate: false,
+        calloutsSet: { collaboration: { isTemplate: false, space: {} } },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await resolver.submitCalloutFormResponse(actor, responseData);
+      expect(responseService.submitResponse).toHaveBeenCalled();
+    });
 
     it('requires CONTRIBUTE on the Post', async () => {
       authorizationService.grantAccessOrFail.mockImplementation(() => {
@@ -201,6 +326,61 @@ describe('CalloutFormResolverMutations', () => {
       expect(
         notificationAdapter.spaceCollaborationCalloutFormResponseSubmitted
       ).not.toHaveBeenCalled();
+      expect(contributionReporter.formResponseSubmitted).not.toHaveBeenCalled();
+    });
+
+    it('loads the Form row with the owner relations, for its title', async () => {
+      responseService.submitResponse.mockResolvedValue(stored);
+      await resolver.submitCalloutFormResponse(actor, responseData);
+      expect(calloutFormService.getCalloutForFormOrFail).toHaveBeenCalledWith(
+        'form-1',
+        {
+          ...CALLOUT_FORM_OWNER_RELATIONS,
+          framing: { profile: true, form: true },
+        }
+      );
+    });
+
+    it('reports one FORM_RESPONSE_SUBMITTED per stored response: response id, Form title, level-zero space, submitter — no content', async () => {
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await resolver.submitCalloutFormResponse(actor, responseData);
+
+      expect(contributionReporter.formResponseSubmitted).toHaveBeenCalledTimes(
+        1
+      );
+      expect(contributionReporter.formResponseSubmitted).toHaveBeenCalledWith(
+        { id: 'response-1', name: 'Q4 planning', space: 'l0-space' },
+        actor
+      );
+      expect(
+        JSON.stringify(contributionReporter.formResponseSubmitted.mock.calls)
+      ).not.toContain('SECRET-ANSWER');
+    });
+
+    it("names the event after the Post's nameID when the Form has no title", async () => {
+      calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+        ...callout,
+        framing: { form: { title: null } },
+      });
+      responseService.submitResponse.mockResolvedValue(stored);
+
+      await resolver.submitCalloutFormResponse(actor, responseData);
+
+      expect(contributionReporter.formResponseSubmitted).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'q4-planning-post' }),
+        actor
+      );
+    });
+
+    it('does not report when CONTRIBUTE is denied', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw forbidden();
+      });
+      await expect(
+        resolver.submitCalloutFormResponse(actor, responseData)
+      ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+      expect(contributionReporter.formResponseSubmitted).not.toHaveBeenCalled();
     });
   });
 
@@ -371,6 +551,7 @@ describe('CalloutFormResolverMutations', () => {
             calloutFormService as any,
             responseService as any,
             notificationAdapter as any,
+            contributionReporter as any,
             realAudit,
             logger as any
           );
@@ -423,6 +604,136 @@ describe('CalloutFormResolverMutations', () => {
             'response-1'
           );
           expect(auditLogger.error).toHaveBeenCalled();
+        });
+      });
+
+      // FR-019 (content deletions are recorded): Platform Support moderates
+      // only through a Space's `allowPlatformSupportAsAdmin` grant, which
+      // carries no privilege of its own — so its deletes must be recognised
+      // from the policy, like Content Full Access's are.
+      describe('with the real authorization service — who moderated', () => {
+        const cred = (type: string, resourceID = '') => ({ type, resourceID });
+        const moderation = [
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ];
+        // The callouts set of a Space that allows platform support as admin:
+        // the space-admin rule, the consent-gated platform-support rule, and
+        // the root content rule cascading Content Full Access.
+        const setAuthorization = () => {
+          const policy = new AuthorizationPolicy(
+            AuthorizationPolicyType.CALLOUTS_SET
+          );
+          policy.credentialRules = [
+            {
+              grantedPrivileges: moderation,
+              criterias: [cred(AuthorizationCredential.SPACE_ADMIN, 'space-1')],
+              cascade: true,
+              name: 'space-admin',
+            },
+            {
+              grantedPrivileges: [...moderation, AuthorizationPrivilege.GRANT],
+              criterias: [cred(AuthorizationCredential.PLATFORM_SUPPORT)],
+              cascade: true,
+              name: 'platform-support-as-admin',
+            },
+            {
+              grantedPrivileges: [
+                ...moderation,
+                AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+              ],
+              criterias: [
+                cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS),
+              ],
+              cascade: true,
+              name: 'root-content',
+            },
+          ] as any;
+          policy.privilegeRules = [] as any;
+          return policy;
+        };
+        const moderator = (...credentials: ReturnType<typeof cred>[]) =>
+          ({ actorID: 'moderator-1', credentials }) as any;
+
+        const run = async (actorContext: any) => {
+          const repository = { create: vi.fn(entry => entry), save: vi.fn() };
+          const realResolver = new CalloutFormResolverMutations(
+            new AuthorizationService(logger as any),
+            formResponseAccess as any,
+            calloutFormService as any,
+            responseService as any,
+            notificationAdapter as any,
+            contributionReporter as any,
+            new PlatformResourceAuditService(
+              repository as any,
+              { error: vi.fn() } as any
+            ),
+            logger as any
+          );
+          calloutFormService.getCalloutForFormOrFail.mockResolvedValue({
+            ...callout,
+            calloutsSet: { authorization: setAuthorization() },
+          });
+          await realResolver.deleteCalloutFormResponse(
+            actorContext,
+            deleteData
+          );
+          expect(responseService.deleteResponse).toHaveBeenCalledWith(
+            'response-1'
+          );
+          return repository.create.mock.calls.map(([row]) => row);
+        };
+
+        it('audits a Platform Support delete under the space consent grant', async () => {
+          const rows = await run(
+            moderator(cred(AuthorizationCredential.PLATFORM_SUPPORT))
+          );
+          expect(rows).toHaveLength(1);
+          expect(rows[0]).toMatchObject({
+            category: PlatformAuditCategory.PLATFORM_RESOURCE,
+            outcome: PlatformAuditOutcome.RESOURCE_DELETED,
+            initiatorUserId: 'moderator-1',
+            initiatorRole: PlatformAuditInitiatorRole.PLATFORM_SUPPORT,
+            details: {
+              resourceKind: 'callout-form-response',
+              resourceId: 'response-1',
+              respondentUserId: 'respondent-1',
+            },
+          });
+        });
+
+        it('audits a Content Full Access delete as Content Full Access', async () => {
+          const rows = await run(
+            moderator(
+              cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)
+            )
+          );
+          expect(rows).toHaveLength(1);
+          expect(rows[0].initiatorRole).toBe(
+            PlatformAuditInitiatorRole.PLATFORM_CONTENT_FULL_ACCESS
+          );
+        });
+
+        it('writes one row, as Content Full Access, for a holder of both roles', async () => {
+          const rows = await run(
+            moderator(
+              cred(AuthorizationCredential.PLATFORM_SUPPORT),
+              cred(AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS)
+            )
+          );
+          expect(rows).toHaveLength(1);
+          expect(rows[0].initiatorRole).toBe(
+            PlatformAuditInitiatorRole.PLATFORM_CONTENT_FULL_ACCESS
+          );
+        });
+
+        it('does not audit the space’s own admin', async () => {
+          const rows = await run(
+            moderator(cred(AuthorizationCredential.SPACE_ADMIN, 'space-1'))
+          );
+          expect(rows).toHaveLength(0);
         });
       });
     });
