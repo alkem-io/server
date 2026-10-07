@@ -177,8 +177,9 @@ export class ConversionService {
     spaceL1.storageAggregator.parentStorageAggregator =
       storageAggregatorAccount;
 
-    // Some fields on a Space L0 do not exist on Space L1 so we need to create them
-    spaceL1.license = this.spaceService.createLicenseForSpaceL0();
+    // A Space L0 has a templates manager, a Space L1 does not, so create it.
+    // The license is kept: every level has the same entitlements, and the
+    // caller recomputes them from the promoted space's own credentials.
     spaceL1.templatesManager =
       await this.spaceService.createTemplatesManagerForSpaceL0();
 

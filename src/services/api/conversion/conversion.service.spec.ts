@@ -117,13 +117,14 @@ describe('ConversionService', () => {
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it('assigns a fresh Free license to the promoted L0 (no inheritance from parent)', async () => {
+    it("keeps the subspace's own license rather than orphaning it for a new one (server#6614)", async () => {
       const parentLicenseId = 'parent-license-id';
-      const freshLicense = { id: 'fresh-license-id' };
+      const ownLicense = { id: 'l1-license-id' };
       const spaceL1 = {
         id: 'space-l1',
         nameID: 'l1-name',
         levelZeroSpaceID: 'space-l0',
+        license: ownLicense,
         community: { roleSet: { id: 'roleset-l1' } },
         collaboration: { innovationFlow: { id: 'flow-l1', states: [] } },
         storageAggregator: { id: 'sa-l1', parentStorageAggregator: undefined },
@@ -144,9 +145,6 @@ describe('ConversionService', () => {
       vi.mocked(spaceService.getSpaceOrFail)
         .mockResolvedValueOnce(spaceL1 as never)
         .mockResolvedValueOnce(spaceL0Orig as never);
-      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue(
-        freshLicense as never
-      );
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({} as never);
@@ -169,8 +167,12 @@ describe('ConversionService', () => {
         spaceL1ID: 'space-l1',
       });
 
-      expect(spaceService.createLicenseForSpaceL0).toHaveBeenCalledTimes(1);
-      expect(result.license).toBe(freshLicense);
+      // Every space level is created with the same entitlement set, and the
+      // resolver resets and recomputes the license from the promoted space's
+      // own Free-plan credentials right after this call. A replacement would
+      // only orphan the old license row and its policy.
+      expect(spaceService.createLicenseForSpaceL0).not.toHaveBeenCalled();
+      expect(result.license).toBe(ownLicense);
       expect(result.license?.id).not.toBe(parentLicenseId);
       expect(accountHostService.assignLicensePlansToSpace).toHaveBeenCalledWith(
         'space-l1',
@@ -455,7 +457,6 @@ describe('ConversionService', () => {
       ]);
       vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
       vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
-      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue({});
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({});
@@ -520,9 +521,6 @@ describe('ConversionService', () => {
       vi.mocked(spaceService.getSpaceOrFail)
         .mockResolvedValueOnce(spaceL1 as never)
         .mockResolvedValueOnce(spaceL0Orig as never);
-      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue(
-        {} as never
-      );
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({} as never);

@@ -1143,6 +1143,44 @@ describe('SpaceService', () => {
         service.deleteSpaceOrFail({ ID: 'space-1' })
       ).rejects.toThrow(RelationshipNotFoundException);
     });
+
+    it("deletes the space actor's profile before the actor row (server#6614)", async () => {
+      const deps = service as any;
+      const mockSpace = {
+        id: 'space-1',
+        level: SpaceLevel.L1,
+        subspaces: [],
+        profile: { id: 'profile-1' },
+        collaboration: { id: 'collaboration-1' },
+        community: { id: 'community-1' },
+        about: { id: 'about-1' },
+        storageAggregator: { id: 'aggregator-1' },
+        authorization: { id: 'auth-1' },
+        license: { id: 'license-1' },
+      } as unknown as Space;
+      const findOne = vi
+        .spyOn(spaceRepository, 'findOne')
+        .mockResolvedValue(mockSpace);
+      const callOrder: string[] = [];
+      deps.profileService.deleteProfile.mockImplementation(async () => {
+        callOrder.push('deleteProfile');
+      });
+      deps.actorService.deleteActorById.mockImplementation(async () => {
+        callOrder.push('deleteActorById');
+      });
+
+      await service.deleteSpaceOrFail({ ID: 'space-1' });
+
+      // `actor.profileId` is ON DELETE SET NULL, so deleting the actor row
+      // alone leaves the profile and its whole subtree behind.
+      expect(findOne.mock.calls[0][0]).toMatchObject({
+        relations: { profile: true },
+      });
+      expect(deps.profileService.deleteProfile).toHaveBeenCalledWith(
+        'profile-1'
+      );
+      expect(callOrder).toEqual(['deleteProfile', 'deleteActorById']);
+    });
   });
 
   describe('updateSubspacesSortOrder', () => {

@@ -826,20 +826,17 @@ export class CalloutService {
     });
     result.id = calloutID;
 
-    // Remove the board's column template LAST — but the callout's own
-    // classification (which carries the board's marker tagset) is NOT
-    // cascade-removed with the callout: removing the callout row leaves the
-    // classification and its marker tagset orphaned, and that marker tagset's
-    // FK to the template would block the drop below (QueryFailedError on
-    // tagset_template). Delete the orphaned classification first to release the
-    // FK, then drop the standalone template it referenced. Non-board callouts
-    // have no such template and skip both.
+    // The callout's classification is NOT cascade-removed with the callout row
+    // (the FK sits on the callout), so delete it explicitly for every callout.
+    // On a Tasks board it must also go before the column template below: its
+    // marker tagset's FK to the template would otherwise block the drop
+    // (QueryFailedError on tagset_template).
+    if (callout.classification) {
+      await this.classificationService.deleteClassification(
+        callout.classification.id
+      );
+    }
     if (boardTemplate) {
-      if (callout.classification) {
-        await this.classificationService.deleteClassification(
-          callout.classification.id
-        );
-      }
       await this.tagsetTemplateService.removeTagsetTemplate(boardTemplate);
     }
 

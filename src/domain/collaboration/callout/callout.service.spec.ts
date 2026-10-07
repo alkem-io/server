@@ -877,7 +877,7 @@ describe('CalloutService', () => {
       );
     });
 
-    it('leaves the template service untouched for a plain (non-board) callout', async () => {
+    it('deletes the classification of a plain (non-board) callout, leaving the template service untouched', async () => {
       const callout = {
         id: 'callout-1',
         framing: { id: 'framing-1' },
@@ -897,9 +897,12 @@ describe('CalloutService', () => {
       await service.deleteCallout('callout-1');
 
       expect(tagsetTemplateService.removeTagsetTemplate).not.toHaveBeenCalled();
-      // The explicit classification cleanup is board-only (guarded by the
-      // presence of a standalone board template); a plain callout skips it.
-      expect(classificationService.deleteClassification).not.toHaveBeenCalled();
+      // Every callout owns its classification, and removing the callout row
+      // does not take it along (the FK sits on the callout), so a plain callout
+      // must delete it explicitly too (alkem-io/server#6614).
+      expect(classificationService.deleteClassification).toHaveBeenCalledWith(
+        'cls-1'
+      );
     });
   });
 
