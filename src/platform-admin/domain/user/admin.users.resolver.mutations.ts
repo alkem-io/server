@@ -19,23 +19,18 @@ import { CurrentActor } from '@src/common/decorators';
 import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
-/** T063 — A5's declared owner/legacy-reachers (T062's grant). */
+/** T063 — A5's declared owner (T062's grant). */
 const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
 ];
-const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()
 export class AdminUsersMutations {
-  /** sec-server-4 fix: consolidating A4 (email change) and A5 (identity/
-   * account deletion) onto ONE `PLATFORM_USERS_ADMIN` privilege whose grant
-   * set is the UNION of both surfaces' prior legacy reachers would hand
-   * `global-platform-manager` — who never held THIS surface's legacy
-   * `PLATFORM_ADMIN` gate ({GLOBAL_ADMIN, GLOBAL_SUPPORT,
-   * GLOBAL_LICENSE_MANAGER}) — irreversible account deletion. Checked
-   * against THIS resolver-local, hardcoded policy instead of the shared,
-   * widened platform policy. */
+  /** Irreversible account deletion is checked against THIS resolver-local,
+   * hardcoded policy (the owning role alone) rather than the shared platform
+   * policy, so a later widening of the shared `PLATFORM_USERS_ADMIN` grant
+   * set cannot reach it. */
   private accountDeletePolicy: IAuthorizationPolicy;
 
   constructor(
@@ -69,11 +64,8 @@ export class AdminUsersMutations {
     @Args('userID', { type: () => UUID }) userID: string
   ): Promise<IUser> {
     // 027-platform-role-redesign (T062, A5, research D5) — sec-server-4
-    // fix: re-anchored off legacy PLATFORM_ADMIN onto PLATFORM_USERS_ADMIN
-    // (the new owning role), checked against `accountDeletePolicy` — NOT
-    // the shared platform policy, whose PLATFORM_USERS_ADMIN grant set is
-    // additively widened to also admit global-platform-manager (A4's
-    // legacy reacher), who never held THIS surface.
+    // fix: re-anchored onto PLATFORM_USERS_ADMIN (the owning role), checked
+    // against `accountDeletePolicy` — NOT the shared platform policy.
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.accountDeletePolicy,
@@ -94,7 +86,6 @@ export class AdminUsersMutations {
       await this.platformUserRecordAuditService.recordActionForActor(
         actorContext,
         A5_INTENDED_OWNERS,
-        A5_LEGACY_REACHERS,
         {
           action: 'adminUserAccountDelete',
           targetUserId: user.id,

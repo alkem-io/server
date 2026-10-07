@@ -36,11 +36,10 @@ import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-use
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RegistrationService } from './registration.service';
 
-/** T063 — A5's declared owner/legacy-reachers (T062's grant). */
+/** T063 — A5's declared owner (T062's grant). */
 const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
 ];
-const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()
@@ -243,28 +242,15 @@ export class RegistrationResolverMutations {
     // T063/FR-018a: a self-service deletion is not an administrative action
     // and is not audited. Every OTHER deletion is.
     //
-    // spec-server-27 fix (2026-07-31): this used to read
-    // `if (canDeleteAsPlatformUsersAdmin)`, which silently excluded the
-    // legacy `global-admin` branch — **the normal path for the whole of
-    // Slice A**, since no human holds `platform-users-admin` until they are
-    // granted it by hand (FR-012 does not migrate assignments). The result
-    // was that the single most destructive administrative action on the
-    // platform was recorded nowhere for the entire additive window, directly
-    // contradicting FR-018.
-    //
-    // T076/T077 (Slice B) simplified this: with the legacy-admin branch gone,
-    // `platform-users-admin` is the only administrative path, so the condition
-    // reduces to that one branch. It still names the branch rather than merely
-    // negating `isSelf` — `resolveInitiatorRole` THROWS when the actor holds
-    // no owning role, so the writer must never be invoked on a call no admin
-    // branch authorized. `A5_LEGACY_REACHERS` is now empty, which is what
-    // makes the FR-025 `platform_admin` carve-out unreachable here.
+    // `platform-users-admin` is the only administrative deletion path. The
+    // condition names that branch rather than merely negating `isSelf` —
+    // `resolveInitiatorRole` THROWS when the actor holds no owning role, so
+    // the writer must never be invoked on a call no admin branch authorized.
     const isAdministrativeDeletion = !isSelf && canDeleteAsPlatformUsersAdmin;
     if (isAdministrativeDeletion) {
       await this.platformUserRecordAuditService.recordActionForActor(
         actorContext,
         A5_INTENDED_OWNERS,
-        A5_LEGACY_REACHERS,
         {
           action: 'deleteUser',
           targetUserId: user.id,

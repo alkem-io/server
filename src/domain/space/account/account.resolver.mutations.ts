@@ -48,16 +48,14 @@ import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.baseline.license.plan';
 
-/** T058 — A9's declared owner/legacy-reachers (T037's TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
+/** T058 — A9's declared owner (T037's TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
 const A9_TRANSFER_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
 ];
-const A9_TRANSFER_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
-/** T058 — A12's declared owner/legacy-reachers (ACCOUNT_LICENSE_MANAGE grant). */
+/** T058 — A12's declared owner (ACCOUNT_LICENSE_MANAGE grant). */
 const A12_BASELINE_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
 ];
-const A12_BASELINE_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()
@@ -379,7 +377,6 @@ export class AccountResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_BASELINE_INTENDED_OWNERS,
-      A12_BASELINE_LEGACY_REACHERS,
       {
         resourceKind: 'account-baseline-license-plan',
         resourceId: account.id,
@@ -440,7 +437,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'innovation-hub',
           resourceId: innovationHub.id,
@@ -496,7 +492,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'space',
           resourceId: space.id,
@@ -558,7 +553,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'innovation-pack',
           resourceId: innovationPack.id,
@@ -621,7 +615,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'virtual-contributor',
           resourceId: virtualContributor.id,
@@ -641,17 +634,13 @@ export class AccountResolverMutations {
    * ACCOUNT_ADMIN (every user on their own account), not only by A9's own
    * platform-level credentials — TRANSFER_RESOURCE_OFFER/_ACCEPT is granted
    * to both. Determine the audit branch from the actor's OWN held
-   * credentials (A9_TRANSFER_INTENDED_OWNERS ∪ A9_TRANSFER_LEGACY_REACHERS),
-   * never from the shared privilege grant an ordinary account owner also
-   * satisfies (FR-018a). */
+   * credentials (A9_TRANSFER_INTENDED_OWNERS), never from the shared
+   * privilege grant an ordinary account owner also satisfies. */
   private isA9TransferPlatformAuthorized(actorContext: ActorContext): boolean {
     const held = new Set(
       (actorContext.credentials ?? []).map(credential => credential.type)
     );
-    return [
-      ...A9_TRANSFER_INTENDED_OWNERS,
-      ...A9_TRANSFER_LEGACY_REACHERS,
-    ].some(credential => held.has(credential));
+    return A9_TRANSFER_INTENDED_OWNERS.some(credential => held.has(credential));
   }
 
   private async validateTransferOfAccountResource(

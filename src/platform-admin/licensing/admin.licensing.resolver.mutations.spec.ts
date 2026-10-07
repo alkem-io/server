@@ -398,7 +398,6 @@ describe('AdminLicensingResolverMutations', () => {
       expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
         actorContext,
         expect.any(Array),
-        expect.any(Array),
         expect.objectContaining({ resourceKind, outcome })
       );
     });

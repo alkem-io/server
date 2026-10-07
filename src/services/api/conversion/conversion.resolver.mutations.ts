@@ -537,11 +537,9 @@ export class ConversionResolverMutations {
   ): Promise<void> {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
+      // `platform-resource-admin` is the sole credential on this resolver's
+      // policy, so every audited move is attributable to the owning role.
       [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      // T076: no legacy reachers remain — `platform-resource-admin` is the sole
-      // credential on this resolver's policy, so every audited move is
-      // attributable to the owning role.
-      [],
       {
         resourceKind,
         resourceId,

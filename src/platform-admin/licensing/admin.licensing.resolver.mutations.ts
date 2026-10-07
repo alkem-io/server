@@ -22,11 +22,10 @@ import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.licen
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 
-/** T058 — A12's declared owner/legacy-reachers (T037/T040's grant). */
+/** T058 — A12's declared owner (T037/T040's grant). */
 const A12_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
 ];
-const A12_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()
@@ -87,12 +86,10 @@ export class AdminLicensingResolverMutations {
     await this.licenseService.saveAll(updatedLicenses);
 
     // T058 — A12, single-path surface: gated on GRANT held on the
-    // licensing-framework tree, which only PLATFORM_LICENSE_MANAGER (∪
-    // legacy) holds.
+    // licensing-framework tree, which only PLATFORM_LICENSE_MANAGER holds.
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'account-license-plan',
         resourceId: account.id,
@@ -142,7 +139,6 @@ export class AdminLicensingResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'space-license-plan',
         resourceId: space.id,
@@ -193,7 +189,6 @@ export class AdminLicensingResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'account-license-plan',
         resourceId: account.id,
@@ -243,7 +238,6 @@ export class AdminLicensingResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'space-license-plan',
         resourceId: space.id,

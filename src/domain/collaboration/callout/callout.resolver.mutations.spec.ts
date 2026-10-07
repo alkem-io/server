@@ -2349,7 +2349,6 @@ describe('CalloutResolverMutations', () => {
         expect.arrayContaining([
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ]),
-        expect.any(Array),
         expect.objectContaining({
           resourceKind: 'callout',
           resourceId: 'callout-1',
@@ -2380,7 +2379,6 @@ describe('CalloutResolverMutations', () => {
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ],
-        [],
         expect.objectContaining({
           resourceKind: 'callout-publisher',
           resourceId: 'callout-1',

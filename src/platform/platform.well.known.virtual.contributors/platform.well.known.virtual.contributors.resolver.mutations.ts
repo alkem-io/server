@@ -86,14 +86,10 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
         mappingData.virtualContributorID
       );
 
-    // T058 — A10, single-path surface. The legacy-reacher list matches the
-    // PIN above, not the A10 family union: GLOBAL_PLATFORM_MANAGER cannot
-    // reach this mutation (sec-server-23), so declaring it here would let
-    // `resolveInitiatorRole` attribute a caller the gate rejects.
+    // A10, single-path surface: Platform Settings Admin is the owning role.
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
-      [],
       {
         setting: `wellKnownVirtualContributor:${mappingData.wellKnown}`,
         newValue: mappingData.virtualContributorID,

@@ -45,25 +45,20 @@ import {
 } from './platform.role.assignment.rules.service';
 
 /**
- * A1/A2's declared attribution facts (T040b's eventual census entries,
- * inlined here until that file exists — FR-025).
+ * A1/A2's declared attribution facts (mirroring their census entries in
+ * `verification/a.row.surfaces.ts`).
  *  - A1 (`platform-*` role assign/revoke, `PLATFORM_ROLES_ASSIGN`): owned by
- *    Platform Roles Admin alone, reachable in Slice A ONLY by the legacy
- *    `global-admin` credential — PLATFORM_ROLES_ASSIGN' pre-existing sole
- *    holder, NOT global-support/global-license-manager, which never held it.
+ *    Platform Roles Admin alone.
  *  - A2 (`feature-*` role assign/revoke, `FEATURE_ROLE_ASSIGN`): owned by
- *    BOTH Platform Users Admin and Platform Roles Admin; no legacy reacher
- *    (`FEATURE_ROLE_ASSIGN` is a wholly new privilege, T007).
+ *    BOTH Platform Users Admin and Platform Roles Admin.
  */
 const A1_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_ROLES_ADMIN,
 ];
-const A1_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 const A2_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
   AuthorizationCredential.PLATFORM_ROLES_ADMIN,
 ];
-const A2_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 /** 027-platform-role-redesign (QA C1-note fix): both roles carry the SAME
  * beta/trial `ACCOUNT_LICENSE_PLUS` entitlement (T040a parity — see the
@@ -650,8 +645,8 @@ export class PlatformRoleResolverMutations {
       await this.roleAssignmentAuditService.recordGrantRejected({
         initiatorUserId: actorContext.actorID,
         // A rejection means the actor failed at least one rule — often rule 1
-        // (assigner capability), in which case it holds neither the owning
-        // role nor a legacy credential and resolveInitiatorRole's throw path
+        // (assigner capability), in which case it holds no owning role and
+        // resolveInitiatorRole's throw path
         // would fire on an ALREADY-legitimate empty intersection. Best-effort
         // attribution here rather than a second throw inside error handling.
         initiatorRole: this.resolveA1A2InitiatorRoleBestEffort(
@@ -782,8 +777,8 @@ export class PlatformRoleResolverMutations {
       await this.roleAssignmentAuditService.recordGrantRejected({
         initiatorUserId: actorContext.actorID,
         // A rejection means the actor failed at least one rule — often rule 1
-        // (assigner capability), in which case it holds neither the owning
-        // role nor a legacy credential and resolveInitiatorRole's throw path
+        // (assigner capability), in which case it holds no owning role and
+        // resolveInitiatorRole's throw path
         // would fire on an ALREADY-legitimate empty intersection. Best-effort
         // attribution here rather than a second throw inside error handling.
         initiatorRole: this.resolveA1A2InitiatorRoleBestEffort(
@@ -862,7 +857,7 @@ export class PlatformRoleResolverMutations {
     }
   }
 
-  /** FR-025 attribution for the A1/A2 assignment mutations (T058a). */
+  /** Initiator-role attribution for the A1/A2 assignment mutations. */
   private resolveA1A2InitiatorRole(
     role: RoleName,
     actorContext: ActorContext
@@ -873,17 +868,15 @@ export class PlatformRoleResolverMutations {
         c => c.type as AuthorizationCredential
       ),
       intendedOwners: isFeatureRole ? A2_INTENDED_OWNERS : A1_INTENDED_OWNERS,
-      legacyReachers: isFeatureRole ? A2_LEGACY_REACHERS : A1_LEGACY_REACHERS,
     });
   }
 
   /** Same attribution, but for a REJECTED attempt: the actor may legitimately
-   * hold neither the owning role nor a legacy credential (that is often
-   * exactly WHY the rule engine rejected it), so the strict throw path is
-   * not a defect here — fall back to `self` rather than raise a second
-   * exception while already handling a rejection.
+   * hold no owning role (that is often exactly WHY the rule engine rejected
+   * it), so the strict throw path is not a defect here — fall back to `self`
+   * rather than raise a second exception while already handling a rejection.
    *
-   * corr-server-3/qual-server-1 fix: delegates to the SHARED
+   * Delegates to the SHARED
    * `resolveInitiatorRoleBestEffort` (extracted to
    * `resolve.initiator.role.ts` so `user.service.ts`'s A21 rejection path
    * uses the identical wrapper, rather than calling the strict
@@ -903,7 +896,6 @@ export class PlatformRoleResolverMutations {
         c => c.type as AuthorizationCredential
       ),
       intendedOwners: isFeatureRole ? A2_INTENDED_OWNERS : A1_INTENDED_OWNERS,
-      legacyReachers: isFeatureRole ? A2_LEGACY_REACHERS : A1_LEGACY_REACHERS,
     });
   }
 

@@ -144,7 +144,6 @@ export class SpaceResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [],
         {
           resourceKind: 'space',
           resourceId: deletedSpaceId,
@@ -236,7 +235,6 @@ export class SpaceResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-        [],
         {
           resourceKind: 'space-visibility',
           resourceId: space.id,

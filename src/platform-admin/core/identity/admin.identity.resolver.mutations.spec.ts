@@ -69,7 +69,6 @@ describe('AdminIdentityResolverMutations', () => {
     ).toHaveBeenCalledWith(
       actorContext,
       expect.any(Array),
-      expect.any(Array),
       expect.objectContaining({
         action: 'adminIdentityDeleteKratosIdentity',
         targetUserId: 'user-1',

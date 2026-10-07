@@ -1,6 +1,5 @@
 import {
   A13_INTENDED_OWNERS,
-  A13_LEGACY_REACHERS,
   buildLicenseDefinitionPolicy,
 } from '@common/constants/authorization/license.definition.policy';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -83,7 +82,6 @@ export class LicensePlanResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       A13_INTENDED_OWNERS,
-      A13_LEGACY_REACHERS,
       {
         setting: 'licensePlan',
         licensePlanId: deleteData.ID,
@@ -127,7 +125,6 @@ export class LicensePlanResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       A13_INTENDED_OWNERS,
-      A13_LEGACY_REACHERS,
       {
         setting: 'licensePlan',
         licensePlanId: updateData.ID,
