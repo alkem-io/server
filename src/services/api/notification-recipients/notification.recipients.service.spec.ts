@@ -370,10 +370,7 @@ describe('NotificationRecipientsService', () => {
       ],
       [
         NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION,
-        [
-          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
       ],
       [
         NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED,

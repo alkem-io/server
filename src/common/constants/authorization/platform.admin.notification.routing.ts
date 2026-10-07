@@ -43,10 +43,7 @@ export const PLATFORM_ADMIN_NOTIFICATION_ROUTING: Readonly<
     excludeActor: true,
   },
   [NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION]: {
-    recipients: [
-      AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-      AuthorizationCredential.PLATFORM_USERS_ADMIN,
-    ],
+    recipients: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     kind: 'ownership',
     excludeActor: true,
   },
