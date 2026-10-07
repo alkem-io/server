@@ -399,6 +399,17 @@ export class CalloutsSetResolverMutations {
         );
       }
 
+      if (callout.framing?.type === CalloutFramingType.FORM) {
+        this.contributionReporter.calloutFormCreated(
+          {
+            id: callout.id,
+            name: callout.framing.form?.title || callout.nameID,
+            space: levelZeroSpaceID,
+          },
+          actorContext
+        );
+      }
+
       if (this.taskBoardService.isTaskBoard(callout)) {
         this.contributionReporter.taskBoardCreated(
           {
