@@ -137,6 +137,11 @@ jobs:
           CONVERSATION_MEDIA_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
         run: pnpm exec vitest run test/integration/conversation-storage-owner.postgres.spec.ts --maxWorkers=1
 
+      - name: Test CalendarEvent subspace resolution in PostgreSQL
+        env:
+          CALENDAR_SUBSPACE_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
+        run: pnpm exec vitest run test/integration/calendar-event-subspace.postgres.spec.ts --maxWorkers=1
+
   sonarqube:
     needs: test
     runs-on: ubuntu-latest
