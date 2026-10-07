@@ -27,17 +27,7 @@ export class LicensePlanResolverMutations {
    * policy as its parent, so the root rule's `platform-content-full-access`
    * CRUD cascade (T036a) would otherwise satisfy these bare
    * CREATE/UPDATE/DELETE checks too — a family SC-004's exception does not
-   * cover.
-   *
-   * GLOBAL_SUPPORT included (corr-server-12 fix): `licensingFramework.
-   * authorization` is ALSO built by `inheritParentAuthorization(licensing.
-   * authorization, platform.authorization)`, and `platform.authorization`
-   * carries `globalSupportPlatformAdmin` — a `cascade: true` rule granting
-   * global-support CRUD (platform.service.authorization.ts). Pre-feature
-   * that cascade reached these mutations (checked against
-   * `licensePlan.licensingFramework.authorization` directly); omitting
-   * global-support here would silently revoke a capability Slice A must
-   * stay additive about. */
+   * cover. */
   private licenseDefinitionPolicy: IAuthorizationPolicy =
     buildLicenseDefinitionPolicy();
 

@@ -526,8 +526,8 @@ export class ConversionResolverMutations {
    * than the platform-wide PLATFORM_ADMIN grant set — the census
    * (a.row.surfaces.ts, A9) declares every one of them, not just the three
    * cross-L0 moves this helper originally covered, as a `platform-resource-
-   * admin`-owned surface. `intendedOwners`/`legacyReachers` are the
-   * census's declared source of truth for this row. Single-path surface —
+   * admin`-owned surface. `intendedOwners` is the census's declared source
+   * of truth for this row. Single-path surface —
    * no ordinary-owner branch — so every successful call is audited.
    */
   private async recordResourceMoveAudit(

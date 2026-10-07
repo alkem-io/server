@@ -102,11 +102,11 @@ export interface SurfaceRef {
  * checked (`checkAssignerCapability()`, via `isAccessGranted()`). The
  * census therefore declares A1/A2's `file` as the RULE-ENGINE service
  * (`SurfaceRef.file` is documented to mean "where the gate is enforced",
- * not "where the mutation is declared") — which leaves the resolver file
- * itself holding a REAL, separate `PLATFORM_ROLES_ASSIGN` hit with no census
- * entry pointing at it: its own inline `else`-branch check, which governs
- * only the LEGACY (non-target, `global-*`) role-assignment path that
- * predates this feature and sits outside its 21-row census entirely.
+ * not "where the mutation is declared") — which leaves no census entry
+ * pointing at the resolver file itself. That file still writes credentials
+ * (`grantCredentialOrFail` / `revokeCredential` on the actor service), so
+ * `surface.drift.spec.ts`'s rule 4 (credential-write / credential-argument
+ * completeness) matches it and would read it as an ungated resolver.
  * Exempted here rather than mis-declared as a census surface it is not.
  */
 export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
@@ -168,9 +168,8 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // inventory read, not part of the original eight: it's the read-side
   // discovery path for A11's `updateAssistantActorCapabilities` (the client
   // finds the assistant it's about to update through this field), so it now
-  // is gated on `PLATFORM_OPERATIONS_ADMIN` (replacing `PLATFORM_ADMIN`);
-  // legacy GA/GS/GLM holders keep access because they hold both — the same
-  // disposition as every other inventory read above. Classified
+  // is gated on `PLATFORM_OPERATIONS_ADMIN` (replacing `PLATFORM_ADMIN`) —
+  // the same disposition as every other inventory read above. Classified
   // `non-admin`'s sibling `inventory-read` in `NON_ADMIN_SURFACES` (see
   // `non.admin.surfaces.ts`, `surface.completeness.spec.ts`) rather than
   // censused as an A-row, for the same reason as the other eight.
@@ -262,7 +261,7 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // Owner: Users Admin OR Roles Admin (FR-003). The user-target surfaces
   // are the SAME two resolver methods as A1 (payload role is `feature-*`
   // instead of `platform-*`) — declared as separate entries per
-  // privilege-map.md ("A1's two ⊂ A2's four"), plus the Slice-A-only
+  // privilege-map.md ("A1's two ⊂ A2's four"), plus the
   // organization-target pair (T032a).
   A2: [
     {
@@ -312,10 +311,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A3 — authorization / license-entitlement reset (032, pre-existing)
-  // Owner: Operations Admin. Slice A does not touch this family's grant set
-  // (it already carries `platform-operations-admin`, delivered by
-  // workspace#032) — Slice B (T074/T076) drops the three legacy credentials
-  // alone. Grepped exhaustively for this census (contract's "7" was stale;
+  // Owner: Operations Admin (its grant set carries `platform-operations-admin`
+  // alone). Grepped exhaustively for this census (contract's "7" was stale;
   // 10 real gate sites — the T003 baseline predates several of these
   // mutations).
   // Per-site privilege (NOT a blanket `anyOf` across the whole family) —
@@ -399,13 +396,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ),
 
   // ===== A4 — change login email =====
-  // T070m finding: the ONE `PLATFORM_USERS_ADMIN` credential rule
-  // (`user.service.authorization.ts`) grants it to A4's AND A5's legacy
-  // reachers as a single undifferentiated list — the privilege carries no
-  // memory of which A-row's legacy set a credential was added for, so
-  // `GLOBAL_PLATFORM_MANAGER` (added there for A5) reaches A4 too. Fixed
-  // here rather than narrowing the shared credential rule, which would
-  // remove a legacy holder's TODAY access (forbidden in the additive slice).
   A4: [
     {
       file: 'src/platform-admin/domain/user/email-change/admin.user.email.change.resolver.mutations.ts',

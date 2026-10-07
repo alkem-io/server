@@ -80,12 +80,8 @@ export const GLOBAL_POLICY_PLATFORM_WELL_KNOWN_VC_SET =
 // INHERITS the root policy as its parent — so the root rule's
 // `platform-content-full-access` CRUD cascade (T036a) reached these
 // surfaces too, a family SC-004's exception does not cover. Pinned to this
-// resolver-local, hardcoded IN_MEMORY policy — {platform-settings-admin,
-// global-admin, global-license-manager, global-platform-manager} — instead
-// of the entity's own (cascade-polluted) authorization tree. GLOBAL_ADMIN
-// is included here (corr-server-10): it reached A13 today only via the
-// root cascade, an implicit reach the census's `legacyReachers` omitted
-// entirely; declaring it here makes it an explicit, intentional grant
-// rather than an accident of inheritance.
+// resolver-local, hardcoded IN_MEMORY policy — {platform-settings-admin}
+// (`buildLicenseDefinitionPolicy`) — instead of the entity's own
+// (cascade-polluted) authorization tree.
 export const GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN =
   'globalPolicy-licenseDefinitionAdmin';

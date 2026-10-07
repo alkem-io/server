@@ -74,11 +74,8 @@ const LICENSE_PLUS_ROLES: readonly RoleName[] = [
   RoleName.FEATURE_VC_CAMPAIGN,
 ];
 
-/** Roles the new 027-platform-role-redesign assignment rule engine governs
- * (T030-T032a). Every other RoleName (legacy `global-*` / the pre-existing
- * `platform-beta-tester` / `platform-vc-campaign` / `platform-assistant-access`)
- * keeps its EXACT pre-existing gating below, unmodified — Slice A is
- * additive-only and must not narrow who can assign a legacy role. */
+/** Roles the assignment rule engine governs (T030-T032a): all 13 target
+ * roles. Any other RoleName is rejected by `rejectNonPlatformRoleOrFail`. */
 const RULE_ENGINE_GOVERNED_ROLES: ReadonlySet<RoleName> = new Set([
   ...PLATFORM_FAMILY_ROLES,
   ...FEATURE_FAMILY_ROLES,
@@ -163,11 +160,8 @@ export class PlatformRoleResolverMutations {
     const isRuleEngineGoverned = RULE_ENGINE_GOVERNED_ROLES.has(roleData.role);
 
     if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (T030-T032): the target role model routes
-      // through the shared five-rule engine + fail-closed audit write.
-      // Every OTHER role (legacy `global-*`, `platform-beta-tester`,
-      // `platform-vc-campaign`, `platform-assistant-access`) keeps its
-      // EXACT pre-existing gating below — Slice A is additive-only.
+      // The target role model routes through the shared rule engine +
+      // fail-closed audit write. Every OTHER role is rejected below.
       const targetUser = await this.userLookupService.getUserByIdOrFail(
         roleData.actorID
       );
@@ -459,15 +453,12 @@ export class PlatformRoleResolverMutations {
   /** 027-platform-role-redesign (sec-server-6 fix): the organization-target
    * surface (`assignPlatformRoleToOrganization` /
    * `removePlatformRoleFromOrganization`, T032a) has a use case ONLY for
-   * `Feature …` roles (FR-002) — `Platform …` roles are already rejected by
-   * rule 2 (`checkHolderKind`), but LEGACY `global-*` roles are members of
-   * NEITHER `PLATFORM_FAMILY_ROLES` nor `FEATURE_FAMILY_ROLES`, so rule 2
-   * never sees them and rule 1 (`checkAssignerCapability`) falls through to
-   * the shared, Slice-A-widened `PLATFORM_ROLES_ASSIGN` check on
-   * `roleSet.authorization` — the same widened policy the legacy-role
-   * branch of the USER mutations deliberately avoids via
-   * `legacyGlobalAdminPolicy`. Without this guard a `platform-roles-admin`
-   * holder could mint `global-admin` (or any other legacy role) on an
+   * `Feature …` roles — `Platform …` roles are already rejected by rule 2
+   * (`checkHolderKind`), but a role in NEITHER `PLATFORM_FAMILY_ROLES` nor
+   * `FEATURE_FAMILY_ROLES` is never seen by rule 2, and rule 1
+   * (`checkAssignerCapability`) falls through to the shared
+   * `PLATFORM_ROLES_ASSIGN` check on `roleSet.authorization`. Without this
+   * guard a `platform-roles-admin` holder could assign such a role on an
    * account they control by routing it through the organization surface.
    * Reject anything outside `FEATURE_FAMILY_ROLES` here, before any rule
    * evaluation, credential write or audit call.
@@ -485,7 +476,7 @@ export class PlatformRoleResolverMutations {
    * gets audited (via the shared rule engine's rule 2), so the SAME logical
    * rejection was landing in the trail when the engine caught it but NOT
    * when this guard did — the most security-relevant rejection this
-   * feature has (the org-surface legacy-role-escalation block, sec-server-6)
+   * feature has (the org-surface role-escalation block)
    * was the one leaving no trace. */
   private async assertOrganizationSurfaceOrFail(
     actorContext: ActorContext,
