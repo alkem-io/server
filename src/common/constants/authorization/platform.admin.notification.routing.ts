@@ -51,18 +51,12 @@ export const PLATFORM_ADMIN_NOTIFICATION_ROUTING: Readonly<
     excludeActor: true,
   },
   [NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED]: {
-    recipients: [
-      AuthorizationCredential.PLATFORM_USERS_ADMIN,
-      AuthorizationCredential.PLATFORM_SUPPORT,
-    ],
+    recipients: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     kind: 'awareness',
     excludeActor: false,
   },
   [NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED]: {
-    recipients: [
-      AuthorizationCredential.PLATFORM_USERS_ADMIN,
-      AuthorizationCredential.PLATFORM_SUPPORT,
-    ],
+    recipients: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     kind: 'awareness',
     excludeActor: true,
   },

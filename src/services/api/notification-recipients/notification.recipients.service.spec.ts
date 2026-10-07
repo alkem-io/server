@@ -377,17 +377,11 @@ describe('NotificationRecipientsService', () => {
       ],
       [
         NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED,
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.PLATFORM_SUPPORT,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
       ],
       [
         NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED,
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.PLATFORM_SUPPORT,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
       ],
       [
         NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED,
