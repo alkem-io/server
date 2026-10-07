@@ -22,8 +22,7 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
  * that are NOT part of the root cascade — most are per-resolver SYNTHETIC
  * policies (a fixed, in-memory `IAuthorizationPolicy` built once in a
  * resolver's constructor from a hardcoded credential list, never persisted,
- * never touched by `authorizationPolicyReset*` — the same shape T034a uses
- * for the FR-022 pin). Declaring them here keeps every census `tree` value
+ * never touched by `authorizationPolicyReset*`). Declaring them here keeps every census `tree` value
  * meaningful without pretending they participate in the root cascade.
  */
 export type TreeId =
@@ -70,7 +69,6 @@ export type TreeId =
   // Per-resolver SYNTHETIC policies — fixed, in-memory, never persisted,
   // never reset. Named per resolver so a reviewer can find the constructor
   // that builds it.
-  | 'credential-admin-synthetic' // admin.authorization.resolver.mutations.ts (T034a pin)
   | 'conversion-admin-synthetic' // conversion.resolver.mutations.ts (space/VC move family)
   | 'communication-admin-synthetic'; // admin.communication.resolver.mutations.ts
 

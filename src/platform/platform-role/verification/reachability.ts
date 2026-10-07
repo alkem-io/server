@@ -4,7 +4,6 @@ import { ROOT_CASCADE, type TreeId } from './cascade.model';
 import {
   isAnyOfGate,
   isConditionGate,
-  isCredentialGate,
   isRequiresGate,
   privilegesNamedByGate,
 } from './gate.model';
@@ -42,18 +41,16 @@ import {
  *   the derived set equal the declared intent" a real question rather than
  *   a tautology.
  *
- * - `{ credential: C }` / `{ condition: name }` — these two shapes are, by
- *   construction, NOT independently re-derivable from a generic
- *   privilege/cascade model: a credential pin names its own single
- *   permitted credential directly, and a named runtime condition (A15's
- *   `allowPlatformSupportAsAdmin`) is enforced by bespoke code that checks
- *   a SPECIFIC credential, not a privilege lookup. For these two, `reachers()`
+ * - `{ condition: name }` — by construction NOT independently re-derivable
+ *   from a generic privilege/cascade model: a named runtime condition (A15's
+ *   `allowPlatformSupportAsAdmin`) is enforced by bespoke code that checks a
+ *   SPECIFIC credential, not a privilege lookup. For this shape, `reachers()`
  *   returns the surface's own declared `intendedOwners` ∪
  *   `acceptedExtraReachers` — which makes `reachability.spec.ts`'s equality
  *   trivially true FOR THESE ROWS BY DESIGN. That is not a gap:
  *   `surface.drift.spec.ts`'s rule 3 is the layer that checks a
- *   `{credential}` / `{condition}` DECLARATION against the ENFORCED code, in
- *   both directions — the two layers are complements (research D26), not
+ *   `{condition}` DECLARATION against the ENFORCED code, in both
+ *   directions — the two layers are complements (research D26), not
  *   duplicates.
  */
 export function reachers(
@@ -61,9 +58,6 @@ export function reachers(
 ): readonly AuthorizationCredential[] {
   const gate = surface.gate;
 
-  if (isCredentialGate(gate)) {
-    return declaredReachers(surface);
-  }
   if (isConditionGate(gate)) {
     return declaredReachers(surface);
   }
@@ -106,8 +100,8 @@ export function reachers(
     return dedupe([...result]);
   }
 
-  // Exhaustiveness — GateExpr is a closed union of exactly four shapes
-  // (gate.model.ts). If `tsc` ever complains here, a fifth shape was added
+  // Exhaustiveness — GateExpr is a closed union of exactly three shapes
+  // (gate.model.ts). If `tsc` ever complains here, a fourth shape was added
   // to the union without teaching this function about it.
   const exhaustive: never = gate;
   throw new Error(
@@ -119,7 +113,7 @@ function reachesTree(cascadeTrees: readonly TreeId[], tree: TreeId): boolean {
   return cascadeTrees.includes(tree);
 }
 
-/** The `{credential}` / `{condition}` branch — see the class doc comment
+/** The `{condition}` branch — see the class doc comment
  * above for why this is the surface's own declared fields rather than an
  * independent derivation. */
 function declaredReachers(

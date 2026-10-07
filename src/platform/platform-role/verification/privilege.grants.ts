@@ -295,26 +295,6 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     readonly [P in AuthorizationPrivilege]?: PrivilegeGrant;
   };
 } = {
-  // sec-server-9 fix: `grantCredentialToActor`/`revokeCredentialFromActor`
-  // (actor.resolver.mutations.ts, A1) check bare `PLATFORM_ADMIN` on the
-  // PLATFORM tree's own authorization — the SAME literal privilege A9's
-  // conversion-admin-synthetic resolvers check, but on a DIFFERENT,
-  // UNCHANGED credential rule (`platformAdmin` in `platform.service.
-  // authorization.ts`): `{global-admin, global-support,
-  // global-license-manager}`, cascade:false, no owning role. Scoped to the
-  // `platform` tree (not the global `ManagedPrivilege` union) for the same
-  // reason A9's PLATFORM_ADMIN grant is tree-scoped — PLATFORM_ADMIN is
-  // reused far too promiscuously elsewhere in the codebase (~24 files) to
-  // manage as a flat, tree-independent entry.
-  platform: {
-    // T074/T083a (Slice B): the tree-scoped `PLATFORM_ADMIN` entry that stood
-    // here is gone with the privilege. Its two surfaces —
-    // `grantCredentialToActor` / `revokeCredentialFromActor` — are re-gated on
-    // `PLATFORM_ROLES_ASSIGN`, whose grant is declared once in the flat
-    // `PRIVILEGE_GRANTS` above and needs no tree-scoped override: unlike the
-    // catch-all it replaces, that privilege means the same thing on every
-    // policy that carries it.
-  },
   'licensing-framework': {
     // A12 — assign/revoke license plans (admin.licensing.resolver.mutations.ts).
     [AuthorizationPrivilege.GRANT]: {

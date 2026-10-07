@@ -405,36 +405,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     },
-    // --- Legacy-admin pin (spec-server-1 follow-through fix) — the SAME
-    // `deleteUser` mutation's legacy-admin branch, held to a resolver-local,
-    // hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy rather than checking
-    // bare DELETE against `user.authorization`, so the root rule's now-wider
-    // (FR-004) DELETE cascade to `platform-content-full-access` cannot
-    // satisfy it. Declared so `surface.drift.spec.ts`'s credential-pin check
-    // knows this file also carries a pin.
-    //
-    // spec-server-25 fix (2026-07-31): `lifecycle: {declarationOnly: true}`.
-    // This is the SECOND census entry for the SAME `deleteUser` mutation —
-    // A5 declares the invocable one. Without the marker BOTH multiplied, so
-    // the matrix generated `PLATFORM_USERS_ADMIN x A4 (deleteUser) -> deny`
-    // alongside `PLATFORM_USERS_ADMIN x A5 (deleteUser) -> allow`: one
-    // mutation, two contradictory expectations, the DENY one guaranteed to
-    // fail at Slice B because the ALLOW is the correct answer. Worse, that
-    // DENY cell invoked a real `deleteUser` against the shared fixture user,
-    // and corr-ts-16's DENY-before-ALLOW ordering could not protect it —
-    // that orders cells WITHIN one surface, and these are two surfaces.
-    // Reachability and pin-drift still see this entry in both slices; only
-    // matrix multiplication is suppressed.
-    // T077/T083a (Slice B): this second, `declarationOnly` census entry for
-    // `deleteUser` is REMOVED. It existed to declare the mutation's
-    // legacy-admin branch — a resolver-local `[GLOBAL_ADMIN]` pin held ahead
-    // of a bare DELETE check, so FR-004's widened root DELETE cascade could
-    // not let `platform-content-full-access` delete arbitrary users. That
-    // branch is deleted (registration.resolver.mutations.ts): Platform Users
-    // Admin is now the sole administrative path, and A5's single remaining
-    // entry below declares it. Leaving this entry would be exactly the
-    // orphaned credential-pin declaration `surface.drift.spec.ts` rule 3
-    // exists to fail on.
     {
       file: 'src/platform-admin/domain/user/email-change/admin.user.email.change.resolver.mutations.ts',
       member: 'adminUserEmailChangeDriftResolve',
@@ -450,19 +420,13 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // PLATFORM_USERS_ADMIN]}` gate any more (spec-server-1 follow-through
   // fix). Self-delete is checked by actor-identity comparison (equivalent
   // to the resource-scoped USER_SELF_MANAGEMENT credential every user
-  // holds) and the legacy-admin path is pinned to a resolver-local,
-  // hardcoded `[GLOBAL_ADMIN]` policy — exactly the FR-022/T034a pin shape
-  // — rather than checking bare DELETE against `user.authorization`.
-  // Declaring the gate as bare `{anyOf: [DELETE, ...]}` would have the
-  // derivation intersect the root cascade's now-widened (FR-004) DELETE
-  // grant and report `platform-content-full-access` reaching this row — a
-  // real defect A5/SC-004 does NOT accept (the accepted exception is
-  // closed at A6/A7 only). The gate is therefore declared as
-  // `{requires: PLATFORM_USERS_ADMIN}` alone: GLOBAL_ADMIN's legacy reach
-  // (the pinned branch) and GLOBAL_SUPPORT/GLOBAL_LICENSE_MANAGER/
-  // GLOBAL_PLATFORM_MANAGER's reach are already fully accounted for via
-  // PLATFORM_USERS_ADMIN's own declared legacy grant set
-  // (`privilege.grants.ts`), so the derived set is unchanged and honest.
+  // holds), and the administrative path checks PLATFORM_USERS_ADMIN, rather
+  // than bare DELETE against `user.authorization`. Declaring the gate as bare
+  // `{anyOf: [DELETE, ...]}` would have the derivation intersect the root
+  // cascade's DELETE grant and report `platform-content-full-access`
+  // reaching this row — a real defect A5/SC-004 does NOT accept (the
+  // accepted exception is closed at A6/A7 only). The gate is therefore
+  // declared as `{requires: PLATFORM_USERS_ADMIN}` alone.
   A5: [
     {
       file: 'src/services/api/registration/registration.resolver.mutations.ts',
