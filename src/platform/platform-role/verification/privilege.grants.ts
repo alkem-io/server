@@ -248,10 +248,14 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     owningCredentials: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
     legacyCredentials: [],
   },
-  // --- A8 publisher surface (T038).
+  // --- A8 publisher surface (T038); Resource Admin added by operator
+  // amendment 2026-10-07.
   [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER]: {
     anchor: 'space',
-    owningCredentials: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+    owningCredentials: [
+      AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+      AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+    ],
     legacyCredentials: [],
   },
   // --- A12 usage half (T037/T046).

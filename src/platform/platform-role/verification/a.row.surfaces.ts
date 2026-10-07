@@ -926,7 +926,11 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       kind: 'graphql-mutation',
       tree: 'space',
       gate: { requires: AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER },
-      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+      // Resource Admin: operator amendment 2026-10-07.
+      intendedOwners: [
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ],
       legacyReachers: [],
     },
     // ===== T074 (Slice B) — re-gated `platformAdmin` READ/DISCOVERY surfaces.

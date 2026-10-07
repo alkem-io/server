@@ -462,8 +462,10 @@ describe('CalloutAuthorizationService', () => {
     // `platform-content-full-access` had NO assertion anywhere in the repo —
     // `unit.coverage.inventory.ts` pointed at a file that never mentions the
     // privilege. Assert the EXACT credential types passed to
-    // `createCredentialRuleUsingTypesOnly` for this rule.
-    it('grants UPDATE_CALLOUT_PUBLISHER to platform-content-full-access alongside the legacy global-admin/global-support pair (qual-server-10)', async () => {
+    // `createCredentialRuleUsingTypesOnly` for this rule — in order, since the
+    // same list attributes the audit row (operator amendment 2026-10-07 added
+    // Resource Admin).
+    it('grants UPDATE_CALLOUT_PUBLISHER to exactly platform-content-full-access and platform-resource-admin (qual-server-10)', async () => {
       const callout = makeCallout();
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
       vi.mocked(
@@ -495,9 +497,10 @@ describe('CalloutAuthorizationService', () => {
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
       ).toHaveBeenCalledWith(
         [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
-        expect.arrayContaining([
+        [
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-        ]),
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+        ],
         expect.any(String)
       );
     });
