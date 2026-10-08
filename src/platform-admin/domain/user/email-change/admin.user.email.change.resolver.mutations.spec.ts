@@ -115,13 +115,11 @@ describe('AdminUserEmailChangeResolverMutations', () => {
     expect(result.success).toBe(true);
   });
 
-  // 027-platform-role-redesign (sec-server-7 fix): wires the REAL
-  // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `emailChangePolicy` is a genuine, hardcoded [PLATFORM_USERS_ADMIN,
-  // GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER] policy — NOT the
-  // shared platform policy, whose PLATFORM_USERS_ADMIN grant set
-  // additively widens to also admit global-platform-manager, who never
-  // held these two mutations' pre-feature PLATFORM_ADMIN gate.
+  // Wires the REAL AuthorizationPolicyService + AuthorizationService so the
+  // constructor's `emailChangePolicy` is a genuine, hardcoded
+  // [PLATFORM_USERS_ADMIN] policy — NOT the shared platform policy. Asserts
+  // that non-owning platform roles are denied THIS surface and the owning
+  // role is allowed.
   describe('emailChangePolicy — real-engine integration', () => {
     let realResolver: AdminUserEmailChangeResolverMutations;
     let realUserEmailChangeService: Record<string, Mock>;
@@ -155,7 +153,7 @@ describe('AdminUserEmailChangeResolverMutations', () => {
       });
     });
 
-    it('denies a global-platform-manager-only actor (never held this surface pre-feature)', async () => {
+    it('DENIES a platform-settings-admin actor — settings is not the user-record family', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_SETTINGS_ADMIN
       );
@@ -172,10 +170,7 @@ describe('AdminUserEmailChangeResolverMutations', () => {
       ).rejects.toBeInstanceOf(UserEmailChangeException);
     });
 
-    // 027-platform-role-redesign (T076, Slice B): INVERTED. This asserted the
-    // legacy credential's pre-feature reach through the additive slice; T076
-    // dropped every legacy credential from A4's grant set, so Platform Users
-    // Admin holds the login-email change alone (FR-007(d), spec row 6).
+    // Platform Users Admin holds the login-email change alone.
     it('DENIES a platform-content-full-access actor — changing a login email is the user-record family', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
@@ -193,7 +188,7 @@ describe('AdminUserEmailChangeResolverMutations', () => {
       ).rejects.toThrow();
     });
 
-    it('allows a platform-users-admin actor (the new owning role)', async () => {
+    it('allows a platform-users-admin actor (the owning role)', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_USERS_ADMIN
       );

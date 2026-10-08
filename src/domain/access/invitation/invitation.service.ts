@@ -6,7 +6,6 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { asyncFilter } from '@common/utils';
 import {
   CreateInvitationInput,
   DeleteInvitationInput,
@@ -60,9 +59,8 @@ export class InvitationService {
       AuthorizationPolicyType.INVITATION
     );
 
-    // save the invitation to get the id assigned
-    await this.invitationRepository.save(invitation);
-
+    // attach the lifecycle before the first save: an invitation row must never
+    // be visible without one, as state reads dereference it unconditionally
     invitation.lifecycle = await this.lifecycleService.createLifecycle();
 
     return await this.invitationRepository.save(invitation);
@@ -78,17 +76,27 @@ export class InvitationService {
         roleSet: true,
       },
     });
-    await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id, em);
+    // All-or-nothing: an interrupted, non-transactional delete is what leaves
+    // an invitation behind without its lifecycle
+    const removeRows = async (tx: EntityManager) => {
+      // tolerate an already-orphaned invitation, so it can still be cleaned up
+      if (invitation.lifecycle)
+        await this.lifecycleService.deleteLifecycle(
+          invitation.lifecycle.id,
+          tx
+        );
 
-    if (invitation.authorization)
-      await this.authorizationPolicyService.delete(
-        invitation.authorization,
-        em
-      );
+      if (invitation.authorization)
+        await this.authorizationPolicyService.delete(
+          invitation.authorization,
+          tx
+        );
 
+      return tx.remove(invitation as Invitation);
+    };
     const result = em
-      ? await em.remove(invitation as Invitation)
-      : await this.invitationRepository.remove(invitation as Invitation);
+      ? await removeRows(em)
+      : await this.invitationRepository.manager.transaction(removeRows);
     result.id = invitationID;
 
     if (invitation.invitedActorID && invitation.roleSet) {
@@ -224,18 +232,19 @@ export class InvitationService {
         ...findOpts.relations,
         lifecycle: true,
       };
-      findOpts.select = {
-        lifecycle: {
-          machineState: true,
-        },
-      };
     }
 
     const invitations = await this.invitationRepository.find(findOpts);
 
     if (states.length) {
-      return asyncFilter(invitations, async app =>
-        states.includes(await this.getLifecycleState(app.id))
+      // Use the lifecycle loaded above rather than re-fetching each invitation;
+      // one without a lifecycle has no state, so it cannot match a state filter
+      return invitations.filter(
+        invitation =>
+          !!invitation.lifecycle &&
+          states.includes(
+            this.invitationLifecycleService.getState(invitation.lifecycle)
+          )
       );
     }
 

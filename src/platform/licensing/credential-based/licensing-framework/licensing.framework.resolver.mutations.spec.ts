@@ -114,7 +114,7 @@ describe('LicensingFrameworkResolverMutations', () => {
     expect(
       platformConfigurationAuditService.recordChangeForActor
     ).toHaveBeenCalledTimes(1);
-    const [passedActor, owners, , input] =
+    const [passedActor, owners, input] =
       platformConfigurationAuditService.recordChangeForActor.mock.calls[0];
     expect(passedActor).toBe(actor);
     expect(owners).toContain(AuthorizationCredential.PLATFORM_SETTINGS_ADMIN);

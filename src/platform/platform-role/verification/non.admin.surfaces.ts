@@ -9,12 +9,8 @@
  * through both nets.
  *
  * Two dispositions, closed union by design (adding a third is a decision,
- * not a data entry). Slice A also had `inventory-read`,
- * `legacy-platform-admin` and `slice-b-deletion`; all three are empty at
- * Slice B — T074 re-gated every bare PLATFORM_ADMIN surface and censused the
- * console's list/discovery reads (`platformAdmin.*`) as `declarationOnly`
- * A-row entries, and T078/T079 deleted the platform-settings and Wingback
- * surfaces.
+ * not a data entry). The console's list/discovery reads (`platformAdmin.*`)
+ * are censused as A-row entries, not classified here.
  *  - `non-admin` — an ordinary, owner-gated or self-service surface. No
  *    A-row owns it because it isn't a platform-admin action at all: a Space
  *    member editing their own callout, a user managing their own
