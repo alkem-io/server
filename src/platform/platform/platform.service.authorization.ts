@@ -17,6 +17,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE,
+  PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -432,22 +433,15 @@ export class PlatformAuthorizationService {
     platformResetAuth.cascade = false;
     credentialRules.push(platformResetAuth);
 
-    // Who can receive the platform admin notifications. T076 (Slice B,
-    // routing amended 2026-10-05): re-anchored off the legacy credentials onto
-    // the UNION of the roles `notification.recipients.service.ts` routes the
-    // platform-admin events to — which role gets which event is decided
-    // there, per event. Content Full Access receives none of them (operator
-    // ruling); Audit Reader is excluded on purpose (it reviews the trail, it
-    // does not operate) and so is Spaces Reader (a service account).
+    // Who can receive the platform admin notifications — derived from the
+    // single routing declaration
+    // (`src/common/constants/authorization/platform.admin.notification.routing.ts`)
+    // rather than hand-typed here, so this grant and the per-event recipient
+    // criteria in the notification-recipients service can never diverge.
     const platformAdminNotifications =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-        ],
+        [...PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS],
         ' Receive notifications platform admin'
       );
     platformAdminNotifications.cascade = false;
