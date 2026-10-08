@@ -2,7 +2,7 @@
   "name": "alkemio-server",
   "version": "0.167.1",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
-  "author": "Alkemio Foundation",
+  "author": "Alkemio",
   "private": false,
   "license": "EUPL-1.2",
   "main": "src/main.ts",

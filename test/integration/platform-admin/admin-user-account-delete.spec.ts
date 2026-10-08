@@ -98,7 +98,6 @@ describe('Platform-admin identity deletion flows', () => {
     ).toHaveBeenCalledWith(
       actorContext,
       expect.any(Array),
-      expect.any(Array),
       expect.objectContaining({
         action: 'adminUserAccountDelete',
         targetUserId: 'user-1',

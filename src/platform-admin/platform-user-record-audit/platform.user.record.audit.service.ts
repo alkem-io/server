@@ -43,18 +43,17 @@ export class PlatformUserRecordAuditService {
   ) {}
 
   /**
-   * T063 convenience wrapper — resolves FR-025 attribution (T058a) from the
-   * calling actor's OWN credentials and A5's declared owner/legacy
-   * reachers, then writes exactly as `recordAction` would. `deleteUser` is
-   * a DUAL-PATH surface (self-service DELETE ∨ PLATFORM_USERS_ADMIN) —
-   * callers MUST only invoke this on the PLATFORM branch (FR-018a); a
+   * Convenience wrapper — resolves the initiator role from the calling
+   * actor's OWN credentials and A5's declared owner, then writes exactly as
+   * `recordAction` would. `deleteUser` is a DUAL-PATH surface (self-service
+   * DELETE ∨ PLATFORM_USERS_ADMIN) — callers MUST only invoke this on the
+   * PLATFORM branch; a
    * self-service deletion is not an administrative action and must not be
    * written here.
    */
   public async recordActionForActor(
     actorContext: ActorContext,
     intendedOwners: readonly AuthorizationCredential[],
-    legacyReachers: readonly AuthorizationCredential[],
     input: Omit<
       RecordUserRecordActionInput,
       'initiatorUserId' | 'initiatorRole'
@@ -67,7 +66,6 @@ export class PlatformUserRecordAuditService {
           c => c.type as AuthorizationCredential
         ),
         intendedOwners,
-        legacyReachers,
       });
     } catch (error) {
       this.logger.error?.(
