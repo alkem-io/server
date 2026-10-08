@@ -84,20 +84,6 @@ const RULE_ENGINE_GOVERNED_ROLES: ReadonlySet<RoleName> = new Set([
 @InstrumentResolver()
 @Resolver()
 export class PlatformRoleResolverMutations {
-  /** 027-platform-role-redesign (T077, Slice B): the resolver-local
-   * `[GLOBAL_ADMIN]` pin that used to live here is GONE, together with the
-   * legacy roles it protected.
-   *
-   * It existed for one reason (sec-server-2/corr-server-1): T034 widened
-   * `roleSet.authorization`'s `PLATFORM_ROLES_ASSIGN` rule to admit
-   * `platform-roles-admin`, and the legacy `global-*` roles had to stay
-   * assignable by `global-admin` ALONE for the length of the additive slice.
-   * With the legacy roles removed from `RoleName` there is nothing left for
-   * the pin to protect: every role this resolver can now be asked about is
-   * either rule-engine-governed (the 13 target roles, six-rule engine +
-   * fail-closed audit) or `platform-operations-admin`, which spec 032 made an
-   * ordinary Roles-Admin-assignable role. Re-introducing a hardcoded
-   * credential policy here would re-introduce a legacy grant path. */
   constructor(
     private accountService: AccountService,
     private accountLookupService: AccountLookupService,
@@ -119,24 +105,13 @@ export class PlatformRoleResolverMutations {
   ) {}
 
   /**
-   * 027-platform-role-redesign (T077, Slice B) — the `else` branch of both
-   * user-target mutations is now UNREACHABLE for every platform role, and this
-   * is what stands in its place.
-   *
    * `RULE_ENGINE_GOVERNED_ROLES` is `PLATFORM_FAMILY_ROLES ∪
-   * FEATURE_FAMILY_ROLES` = all 13 target roles, and `platform-operations-admin`
-   * is one of the ten `Platform …` members. Once T077 removed the legacy
-   * vocabulary, nothing assignable to the platform role-set fell outside the
-   * rule engine — so the branch's old job (an ordinary `PLATFORM_ROLES_ASSIGN`
-   * check, or the legacy `[GLOBAL_ADMIN]` pin before it) applies to no role.
-   *
-   * Reaching here therefore means the caller passed a role name belonging to a
-   * DIFFERENT role-set type (`member`, `admin`, `lead`, `associate`, `owner`) or
-   * a baseline identity tier. Rejecting explicitly is what keeps that from
-   * degrading into an unaudited assignment attempt: the old branch would have
-   * run an authorization check and then failed deep inside
-   * `assignActorToRole`, past the point where the six assignment rules and the
-   * fail-closed audit write live.
+   * FEATURE_FAMILY_ROLES` — every role assignable on the platform role-set —
+   * so a role outside it belongs to a DIFFERENT role-set type (`member`,
+   * `admin`, `lead`, `associate`, `owner`) or is a baseline identity tier.
+   * Rejecting it up front keeps it from degrading into an unaudited
+   * assignment attempt that fails deep inside `assignActorToRole`, past the
+   * point where the six assignment rules and the fail-closed audit write live.
    */
   private rejectNonPlatformRoleOrFail(
     role: RoleName,
@@ -157,38 +132,32 @@ export class PlatformRoleResolverMutations {
     @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
-    const isRuleEngineGoverned = RULE_ENGINE_GOVERNED_ROLES.has(roleData.role);
-
-    if (isRuleEngineGoverned) {
-      // The target role model routes through the shared rule engine +
-      // fail-closed audit write. Every OTHER role is rejected below.
-      const targetUser = await this.userLookupService.getUserByIdOrFail(
-        roleData.actorID
-      );
-      await this.evaluateGrantOrFail(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID,
-        targetUser.serviceProfile
-      );
-    } else {
+    if (!RULE_ENGINE_GOVERNED_ROLES.has(roleData.role)) {
       this.rejectNonPlatformRoleOrFail(roleData.role, 'assign');
     }
 
-    // corr-server-14 fix: captured BEFORE assignActorToRole so a failed
-    // success-audit write's compensation logic (recordGrantSuccess) knows
-    // whether the grant actually changed state or was an idempotent no-op
-    // (target already held the role) — compensating a no-op would strip a
-    // pre-existing grant the target legitimately held before this call.
-    const heldRoleBeforeGrant = isRuleEngineGoverned
-      ? await this.roleSetService.isInRole(
-          roleData.actorID,
-          roleSet,
-          roleData.role
-        )
-      : false;
+    const targetUser = await this.userLookupService.getUserByIdOrFail(
+      roleData.actorID
+    );
+    await this.evaluateGrantOrFail(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID,
+      targetUser.serviceProfile
+    );
+
+    // Captured BEFORE assignActorToRole so a failed success-audit write's
+    // compensation logic (recordGrantSuccess) knows whether the grant
+    // actually changed state or was an idempotent no-op (target already held
+    // the role) — compensating a no-op would strip a pre-existing grant the
+    // target legitimately held before this call.
+    const heldRoleBeforeGrant = await this.roleSetService.isInRole(
+      roleData.actorID,
+      roleSet,
+      roleData.role
+    );
 
     await this.roleSetService.assignActorToRole(
       roleSet,
@@ -198,21 +167,18 @@ export class PlatformRoleResolverMutations {
       true
     );
 
-    if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (corr-server-5 fix): the SUCCESS audit
-      // row is written only AFTER assignActorToRole has actually completed —
-      // writing it beforehand (the pre-fix ordering) left a permanent audit
-      // record of a grant that never happened whenever assignActorToRole
-      // subsequently threw (e.g. a role-set policy limit).
-      await this.recordGrantSuccess(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID,
-        heldRoleBeforeGrant
-      );
-    }
+    // The SUCCESS audit row is written only AFTER assignActorToRole has
+    // actually completed — writing it beforehand would leave a permanent
+    // audit record of a grant that never happened whenever assignActorToRole
+    // throws (e.g. a role-set policy limit).
+    await this.recordGrantSuccess(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID,
+      heldRoleBeforeGrant
+    );
 
     const user = await this.userLookupService.getUserByIdOrFail(
       roleData.actorID
@@ -248,47 +214,35 @@ export class PlatformRoleResolverMutations {
     @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
-    const isRuleEngineGoverned = RULE_ENGINE_GOVERNED_ROLES.has(roleData.role);
-
-    if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (sec-server-20 fix, 2026-07-31): resolve
-      // the target as a USER before anything else, exactly as the grant
-      // surface already does (`assignPlatformRoleToUser` calls
-      // `getUserByIdOrFail` ahead of `evaluateGrantOrFail`). This surface
-      // asserted `targetActorType: 'user'` to the rule engine without ever
-      // checking it, and the first thing that actually verified the claim
-      // was the `getUserByIdOrFail` at the END of the method — by which
-      // point `removeActorFromRole` had already revoked the credential and
-      // `recordRevokeSuccess` had filed the row under `subjectUserId`.
-      //
-      // An organization id therefore produced: a real credential revocation,
-      // an audit row attributed to the wrong subject KIND, and an
-      // EntityNotFound thrown back to the caller — i.e. the caller is told
-      // the operation did not happen while the state change stands, and the
-      // trail disagrees with both. Verifying up front makes the mutation
-      // atomic again and costs one lookup the method already performs.
-      await this.userLookupService.getUserByIdOrFail(roleData.actorID);
-      await this.evaluateRevokeOrFail(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID
-      );
-    } else {
+    if (!RULE_ENGINE_GOVERNED_ROLES.has(roleData.role)) {
       this.rejectNonPlatformRoleOrFail(roleData.role, 'remove');
     }
 
-    // corr-server-14 fix: captured BEFORE removeActorFromRole — see the
-    // grant side's identical comment. `wasNoOp` for a revoke means the
-    // target did NOT hold the role beforehand.
-    const heldRoleBeforeRevoke = isRuleEngineGoverned
-      ? await this.roleSetService.isInRole(
-          roleData.actorID,
-          roleSet,
-          roleData.role
-        )
-      : false;
+    // Resolve the target as a USER before anything else, exactly as the
+    // grant surface does. The rule engine is told `targetActorType: 'user'`;
+    // without this check an organization id would only fail at the
+    // `getUserByIdOrFail` at the END of the method — after
+    // `removeActorFromRole` had revoked the credential and
+    // `recordRevokeSuccess` had filed the row under `subjectUserId`, so the
+    // caller would be told the operation failed while the state change stood
+    // and the audit trail named the wrong subject kind.
+    await this.userLookupService.getUserByIdOrFail(roleData.actorID);
+    await this.evaluateRevokeOrFail(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID
+    );
+
+    // Captured BEFORE removeActorFromRole — see the grant side's identical
+    // comment. `wasNoOp` for a revoke means the target did NOT hold the role
+    // beforehand.
+    const heldRoleBeforeRevoke = await this.roleSetService.isInRole(
+      roleData.actorID,
+      roleSet,
+      roleData.role
+    );
 
     await this.roleSetService.removeActorFromRole(
       roleSet,
@@ -296,18 +250,16 @@ export class PlatformRoleResolverMutations {
       roleData.actorID
     );
 
-    if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (corr-server-5 fix): success audit only
-      // after removeActorFromRole actually completes — see the assign side.
-      await this.recordRevokeSuccess(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID,
-        !heldRoleBeforeRevoke
-      );
-    }
+    // Success audit only after removeActorFromRole actually completes — see
+    // the assign side.
+    await this.recordRevokeSuccess(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID,
+      !heldRoleBeforeRevoke
+    );
 
     const user = await this.userLookupService.getUserByIdOrFail(
       roleData.actorID
