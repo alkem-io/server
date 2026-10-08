@@ -49,7 +49,7 @@ import {
  *   trivially true FOR THESE ROWS BY DESIGN. That is not a gap:
  *   `surface.drift.spec.ts`'s rule 3 is the layer that checks a
  *   `{condition}` DECLARATION against the ENFORCED code, in both
- *   directions — the two layers are complements (research D26), not
+ *   directions — the two layers are complements, not
  *   duplicates.
  */
 export function reachers(

@@ -394,17 +394,17 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   ],
 
   // ===== A5 — delete user; reset identity/account =====
-  // `deleteUser` is the D5 dual path — but NOT a plain `{anyOf: [DELETE,
-  // PLATFORM_USERS_ADMIN]}` gate any more (spec-server-1 follow-through
-  // fix). Self-delete is checked by actor-identity comparison (equivalent
-  // to the resource-scoped USER_SELF_MANAGEMENT credential every user
-  // holds), and the administrative path checks PLATFORM_USERS_ADMIN, rather
-  // than bare DELETE against `user.authorization`. Declaring the gate as bare
-  // `{anyOf: [DELETE, ...]}` would have the derivation intersect the root
-  // cascade's DELETE grant and report `platform-content-full-access`
-  // reaching this row — a real defect A5/SC-004 does NOT accept (the
-  // accepted exception is closed at A6/A7 only). The gate is therefore
-  // declared as `{requires: PLATFORM_USERS_ADMIN}` alone.
+  // `deleteUser` is a dual path — but NOT a plain `{anyOf: [DELETE,
+  // PLATFORM_USERS_ADMIN]}` gate. Self-delete is checked by actor-identity
+  // comparison (equivalent to the resource-scoped USER_SELF_MANAGEMENT
+  // credential every user holds), and the administrative path checks
+  // PLATFORM_USERS_ADMIN, rather than bare DELETE against
+  // `user.authorization`. Declaring the gate as bare `{anyOf: [DELETE, ...]}`
+  // would have the derivation intersect the root cascade's DELETE grant and
+  // report `platform-content-full-access` reaching this row — a real defect,
+  // because that role's single accepted exception is closed at A6/A7 only.
+  // The gate is therefore declared as `{requires: PLATFORM_USERS_ADMIN}`
+  // alone.
   A5: [
     {
       file: 'src/services/api/registration/registration.resolver.mutations.ts',

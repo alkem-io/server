@@ -106,11 +106,8 @@ function censusEntriesByFile(): ReadonlyMap<string, readonly SurfaceRef[]> {
 }
 
 /** Privileges a file's census entries declare for RULE 2 — the union, over
- * every entry at that file, of (a) privileges its `requires`/`anyOf` gate
- * names, and (b) for a `{condition}` gate, any `SCANNED_PRIVILEGES` member
- * whose enum key appears as a substring of the gate's own `reason` text —
- * a real, scannable token that a privilege-only view of the gate would
- * otherwise miss. */
+ * every entry at that file, of the privileges its `requires`/`anyOf` gate
+ * names. A `{condition}` gate names no privilege, so it declares none. */
 function declaredPrivilegesForFile(
   entries: readonly SurfaceRef[]
 ): ReadonlySet<AuthorizationPrivilege> {
@@ -119,13 +116,6 @@ function declaredPrivilegesForFile(
     for (const privilege of privilegesNamedByGate(entry.gate)) {
       if (!EXCLUDED_FROM_SCAN.has(privilege)) {
         declared.add(privilege);
-      }
-    }
-    if (isConditionGate(entry.gate)) {
-      for (const privilege of SCANNED_PRIVILEGES) {
-        if (entry.gate.reason.includes(privilegeEnumKey(privilege))) {
-          declared.add(privilege);
-        }
       }
     }
   }
@@ -231,7 +221,7 @@ describe('surface.drift.spec (T052a) — census vs. code', () => {
     }
   });
 
-  describe('rule 3 — the two non-privilege gate components agree with the code', () => {
+  describe('rule 3 — the non-privilege condition component agrees with the code', () => {
     // Named runtime conditions (currently just A15's
     // `allowPlatformSupportAsAdmin`) — matched as an `if (…propertyName)`
     // predicate so a plain data-plumbing reference (the DTOs, the bootstrap

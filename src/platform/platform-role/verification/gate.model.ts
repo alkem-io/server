@@ -1,31 +1,29 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 
 /**
- * 027-platform-role-redesign (T040c, research D26/D27, eighth clarification
- * pass) — the closed vocabulary a census entry's `gate` can be written in.
+ * The closed vocabulary a census entry's `gate` can be written in.
  *
- * `reachers()` (T040d) INTERSECTS every component of a gate with the
+ * `reachers()` INTERSECTS every component of a gate with the
  * explicit-grant / cascade model to derive who actually reaches a surface.
  * A privilege-only vocabulary is not enough: a row can be gated on
  * something that is not a privilege check at all, and modelling it as if
  * it were would make the derivation confidently wrong rather than visibly
- * incomplete (research D27).
+ * incomplete.
  *
  * Exactly three shapes, closed:
  *
  * 1. `{ requires: P }` — the ordinary REPLACEMENT gate. Satisfied by
  *    holding `P` (by explicit grant or cascade). Most A-rows take this
- *    shape once their god-mode grant is narrowed to a purpose-built
- *    privilege (T041, T045-T052 and friends).
+ *    shape: a purpose-built privilege per family.
  *
- * 2. `{ anyOf: [P, Q] }` — the FR-007/FR-023 DUAL PATH. Satisfied by
+ * 2. `{ anyOf: [P, Q] }` — the DUAL PATH. Satisfied by
  *    holding EITHER member. This is the shape shared by A6 (`DELETE` ∨
  *    `DELETE_ORGANIZATION`), A7 (`UPDATE` ∨ `PLATFORM_SUPPORT_ORG_RESOURCES`)
  *    and A8 (`DELETE` ∨ `PLATFORM_CONTENT_FULL_ACCESS`): the resource's own
  *    owner keeps the ordinary CRUD privilege, the platform role reaches the
  *    same mutation through its own privilege, and this shape is what makes
  *    `reachers()` RETURN the fact three review passes had to establish by
- *    hand (research D5/D6).
+ *    hand.
  *
  * 3. `{ condition: name; reason }` — a NAMED RUNTIME CONDITION that is not a
  *    platform privilege at all. This is A15's in-space support surface: the
