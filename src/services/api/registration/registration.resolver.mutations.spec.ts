@@ -558,13 +558,11 @@ describe('RegistrationResolverMutations', () => {
     });
   });
 
-  // 027-platform-role-redesign (sec-server-4 fix): wires the REAL
-  // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `platformUsersAdminDeleteUserPolicy` is a genuine, hardcoded
-  // [PLATFORM_USERS_ADMIN]-only policy — NOT `user.authorization`, whose
-  // PLATFORM_USERS_ADMIN grant set additively admits global-support/
-  // global-license-manager/global-platform-manager too (A4's legacy
-  // reachers). None of those three ever held deleteUser pre-feature.
+  // Wires the REAL AuthorizationPolicyService + AuthorizationService so the
+  // constructor's `platformUsersAdminDeleteUserPolicy` is a genuine,
+  // hardcoded [PLATFORM_USERS_ADMIN]-only policy — NOT `user.authorization`.
+  // Asserts that non-owning platform roles are denied deleteUser and the
+  // owning role is allowed.
   describe('deleteUser — platform-users-admin pin, real-engine integration', () => {
     let realResolver: RegistrationResolverMutations;
     let realUserService: Record<string, Mock>;
@@ -611,21 +609,21 @@ describe('RegistrationResolverMutations', () => {
       );
     });
 
-    it('denies a global-support-only actor (never held deleteUser pre-feature)', async () => {
-      const actor = buildActorContext('global-support');
+    it('DENIES a platform-support actor — support is not the user-record family', async () => {
+      const actor = buildActorContext('platform-support');
       await expect(
         realResolver.deleteUser(actor, { ID: 'user-target' })
       ).rejects.toThrow();
     });
 
-    it('denies a global-license-manager-only actor (never held deleteUser pre-feature)', async () => {
-      const actor = buildActorContext('global-license-manager');
+    it('DENIES a platform-license-manager actor — licensing is not the user-record family', async () => {
+      const actor = buildActorContext('platform-license-manager');
       await expect(
         realResolver.deleteUser(actor, { ID: 'user-target' })
       ).rejects.toThrow();
     });
 
-    it('allows a platform-users-admin actor (the new owning role)', async () => {
+    it('allows a platform-users-admin actor (the owning role)', async () => {
       const actor = buildActorContext('platform-users-admin');
       await expect(
         realResolver.deleteUser(actor, { ID: 'user-target' })

@@ -47,7 +47,6 @@ export class PlatformConfigurationAuditService {
   public async recordChangeForActor(
     actorContext: ActorContext,
     intendedOwners: readonly AuthorizationCredential[],
-    legacyReachers: readonly AuthorizationCredential[],
     input: Omit<
       RecordConfigurationChangeInput,
       'initiatorUserId' | 'initiatorRole'
@@ -60,7 +59,6 @@ export class PlatformConfigurationAuditService {
           c => c.type as AuthorizationCredential
         ),
         intendedOwners,
-        legacyReachers,
       });
     } catch (error) {
       this.logger.error?.(

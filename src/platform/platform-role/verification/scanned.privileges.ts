@@ -3,16 +3,15 @@ import { A_ROW_SURFACES } from './a.row.surfaces';
 import { privilegesNamedByGate } from './gate.model';
 
 /**
- * 027-platform-role-redesign (T052a, eighth clarification pass) — split out
- * of `surface.drift.spec.ts` only because Biome's `noExportsInTest` forbids
- * exporting from a `*.spec.ts` file; the derivation itself belongs
- * conceptually to the drift detector, not to the model layer (T040c/T040d).
+ * Split out of `surface.drift.spec.ts` only because Biome's
+ * `noExportsInTest` forbids exporting from a `*.spec.ts` file; the
+ * derivation itself belongs conceptually to the drift detector, not to the
+ * model layer.
  *
- * Baseline CRUD verbs plus the retiring catch-all are excluded even though
+ * Baseline CRUD verbs (and GRANT) are excluded even though
  * they are named in some census gate expressions (A6/A7/A8's `anyOf` owner
- * branch, A9's three resolver-local-policy conversion mutations, A13's
- * bare-CRUD-gated license definitions, A16's plain `READ`) — see
- * `surface.drift.spec.ts`'s doc comment, stated limit 2, for why: these six
+ * branch, A13's bare-CRUD-gated license definitions, A16's plain `READ`) — see
+ * `surface.drift.spec.ts`'s doc comment, stated limit 2, for why: these five
  * are the vocabulary reused by every ordinary, non-administrative gate
  * across this ~3k-file codebase, and scanning them by literal privilege
  * name would flag dozens of files unrelated to this feature's eight admin
@@ -24,21 +23,13 @@ export const EXCLUDED_FROM_SCAN: ReadonlySet<AuthorizationPrivilege> = new Set([
   AuthorizationPrivilege.UPDATE,
   AuthorizationPrivilege.DELETE,
   AuthorizationPrivilege.GRANT,
-  // T074 (Slice B): `PLATFORM_ADMIN` is no longer listed — it no longer
-  // exists. Its blanket exclusion (and the narrow rule-1b allowlist below that
-  // compensated for it) was this census's one documented blind spot, and the
-  // ~26 gates hiding inside it are exactly what T074 had to re-anchor by hand.
 ]);
 
 /**
  * DERIVED from the census — every privilege named in any `A_ROW_SURFACES`
- * entry's `gate` expression, minus `EXCLUDED_FROM_SCAN`. This supersedes
- * the thirteenth analyze pass's "pin it as data" instruction: the
- * previously hand-pinned set (T007's 11 new privileges plus
- * `PLATFORM_ROLES_ASSIGN`) is now this set's EXPECTED CONTENT, not its
- * definition — a surface added to the census extends the scan by
- * construction, so the vocabulary cannot independently drift from what is
- * actually declared.
+ * entry's `gate` expression, minus `EXCLUDED_FROM_SCAN`. A surface added to
+ * the census extends the scan by construction, so the vocabulary cannot
+ * independently drift from what is actually declared.
  */
 export const SCANNED_PRIVILEGES: readonly AuthorizationPrivilege[] = (() => {
   const found = new Set<AuthorizationPrivilege>();
