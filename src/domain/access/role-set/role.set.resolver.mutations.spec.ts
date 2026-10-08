@@ -727,4 +727,150 @@ describe('RoleSetResolverMutations', () => {
       ).rejects.toThrow(ValidationException);
     });
   });
+  // server#6623: consent is about ENTERING the Space (R32). A role beyond the
+  // entry role must not be a side door into an L0, so an actor that is not yet
+  // in the entry role needs the entry privilege whatever role is asked for.
+  describe('entering a SPACE needs the entry privilege whatever the role (server#6623)', () => {
+    const actorContext = { actorID: 'admin-1' } as any;
+    const spaceRoleSet = {
+      id: 'rs-1',
+      type: RoleSetType.SPACE,
+      entryRoleName: RoleName.MEMBER,
+      authorization: { id: 'auth-1' },
+      license: { id: 'lic-1' },
+    } as any;
+
+    const privilegesChecked = () =>
+      (authorizationService.grantAccessOrFail as Mock).mock.calls.map(
+        call => call[2]
+      );
+
+    beforeEach(() => {
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(spaceRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (roleSetService.assignActorToRole as Mock).mockResolvedValue('actor-1');
+      (
+        userAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (userLookupService.getUserByIdOrFail as Mock).mockResolvedValue({
+        id: 'actor-1',
+      });
+      (
+        virtualContributorLookupService.getVirtualContributorByIdOrFail as Mock
+      ).mockResolvedValue({ id: 'actor-1' });
+      (licenseService.isEntitlementEnabledOrFail as Mock).mockReturnValue(
+        undefined
+      );
+    });
+
+    it.each([
+      RoleName.LEAD,
+      RoleName.ADMIN,
+    ])('assignRoleToUser(%s) on a non-member needs ROLESET_ENTRY_ROLE_ASSIGN and GRANT', async role => {
+      (roleSetService.isInRole as Mock).mockResolvedValue(false);
+
+      await resolver.assignRoleToUser(actorContext, {
+        roleSetID: 'rs-1',
+        actorID: 'actor-1',
+        role,
+      } as any);
+
+      expect(roleSetService.isInRole).toHaveBeenCalledWith(
+        'actor-1',
+        spaceRoleSet,
+        RoleName.MEMBER
+      );
+      expect(privilegesChecked()).toEqual([
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
+        AuthorizationPrivilege.GRANT,
+      ]);
+    });
+
+    it('assignRoleToUser(LEAD) on an existing member needs GRANT alone', async () => {
+      (roleSetService.isInRole as Mock).mockResolvedValue(true);
+
+      await resolver.assignRoleToUser(actorContext, {
+        roleSetID: 'rs-1',
+        actorID: 'actor-1',
+        role: RoleName.LEAD,
+      } as any);
+
+      expect(privilegesChecked()).toEqual([AuthorizationPrivilege.GRANT]);
+    });
+
+    it('refuses before assigning when the caller lacks the entry privilege', async () => {
+      (roleSetService.isInRole as Mock).mockResolvedValue(false);
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        (_ctx, _auth, privilege) => {
+          if (privilege === AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN) {
+            throw new Error('forbidden');
+          }
+        }
+      );
+
+      await expect(
+        resolver.assignRoleToUser(actorContext, {
+          roleSetID: 'rs-1',
+          actorID: 'actor-1',
+          role: RoleName.ADMIN,
+        } as any)
+      ).rejects.toThrow('forbidden');
+      expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+    });
+
+    it('assignRole routes a USER through the same rule', async () => {
+      (roleSetService.isInRole as Mock).mockResolvedValue(false);
+      (actorLookupService.getActorByIdOrFail as Mock).mockResolvedValue({
+        id: 'actor-1',
+        type: ActorType.USER,
+      });
+
+      await resolver.assignRole(actorContext, {
+        roleSetID: 'rs-1',
+        actorID: 'actor-1',
+        role: RoleName.LEAD,
+      } as any);
+
+      expect(privilegesChecked()).toEqual([
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
+        AuthorizationPrivilege.GRANT,
+      ]);
+    });
+
+    it.each([
+      [false, AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
+      [true, AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT],
+    ])('assignRoleToVirtualContributor(LEAD) on a non-member (same account: %s) needs %s and GRANT', async (sameAccount, entryPrivilege) => {
+      (roleSetService.isInRole as Mock).mockResolvedValue(false);
+      (
+        roleSetService.isRoleSetAccountMatchingVcAccount as Mock
+      ).mockResolvedValue(sameAccount);
+
+      await resolver.assignRoleToVirtualContributor(actorContext, {
+        roleSetID: 'rs-1',
+        actorID: 'actor-1',
+        role: RoleName.LEAD,
+      } as any);
+
+      expect(privilegesChecked()).toEqual([
+        entryPrivilege,
+        AuthorizationPrivilege.GRANT,
+      ]);
+    });
+
+    it('assignRoleToVirtualContributor(LEAD) on an existing member needs GRANT alone', async () => {
+      (roleSetService.isInRole as Mock).mockResolvedValue(true);
+
+      await resolver.assignRoleToVirtualContributor(actorContext, {
+        roleSetID: 'rs-1',
+        actorID: 'actor-1',
+        role: RoleName.LEAD,
+      } as any);
+
+      expect(privilegesChecked()).toEqual([AuthorizationPrivilege.GRANT]);
+    });
+  });
 });
