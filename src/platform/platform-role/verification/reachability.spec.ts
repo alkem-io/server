@@ -3,16 +3,15 @@ import { A_ROW_SURFACES, type SurfaceRef } from './a.row.surfaces';
 import { reachers } from './reachability';
 
 /**
- * 027-platform-role-redesign (T070m, FR-034/SC-019, research D26) — THE
- * check that closes the defect class four review findings kept re-opening:
- * for EVERY live surface in `A_ROW_SURFACES`, the DERIVED reacher set
+ * THE check that closes the defect class four review findings kept
+ * re-opening: for EVERY surface in `A_ROW_SURFACES`, the DERIVED reacher set
  * (`reachers()`, from the gate + grant/cascade model) must equal the
- * DECLARED intent (`intendedOwners ∪ acceptedExtraReachers`). Set EQUALITY, not containment — a superset
- * is the two-family overlap SC-004 forbids, a subset is a role denied its
- * own family, and only equality catches both.
+ * DECLARED intent (`intendedOwners ∪ acceptedExtraReachers`). Set EQUALITY,
+ * not containment — a superset is a two-family overlap, a subset is a role
+ * denied its own family, and only equality catches both.
  *
  * A failing assertion here is a finding about the POLICY or the CENSUS,
- * NEVER a stale expectation to relax (research D26). Every historic
+ * NEVER a stale expectation to relax. Every historic
  * instance (A15 forum, A6 delete-org, A7 packs, A16 read, A17 owner) was a
  * real defect that this file's absence let ship.
  */
@@ -37,10 +36,6 @@ function expectedReachers(surface: SurfaceRef): Set<AuthorizationCredential> {
     ...surface.intendedOwners,
     ...(surface.acceptedExtraReachers?.map(r => r.credential) ?? []),
   ]);
-}
-
-function isLive(surface: SurfaceRef): boolean {
-  return surface.lifecycle !== 'retired';
 }
 
 function surfaceLabel(aRow: string, surface: SurfaceRef): string {
@@ -87,9 +82,6 @@ describe('reachability.spec.ts (T070m, FR-034/SC-019)', () => {
         const label = `${surfaceLabel(aRow, surface)}${surfaces.length > 1 ? ` [${index}]` : ''}`;
 
         it(`${label} — derived ≡ intendedOwners ∪ acceptedExtraReachers`, () => {
-          if (!isLive(surface)) {
-            return; // 'retired' — no live surface, nothing to check.
-          }
           assertReachabilityEquals(aRow, surface);
         });
       });
