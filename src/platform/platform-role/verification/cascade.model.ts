@@ -81,10 +81,11 @@ export type TreeId =
  * owned by NO global role, so cascading it would hand Content Full Access
  * entity renames the spec explicitly denies it.
  *
- * Reaches the seven direct root-inheritors. `GLOBAL_SUPPORT` is deliberately
- * NOT a credential here: it never held blanket CRUD across these seven trees,
- * only per-space, flag-gated privileges (`allowPlatformSupportAsAdmin`).
- * Adding it here would bypass that per-space consent gate platform-wide.
+ * Reaches the seven direct root-inheritors. `platform-support` is
+ * deliberately NOT a credential here: it holds no blanket CRUD across these
+ * seven trees, only per-space, flag-gated privileges
+ * (`allowPlatformSupportAsAdmin`). Adding it here would bypass that per-space
+ * consent gate platform-wide.
  */
 export const ROOT_CASCADE: {
   readonly privileges: readonly AuthorizationPrivilege[];

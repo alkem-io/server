@@ -14,16 +14,16 @@ import {
 } from './privilege.grants';
 
 /**
- * 027-platform-role-redesign (T040d, research D26/D27) — ONE pure function,
- * no I/O, no Nest DI: given a surface, return every credential that ACTUALLY
- * reaches it, computed from the gate expression plus the explicit-grant
- * (`privilege.grants.ts`) and cascade (`cascade.model.ts`) model. This is a
+ * ONE pure function, no I/O, no Nest DI: given a surface, return every
+ * credential that ACTUALLY reaches it, computed from the gate expression plus
+ * the explicit-grant (`privilege.grants.ts`) and cascade (`cascade.model.ts`)
+ * model. This is a
  * DERIVATION, not a declaration — the census (`a.row.surfaces.ts`) states
  * INTENT; this function states FACT, and `reachability.spec.ts` is what
- * asserts the two agree for every live surface:
+ * asserts the two agree for every surface:
  * derived ≡ intendedOwners ∪ acceptedExtraReachers.
  *
- * Returns CREDENTIALS, never role names (research D27a) — an equality that
+ * Returns CREDENTIALS, never role names — an equality that
  * crossed vocabularies would land on silent-void identifiers. A consumer
  * needing a role name converts through the canonical `ROLE_CREDENTIAL_MAP`
  * (`platform.roles.access.service.ts`) — never a local cast.

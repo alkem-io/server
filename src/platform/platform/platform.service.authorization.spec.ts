@@ -358,7 +358,7 @@ describe('PlatformAuthorizationService', () => {
   // assertions for T034/T034a/T035's grant-set widenings and re-anchors on
   // the platform policy — the direct guard reachability.spec.ts (T070m)
   // covers only indirectly, via set equality against the census.
-  describe('027-platform-role-redesign — T034/T034a/T035 grant-set widenings (T070f)', () => {
+  describe('platform-tree per-family grant sets', () => {
     const arrange = () => {
       authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
         ((privileges: any, types: any, name: any) => ({
@@ -379,7 +379,7 @@ describe('PlatformAuthorizationService', () => {
         .map(r => r.value)
         .filter((rule: any) => rule.grantedPrivileges?.includes(privilege));
 
-    it('PLATFORM_ROLES_ASSIGN (T034 widening): EXACTLY {global-admin, platform-roles-admin}, non-cascading — the FR-022 pin (T034a) keeps the widening off the four credential mutations at the resolver, not here', async () => {
+    it('PLATFORM_ROLES_ASSIGN (A1): EXACTLY {platform-roles-admin}, non-cascading', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -391,7 +391,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('FEATURE_ROLE_ASSIGN (T034, A2): EXACTLY {platform-users-admin, platform-roles-admin} — wholly new privilege, no legacy reacher', async () => {
+    it('FEATURE_ROLE_ASSIGN (A2): EXACTLY {platform-users-admin, platform-roles-admin}, non-cascading', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -419,7 +419,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('FEATURE_ROLE_HOLDERS_READ (T034, A20b): EXACTLY {platform-users-admin} plus legacy — NOT platform-roles-admin / platform-audit-reader, which reach it by subsumption through PLATFORM_ROLE_HOLDERS_READ (D9)', async () => {
+    it('FEATURE_ROLE_HOLDERS_READ (A20b): EXACTLY {platform-users-admin} — NOT platform-roles-admin / platform-audit-reader, which reach it by subsumption through PLATFORM_ROLE_HOLDERS_READ', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -439,7 +439,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('PLATFORM_AUDIT_READ (T035, A19): EXACTLY {platform-audit-reader} plus legacy, read-only, held by no other target role', async () => {
+    it('PLATFORM_AUDIT_READ (A19): EXACTLY {platform-audit-reader}, read-only, held by no other role', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -451,7 +451,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('SET_SERVICE_PROFILE (T035, A21): EXACTLY {platform-roles-admin} plus legacy', async () => {
+    it('SET_SERVICE_PROFILE (A21): EXACTLY {platform-roles-admin}', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -475,7 +475,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('PLATFORM_FORUM_MANAGE (T035, A15, FR-007(e)): EXACTLY {platform-support} plus legacy, cascading — and, distinguishing a correctly-gated surface from a CRUD-gated one, platform-content-full-access is NOT among the reachers', async () => {
+    it('PLATFORM_FORUM_MANAGE (A15): EXACTLY {platform-support}, cascading — and, distinguishing a correctly-gated surface from a CRUD-gated one, platform-content-full-access is NOT among the reachers', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -496,7 +496,7 @@ describe('PlatformAuthorizationService', () => {
     // on CREATE_ORGANIZATION would have admitted feature-organization-creator and
     // beta-tester, and platform-content-full-access already reaches the lists
     // through its own privilege and must not acquire Support's.
-    it('PLATFORM_SUPPORT_LISTS_READ (R-F.2, Slice B): EXACTLY {platform-support}, non-cascading — neither the org-creator pair nor content-full-access is among the reachers', async () => {
+    it('PLATFORM_SUPPORT_LISTS_READ: EXACTLY {platform-support}, non-cascading — neither the org-creator pair nor content-full-access is among the reachers', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 
@@ -587,7 +587,7 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('CREATE_ORGANIZATION (T035, A6 create half): EXACTLY {global-admin, global-support, beta-tester, platform-support, feature-organization-creator} — deliberately separate from DELETE_ORGANIZATION so Feature Organization Creator can never acquire the delete half', async () => {
+    it('CREATE_ORGANIZATION (A6 create half): EXACTLY {platform-support, feature-organization-creator} — deliberately separate from DELETE_ORGANIZATION so Feature Organization Creator can never acquire the delete half', async () => {
       arrange();
       await service.applyAuthorizationPolicy();
 

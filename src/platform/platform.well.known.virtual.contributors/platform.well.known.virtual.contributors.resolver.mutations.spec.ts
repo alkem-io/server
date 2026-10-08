@@ -14,23 +14,15 @@ import { PlatformWellKnownVirtualContributorsResolverMutations } from './platfor
 import { PlatformWellKnownVirtualContributorsService } from './platform.well.known.virtual.contributors.service';
 
 /**
- * 027-platform-role-redesign (sec-server-23 fix, 2026-07-31).
- *
- * A10 consolidated a family of platform-settings mutations onto ONE
- * `PLATFORM_SETTINGS_ADMIN` privilege — but the family did not share a
- * pre-feature gate. Most members were already on PLATFORM_SETTINGS_ADMIN
- * (pre-feature reachers {GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER});
- * `setPlatformWellKnownVirtualContributor` was on the PLATFORM_ADMIN
- * catch-all (pre-feature reachers {GLOBAL_ADMIN, GLOBAL_SUPPORT,
- * GLOBAL_LICENSE_MANAGER}). Consolidation therefore grants each member the
- * UNION, and GLOBAL_PLATFORM_MANAGER gains a mutation it never held.
- *
- * The resolver pins its own check to the owning role alone. These tests wire the REAL AuthorizationPolicyService +
+ * `setPlatformWellKnownVirtualContributor` belongs to A10, the
+ * platform-settings family, and the resolver pins its own check to the
+ * owning role (`platform-settings-admin`) alone rather than the shared
+ * platform policy. These tests wire the REAL AuthorizationPolicyService +
  * AuthorizationService so the constructor builds a genuine policy — a mocked
  * `grantAccessOrFail` would assert nothing about who the pin actually admits.
  *
  * Same shape as `emailChangePolicy — real-engine integration`
- * (admin.user.email.change.resolver.mutations.spec.ts, sec-server-7).
+ * (admin.user.email.change.resolver.mutations.spec.ts).
  */
 describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
   let resolver: PlatformWellKnownVirtualContributorsResolverMutations;

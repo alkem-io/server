@@ -240,10 +240,10 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
     owningCredentials: [AuthorizationCredential.FEATURE_VIRTUAL_ASSISTANT],
   },
 
-  // --- A3/A11 (032, pre-existing) — see the `ManagedPrivilege` doc comment
-  // above for why these three are mirrored here despite predating this
-  // feature. All three share ONE grant set (research C3), regardless of which
-  // of these three literal privileges an A3/A11 surface checks.
+  // --- A3/A11 (pre-existing) — see the `ManagedPrivilege` doc comment above
+  // for why these three are mirrored here despite predating this feature.
+  // All three share ONE grant set, regardless of which of these three
+  // literal privileges an A3/A11 surface checks.
   [AuthorizationPrivilege.AUTHORIZATION_RESET]: {
     anchor: 'platform',
     owningCredentials: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],

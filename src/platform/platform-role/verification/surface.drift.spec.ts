@@ -20,11 +20,10 @@ import {
 import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
 
 /**
- * 027-platform-role-redesign (T052a, research D24, FR-010) — the census
- * DRIFT DETECTOR. Three rules, all against `src/**\/*.ts` as it exists on
- * disk right now — none of them read `A_ROW_SURFACES` as ground truth about
- * the CODE; they read it as ground truth about what was DECLARED, and
- * check the code against it.
+ * The census DRIFT DETECTOR. Three rules, all against `src/**\/*.ts` as it
+ * exists on disk right now — none of them read `A_ROW_SURFACES` as ground
+ * truth about the CODE; they read it as ground truth about what was
+ * DECLARED, and check the code against it.
  *
  * - Rule 1 — a whole NEW gated surface: every file where a scanned
  *   privilege appears at a gate-position call must be a file this census
@@ -39,26 +38,23 @@ import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
  * **Stated limits — do not paper over them:**
  *  1. A resolver that forgets to gate an action AT ALL is invisible to a
  *     scan built around "which privilege is checked" — there is no gate to
- *     find. That gap is closed by `test-suites`' denial cells (FR-024),
- *     which fail when an UNGATED surface answers a role that should be
- *     denied. The two detectors are complements, which is why FR-033 keeps
- *     both layers.
+ *     find. That gap is closed by `test-suites`' denial cells, which fail
+ *     when an UNGATED surface answers a role that should be denied. The two
+ *     detectors are complements, which is why both layers are kept.
  *  2. `SCANNED_PRIVILEGES` deliberately EXCLUDES the five baseline CRUD
- *     verbs (`CREATE`/`READ`/`UPDATE`/`DELETE`/`GRANT`) and the retiring
- *     `PLATFORM_ADMIN` catch-all, even where a census gate expression names
- *     one of them (A6/A7/A8's `anyOf` owner branch; A9's three
- *     resolver-local-`PLATFORM_ADMIN`-policy conversion mutations; A13's
- *     bare-CRUD-gated license definitions; A16's plain `READ`). These six
- *     are the vocabulary reused by ordinary, non-administrative gates
+ *     verbs (`CREATE`/`READ`/`UPDATE`/`DELETE`/`GRANT`), even where a census
+ *     gate expression names one of them (A6/A7/A8's `anyOf` owner branch;
+ *     A13's bare-CRUD-gated license definitions; A16's plain `READ`). These
+ *     five are the vocabulary reused by ordinary, non-administrative gates
  *     across this ~3k-file codebase — a text scan that included them would
  *     flag dozens of files that have nothing to do with this feature's
  *     eight admin families (verified empirically while building this
  *     census: 28+ files check bare `DELETE` at a gate-position call shape
- *     alone). A new gate site added to one of THOSE six privileges is
+ *     alone). A new gate site added to one of THOSE five privileges is
  *     therefore ALSO invisible here — the same class of blind spot as (1),
  *     for a different reason (over-, not under-, matching a privilege
  *     name), and covered by the same complement (`test-suites`' denial
- *     cells, plus this repo's own per-policy grant-set specs, T070f).
+ *     cells, plus this repo's own per-policy grant-set specs).
  *
  * **Text scan, not an AST pass.** The three gate-position shapes
  * (`@AuthorizationActorHasPrivilege(…)`, `grantAccessOrFail(…, …)`,
@@ -73,10 +69,7 @@ import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
  * whole-file join is the cheapest thing that does not choke on that shape.
  */
 
-// `listSourceFiles()` / `GATE_CALL_PATTERN` live in `source.scan.ts` (QA
-// cross-census-3). This file's former rule 1b and its hand-picked
-// `PLATFORM_ADMIN_SCAN_ALLOWLIST` are gone: Slice B (T074) deleted the
-// privilege they scanned for.
+// `listSourceFiles()` / `GATE_CALL_PATTERN` live in `source.scan.ts`.
 
 interface FileScan {
   readonly hasGateCall: boolean;
@@ -163,7 +156,7 @@ describe('surface.drift.spec (T052a) — census vs. code', () => {
     ...INDIRECT_ENFORCEMENT_FILES,
   ]);
 
-  it('SCANNED_PRIVILEGES is non-empty and excludes the six baseline verbs', () => {
+  it('SCANNED_PRIVILEGES is non-empty and excludes the five baseline verbs', () => {
     expect(SCANNED_PRIVILEGES.length).toBeGreaterThan(0);
     for (const excluded of EXCLUDED_FROM_SCAN) {
       expect(SCANNED_PRIVILEGES).not.toContain(excluded);

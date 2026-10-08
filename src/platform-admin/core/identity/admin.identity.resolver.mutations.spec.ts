@@ -110,11 +110,11 @@ describe('AdminIdentityResolverMutations', () => {
     ).not.toHaveBeenCalled();
   });
 
-  // 027-platform-role-redesign (sec-server-4 fix): wires the REAL
-  // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `identityDeletePolicy` is a genuine, hardcoded [PLATFORM_USERS_ADMIN]
-  // policy — NOT the shared platform policy. Asserts that non-owning platform
-  // roles are denied THIS surface and the owning role is allowed.
+  // Wires the REAL AuthorizationPolicyService + AuthorizationService so the
+  // constructor's `identityDeletePolicy` is a genuine, hardcoded
+  // [PLATFORM_USERS_ADMIN] policy — NOT the shared platform policy. Asserts
+  // that non-owning platform roles are denied THIS surface and the owning
+  // role is allowed.
   describe('identityDeletePolicy — real-engine integration', () => {
     let realResolver: AdminIdentityResolverMutations;
     let realAdminIdentityService: Record<string, Mock>;
@@ -145,14 +145,14 @@ describe('AdminIdentityResolverMutations', () => {
       realAdminIdentityService.deleteIdentity.mockResolvedValue(true);
     });
 
-    it('denies a global-support-only actor (never held this surface pre-feature)', async () => {
+    it('DENIES a platform-support actor — support is not the user-record family', async () => {
       const actor = buildActorContext(AuthorizationCredential.PLATFORM_SUPPORT);
       await expect(
         realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
       ).rejects.toThrow();
     });
 
-    it('denies a global-license-manager-only actor (never held this surface pre-feature)', async () => {
+    it('DENIES a platform-license-manager actor — licensing is not the user-record family', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_LICENSE_MANAGER
       );
@@ -161,14 +161,10 @@ describe('AdminIdentityResolverMutations', () => {
       ).rejects.toThrow();
     });
 
-    // 027-platform-role-redesign (T076, Slice B): INVERTED. This asserted that a
-    // legacy credential kept its pre-feature reach through the additive slice.
-    // T076 dropped every legacy credential from this surface's grant set, so the
-    // assertion becomes the denial — and that denial is the FR-007(d) guarantee
-    // itself: the user-record family is held by Platform Users Admin ALONE.
-    // Content Full Access is the sharpest case: FR-004 cascades it full CRUD
-    // platform-wide, and A5 is outside SC-004's named exception (closed at
-    // A6/A7), so it must still be refused here.
+    // The user-record family is held by Platform Users Admin ALONE. Content
+    // Full Access is the sharpest case: the root rule cascades it full CRUD
+    // platform-wide, and A5 is outside its single accepted exception (closed
+    // at A6/A7), so it must still be refused here.
     it('DENIES a platform-content-full-access actor — identity deletion is the user-record family', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
@@ -178,7 +174,7 @@ describe('AdminIdentityResolverMutations', () => {
       ).rejects.toThrow();
     });
 
-    it('allows a platform-users-admin actor (the new owning role)', async () => {
+    it('allows a platform-users-admin actor (the owning role)', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_USERS_ADMIN
       );

@@ -19,21 +19,14 @@ import { LicensePolicyService } from './license.policy.service';
 @InstrumentResolver()
 @Resolver()
 export class LicensePolicyResolverMutations {
-  /** 027-platform-role-redesign (corr-server-7/corr-server-10 fix, shared
-   * via server-C2-a's `buildLicenseDefinitionPolicy`): checked against THIS
-   * resolver-local, hardcoded IN_MEMORY policy — NOT
+  /** Checked against THIS resolver-local, hardcoded IN_MEMORY policy
+   * (`buildLicenseDefinitionPolicy`, shared by every license-definition
+   * resolver), whose only credential is `platform-settings-admin` — NOT
    * `licensePolicy.authorization`, which inherits the root policy
    * (transitively, via the licensing framework), so the root rule's
-   * `platform-content-full-access` CRUD cascade (T036a) would otherwise
-   * satisfy these bare CREATE/UPDATE/DELETE checks too — a family SC-004's
-   * exception does not cover.
-   *
-   * GLOBAL_SUPPORT included (corr-server-12 fix): the licensing framework's
-   * authorization ALSO inherits `platform.authorization`, which carries
-   * `globalSupportPlatformAdmin` — a `cascade: true` rule granting
-   * global-support CRUD (platform.service.authorization.ts). Omitting it
-   * here would silently revoke a pre-feature reach, which the additive
-   * slice must not do. */
+   * `platform-content-full-access` CRUD cascade would otherwise satisfy
+   * these bare CREATE/UPDATE/DELETE checks too — a family the
+   * content-full-access exception does not cover. */
   private licenseDefinitionPolicy: IAuthorizationPolicy =
     buildLicenseDefinitionPolicy();
 
