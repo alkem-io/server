@@ -56,31 +56,11 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
-    this.validateRoleSetTypeOrFail(roleSet, [
-      RoleSetType.SPACE,
-      RoleSetType.ORGANIZATION,
-    ]);
-
-    let privilegeRequired = AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN;
-    switch (roleSet.type) {
-      case RoleSetType.SPACE: {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        if (roleData.role === RoleName.MEMBER) {
-          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-        }
-        break;
-      }
-      case RoleSetType.ORGANIZATION: {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        break;
-      }
-    }
-
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeAssignUser(
       actorContext,
-      roleSet.authorization,
-      privilegeRequired,
-      `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
+      roleSet,
+      roleData.role,
+      roleData.actorID
     );
 
     await this.roleSetService.assignActorToRole(
@@ -176,44 +156,12 @@ export class RoleSetResolverMutations {
       }
     );
 
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
-
-    // Note re COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
-    // The ability to assign the VC is a function of the space and the VC, not of the user
-    // So it is a privilege to be able to assign from the same account,
-    // but this is separate from the business logic check that the space and the
-    // account are in the same account.
-    let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === RoleName.MEMBER) {
-      const sameAccount =
-        await this.roleSetService.isRoleSetAccountMatchingVcAccount(
-          roleSet,
-          roleData.actorID
-        );
-      if (sameAccount) {
-        requiredPrivilege =
-          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT;
-      } else {
-        // Nobody holds this on an L0 Space, so a VC from another account
-        // enters an L0 by invitation only (ruling 2026-10-08, server#6623).
-        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-      }
-    }
-
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeAssignVirtualContributor(
       actorContext,
-      roleSet.authorization,
-      requiredPrivilege,
-      `assign virtual community role: ${roleSet.id}`
+      roleSet,
+      roleData.role,
+      roleData.actorID
     );
-
-    // Also require SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement for the RoleSet
-    if (roleSet.type === RoleSetType.SPACE) {
-      this.licenseService.isEntitlementEnabledOrFail(
-        roleSet.license,
-        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
-      );
-    }
 
     await this.roleSetService.assignActorToRole(
       roleSet,
@@ -407,7 +355,12 @@ export class RoleSetResolverMutations {
     // Type-specific authorization and validation
     switch (actor.type) {
       case ActorType.USER:
-        await this.authorizeAssignUser(actorContext, roleSet, roleData.role);
+        await this.authorizeAssignUser(
+          actorContext,
+          roleSet,
+          roleData.role,
+          roleData.actorID
+        );
         break;
       case ActorType.ORGANIZATION:
         await this.authorizeAssignOrganization(
@@ -516,32 +469,53 @@ export class RoleSetResolverMutations {
   private async authorizeAssignUser(
     actorContext: ActorContext,
     roleSet: IRoleSet,
-    role: RoleName
+    role: RoleName,
+    actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [
       RoleSetType.SPACE,
       RoleSetType.ORGANIZATION,
     ]);
+    const reason = `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`;
 
-    let privilegeRequired = AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN;
-    switch (roleSet.type) {
-      case RoleSetType.SPACE:
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        if (role === RoleName.MEMBER) {
-          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-        }
-        break;
-      case RoleSetType.ORGANIZATION:
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        break;
+    if (roleSet.type === RoleSetType.ORGANIZATION) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT,
+        reason
+      );
+      return;
     }
 
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      privilegeRequired,
-      `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
-    );
+    // Consent is about ENTERING the Space, not about which role the actor
+    // holds once in (R32, as for organizations). A user not yet in the entry
+    // role needs the entry privilege whatever role is asked for, so Lead or
+    // Admin is never a side door into an L0, where nobody holds it
+    // (server#6623). Roles beyond the entry role also need GRANT.
+    if (
+      role === RoleName.MEMBER ||
+      !(await this.roleSetService.isInRole(
+        actorID,
+        roleSet,
+        roleSet.entryRoleName
+      ))
+    ) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
+        reason
+      );
+    }
+    if (role !== RoleName.MEMBER) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT,
+        reason
+      );
+    }
   }
 
   /**
@@ -599,36 +573,49 @@ export class RoleSetResolverMutations {
     actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+    const reason = `assign virtual community role: ${roleSet.id}`;
 
-    let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (role === RoleName.MEMBER) {
+    // Entering the Space is gated as for users (server#6623). The entry
+    // privilege depends on the VC: COMMUNITY_ASSIGN_VC_FROM_ACCOUNT is a
+    // function of the Space and the VC, not of the caller, so it covers only a
+    // VC from the Space's own account. Nobody holds ROLESET_ENTRY_ROLE_ASSIGN
+    // on an L0, so a VC from another account enters an L0 by invitation only
+    // (ruling 2026-10-08).
+    if (
+      role === RoleName.MEMBER ||
+      !(await this.roleSetService.isInRole(
+        actorID,
+        roleSet,
+        roleSet.entryRoleName
+      ))
+    ) {
       const sameAccount =
         await this.roleSetService.isRoleSetAccountMatchingVcAccount(
           roleSet,
           actorID
         );
-      if (sameAccount) {
-        requiredPrivilege =
-          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT;
-      } else {
-        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-      }
-    }
-
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      requiredPrivilege,
-      `assign virtual community role: ${roleSet.id}`
-    );
-
-    // Also require VC access entitlement
-    if (roleSet.type === RoleSetType.SPACE) {
-      this.licenseService.isEntitlementEnabledOrFail(
-        roleSet.license,
-        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        sameAccount
+          ? AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
+          : AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
+        reason
       );
     }
+    if (role !== RoleName.MEMBER) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT,
+        reason
+      );
+    }
+
+    this.licenseService.isEntitlementEnabledOrFail(
+      roleSet.license,
+      LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+    );
   }
 
   // Authorization helpers for remove operations
