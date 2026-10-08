@@ -14,7 +14,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { IRoleSet } from '../role-set/role.set.interface';
 import { CreatePlatformInvitationInput } from './dto/platform.invitation.dto.create';
 import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
@@ -23,12 +23,19 @@ import { IPlatformInvitation } from './platform.invitation.interface';
 
 @Injectable()
 export class PlatformInvitationService {
-  private acceptedPlatformRoles: RoleName[] = [
-    RoleName.PLATFORM_BETA_TESTER,
-    RoleName.PLATFORM_VC_CAMPAIGN,
-    // 027: the Feature successor of platform-vc-campaign (Slice A keeps both).
-    RoleName.FEATURE_VC_CAMPAIGN,
-  ];
+  /**
+   * 027-platform-role-redesign (T077, Slice B): a platform invitation could
+   * carry `platform-beta-tester` or `platform-vc-campaign`; both roles are
+   * gone. `feature-beta-tester` is deliberately NOT added here — a Feature
+   * role granted through `assignPlatformRoleToOrganization` / `…ToUser` runs
+   * the six assignment rules and the fail-closed audit write (FR-012), and
+   * routing it through an invitation would bypass both.
+   *
+   * `feature-vc-campaign` is the one exception, carried over from Slice A: it
+   * is the successor of `platform-vc-campaign`, whose invitation path was the
+   * targeting half of the dashboard Virtual Contributor offer (runbook §2b).
+   */
+  private acceptedPlatformRoles: RoleName[] = [RoleName.FEATURE_VC_CAMPAIGN];
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -131,7 +138,7 @@ export class PlatformInvitationService {
   ): Promise<IPlatformInvitation[]> {
     const existingPlatformInvitations =
       await this.platformInvitationRepository.find({
-        where: { email: email.toLowerCase() },
+        where: { email: email.toLowerCase(), profileCreated: false },
         relations: { roleSet: true },
       });
 
@@ -148,6 +155,7 @@ export class PlatformInvitationService {
       await this.platformInvitationRepository.find({
         where: {
           email: email.toLowerCase(),
+          profileCreated: false,
           roleSet: {
             id: roleSetID,
           },
@@ -157,13 +165,49 @@ export class PlatformInvitationService {
 
     if (existingPlatformInvitations.length > 1) {
       throw new RoleSetMembershipException(
-        `Found roleSet invitations for email ${email} and roleSet ${roleSetID}, but only one is expected!`,
-        LogContext.ROLES
+        'Found multiple open platform invitations for one address and role set, but only one is expected',
+        LogContext.ROLES,
+        undefined,
+        {
+          roleSetID,
+          platformInvitationIDs: existingPlatformInvitations.map(i => i.id),
+        }
       );
     }
     if (existingPlatformInvitations.length === 1) {
       return existingPlatformInvitations[0];
     }
     return undefined;
+  }
+
+  /**
+   * Open (not yet consumed) platform invitations of one role set. Consumed
+   * rows (profileCreated) are history and never listed as pending.
+   */
+  async findOpenForRoleSet(roleSetID: string): Promise<IPlatformInvitation[]> {
+    return await this.platformInvitationRepository.find({
+      where: { roleSet: { id: roleSetID }, profileCreated: false },
+      relations: { roleSet: true },
+    });
+  }
+
+  /**
+   * Erases every platform invitation (open or consumed) addressed to the
+   * email, together with its authorization policy. Runs on the caller's
+   * transactional manager so it commits or rolls back with the account
+   * deletion. Returns the number of invitations removed.
+   */
+  async deleteAllForEmail(email: string, em: EntityManager): Promise<number> {
+    const invitations = await em.find(PlatformInvitation, {
+      where: { email: email.trim().toLowerCase() },
+      relations: { authorization: true },
+    });
+    for (const invitation of invitations) {
+      if (invitation.authorization) {
+        await em.remove(invitation.authorization);
+      }
+      await em.remove(invitation);
+    }
+    return invitations.length;
   }
 }

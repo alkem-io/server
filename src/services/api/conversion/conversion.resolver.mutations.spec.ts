@@ -101,7 +101,7 @@ describe('ConversionResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         expect.anything(),
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
         expect.any(String)
       );
       expect(
@@ -456,6 +456,86 @@ describe('ConversionResolverMutations', () => {
           outcome: 'moved',
         })
       );
+    });
+  });
+
+  describe('convertVirtualContributorToUseKnowledgeBase — Form callouts', () => {
+    const arrange = (callouts: any[]) => {
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      virtualContributorService.getVirtualContributorByIdOrFail.mockResolvedValue(
+        {
+          id: 'vc-1',
+          knowledgeBase: { calloutsSet: { id: 'cs-target' } },
+          account: { id: 'acc-1' },
+          bodyOfKnowledgeType: 'alkemio-space',
+          bodyOfKnowledgeID: 'space-1',
+        }
+      );
+      spaceService.getSpaceOrFail.mockResolvedValue({
+        id: 'space-1',
+        collaboration: { calloutsSet: { id: 'cs-source', callouts } },
+      });
+      spaceService.getAccountForLevelZeroSpaceOrFail.mockResolvedValue({
+        id: 'acc-1',
+      });
+      virtualContributorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+    };
+
+    it('loads the framing of every callout so the Form pre-flight can see it', async () => {
+      arrange([]);
+      await resolver.convertVirtualContributorToUseKnowledgeBase(actorContext, {
+        virtualContributorID: 'vc-1',
+      });
+      expect(spaceService.getSpaceOrFail).toHaveBeenCalledWith(
+        'space-1',
+        expect.objectContaining({
+          relations: {
+            collaboration: {
+              calloutsSet: { callouts: { framing: true } },
+            },
+          },
+        })
+      );
+    });
+
+    it('one Form among three callouts rejects the whole conversion with zero transfers', async () => {
+      arrange([
+        { id: 'c-1', framing: { type: 'none' } },
+        { id: 'c-2', framing: { type: 'form' } },
+        { id: 'c-3', framing: { type: 'poll' } },
+      ]);
+
+      await expect(
+        resolver.convertVirtualContributorToUseKnowledgeBase(actorContext, {
+          virtualContributorID: 'vc-1',
+        })
+      ).rejects.toMatchObject({
+        details: { code: 'FORM_TRANSFER_NOT_ALLOWED' },
+      });
+
+      expect(_calloutTransferService.transferCallout).not.toHaveBeenCalled();
+      expect(
+        virtualContributorAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).not.toHaveBeenCalled();
+    });
+
+    it('without a Form every callout is transferred (positive control)', async () => {
+      arrange([
+        { id: 'c-1', framing: { type: 'none' } },
+        { id: 'c-3', framing: { type: 'poll' } },
+      ]);
+
+      await resolver.convertVirtualContributorToUseKnowledgeBase(actorContext, {
+        virtualContributorID: 'vc-1',
+      });
+
+      expect(_calloutTransferService.transferCallout).toHaveBeenCalledTimes(2);
     });
   });
 

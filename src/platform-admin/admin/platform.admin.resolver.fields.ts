@@ -49,12 +49,10 @@ export class PlatformAdminResolverFields {
    * `useVisibleAdminSections.ts`); the server's matching read surfaces were
    * not, and the mismatch is exactly the width of this helper.
    *
-   * Additive: `PLATFORM_ADMIN` stays FIRST in every list, so no legacy holder
-   * loses a list, and the thrown message still names it when nothing matches.
-   * The alternative — granting the catch-all itself to the new roles — would
-   * hand each of them `grantCredentialToActor`, the forum and the Wingback
-   * subscription mutations along with it. Read affordances only; every action
-   * inside these sections keeps its own gate.
+   * Slice B (T074): `PLATFORM_ADMIN` is retired, so every list now names only
+   * its family's privilege(s); the FIRST entry is the one the thrown message
+   * reports when nothing matches. Read affordances only; every action inside
+   * these sections keeps its own gate.
    */
   private async grantAnyOrFail(
     actorContext: ActorContext,
@@ -64,7 +62,7 @@ export class PlatformAdminResolverFields {
     const policy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
-    for (const privilege of privileges.slice(1)) {
+    for (const privilege of privileges) {
       if (
         this.authorizationService.isAccessGranted(
           actorContext,
@@ -97,10 +95,7 @@ export class PlatformAdminResolverFields {
   ): Promise<IAccount[]> {
     await this.grantAnyOrFail(
       actorContext,
-      [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
-      ],
+      [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS],
       'platformAdmin Accounts'
     );
 
@@ -118,7 +113,6 @@ export class PlatformAdminResolverFields {
     await this.grantAnyOrFail(
       actorContext,
       [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         // R-F.2 (2026-09-16): Support's console list read — see `organizations`.
         AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
@@ -142,7 +136,6 @@ export class PlatformAdminResolverFields {
     await this.grantAnyOrFail(
       actorContext,
       [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         // R-F.2 (2026-09-16): Support's console list read — see `organizations`.
         AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
@@ -165,7 +158,6 @@ export class PlatformAdminResolverFields {
     await this.grantAnyOrFail(
       actorContext,
       [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         // 027 R-F.3 (2026-09-18, licensing-section-design.md) — the License
         // Manager's half of F1. It owns plan assignment on spaces (A12) and
@@ -202,7 +194,6 @@ export class PlatformAdminResolverFields {
     await this.grantAnyOrFail(
       actorContext,
       [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         // R-F.3 (2026-09-18): License Manager's console list read — see
         // `spaces`. Safe on the USERS list only because `User.email` / `phone`
@@ -234,7 +225,6 @@ export class PlatformAdminResolverFields {
     await this.grantAnyOrFail(
       actorContext,
       [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         // 027 R-F.2 (2026-09-16, research D29) — the other half of F6. Platform
         // Support owns the organization lifecycle (A6) and org-owned pack/hub
@@ -267,10 +257,7 @@ export class PlatformAdminResolverFields {
   ): Promise<IVirtualContributor[]> {
     await this.grantAnyOrFail(
       actorContext,
-      [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
-      ],
+      [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS],
       'platformAdmin Virtual Contributors'
     );
 
@@ -280,7 +267,7 @@ export class PlatformAdminResolverFields {
   @ResolveField(() => IVirtualAssistant, {
     nullable: false,
     description:
-      'The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins (and legacy holders); the discovery path for updateAssistantActorCapabilities.',
+      'The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins; the discovery path for updateAssistantActorCapabilities.',
   })
   async virtualAssistant(
     @CurrentActor() actorContext: ActorContext
@@ -288,9 +275,7 @@ export class PlatformAdminResolverFields {
     // 027-platform-role-redesign (server-C1-13, advocate/skeptic debate) —
     // updateAssistantActorCapabilities is gated on PLATFORM_OPERATIONS_ADMIN,
     // but this field, the client's only discovery path for it, was still
-    // gated on the broader PLATFORM_ADMIN catch-all. Nobody loses access:
-    // the legacy holders of both privileges are the same {GLOBAL_ADMIN,
-    // GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER}.
+    // gated on the broader PLATFORM_ADMIN catch-all (retired at Slice B, T074).
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -313,7 +298,7 @@ export class PlatformAdminResolverFields {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'platformAdmin Communication'
     );
     return {} as PlatformAdminCommunicationQueryResults;
@@ -328,10 +313,7 @@ export class PlatformAdminResolverFields {
   ): Promise<PlatformAdminIdentityQueryResults> {
     await this.grantAnyOrFail(
       actorContext,
-      [
-        AuthorizationPrivilege.PLATFORM_ADMIN,
-        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
-      ],
+      [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
       'platformAdmin Identity'
     );
     return {} as PlatformAdminIdentityQueryResults;

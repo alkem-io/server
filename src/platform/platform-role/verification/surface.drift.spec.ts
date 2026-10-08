@@ -76,10 +76,9 @@ import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
  */
 
 // `listSourceFiles()` / `GATE_CALL_PATTERN` live in `source.scan.ts` (QA
-// cross-census-3), shared with `surface.completeness.spec.ts`'s census
-// check 3, which is also where every `PLATFORM_ADMIN` gate is now tracked —
-// per member, codebase-wide — replacing this file's former rule 1b and its
-// hand-picked `PLATFORM_ADMIN_SCAN_ALLOWLIST`.
+// cross-census-3). This file's former rule 1b and its hand-picked
+// `PLATFORM_ADMIN_SCAN_ALLOWLIST` are gone: Slice B (T074) deleted the
+// privilege they scanned for.
 
 interface FileScan {
   readonly hasGateCall: boolean;
@@ -127,7 +126,7 @@ function censusEntriesByFile(): ReadonlyMap<string, readonly SurfaceRef[]> {
  * `SCANNED_PRIVILEGES` member whose enum key appears as a substring of the
  * gate's own `reason` text. (b) exists for exactly one documented shape —
  * T034a's FR-022 pin, whose `reason` deliberately names the shared
- * `GRANT_GLOBAL_ADMINS` privilege it is pinned ahead of, which the code
+ * `PLATFORM_ROLES_ASSIGN` privilege it is pinned ahead of, which the code
  * ALSO still passes as a literal (checked-against-a-narrower-policy)
  * argument to `grantAccessOrFail` — a real, scannable token that a
  * privilege-only view of a `{credential}` gate would otherwise miss. */

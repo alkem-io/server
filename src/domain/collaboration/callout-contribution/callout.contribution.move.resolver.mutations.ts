@@ -66,14 +66,13 @@ export class CalloutContributionMoveResolverMutations {
     // which an ordinary admin also satisfies.
     const isPlatformAuthorized = (actorContext.credentials ?? []).some(
       credential =>
-        credential.type === AuthorizationCredential.PLATFORM_RESOURCE_ADMIN ||
-        credential.type === AuthorizationCredential.GLOBAL_ADMIN
+        credential.type === AuthorizationCredential.PLATFORM_RESOURCE_ADMIN
     );
     if (isPlatformAuthorized) {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [],
         {
           resourceKind: 'callout-contribution',
           resourceId: contribution.id,
@@ -127,10 +126,7 @@ export class CalloutContributionMoveResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [],
         {
           resourceKind: 'callout-contribution',
           resourceId: contribution.id,

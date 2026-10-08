@@ -68,19 +68,6 @@ export type AlkemioConfig = {
     index_pattern: string;
     collabora_document_max_source_size: number;
   };
-  licensing: {
-    wingback: {
-      enabled: boolean;
-      key: string;
-      endpoint: string;
-      retries: number;
-      timeout: number;
-      webhook_secret: {
-        name: string;
-        value: string;
-      };
-    };
-  };
   identity: {
     authentication: {
       cache_ttl: number;
@@ -296,6 +283,14 @@ export type AlkemioConfig = {
       enabled: boolean;
       /** Leading-edge email suppression window per (recipient, callout) in seconds. */
       email_suppression_window_seconds: number;
+    };
+    platform_invitations: {
+      /** Cooldown between resends of the invitation email to one address on one role set, in seconds. */
+      resend_cooldown_seconds: number;
+      /** Invitation emails (new invitations plus resends) one acting user may cause per hour. */
+      email_budget_per_actor_per_hour: number;
+      /** Invitation emails (new invitations plus resends) one role set may cause per hour. */
+      email_budget_per_role_set_per_hour: number;
     };
     organization_invitations: {
       /** Destination for the zero-admin escalation email; never required to boot. */

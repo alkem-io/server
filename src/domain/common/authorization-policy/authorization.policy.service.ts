@@ -96,15 +96,6 @@ export class AuthorizationPolicyService {
     for (const globalRole of globalRoles) {
       let credType: AuthorizationCredential;
       switch (globalRole) {
-        case AuthorizationRoleGlobal.GLOBAL_ADMIN:
-          credType = AuthorizationCredential.GLOBAL_ADMIN;
-          break;
-        case AuthorizationRoleGlobal.GLOBAL_COMMUNITY_READ:
-          credType = AuthorizationCredential.GLOBAL_COMMUNITY_READ;
-          break;
-        case AuthorizationRoleGlobal.GLOBAL_SUPPORT:
-          credType = AuthorizationCredential.GLOBAL_SUPPORT;
-          break;
         case AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN:
           credType = AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN;
           break;

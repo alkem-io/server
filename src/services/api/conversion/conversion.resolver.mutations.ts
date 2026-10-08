@@ -3,6 +3,7 @@ import { LogContext } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import {
   RelationshipNotFoundException,
@@ -10,6 +11,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -62,15 +64,20 @@ export class ConversionResolverMutations {
     // move & convert family — convertSpaceL1ToSpaceL0/L2ToL1/L1ToL2,
     // moveSpaceL1ToSpaceL0/L1ToL2/L2ToL1 (spec 030's cross-L0 moves) and
     // convertVirtualContributorToUseKnowledgeBase — shares this ONE
-    // resolver-local policy. Additive: platform-resource-admin gains it
-    // alongside legacy global-admin.
+    // resolver-local policy.
+    //
+    // T074/T076 (Slice B): `global-admin` is gone from the credential list and
+    // the synthetic privilege moved off the retiring `PLATFORM_ADMIN`
+    // catch-all onto `TRANSFER_RESOURCE_OFFER` — A9's own privilege, owned by
+    // Platform Resource Admin (spec §Target global role model row 3). The
+    // token is only ever compared against THIS in-memory policy, so the
+    // choice is about naming the family correctly, not about widening: the
+    // credential list is the sole reacher set and it is now exactly
+    // `platform-resource-admin`.
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [
-          AuthorizationRoleGlobal.GLOBAL_ADMIN,
-          AuthorizationRoleGlobal.PLATFORM_RESOURCE_ADMIN,
-        ],
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
+        [AuthorizationRoleGlobal.PLATFORM_RESOURCE_ADMIN],
+        [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
         GLOBAL_POLICY_CONVERSION_GLOBAL_ADMINS
       );
   }
@@ -86,7 +93,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `convert challenge to space: ${actorContext.actorID}`
     );
     let space =
@@ -120,7 +127,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `convert space L2 to Space L1: ${actorContext.actorID}`
     );
     let spaceL1 =
@@ -160,7 +167,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `convert space L1 to Space L2: ${actorContext.actorID}`
     );
     let spaceL2 =
@@ -198,7 +205,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `move space L1 to different L0: ${actorContext.actorID}`
     );
 
@@ -263,7 +270,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `move space L1 to L2 in different L0: ${actorContext.actorID}`
     );
 
@@ -330,7 +337,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `move space L2 to L1 in different L0: ${actorContext.actorID}`
     );
 
@@ -390,7 +397,7 @@ export class ConversionResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       this.authorizationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `convert VC of type Space to VC of type KnowledgeBase: ${actorContext.actorID}`
     );
     const virtualContributor =
@@ -436,7 +443,7 @@ export class ConversionResolverMutations {
       relations: {
         collaboration: {
           calloutsSet: {
-            callouts: true,
+            callouts: { framing: true },
           },
         },
       },
@@ -471,6 +478,21 @@ export class ConversionResolverMutations {
       );
     }
     const targetCalloutsSet = virtualContributor.knowledgeBase.calloutsSet;
+
+    // The transfer loop below is not transactional: a Form found halfway would
+    // leave the earlier callouts already moved. Reject up front so the source
+    // space stays untouched.
+    if (
+      space.collaboration.calloutsSet.callouts.some(
+        callout => callout.framing?.type === CalloutFramingType.FORM
+      )
+    ) {
+      throw new ValidationException(
+        'A space with a Form callout cannot be converted to a knowledge base',
+        LogContext.CONVERSION,
+        { code: CalloutFormErrorCode.FORM_TRANSFER_NOT_ALLOWED }
+      );
+    }
 
     // Transfer is authorized, now try to execute it
     for (const callout of space.collaboration.calloutsSet.callouts) {
@@ -516,7 +538,10 @@ export class ConversionResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      [AuthorizationCredential.GLOBAL_ADMIN],
+      // T076: no legacy reachers remain — `platform-resource-admin` is the sole
+      // credential on this resolver's policy, so every audited move is
+      // attributable to the owning role.
+      [],
       {
         resourceKind,
         resourceId,

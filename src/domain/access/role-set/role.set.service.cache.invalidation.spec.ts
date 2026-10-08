@@ -167,13 +167,13 @@ describe('RoleSetCacheInvalidationService', () => {
       roles: [
         {
           credential: {
-            type: AuthorizationCredential.GLOBAL_ADMIN,
+            type: AuthorizationCredential.PLATFORM_ROLES_ADMIN,
             resourceID: '',
           },
         },
         {
           credential: {
-            type: AuthorizationCredential.BETA_TESTER,
+            type: AuthorizationCredential.FEATURE_BETA_TESTER,
             resourceID: '',
           },
         },
@@ -186,7 +186,7 @@ describe('RoleSetCacheInvalidationService', () => {
 
       await service.invalidateForCredentialChange(
         'actor-1',
-        AuthorizationCredential.GLOBAL_ADMIN
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN
       );
 
       expect(cache.cleanActorMembershipCache).toHaveBeenCalledWith(
@@ -201,7 +201,7 @@ describe('RoleSetCacheInvalidationService', () => {
 
       await service.invalidateForCredentialChange(
         'actor-1',
-        AuthorizationCredential.BETA_TESTER
+        AuthorizationCredential.FEATURE_BETA_TESTER
       );
 
       expect(cache.cleanActorMembershipCache).toHaveBeenCalledWith(
@@ -242,7 +242,7 @@ describe('RoleSetCacheInvalidationService', () => {
 
       await service.invalidateForCredentialChange(
         'actor-1',
-        AuthorizationCredential.GLOBAL_ADMIN
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN
       );
 
       expect(cache.cleanActorMembershipCache).not.toHaveBeenCalled();

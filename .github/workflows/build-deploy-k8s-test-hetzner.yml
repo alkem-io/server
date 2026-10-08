@@ -134,6 +134,14 @@ jobs:
           imagepullsecrets: |
             alkemio-server-secret
 
+      # The auth-reset worker runs this same image in reset-only mode
+      # (AUTH_RESET_WORKER) but its manifest lives outside this repo, so nothing
+      # else rolls it: left behind, every queued authorizationPolicyResetAll
+      # rewrites policies with old code. Strategic merge — containers by name.
+      - name: Roll the auth-reset worker to the same image
+        run: |
+          kubectl patch deployment alkemio-auth-reset-worker-deployment -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"alkemio-server-secret"}],"containers":[{"name":"alkemio-auth-reset-worker","image":"${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}"}]}}}}'
+
   # Always release the lock — even if migrate/deploy failed — so the next deploy
   # or nightly isn't blocked until the stale-TTL reclaim (60 min) kicks in. Runs
   # only if the lock was actually acquired.

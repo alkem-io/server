@@ -1008,7 +1008,10 @@ describe('StorageBucketService', () => {
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
-    it('composes and saves the destination-inherited policy BEFORE the Go copy insert', async () => {
+    it.each([
+      StorageAggregatorType.USER,
+      StorageAggregatorType.CONVERSATION,
+    ])('composes the destination policy before copying to a %s owner', async ownerType => {
       const inheritedReadRule = {
         name: 'destination-read',
         grantedPrivileges: [AuthorizationPrivilege.READ],
@@ -1023,6 +1026,7 @@ describe('StorageBucketService', () => {
       const bucket = mockStorageBucket({
         id: 'bucket-dst',
         authorization: destinationAuthorization as any,
+        directStorageOwner: { type: ownerType } as any,
       });
       const source = makeSourceDoc();
       const copiedDocument = mockDocument({
@@ -1120,20 +1124,32 @@ describe('StorageBucketService', () => {
         documentAuthorizationService.applyAuthorizationPolicy as Mock
       ).mock.calls[0];
       expect(parentAuth).toBe(destinationAuthorization);
-      expect(appendCreatorRule).toBe(true);
+      expect(appendCreatorRule).toBe(
+        ownerType !== StorageAggregatorType.CONVERSATION
+      );
+      expect(storageBucketRepository.findOneOrFail).toHaveBeenCalledWith({
+        where: { id: 'bucket-dst' },
+        relations: { authorization: true, directStorageOwner: true },
+      });
       expect(composedDoc.createdBy).toBe('user-caller');
-      expect(composedDoc.authorization.credentialRules).toEqual([
-        inheritedReadRule,
-        expect.objectContaining({
-          grantedPrivileges: [
-            AuthorizationPrivilege.CREATE,
-            AuthorizationPrivilege.READ,
-            AuthorizationPrivilege.UPDATE,
-            AuthorizationPrivilege.DELETE,
-          ],
-          criterias: [expect.objectContaining({ resourceID: 'user-caller' })],
-        }),
-      ]);
+      expect(composedDoc.authorization.credentialRules).toEqual(
+        ownerType === StorageAggregatorType.CONVERSATION
+          ? [inheritedReadRule]
+          : [
+              inheritedReadRule,
+              expect.objectContaining({
+                grantedPrivileges: [
+                  AuthorizationPrivilege.CREATE,
+                  AuthorizationPrivilege.READ,
+                  AuthorizationPrivilege.UPDATE,
+                  AuthorizationPrivilege.DELETE,
+                ],
+                criterias: [
+                  expect.objectContaining({ resourceID: 'user-caller' }),
+                ],
+              }),
+            ]
+      );
       expect(result.id).toBe(copiedDocument.id);
     });
 
@@ -1496,7 +1512,8 @@ describe('StorageBucketService', () => {
         const bucket = mockStorageBucket({
           id: 'bucket-conversation',
           authorization: { id: 'bucket-auth' } as any,
-          storageAggregator: {
+          storageAggregator: undefined,
+          directStorageOwner: {
             id: 'agg-conversation',
             type: StorageAggregatorType.CONVERSATION,
           } as any,
@@ -1587,7 +1604,7 @@ describe('StorageBucketService', () => {
       const bucket = mockStorageBucket({
         id: 'bucket-generic',
         authorization: { id: 'bucket-auth' } as any,
-        storageAggregator: { type: StorageAggregatorType.USER } as any,
+        directStorageOwner: { type: StorageAggregatorType.USER } as any,
       });
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
       (authorizationPolicyService.save as Mock).mockResolvedValue({

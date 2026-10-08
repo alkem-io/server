@@ -185,7 +185,7 @@ describe('SpaceAuthorizationService', () => {
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
         {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           resourceID: '',
         },
       ]);
@@ -268,7 +268,10 @@ describe('SpaceAuthorizationService', () => {
       (
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
-        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
       ]);
       (platformRolesAccessService.getPrivilegesForRole as any).mockReturnValue(
         []
@@ -342,19 +345,135 @@ describe('SpaceAuthorizationService', () => {
         );
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);
     });
 
+    it("grants UPDATE_NAMEID (A17) to the space's OWN admins only — never to a platform role holding UPDATE (T078)", async () => {
+      const mockSpace = createMockSpace();
+      (spaceLookupService.getSpaceOrFail as any).mockResolvedValue(
+        mockSpace as any
+      );
+      (
+        platformRolesAccessService.getCredentialsForRolesWithAccess as any
+      ).mockReturnValue([
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
+      ]);
+      (platformRolesAccessService.getPrivilegesForRole as any).mockReturnValue(
+        []
+      );
+      (authorizationPolicyService.reset as any).mockReturnValue(
+        mockSpace.authorization as any
+      );
+      (
+        authorizationPolicyService.inheritParentAuthorization as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (
+        authorizationPolicyService.createCredentialRule as any
+      ).mockImplementation(
+        (privileges: any, criterias: any, name: any) =>
+          ({
+            grantedPrivileges: privileges,
+            criterias,
+            name,
+            cascade: false,
+          }) as any
+      );
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mockImplementation(
+        (privileges: any, types: any, name: any) =>
+          ({
+            grantedPrivileges: privileges,
+            criterias: types,
+            name,
+            cascade: true,
+          }) as any
+      );
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping as any
+      ).mockReturnValue(mockSpace.authorization as any);
+      (authorizationPolicyService.save as any).mockResolvedValue(
+        mockSpace.authorization as any
+      );
+      (authorizationPolicyService.saveAll as any).mockResolvedValue([] as any);
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([]);
+      (
+        roleSetService.getCredentialsForRoleWithParents as any
+      ).mockResolvedValue([
+        { type: AuthorizationCredential.SPACE_ADMIN, resourceID: 'space-1' },
+      ]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+      (
+        communityAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        collaborationAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        templatesManagerAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        spaceAboutAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy('space-1');
+
+      const renameRules = (
+        authorizationPolicyService.createCredentialRule as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter((rule: any) =>
+          rule.grantedPrivileges?.includes(AuthorizationPrivilege.UPDATE_NAMEID)
+        );
+
+      // Exactly one rule carries the rename privilege, and its criteria are
+      // the space's own admins — `getCredentialsForRolesWithAccess` returned
+      // a platform-role credential in this arrange, and it must NOT
+      // appear here. A17: no global role reaches an entity rename.
+      expect(renameRules).toHaveLength(1);
+      expect(renameRules[0].criterias).toEqual([
+        { type: AuthorizationCredential.SPACE_ADMIN, resourceID: 'space-1' },
+      ]);
+      expect(renameRules[0].cascade).toBe(false);
+
+      // And the broad space-admin rule (which DOES admit platform roles)
+      // must not carry it.
+      const spaceAdminRules = (
+        authorizationPolicyService.createCredentialRule as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter((rule: any) =>
+          rule.grantedPrivileges?.includes(AuthorizationPrivilege.GRANT)
+        );
+      for (const rule of spaceAdminRules) {
+        expect(rule.grantedPrivileges).not.toContain(
+          AuthorizationPrivilege.UPDATE_NAMEID
+        );
+      }
+    });
+
     // 027-platform-role-redesign (QA server-C1-1, ruling (b′) "mover-only
     // reads"): platform-resource-admin's space READ must NOT cascade — it may
     // resolve the space it moves (A9 target resolution), never read the
-    // space's content. The two spaces-reader roles (A16) keep their
-    // cascading READ unchanged.
-    it('QA server-C1-1: platform-resource-admin gets its OWN non-cascading space READ rule; the spaces-reader rules still cascade', async () => {
+    // space's content. The spaces-reader role (A16) keeps its cascading READ
+    // unchanged (Slice B: `global-spaces-reader` is gone).
+    it('QA server-C1-1: platform-resource-admin gets its OWN non-cascading space READ rule; the spaces-reader rule still cascades', async () => {
       const mockSpace = createMockSpace({
         settings: {
           ...defaultSettings,
@@ -370,7 +489,10 @@ describe('SpaceAuthorizationService', () => {
       (
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
-        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
       ]);
       (
         platformRolesAccessService.getPrivilegesForRole as any
@@ -381,10 +503,7 @@ describe('SpaceAuthorizationService', () => {
             AuthorizationPrivilege.READ_ABOUT,
           ];
         }
-        if (
-          roleName === RoleName.GLOBAL_SPACES_READER ||
-          roleName === RoleName.PLATFORM_SPACES_READER
-        ) {
+        if (roleName === RoleName.PLATFORM_SPACES_READER) {
           return [AuthorizationPrivilege.READ];
         }
         return [];
@@ -467,14 +586,11 @@ describe('SpaceAuthorizationService', () => {
       ]);
       expect(resourceAdminRules[0].cascade).toBe(false);
 
-      for (const reader of [
-        AuthorizationCredential.GLOBAL_SPACES_READER,
-        AuthorizationCredential.PLATFORM_SPACES_READER,
-      ]) {
-        const readerRules = rulesFor(reader);
-        expect(readerRules).toHaveLength(1);
-        expect(readerRules[0].cascade).toBe(true);
-      }
+      const readerRules = rulesFor(
+        AuthorizationCredential.PLATFORM_SPACES_READER
+      );
+      expect(readerRules).toHaveLength(1);
+      expect(readerRules[0].cascade).toBe(true);
     });
 
     // 027-platform-role-redesign (QA server-C1-1, blocking fix): a PUBLIC
@@ -660,7 +776,7 @@ describe('SpaceAuthorizationService', () => {
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
         {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
           resourceID: '',
         },
       ]);
@@ -740,7 +856,10 @@ describe('SpaceAuthorizationService', () => {
       (
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
-        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
       ]);
       (
         authorizationPolicyService.inheritParentAuthorization as any
@@ -814,7 +933,10 @@ describe('SpaceAuthorizationService', () => {
       (
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
-        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
       ]);
       (
         authorizationPolicyService.inheritParentAuthorization as any
@@ -846,7 +968,10 @@ describe('SpaceAuthorizationService', () => {
       (
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
-        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
       ]);
       (platformRolesAccessService.getPrivilegesForRole as any).mockReturnValue(
         []
@@ -924,7 +1049,10 @@ describe('SpaceAuthorizationService', () => {
       (
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
-        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
       ]);
       (platformRolesAccessService.getPrivilegesForRole as any).mockReturnValue(
         []
@@ -997,7 +1125,10 @@ describe('SpaceAuthorizationService', () => {
       (
         platformRolesAccessService.getCredentialsForRolesWithAccess as any
       ).mockReturnValue([
-        { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        {
+          type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          resourceID: '',
+        },
       ]);
       (platformRolesAccessService.getPrivilegesForRole as any).mockReturnValue(
         []

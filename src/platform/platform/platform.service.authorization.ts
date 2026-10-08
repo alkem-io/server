@@ -9,15 +9,15 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_FORUM_MANAGE,
-  CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ,
-  CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
   CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
+  CREDENTIAL_RULE_TYPES_PLATFORM_ROLES_ASSIGN,
   CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE,
+  PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -245,11 +245,10 @@ export class PlatformAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT],
         [
-          { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-          { type: AuthorizationCredential.ASSISTANT_ACCESS, resourceID: '' },
-          // 027-platform-role-redesign (T035): re-anchor ASSISTANT_ACCESS ->
-          // Feature Virtual Assistant, additively (legacy ASSISTANT_ACCESS
-          // retained until Slice B).
+          // 027-platform-role-redesign (T035, closed by T076/T077): the
+          // re-anchor is complete — `global-admin` and the legacy
+          // `assistant-access` credential are gone, and Feature Virtual
+          // Assistant (spec row 12) is the sole holder.
           {
             type: AuthorizationCredential.FEATURE_VIRTUAL_ASSISTANT,
             resourceID: '',
@@ -265,32 +264,21 @@ export class PlatformAuthorizationService {
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // Allow global support to access Platform mgmt
-    const platformAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
-      );
-    platformAdmin.cascade = false;
-    credentialRules.push(platformAdmin);
-
+    // 027-platform-role-redesign (T074/T076, FR-007(d)): the `PLATFORM_ADMIN`
+    // catch-all rule that stood here is DELETED. It granted one privilege to
+    // {global-admin, global-support, global-license-manager} and that one
+    // privilege gated ~26 unrelated surfaces across nine families — the single
+    // widest over-grant this feature exists to break apart. Every surface it
+    // gated now names its own family's privilege (T074), and each of those has
+    // its own rule below or on the entity policy that owns it.
+    //
     // Operational & maintenance mutation family — dedicated privilege, own
     // rule (never merged into the platformAdmin rule above). Grant set mirrors
     // today's PLATFORM_ADMIN holders plus the Platform Operations Admin role.
     const platformOperationsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN
       );
     platformOperationsAdmin.cascade = false;
@@ -313,13 +301,7 @@ export class PlatformAuthorizationService {
     const platformSettingsAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
       );
     platformSettingsAdmin.cascade = false;
@@ -331,12 +313,7 @@ export class PlatformAuthorizationService {
     const platformAuditRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_AUDIT_READ],
-        [
-          AuthorizationCredential.PLATFORM_AUDIT_READER,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_AUDIT_READER],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUDIT_READ
       );
     platformAuditRead.cascade = false;
@@ -347,12 +324,7 @@ export class PlatformAuthorizationService {
     const setServiceProfile =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.SET_SERVICE_PROFILE],
-        [
-          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
         CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE
       );
     setServiceProfile.cascade = false;
@@ -373,13 +345,7 @@ export class PlatformAuthorizationService {
     const platformUsersAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN
       );
     platformUsersAdmin.cascade = false;
@@ -387,18 +353,14 @@ export class PlatformAuthorizationService {
 
     // 027-platform-role-redesign (T035, A15, FR-007(e)) — the platform
     // forum's OWN privilege. NOT optional/cosmetic: the forum's only
-    // platform-side path today is the GLOBAL_SUPPORT subtree cascade as
-    // ordinary UPDATE, which Slice B (T073) deletes — without this grant
-    // Support would lose forum access entirely at that point. Cascades to
-    // the forum (mirroring the legacy cascade's reach), granted additively.
+    // platform-side path used to be the GLOBAL_SUPPORT subtree cascade as
+    // ordinary UPDATE, which Slice B (T073) has now deleted — this rule is
+    // what keeps FR-008(d) alive for Platform Support. Cascades to the forum
+    // (mirroring the reach the deleted cascade had).
     const platformForumManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_FORUM_MANAGE],
-        [
-          AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
         CREDENTIAL_RULE_TYPES_PLATFORM_FORUM_MANAGE
       );
     platformForumManage.cascade = true;
@@ -413,14 +375,11 @@ export class PlatformAuthorizationService {
     // action reached from a list keeps its own A6/A7/A8 gate. Deliberately
     // NOT CREATE_ORGANIZATION (would admit feature-organization-creator and
     // beta-tester, FR-007(e)). Non-cascading: the lists live here.
+    // Slice B (T076): `platform-support` alone — the legacy reachers are gone.
     const platformSupportListsRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ],
-        [
-          AuthorizationCredential.PLATFORM_SUPPORT,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
         CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ
       );
     platformSupportListsRead.cascade = false;
@@ -434,35 +393,30 @@ export class PlatformAuthorizationService {
     // licenses — refused it, and the role had no browser path to A12 or A14.
     // A read, not a write: every plan assign/revoke and visibility change off
     // a list keeps its own A12/A14 gate, and `User.email` keeps its per-field
-    // READ_USER_PII gate. Legacy reach mirrors A12's pair. Deliberately NOT
+    // READ_USER_PII gate. Slice B (T076): the legacy pair Slice A mirrored
+    // from A12 (global-admin, global-license-manager) is gone. Deliberately NOT
     // platform-settings-admin: it DEFINES plans (A13) and must not get the
     // usage lists for free. Non-cascading: the lists live here.
     const platformLicensingListsRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ],
-        [
-          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
         CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ
       );
     platformLicensingListsRead.cascade = false;
     credentialRules.push(platformLicensingListsRead);
 
-    const globalSupportPlatformAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [AuthorizationCredential.GLOBAL_SUPPORT],
-        CREDENTIAL_RULE_TYPES_PLATFORM_MGMT
-      );
-    globalSupportPlatformAdmin.cascade = true;
-    credentialRules.push(globalSupportPlatformAdmin);
+    // 027-platform-role-redesign (T073, Slice B): the `global-support`
+    // platform-SUBTREE cascade that stood here — cascading CRUD over
+    // platform, forum, library, templates-manager, role-set, storage,
+    // messaging and (transitively) the licensing tree — is DELETED. Support's
+    // reach is now A6, A7 and A15 only, each through its own named
+    // privilege, plus its non-cascading list read above (R-F.2).
+    // Everything that rode this cascade was re-anchored in Slice A: the forum
+    // onto `PLATFORM_FORUM_MANAGE` (T035 + T049), the rest onto the
+    // per-family privileges. Do not reintroduce a subtree cascade to
+    // "restore" a capability — name the surface and gate it, or
+    // `surface.drift.spec.ts` and the A15 denial cells will disagree with you.
 
     // AUTHORIZATION_RESET holders: GLOBAL_ADMIN, GLOBAL_SUPPORT,
     // GLOBAL_LICENSE_MANAGER and PLATFORM_OPERATIONS_ADMIN.
@@ -473,27 +427,21 @@ export class PlatformAuthorizationService {
     const platformResetAuth =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );
     platformResetAuth.cascade = false;
     credentialRules.push(platformResetAuth);
 
-    // Who can receive the platform admin notifications
+    // Who can receive the platform admin notifications — derived from the
+    // single routing declaration
+    // (`src/common/constants/authorization/platform.admin.notification.routing.ts`)
+    // rather than hand-typed here, so this grant and the per-event recipient
+    // criteria in the notification-recipients service can never diverge.
     const platformAdminNotifications =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [...PLATFORM_ADMIN_NOTIFICATION_GRANT_CREDENTIALS],
         ' Receive notifications platform admin'
       );
     platformAdminNotifications.cascade = false;
@@ -551,9 +499,6 @@ export class PlatformAuthorizationService {
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.CREATE_ORGANIZATION],
         [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.BETA_TESTER,
           AuthorizationCredential.PLATFORM_SUPPORT,
           AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR,
         ],
@@ -586,12 +531,9 @@ export class PlatformAuthorizationService {
     // cannot reach them (research C10, D24, thirteenth analyze pass).
     const globalAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT_GLOBAL_ADMINS],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.PLATFORM_ROLES_ADMIN,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS
+        [AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN],
+        [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ROLES_ASSIGN
       );
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
@@ -622,9 +564,6 @@ export class PlatformAuthorizationService {
         [
           AuthorizationCredential.PLATFORM_ROLES_ADMIN,
           AuthorizationCredential.PLATFORM_AUDIT_READER,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ
       );
@@ -641,28 +580,19 @@ export class PlatformAuthorizationService {
     const featureRoleHoldersRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.FEATURE_ROLE_HOLDERS_READ],
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         CREDENTIAL_RULE_TYPES_FEATURE_ROLE_HOLDERS_READ
       );
     featureRoleHoldersRead.cascade = false;
     newRules.push(featureRoleHoldersRead);
 
-    const globalAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.GRANT],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS
-      );
-    globalAdmin.cascade = false;
-    newRules.push(globalAdmin);
+    // 027-platform-role-redesign (T076, Slice B): the bare `GRANT` rule on the
+    // platform role-set is DELETED. `global-admin`'s blanket GRANT here IS the
+    // broad grant FR-007(c) exists to split apart — it is replaced, above, by
+    // `PLATFORM_ROLES_ASSIGN` (Roles Admin, the `Platform …` half) and
+    // `FEATURE_ROLE_ASSIGN` (Users Admin or Roles Admin, the `Feature …` half).
+    // Re-anchoring it to any role would restore a single privilege that spans
+    // both halves and bypasses the one-way separation in FR-003.
 
     return newRules;
   }

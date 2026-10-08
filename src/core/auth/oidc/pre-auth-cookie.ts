@@ -10,6 +10,14 @@ export type PreAuthCookiePayload = {
   code_verifier: string;
   returnTo: string;
   issued_at: number;
+  /**
+   * workspace#079-app-sso-handoff FR-002/FR-003 — set only when `/login`
+   * entered app mode. It rides in the signed cookie rather than in the query
+   * because Kratos' `registration.after.oidc` re-enters a BARE
+   * `/api/auth/oidc/login` with no query string, so a flag passed only as a
+   * query parameter is provably lost on the social sign-up leg.
+   */
+  app_challenge?: string;
 };
 
 export type PreAuthCookieAttributes = {
@@ -46,6 +54,7 @@ export async function verifyPreAuthCookie(
     code_verifier: codeVerifier,
     returnTo,
     issued_at: issuedAt,
+    app_challenge: appChallenge,
   } = payload as Record<string, unknown>;
 
   if (
@@ -53,7 +62,11 @@ export async function verifyPreAuthCookie(
     typeof nonce !== 'string' ||
     typeof codeVerifier !== 'string' ||
     typeof returnTo !== 'string' ||
-    typeof issuedAt !== 'number'
+    typeof issuedAt !== 'number' ||
+    // Absent is the ordinary web flow; present-but-not-a-string is a forgery
+    // attempt or a corrupt payload, and either way must not reach the
+    // app-mode branch in `/callback`.
+    (appChallenge !== undefined && typeof appChallenge !== 'string')
   ) {
     throw new Error('pre-auth cookie payload shape invalid');
   }
@@ -64,6 +77,7 @@ export async function verifyPreAuthCookie(
     code_verifier: codeVerifier,
     returnTo,
     issued_at: issuedAt,
+    app_challenge: appChallenge,
   };
 }
 

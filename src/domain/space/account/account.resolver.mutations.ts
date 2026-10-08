@@ -52,18 +52,12 @@ import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.bas
 const A9_TRANSFER_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
 ];
-const A9_TRANSFER_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-];
+const A9_TRANSFER_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 /** T058 — A12's declared owner/legacy-reachers (ACCOUNT_LICENSE_MANAGE grant). */
 const A12_BASELINE_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
 ];
-const A12_BASELINE_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-];
+const A12_BASELINE_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 @InstrumentResolver()
 @Resolver()
@@ -718,12 +712,19 @@ export class AccountResolverMutations {
     );
     const isEntitlementEnabled =
       await this.licenseService.isEntitlementAvailable(license, licenseType);
-    const isPlatformAdmin = this.authorizationService.isAccessGranted(
-      actorContext,
-      authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN
-    );
-    if (!isPlatformAdmin && !isEntitlementEnabled) {
+    // 027-platform-role-redesign (T074, A12): the soft-limit BYPASS is a
+    // licensing decision, so it moves off the retiring PLATFORM_ADMIN
+    // catch-all onto the License Manager's own account privilege — spec
+    // §Target global role model row 8 owns "licensing (usage)". This is a
+    // narrowing: Support and Content Full Access no longer bypass entitlement
+    // limits they never owned.
+    const canOverrideEntitlementLimit =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+    if (!canOverrideEntitlementLimit && !isEntitlementEnabled) {
       const entitlementLimit = this.licenseService.getEntitlementLimit(
         license,
         licenseType

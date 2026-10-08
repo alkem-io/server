@@ -50,12 +50,7 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
     const rule =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
         GLOBAL_POLICY_PLATFORM_WELL_KNOWN_VC_SET
       );
     this.wellKnownVirtualContributorSetPolicy =
@@ -98,11 +93,7 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
-      [
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-      ],
+      [],
       {
         setting: `wellKnownVirtualContributor:${mappingData.wellKnown}`,
         newValue: mappingData.virtualContributorID,

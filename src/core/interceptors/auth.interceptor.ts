@@ -89,6 +89,14 @@ const AUTH_ENTRY_POINT_PATHS = new Set([
   '/api/auth/oidc/login',
   '/api/auth/oidc/callback',
   '/api/auth/oidc/logout',
+  // workspace#079-app-sso-handoff — the native handoff redemption. It reads no
+  // authenticated actor and regenerates the session from scratch, so it meets
+  // the same bar as `/callback`; and it is loaded as a MAIN-FRAME navigation
+  // inside the app's WebView, where a 401 JSON page is what FR-035/US3.3
+  // forbid. A WebView carrying a session the strategy will reject (revoked
+  // subject, absolute TTL, tombstone) is precisely the case a user re-signs-in
+  // to fix.
+  '/api/auth/oidc/app-handoff',
 ]);
 
 function isAuthEntryPoint(req: IncomingMessage | undefined): boolean {

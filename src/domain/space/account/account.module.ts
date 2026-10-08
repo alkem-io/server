@@ -18,7 +18,6 @@ import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platf
 import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { LicensingCredentialBasedModule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
-import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -46,7 +45,6 @@ import { AccountLicenseService } from './account.service.license';
     LicensingFrameworkModule,
     LicenseIssuerModule,
     LicensingCredentialBasedModule,
-    LicensingWingbackSubscriptionModule,
     LicenseModule,
     ProfileModule,
     SpaceModule,

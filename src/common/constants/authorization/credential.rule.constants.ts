@@ -14,6 +14,11 @@ export const CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_JOIN =
   'credentialRule-subspaceAncestorMemberJoin';
 export const CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE =
   'credentialRule-SpaceAdminDeleteSubspace';
+// 027-platform-role-redesign (T078, FR-020, A17): the space-rename rule —
+// deliberately separate from CREDENTIAL_RULE_SPACE_ADMINS, which also admits
+// platform roles holding UPDATE.
+export const CREDENTIAL_RULE_SPACE_ADMIN_UPDATE_NAMEID =
+  'credentialRule-spaceAdminUpdateNameID';
 export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';
 export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';

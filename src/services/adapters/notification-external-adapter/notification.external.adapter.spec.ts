@@ -774,6 +774,95 @@ describe('NotificationExternalAdapter', () => {
     });
   });
 
+  describe('buildSpaceCollaborationCalloutFormResponsePayload', () => {
+    const collectKeys = (value: unknown, keys: string[] = []): string[] => {
+      if (Array.isArray(value)) {
+        value.forEach(item => collectKeys(item, keys));
+      } else if (value && typeof value === 'object') {
+        for (const [key, nested] of Object.entries(value)) {
+          keys.push(key);
+          collectKeys(nested, keys);
+        }
+      }
+      return keys;
+    };
+
+    const build = async () => {
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'user-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(urlGeneratorService.generateUrlForProfile).mockResolvedValue(
+        '/space/1'
+      );
+      vi.mocked(
+        urlGeneratorService.createSpaceAdminCommunityURL
+      ).mockResolvedValue('/admin/1');
+      vi.mocked(urlGeneratorService.getCalloutUrlPath).mockResolvedValue(
+        '/callout/1'
+      );
+      vi.mocked(urlGeneratorService.createUrlForUserNameID).mockReturnValue(
+        '/user/1'
+      );
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+
+      return adapter.buildSpaceCollaborationCalloutFormResponsePayload(
+        NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE,
+        'user-1',
+        [],
+        {
+          id: 'space-1',
+          level: 1,
+          about: { profile: { displayName: 'Space' } },
+        } as any,
+        {
+          id: 'callout-1',
+          framing: {
+            id: 'framing-1',
+            profile: { displayName: 'Feedback form', description: 'desc' },
+          },
+        } as any,
+        {
+          id: 'response-1',
+          submittedAt: new Date('2026-09-29T10:00:00.000Z'),
+          visibility: 'ADMINS',
+        }
+      );
+    };
+
+    it('is link-only: callout name and url, response id/time/visibility, submitter', async () => {
+      const result = await build();
+      expect(result.callout).toEqual({
+        id: 'callout-1',
+        displayName: 'Feedback form',
+        url: '/callout/1',
+      });
+      expect(result.formResponse).toEqual({
+        id: 'response-1',
+        submittedAt: '2026-09-29T10:00:00.000Z',
+        visibility: 'ADMINS',
+      });
+      expect(result.submitter).toEqual({
+        id: 'user-1',
+        profile: { displayName: 'Test User', url: '/user/1' },
+        type: expect.any(String),
+      });
+      // the submitter is a contributor, not the base payload's user with an email
+      expect(JSON.stringify(result.submitter)).not.toContain('test@test.com');
+    });
+
+    it('carries no key that could hold an answer, prompt, question or text', async () => {
+      const keys = collectKeys(await build());
+      expect(
+        keys.filter(key => /answer|prompt|question|text/i.test(key))
+      ).toEqual([]);
+    });
+  });
+
   describe('buildUserMessageSentNotificationPayload', () => {
     it('should build message payload with sender and receiver', async () => {
       vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
@@ -1368,6 +1457,79 @@ describe('NotificationExternalAdapter', () => {
         'https://platform.test/organization/acme'
       );
       expect(result.welcomeMessage).toBeUndefined();
+    });
+  });
+
+  describe('buildOrganizationAssociatePlatformInvitationPayload', () => {
+    const setUpMocks = () => {
+      vi.mocked(actorLookupService.getFullActorByIdOrFail).mockResolvedValue({
+        id: 'org-1',
+        nameID: 'acme',
+        type: ActorType.ORGANIZATION,
+        profile: { displayName: 'Acme' },
+      } as any);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue({
+        id: 'inviter-1',
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@test.com',
+        nameID: 'test-user',
+        profile: { displayName: 'Test User' },
+      } as any);
+      vi.mocked(
+        urlGeneratorService.createUrlForOrganizationNameID
+      ).mockReturnValue('https://platform.test/organization/acme');
+      vi.mocked(configService.get).mockReturnValue('https://platform.test');
+    };
+
+    it('carries exactly one synthetic recipient with the address, the offered roles, the message and the organization url, and no invitee', async () => {
+      setUpMocks();
+
+      const result =
+        await adapter.buildOrganizationAssociatePlatformInvitationPayload(
+          NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM,
+          'inviter-1',
+          'new@example.com',
+          'org-1',
+          [RoleName.ADMIN],
+          'Welcome aboard'
+        );
+
+      expect(result.recipients).toHaveLength(1);
+      expect(result.recipients[0]).toEqual(
+        expect.objectContaining({
+          email: 'new@example.com',
+          firstName: '',
+          lastName: '',
+          id: '',
+        })
+      );
+      expect(result.extraRoles).toEqual(['admin']);
+      expect(result.welcomeMessage).toBe('Welcome aboard');
+      expect(result.organizationUrl).toBe(
+        'https://platform.test/organization/acme'
+      );
+      expect(result.organization).toBeDefined();
+      expect(result.eventType).toBe(
+        NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM
+      );
+      expect('invitee' in result).toBe(false);
+    });
+
+    it('leaves the welcome message undefined when none was given', async () => {
+      setUpMocks();
+
+      const result =
+        await adapter.buildOrganizationAssociatePlatformInvitationPayload(
+          NotificationEvent.ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM,
+          'inviter-1',
+          'new@example.com',
+          'org-1',
+          []
+        );
+
+      expect(result.welcomeMessage).toBeUndefined();
+      expect(result.extraRoles).toEqual([]);
     });
   });
 

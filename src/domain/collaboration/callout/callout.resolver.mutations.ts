@@ -63,6 +63,7 @@ import { CollaborationLicenseService } from '../collaboration/collaboration.serv
 import { ILink } from '../link/link.interface';
 import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { ICallout } from './callout.interface';
+import { getCalloutPublisherPlatformCredentialTypes } from './callout.platform.read.credentials';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
@@ -176,10 +177,7 @@ export class CalloutResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [],
         {
           resourceKind: 'callout',
           resourceId: deleteData.ID,
@@ -529,14 +527,13 @@ export class CalloutResolverMutations {
       calloutData.publishDate
     );
     // T058 — single-path surface (no owner branch): every successful call
-    // is, by construction, authorized by UPDATE_CALLOUT_PUBLISHER.
+    // is, by construction, authorized by UPDATE_CALLOUT_PUBLISHER, whose rule
+    // is built from this same list — so the role it records is the one that
+    // opened the gate.
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
-      [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-      [
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-      ],
+      getCalloutPublisherPlatformCredentialTypes(),
+      [],
       {
         resourceKind: 'callout-publisher',
         resourceId: callout.id,

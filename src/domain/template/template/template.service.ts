@@ -249,11 +249,17 @@ export class TemplateService {
         }
         this.overrideCalloutSettingsForTemplate(templateData.calloutData);
         templateData.calloutData.nameID = `template-${randomUUID().slice(0, 8)}`;
+        // A callout template lives in a templates set, never in a callouts
+        // set: it has no audience and no responses, so a Form here is only a
+        // definition and may be captured.
         template.callout = await this.calloutService.createCallout(
           templateData.calloutData!,
           [],
           storageAggregator,
-          actorContext
+          actorContext,
+          undefined,
+          undefined,
+          { allowFormFraming: true }
         );
         break;
       }
@@ -720,13 +726,22 @@ export class TemplateService {
         await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
           space.collaboration.calloutsSet.callouts ?? []
         );
+      // The target is a template's content space, so its callouts are template
+      // callouts — the same flag createCollaboration stamps when a template is
+      // created from a space. It is what keeps a template Form/Poll from
+      // collecting responses or firing space side effects.
+      calloutsFromSourceCollaboration.forEach(
+        callout => (callout.isTemplate = true)
+      );
 
       const newCallouts = await this.calloutsSetService.addCallouts(
         templateContentSpace.collaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
         actorContext,
-        userID
+        userID,
+        undefined,
+        { allowFormFraming: true }
       );
       templateContentSpace.collaboration.calloutsSet.callouts?.push(
         ...newCallouts

@@ -57,7 +57,7 @@ export class RolesResolverFields {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       `roles user query: ${actorContext.actorID}`
     );
     const invitations = await this.rolesService.getCommunityInvitationsForUser(
@@ -85,7 +85,7 @@ export class RolesResolverFields {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
       `roles user query: ${actorContext.actorID}`
     );
     const applications =

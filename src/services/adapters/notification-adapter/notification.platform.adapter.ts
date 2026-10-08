@@ -1,7 +1,9 @@
 import { RoleChangeType } from '@alkemio/notifications-lib';
+import { LogContext } from '@common/enums';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { RoleName } from '@common/enums/role.name';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
@@ -9,6 +11,8 @@ import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-a
 import { InAppNotificationPayloadPlatformUserProfileRemoved } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.user.profile.removed';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
+import { FEATURE_FAMILY_ROLES } from '@platform/platform-role/platform.role.assignment.rules.service';
+import { resolveRoleDisplayLabel } from '@platform/platform-role/platform.role.display.labels';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
@@ -73,6 +77,20 @@ export class NotificationPlatformAdapter {
   public async platformGlobalRoleChanged(
     eventData: NotificationInputPlatformGlobalRoleChange
   ): Promise<void> {
+    // Routine `Feature …` entitlement grants must not produce a
+    // platform-admin notification — the fail-closed assignment audit trail
+    // is the compensating control for those. On 027 Slice B the platform-role
+    // mutations are the only emitter, so the observable behaviour is
+    // "Platform … only"; the guard stays a deny-list on the Feature family so
+    // a role added later emits by default instead of going silent.
+    if (FEATURE_FAMILY_ROLES.has(eventData.role as RoleName)) {
+      this.logger.verbose?.(
+        `Suppressed platform-admin role-change notification for a Feature-family grant: ${eventData.role}`,
+        LogContext.NOTIFICATIONS
+      );
+      return;
+    }
+
     const event = NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED;
     const recipients = await this.getNotificationRecipientsPlatform(
       event,
@@ -100,6 +118,7 @@ export class NotificationPlatformAdapter {
         type: NotificationEventPayload.PLATFORM_GLOBAL_ROLE_CHANGE,
         userID: eventData.userID,
         roleName: eventData.role,
+        changeType: eventData.type,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
@@ -111,11 +130,11 @@ export class NotificationPlatformAdapter {
       );
     }
 
-    // Send push notifications
-    const pushRecipientsFiltered = recipients.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
-    );
-    if (pushRecipientsFiltered.length > 0) {
+    // Send push notifications. Resolution already excluded the acting
+    // operator for this event (FR-011), so the recipient list needs no
+    // further filtering here — a second owner of the same exclusion is
+    // exactly what this feature removes.
+    if (recipients.pushRecipients.length > 0) {
       const actorName = await this.getTriggeredByDisplayName(
         eventData.triggeredBy
       );
@@ -125,11 +144,11 @@ export class NotificationPlatformAdapter {
       const action =
         eventData.type === RoleChangeType.ADDED ? 'assigned' : 'removed';
       await this.notificationPushAdapter.sendPushNotifications(
-        pushRecipientsFiltered,
+        recipients.pushRecipients,
         event,
         {
           title: 'Platform role changed',
-          body: `${actorName} ${action} the ${eventData.role} role for ${affectedUserName}`,
+          body: `${actorName} ${action} the ${resolveRoleDisplayLabel(eventData.role)} role for ${affectedUserName}`,
           url: '/',
         }
       );
@@ -513,13 +532,12 @@ export class NotificationPlatformAdapter {
       );
     }
 
-    // Send push notifications
-    const pushRecipientsFiltered = recipients.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
-    );
-    if (pushRecipientsFiltered.length > 0) {
+    // Send push notifications. Resolution already excluded the acting
+    // operator for this event (FR-011) when the removal was admin-driven,
+    // so the recipient list needs no further filtering here.
+    if (recipients.pushRecipients.length > 0) {
       await this.notificationPushAdapter.sendPushNotifications(
-        pushRecipientsFiltered,
+        recipients.pushRecipients,
         event,
         {
           title: 'User profile removed',

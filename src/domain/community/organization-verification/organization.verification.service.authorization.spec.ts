@@ -78,8 +78,9 @@ describe('OrganizationVerificationAuthorizationService', () => {
     // is organization lifecycle — Platform Support's A6 family. It needs
     // UPDATE (the resolver gate) AND GRANT (the MANUALLY_VERIFY / RESET /
     // REOPEN / ARCHIVE lifecycle guards) plus READ, on its OWN rule, never
-    // CREATE/DELETE; the legacy GA/GS/GLOBAL_COMMUNITY_READ rule is untouched.
-    it('QA server-C2-d: grants platform-support EXACTLY READ + UPDATE + GRANT on its own non-cascading rule, legacy rule unchanged', async () => {
+    // CREATE/DELETE. Slice B (T076) deletes the legacy
+    // GA/GS/GLOBAL_COMMUNITY_READ rule, so nothing else is appended.
+    it('QA server-C2-d: grants platform-support EXACTLY READ + UPDATE + GRANT on its own non-cascading rule, no legacy rule', async () => {
       const auth = { id: 'auth-1', credentialRules: [] };
       authorizationPolicyService.reset.mockReturnValue(auth);
       authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
@@ -130,15 +131,8 @@ describe('OrganizationVerificationAuthorizationService', () => {
       );
       expect(supportRules[0].cascade).toBe(false);
 
-      const legacy = appended.filter((rule: any) =>
-        rule.criterias?.includes(AuthorizationCredential.GLOBAL_ADMIN)
-      );
-      expect(legacy).toHaveLength(1);
-      expect(legacy[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-      ]);
+      // Platform Support's rule + the organization account admin's rule.
+      expect(appended).toHaveLength(2);
     });
 
     it('should throw EntityNotInitializedException when authorization is undefined', async () => {

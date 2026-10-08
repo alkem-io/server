@@ -40,12 +40,7 @@ export class AdminUserEmailChangeResolverMutations {
     const rule =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         GLOBAL_POLICY_ADMIN_USER_EMAIL_CHANGE
       );
     this.emailChangePolicy =
@@ -63,7 +58,7 @@ export class AdminUserEmailChangeResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('adminUserEmailChangeData') input: AdminUserEmailChangeInput
   ): Promise<UserEmailChangeResult> {
-    await this.assertPlatformAdmin(
+    await this.assertAuditRead(
       actorContext,
       `adminUserEmailChange subject=${input.userID}`
     );
@@ -86,7 +81,7 @@ export class AdminUserEmailChangeResolverMutations {
     @Args('adminUserEmailChangeDriftResolveData')
     input: AdminUserEmailChangeDriftResolveInput
   ): Promise<UserEmailChangeResult> {
-    await this.assertPlatformAdmin(
+    await this.assertAuditRead(
       actorContext,
       `adminUserEmailChangeDriftResolve subject=${input.userID}`
     );
@@ -102,7 +97,7 @@ export class AdminUserEmailChangeResolverMutations {
   // Slice-A-widened `getPlatformAuthorizationPolicy()` — that union also
   // admits GLOBAL_PLATFORM_MANAGER, which never held this surface's
   // pre-feature PLATFORM_ADMIN gate.
-  private async assertPlatformAdmin(
+  private async assertAuditRead(
     actorContext: ActorContext,
     description: string
   ): Promise<void> {

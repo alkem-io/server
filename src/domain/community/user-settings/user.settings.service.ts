@@ -210,6 +210,11 @@ export class UserSettingsService {
           settings.notification.space.admin.userEmailChanged,
           adminData.userEmailChanged
         );
+        this.updateNotificationSetting(
+          settings.notification.space.admin
+            .collaborationCalloutFormResponseReceived,
+          adminData.collaborationCalloutFormResponseReceived
+        );
       }
 
       // Handle regular space notifications

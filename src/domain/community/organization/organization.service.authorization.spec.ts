@@ -3,14 +3,17 @@ import { RelationshipNotFoundException } from '@common/exceptions';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock } from 'vitest';
 import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
+import { UserGroupService } from '../user-group/user-group.service';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationService } from './organization.service';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
@@ -347,7 +350,6 @@ describe('OrganizationAuthorizationService', () => {
       const granted = privilegesGrantedToRole();
       for (const excluded of [
         AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
@@ -438,8 +440,6 @@ describe('OrganizationAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_SUPPORT,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
       ]);
       expect(rules[0].criterias).not.toContain(
         AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR
@@ -558,5 +558,167 @@ describe('OrganizationAuthorizationService', () => {
       );
       expect(joinRule).toBeUndefined();
     });
+  });
+});
+
+// Exercises the real UserGroupAuthorizationService and UserGroupService so the
+// group cascade reaches UserGroupService.getProfile, which throws when the
+// group's profile was not loaded.
+describe('OrganizationAuthorizationService - user group cascade', () => {
+  let service: OrganizationAuthorizationService;
+  let organizationService: { getOrganizationOrFail: Mock };
+  let authorizationPolicyService: {
+    reset: Mock;
+    inheritParentAuthorization: Mock;
+    createCredentialRuleUsingTypesOnly: Mock;
+    createCredentialRule: Mock;
+    appendCredentialAuthorizationRules: Mock;
+    cloneAuthorizationPolicy: Mock;
+    appendCredentialRuleAnonymousRegisteredAccess: Mock;
+  };
+  let platformAuthorizationService: {
+    inheritRootAuthorizationPolicy: Mock;
+  };
+  let profileAuthorizationService: { applyAuthorizationPolicy: Mock };
+  let storageAggregatorAuthorizationService: {
+    applyAuthorizationPolicy: Mock;
+  };
+  let roleSetAuthorizationService: { applyAuthorizationPolicy: Mock };
+  let organizationVerificationAuthorizationService: {
+    applyAuthorizationPolicy: Mock;
+  };
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+
+    // Shared by the organization and user group services, so provided
+    // explicitly: useMocker would hand each consumer its own mock instance.
+    authorizationPolicyService = {
+      reset: vi.fn(),
+      inheritParentAuthorization: vi.fn(),
+      createCredentialRuleUsingTypesOnly: vi.fn(),
+      createCredentialRule: vi.fn(),
+      appendCredentialAuthorizationRules: vi.fn(),
+      cloneAuthorizationPolicy: vi.fn(),
+      appendCredentialRuleAnonymousRegisteredAccess: vi.fn(),
+    };
+    profileAuthorizationService = { applyAuthorizationPolicy: vi.fn() };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        OrganizationAuthorizationService,
+        UserGroupAuthorizationService,
+        UserGroupService,
+        repositoryProviderMockFactory(UserGroup),
+        {
+          provide: AuthorizationPolicyService,
+          useValue: authorizationPolicyService,
+        },
+        {
+          provide: ProfileAuthorizationService,
+          useValue: profileAuthorizationService,
+        },
+        MockCacheManager,
+        MockWinstonProvider,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+
+    service = module.get(OrganizationAuthorizationService);
+    organizationService = module.get(OrganizationService) as any;
+    platformAuthorizationService = module.get(
+      PlatformAuthorizationPolicyService
+    ) as any;
+    storageAggregatorAuthorizationService = module.get(
+      StorageAggregatorAuthorizationService
+    ) as any;
+    roleSetAuthorizationService = module.get(
+      RoleSetAuthorizationService
+    ) as any;
+    organizationVerificationAuthorizationService = module.get(
+      OrganizationVerificationAuthorizationService
+    ) as any;
+  });
+
+  it('resets an organization that has a user group, cascading to the group profile', async () => {
+    const orgAuthorization = { id: 'org-auth', credentialRules: [] };
+    const groupAuthorization = { id: 'group-auth', credentialRules: [] };
+
+    // Mirrors TypeORM: eager relations (UserGroup.profile is eager) are only
+    // joined when loadEagerRelations is not false; otherwise a nested
+    // relation is present only if it is explicitly requested.
+    organizationService.getOrganizationOrFail.mockImplementation(
+      async (
+        id: string,
+        options?: {
+          loadEagerRelations?: boolean;
+          relations?: { groups?: boolean | { profile?: boolean } };
+        }
+      ) => {
+        const groupsRelation = options?.relations?.groups;
+        const groupProfileLoaded =
+          options?.loadEagerRelations !== false ||
+          (typeof groupsRelation === 'object' && !!groupsRelation.profile);
+        return {
+          id,
+          accountID: 'account-1',
+          authorization: orgAuthorization,
+          profile: { id: 'org-profile' },
+          storageAggregator: { id: 'sa-1' },
+          credentials: [],
+          groups: [
+            {
+              id: 'group-1',
+              authorization: groupAuthorization,
+              ...(groupProfileLoaded
+                ? { profile: { id: 'group-profile' } }
+                : {}),
+            },
+          ],
+          verification: { id: 'ver-1' },
+          roleSet: { id: 'rs-1' },
+        };
+      }
+    );
+    authorizationPolicyService.reset.mockReturnValue(orgAuthorization);
+    authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+      groupAuthorization
+    );
+    platformAuthorizationService.inheritRootAuthorizationPolicy.mockReturnValue(
+      orgAuthorization
+    );
+    authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockReturnValue(
+      { cascade: false }
+    );
+    authorizationPolicyService.createCredentialRule.mockReturnValue({
+      cascade: false,
+    });
+    authorizationPolicyService.appendCredentialAuthorizationRules.mockImplementation(
+      authorization => authorization
+    );
+    authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(
+      orgAuthorization
+    );
+    authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess.mockReturnValue(
+      orgAuthorization
+    );
+    profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+    storageAggregatorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+      []
+    );
+    roleSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+    organizationVerificationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+      { id: 'ver-auth' }
+    );
+
+    const result = await service.applyAuthorizationPolicy({
+      id: 'org-1',
+    } as any);
+
+    expect(result).toContain(groupAuthorization);
+    expect(
+      profileAuthorizationService.applyAuthorizationPolicy
+    ).toHaveBeenCalledWith('group-profile', groupAuthorization);
   });
 });

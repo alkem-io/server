@@ -61,7 +61,7 @@ export class RoleSetResolverMutations {
       RoleSetType.ORGANIZATION,
     ]);
 
-    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    let privilegeRequired = AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN;
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         privilegeRequired = AuthorizationPrivilege.GRANT;
@@ -521,7 +521,7 @@ export class RoleSetResolverMutations {
       RoleSetType.ORGANIZATION,
     ]);
 
-    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
+    let privilegeRequired = AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN;
     switch (roleSet.type) {
       case RoleSetType.SPACE:
         privilegeRequired = AuthorizationPrivilege.GRANT;

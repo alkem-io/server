@@ -1,5 +1,3 @@
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-
 /**
  * 027-platform-role-redesign (QA cross-census-1, 2026-09-25) — the census's
  * COMPLEMENT: every `Mutation` field and every `platformAdmin.<field>` this
@@ -10,8 +8,13 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
  * `schema.graphql` without EITHER fails loudly instead of silently falling
  * through both nets.
  *
- * Five dispositions, closed union by design (adding a sixth is a decision,
- * not a data entry):
+ * Two dispositions, closed union by design (adding a third is a decision,
+ * not a data entry). Slice A also had `inventory-read`,
+ * `legacy-platform-admin` and `slice-b-deletion`; all three are empty at
+ * Slice B — T074 re-gated every bare PLATFORM_ADMIN surface and censused the
+ * console's list/discovery reads (`platformAdmin.*`) as `declarationOnly`
+ * A-row entries, and T078/T079 deleted the platform-settings and Wingback
+ * surfaces.
  *  - `non-admin` — an ordinary, owner-gated or self-service surface. No
  *    A-row owns it because it isn't a platform-admin action at all: a Space
  *    member editing their own callout, a user managing their own
@@ -21,30 +24,12 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
  *    everything outside it is presumed non-admin unless a QA/security pass
  *    finds otherwise (as C2-a did for `createLicensePlan`, moved INTO the
  *    census rather than classified here).
- *  - `inventory-read` — one of F6's list/discovery reads under
- *    `platformAdmin` (`a.row.surfaces.ts`'s `INDIRECT_ENFORCEMENT_FILES`
- *    F6/R-F.2/R-F.3 commentary is the authority; this is its classification
- *    mirror, not a restatement of the reasoning).
- *  - `legacy-platform-admin` — still gated on the bare, retiring
- *    `PLATFORM_ADMIN` catch-all with no A-row and no per-family privilege
- *    yet. `reason` names the file that owns reassigning it, and that file's
- *    `PLATFORM_ADMIN_GATE_HOMES` entry (below — census check 3, QA
- *    cross-census-3) must list the member: the codebase-wide tracking of
- *    every PLATFORM_ADMIN gate lives there, not here.
- *  - `slice-b-deletion` — deleted outright at Slice B (T079), not re-gated;
- *    same disposition as the already-censused `createWingbackAccount` (A12)
- *    for the rest of the Wingback surface.
  *  - `pending-ruling` — QA found a real, named gap, but the fix is a
  *    decision (which role should own this), not a mechanical change. Each
  *    entry's `reason` cites the QA finding key that has the options.
  */
 
-export type NonAdminDisposition =
-  | 'non-admin'
-  | 'inventory-read'
-  | 'legacy-platform-admin'
-  | 'slice-b-deletion'
-  | 'pending-ruling';
+export type NonAdminDisposition = 'non-admin' | 'pending-ruling';
 
 export interface NonAdminClassification {
   readonly disposition: NonAdminDisposition;
@@ -61,86 +46,9 @@ const NON_ADMIN: NonAdminClassification = {
     'Ordinary owner-gated or self-service domain mutation, gated by the resource’s own authorization policy — no A-row owns it; not a platform-admin action.',
 };
 
-const inventoryRead = (field: string): NonAdminClassification => ({
-  disposition: 'inventory-read',
-  reason:
-    `F6 (a.row.surfaces.ts INDIRECT_ENFORCEMENT_FILES) — the admin console's ` +
-    `${field} inventory read, not an A-row action; censusing it would multiply ` +
-    'a read-only affordance into the FR-024 denial matrix and restate an ' +
-    "already-censused family's intent in a second place.",
-});
-
 export const NON_ADMIN_SURFACES: Readonly<
   Record<string, NonAdminClassification>
 > = {
-  // ===== inventory-read (9) — F6's eight list/discovery reads + virtualAssistant (C1-13) =====
-  'platformAdmin.accounts': inventoryRead('accounts'),
-  'platformAdmin.identity': inventoryRead('identity'),
-  'platformAdmin.innovationHubs': inventoryRead('innovationHubs'),
-  'platformAdmin.innovationPacks': inventoryRead('innovationPacks'),
-  'platformAdmin.organizations': inventoryRead('organizations'),
-  'platformAdmin.spaces': inventoryRead('spaces'),
-  'platformAdmin.users': inventoryRead('users'),
-  'platformAdmin.virtualContributors': inventoryRead('virtualContributors'),
-  // QA C1-13 fix: virtualAssistant is a NINTH inventory read — the read-side
-  // discovery path for A11's `updateAssistantActorCapabilities` — not part
-  // of F6's original eight, gated on PLATFORM_OPERATIONS_ADMIN (not the
-  // per-family privileges the other eight use), same disposition regardless.
-  'platformAdmin.virtualAssistant': {
-    disposition: 'inventory-read',
-    reason:
-      "QA C1-13 fix — the read-side discovery path for A11's " +
-      '`updateAssistantActorCapabilities` (`src/platform-admin/admin/' +
-      'platform.admin.resolver.fields.ts`), gated on PLATFORM_OPERATIONS_ADMIN ' +
-      '(replacing PLATFORM_ADMIN); legacy GA/GS/GLM holders keep access ' +
-      'because they hold both. A read, not an A-row.',
-  },
-
-  // ===== legacy-platform-admin (4) — bare PLATFORM_ADMIN, no new home yet =====
-  'platformAdmin.communication': {
-    disposition: 'legacy-platform-admin',
-    reason:
-      'Bare PLATFORM_ADMIN gate, no per-family privilege yet — ' +
-      'src/platform-admin/admin/platform.admin.resolver.fields.ts owns its reassignment.',
-  },
-  updateOrganizationPlatformSettings: {
-    disposition: 'legacy-platform-admin',
-    reason:
-      'Bare PLATFORM_ADMIN gate against the Organization’s own policy, no ' +
-      'per-family privilege yet — src/platform-admin/domain/organization/' +
-      'domain.platform.settings.resolver.mutations.ts owns its reassignment.',
-  },
-  updateUserPlatformSettings: {
-    disposition: 'legacy-platform-admin',
-    reason:
-      'Bare PLATFORM_ADMIN gate against the User’s own policy, no ' +
-      'per-family privilege yet — src/domain/community/user/' +
-      'user.resolver.mutations.ts owns its reassignment.',
-  },
-  updateVirtualContributorPlatformSettings: {
-    disposition: 'legacy-platform-admin',
-    reason:
-      'Bare PLATFORM_ADMIN gate against the VirtualContributor’s own ' +
-      'policy, no per-family privilege yet — src/domain/community/' +
-      'virtual-contributor/virtual.contributor.resolver.mutations.ts owns its reassignment.',
-  },
-
-  // ===== slice-b-deletion (2) — Wingback, FR-021/T079 =====
-  adminWingbackCreateTestCustomer: {
-    disposition: 'slice-b-deletion',
-    reason:
-      'FR-021/T079: the whole Wingback surface is deleted at Slice B, not ' +
-      're-gated — same disposition as the already-censused ' +
-      '`createWingbackAccount` (A12).',
-  },
-  adminWingbackGetCustomerEntitlements: {
-    disposition: 'slice-b-deletion',
-    reason:
-      'FR-021/T079: the whole Wingback surface is deleted at Slice B, not ' +
-      're-gated — same disposition as the already-censused ' +
-      '`createWingbackAccount` (A12).',
-  },
-
   // ===== pending-ruling (5) — real, named gaps; the fix is a decision =====
   // QA server-C1-12 / server-C2-d were RULED (2026-09-25) and moved INTO the
   // census: `createInnovationHub` (A12, Platform License Manager) and
@@ -198,7 +106,7 @@ export const NON_ADMIN_SURFACES: Readonly<
       'AI persona; not yet ruled on.',
   },
 
-  // ===== non-admin (140) — ordinary, owner-gated or self-service mutations =====
+  // ===== non-admin (143) — ordinary, owner-gated or self-service mutations =====
   addClassificationEntryFromTemplate: NON_ADMIN,
   addPollOption: NON_ADMIN,
   addReactionToCallout: NON_ADMIN,
@@ -217,7 +125,6 @@ export const NON_ADMIN_SURFACES: Readonly<
   createClassificationEntry: NON_ADMIN,
   createContributionOnCallout: NON_ADMIN,
   createConversation: NON_ADMIN,
-  createDiscussion: NON_ADMIN,
   createEventOnCalendar: NON_ADMIN,
   createGroupOnCommunity: NON_ADMIN,
   createGroupOnOrganization: NON_ADMIN,
@@ -280,6 +187,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   reorderPollOptions: NON_ADMIN,
   replaceCollaboraDocument: NON_ADMIN,
   replaceWhiteboardContentFromSource: NON_ADMIN,
+  resendPlatformInvitation: NON_ADMIN,
   resetConversationVc: NON_ADMIN,
   revokeMcpApiKey: NON_ADMIN,
   sendDirectMessageToUsers: NON_ADMIN,
@@ -289,10 +197,12 @@ export const NON_ADMIN_SURFACES: Readonly<
   sendMessageToRoom: NON_ADMIN,
   sendMessageToUsers: NON_ADMIN,
   setDefaultCalloutTemplateOnInnovationFlowState: NON_ADMIN,
+  submitCalloutFormResponse: NON_ADMIN,
   subscribeToPushNotifications: NON_ADMIN,
   unsubscribeFromPushNotifications: NON_ADMIN,
   updateApplicationFormOnRoleSet: NON_ADMIN,
   updateCalendarEvent: NON_ADMIN,
+  updateCalloutForm: NON_ADMIN,
   updateCalloutVisibility: NON_ADMIN,
   updateCalloutsSortOrder: NON_ADMIN,
   updateClassificationEntry: NON_ADMIN,
@@ -339,184 +249,4 @@ export const NON_ADMIN_SURFACES: Readonly<
   uploadFileOnReference: NON_ADMIN,
   uploadFileOnStorageBucket: NON_ADMIN,
   uploadImageOnVisual: NON_ADMIN,
-};
-
-/**
- * 027-platform-role-redesign (QA cross-census-3, census check 3) — where each
- * remaining `AuthorizationPrivilege.PLATFORM_ADMIN` gate GOES before T074
- * deletes the privilege. T074 (`tasks/server.md`) assumes every one of its
- * call sites was already re-gated in Slice A, so "what remains is deleting a
- * dead check"; a site that still needs a gate at that point is a Slice A
- * miss. This map makes each remaining site a DECLARED, per-member fact with
- * a concrete home, and `surface.completeness.spec.ts` checks it against the
- * code in both directions, PER MEMBER:
- *  - completeness — every declared class member whose own source segment
- *    names PLATFORM_ADMIN, in every file that is a PLATFORM_ADMIN gate site,
- *    is listed here (except the files the census itself already declares
- *    with `gate.requires === PLATFORM_ADMIN`: A1's actor credential
- *    mutations and A9's conversion mutations);
- *  - staleness — every member listed here is still DECLARED in its file and
- *    its own segment still names PLATFORM_ADMIN. A member re-gated onto
- *    another privilege while the rest of the file keeps PLATFORM_ADMIN (the
- *    C1-13 `virtualAssistant` shape) fails here instead of lingering.
- *
- * Replaces rule 1b and its hand-picked two-file `PLATFORM_ADMIN_SCAN_ALLOWLIST`
- * (`surface.drift.spec.ts`), which could not see a member-level change and
- * named a file that no longer gates on PLATFORM_ADMIN at all.
- */
-export type PlatformAdminGateHome =
-  /** `anyOf` union: PLATFORM_ADMIN is the retiring legacy branch beside
-   * these replacement privilege(s), which must appear in the member's own
-   * segment. T074 deletes the branch; the replacements carry the gate. */
-  | { readonly replacedBy: readonly AuthorizationPrivilege[] }
-  /** The surface itself is deleted at Slice B by this task (T078: FR-020
-   * platform-settings mutations; T079: FR-021 Wingback). */
-  | { readonly deletedAt: 'T078' | 'T079' }
-  /** Not a gate at all: PLATFORM_ADMIN sits in a resolver-local synthetic
-   * policy's PRIVILEGE SET (a legacy union), removed with the enum at T074. */
-  | { readonly privilegeSetUnionDroppedAt: 'T074' }
-  /** A bare PLATFORM_ADMIN gate with no replacement privilege yet — a
-   * known Slice A miss, named here so T074 cannot delete it silently. The
-   * string says what the gate guards. */
-  | { readonly regateBeforeT074: string };
-
-export const PLATFORM_ADMIN_GATE_HOMES: Readonly<
-  Record<string, Readonly<Record<string, PlatformAdminGateHome>>>
-> = {
-  'src/platform/licensing/wingback-subscription/licensing.wingback.subscription.resolver.mutations.ts':
-    {
-      adminWingbackCreateTestCustomer: { deletedAt: 'T079' },
-      adminWingbackGetCustomerEntitlements: { deletedAt: 'T079' },
-    },
-  'src/services/api/lookup/lookup.resolver.fields.ts': {
-    authorizationPolicy: {
-      regateBeforeT074:
-        'lookup of an arbitrary AuthorizationPolicy row — an authorization-debugging read',
-    },
-    authorizationPrivilegesForUser: {
-      regateBeforeT074:
-        "another user's granted privileges on a policy — an authorization-debugging read",
-    },
-  },
-  'src/services/api/roles/roles.resolver.fields.ts': {
-    invitations: {
-      regateBeforeT074: "another user's community invitations",
-    },
-    applications: {
-      regateBeforeT074: "another user's community applications",
-    },
-  },
-  'src/services/api/notification-recipients/notification.recipients.resolver.queries.ts':
-    {
-      notificationRecipients: {
-        regateBeforeT074:
-          'recipient resolution for an arbitrary notification event',
-      },
-    },
-  'src/domain/community/virtual-contributor/virtual.contributor.resolver.queries.ts':
-    {
-      virtualContributors: {
-        regateBeforeT074:
-          'the platform-wide VirtualContributor list (non-holders get an empty list)',
-      },
-    },
-  'src/domain/community/virtual-contributor/virtual.contributor.resolver.mutations.ts':
-    {
-      updateVirtualContributorPlatformSettings: {
-        regateBeforeT074:
-          "a VirtualContributor's platform settings (NON_ADMIN_SURFACES: legacy-platform-admin)",
-      },
-    },
-  'src/domain/community/user/user.resolver.fields.ts': {
-    authentication: {
-      regateBeforeT074:
-        "another user's authentication methods and timestamps (self always sees their own)",
-    },
-  },
-  'src/domain/community/user/user.resolver.mutations.ts': {
-    updateUserPlatformSettings: { deletedAt: 'T078' },
-  },
-  'src/domain/space/account/account.resolver.mutations.ts': {
-    validateSoftLicenseLimitOrFail: {
-      regateBeforeT074:
-        'the bypass of the account entitlement limit on createSpace / createInnovationHub / createVirtualContributor / createInnovationPack',
-    },
-  },
-  'src/platform-admin/admin/platform.admin.resolver.fields.ts': {
-    accounts: {
-      replacedBy: [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS],
-    },
-    innovationHubs: {
-      replacedBy: [
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
-        AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
-      ],
-    },
-    innovationPacks: {
-      replacedBy: [
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
-        AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
-      ],
-    },
-    spaces: {
-      replacedBy: [
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
-        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
-      ],
-    },
-    users: {
-      replacedBy: [
-        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
-        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
-      ],
-    },
-    organizations: {
-      replacedBy: [
-        AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
-        AuthorizationPrivilege.PLATFORM_SUPPORT_LISTS_READ,
-        AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ,
-      ],
-    },
-    virtualContributors: {
-      replacedBy: [AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS],
-    },
-    // `virtualAssistant` is deliberately ABSENT: QA C1-13 re-gated it onto
-    // PLATFORM_OPERATIONS_ADMIN, and the per-member stale check fails if it
-    // is listed here again.
-    communication: {
-      regateBeforeT074:
-        'the platformAdmin.communication entry point to the Matrix admin reads (NON_ADMIN_SURFACES: legacy-platform-admin)',
-    },
-    identity: {
-      replacedBy: [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-    },
-  },
-  'src/platform-admin/admin/platform.admin.resolver.communication.fields.ts': {
-    adminCommunicationMembership: {
-      regateBeforeT074: 'Matrix room membership for a communication',
-    },
-    adminCommunicationOrphanedUsage: {
-      regateBeforeT074: 'Matrix usage not tied to the domain model',
-    },
-  },
-  'src/platform-admin/core/identity/admin.identity.resolver.fields.ts': {
-    identities: {
-      replacedBy: [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-    },
-  },
-  'src/platform-admin/core/identity/admin.identity.resolver.queries.ts': {
-    adminIdentitiesUnverified: {
-      regateBeforeT074: 'the unverified Kratos identities list',
-    },
-  },
-  'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts':
-    {
-      // `as const`: a `constructor` key loses the Record's contextual type
-      // (it collides with Object.prototype.constructor), widening the literal.
-      constructor: { privilegeSetUnionDroppedAt: 'T074' as const },
-    },
-  'src/platform-admin/domain/organization/domain.platform.settings.resolver.mutations.ts':
-    {
-      updateOrganizationPlatformSettings: { deletedAt: 'T078' },
-    },
 };

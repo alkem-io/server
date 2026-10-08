@@ -298,6 +298,16 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 105,
     userMessage: 'userMessages.operations.roleSetInvitation',
   },
+  [AlkemioErrorStatus.ROLE_SET_INVITATION_RESEND_THROTTLED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 124,
+    userMessage: 'userMessages.operations.roleSetInvitationResendThrottled',
+  },
+  [AlkemioErrorStatus.ROLE_SET_INVITATION_EMAIL_BUDGET_EXCEEDED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 125,
+    userMessage: 'userMessages.operations.roleSetInvitationEmailBudgetExceeded',
+  },
   [AlkemioErrorStatus.ROLE_SET_POLICY_ROLE_LIMITS_VIOLATED]: {
     category: ErrorCategory.OPERATIONS,
     specificCode: 106,
