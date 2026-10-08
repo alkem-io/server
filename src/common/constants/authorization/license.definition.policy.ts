@@ -19,10 +19,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
  * satisfy these bare CREATE/READ/UPDATE/DELETE checks too — a reach
  * family SC-004's exception does not cover.
  *
- * Slice B (T076): the legacy reachers Slice A carried for additivity
- * (GLOBAL_ADMIN — corr-server-10; GLOBAL_SUPPORT — corr-server-12;
- * GLOBAL_LICENSE_MANAGER; GLOBAL_PLATFORM_MANAGER) are retired, so Platform
- * Settings Admin is A13's only reacher.
+ * Platform Settings Admin is A13's only reacher.
  *
  * server-C2-a closed the one A13 surface (createLicensePlan) the T058
  * census missed — it kept checking `licensing.authorization` directly and
@@ -34,7 +31,6 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 export const A13_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
 ];
-export const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 /**
  * Pure builder — takes no service dependency, so every A13 resolver can
@@ -44,10 +40,10 @@ export const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
  */
 export const buildLicenseDefinitionPolicy = (): IAuthorizationPolicy => {
   const policy = new AuthorizationPolicy(AuthorizationPolicyType.IN_MEMORY);
-  const criterias: ICredentialDefinition[] = [
-    ...A13_INTENDED_OWNERS,
-    ...A13_LEGACY_REACHERS,
-  ].map(type => ({ type, resourceID: '' }));
+  const criterias: ICredentialDefinition[] = A13_INTENDED_OWNERS.map(type => ({
+    type,
+    resourceID: '',
+  }));
 
   policy.credentialRules = [
     new AuthorizationPolicyRuleCredential(

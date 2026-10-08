@@ -72,7 +72,6 @@ export class CalloutContributionMoveResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-        [],
         {
           resourceKind: 'callout-contribution',
           resourceId: contribution.id,
@@ -126,7 +125,6 @@ export class CalloutContributionMoveResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [],
         {
           resourceKind: 'callout-contribution',
           resourceId: contribution.id,
