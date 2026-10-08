@@ -11,11 +11,9 @@ export type PreAuthCookiePayload = {
   returnTo: string;
   issued_at: number;
   /**
-   * workspace#082 — set only when the QUERY leg of `/login` entered app mode,
-   * and read only by `/callback`, which is a separate request. It is a property
-   * of ONE flow: no leg revives it from the cookie into a NEW flow. 079's stated
-   * reason for the carry-forward does not hold at Kratos v26.2.0 —
-   * specs/082-app-handoff-scheme-squat/spec.md §2 (owner).
+   * Set only when the QUERY leg of `/login` entered app mode, and read only by
+   * `/callback`. Never revived from the cookie into a new flow — see the note
+   * at the decision site in `oidc.controller.ts#login` (SEC-082-01).
    */
   app_challenge?: string;
 };

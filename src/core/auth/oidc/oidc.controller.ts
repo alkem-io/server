@@ -284,24 +284,19 @@ export class OidcController {
       //
       // RESIDUAL, owed to alkem-io/server#6545: `rel="noreferrer"` or a
       // `Referrer-Policy: no-referrer` on the attacker's own page strips it, so
-      // this raises the cost of the attack rather than closing it. The
-      // zero-interaction form of SEC-079-01 is closed by workspace#082's
-      // app-mode Kratos session clear on the query leg of `/login` above.
-      // Residual class and current disposition:
-      // specs/082-app-handoff-scheme-squat/spec.md §6. A WHOLESALE `/*` App
-      // Links claim is what the operator ruled out; a PATH-SCOPED verified
-      // callback is a live option (client-appstore/docs/decisions.md §6) and is
-      // spec §7 OG-8. Do NOT tighten this by guessing at another header:
-      // measure it on a device first, which is the step whose absence caused
-      // the original bug.
+      // this raises the cost of the attack rather than closing it; the
+      // zero-interaction form is closed by the Kratos session clear below.
+      // What remains, and the path-scoped-App-Link option, are recorded once at
+      // the `/callback` exit. Do NOT tighten this by guessing at another
+      // header: measure it on a device first, which is the step whose absence
+      // caused the original bug.
       (typeof req.headers.referer !== 'string' ||
         req.headers.referer.length === 0)
     ) {
       appChallenge = appChallengeRaw;
 
-      // workspace#082 FR-001 (server#6545) — an app-initiated authorize must not be
-      // able to spend an ambient Kratos session. Mechanism, provenance and residuals:
-      // specs/082-app-handoff-scheme-squat/spec.md §1-§2.
+      // FR-001 (server#6545) — an app-initiated authorize must not be able to
+      // spend an ambient Kratos session.
       this.clearKratosSessionCookie(res);
     }
 
@@ -568,13 +563,12 @@ export class OidcController {
       // by whoever started the flow. So the verifier binding defeats
       // INTERCEPTION of a legitimate flow, but not a flow an attacker-installed
       // app initiates itself against a live Kratos session in the shared Chrome
-      // jar. workspace#082 closes the zero-interaction form of this by
-      // clearing the Kratos session on the app-mode query leg of `/login`.
-      // Residual class and current disposition:
-      // specs/082-app-handoff-scheme-squat/spec.md §6 and ADR 0020's
-      // 2026-10-07 amendment. The closure, if it is ever taken, is app
-      // attestation or a PATH-SCOPED verified callback on both platforms
-      // (client-appstore/docs/decisions.md §6) — spec §7 OG-8. The scheme stays
+      // jar. workspace#082 closes the zero-interaction form by clearing the
+      // Kratos session on the app-mode query leg of `/login`; what remains is
+      // recorded in spec §6 and ADR 0020's 2026-10-07 amendment. The closure,
+      // if taken, is app attestation or a PATH-SCOPED verified callback — a
+      // wholesale `/*` App Links claim is the part the operator ruled out
+      // (client-appstore/docs/decisions.md §6, spec §7 OG-8). The scheme stays
       // today because ASWebAuthenticationSession accepts https callbacks only
       // from iOS 17.4 and the app targets iOS 15.0 (079 D3).
       res.redirect(302, `${appMode.scheme}:/auth/callback?code=${code}`);

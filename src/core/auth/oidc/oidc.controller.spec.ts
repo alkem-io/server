@@ -664,11 +664,9 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(res.statusCode).toBe(302);
-    // workspace#082 U0 [AC1.1/FR-001] — the app-mode QUERY leg clears the
-    // Kratos SSO cookie, with the full {name, domain, path} triple and
-    // Max-Age=0. server#6315: a mismatch on any one of the three stores a
-    // SECOND cookie and leaves the original alive. This is the ONE assertion in
-    // 082 that is RED before the production edit.
+    // workspace#082 [AC1.1/FR-001] — the app-mode QUERY leg clears the Kratos SSO
+    // cookie with the full {name, domain, path} triple and Max-Age=0; a mismatch
+    // on any one stores a SECOND cookie and leaves the original alive (server#6315).
     const clearedOnLogin = res.cookies.find(
       (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
     );
@@ -800,11 +798,10 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     expectNoKratosClear(res);
   });
 
-  // workspace#082 E — THE LOOP GUARD, inverted into the stronger assertion. Kratos
-  // v26.2.0 preserves `return_to` and the Hydra login challenge across the
-  // login→registration conversion (spec §2), so no leg of the Hydra chain lands on a
-  // bare `/login`; the carry-forward this replaces served no live flow and let a
-  // planted `app_challenge` be spent by the victim's own later sign-in (SEC-082-01).
+  // workspace#082 — the loop guard, inverted. Kratos v26.2.0 preserves `return_to`
+  // and the Hydra login challenge across the login→registration conversion (spec
+  // §2), so no leg lands on a bare `/login`; 079's carry-forward served no live flow
+  // and let a planted `app_challenge` be spent by the victim's own later sign-in.
   it('a bare re-entry never enters app mode, whatever the cookie carries', async () => {
     const plantedAt = Math.floor(Date.now() / 1000) - 300;
     const cookie = await signPreAuthCookie(
