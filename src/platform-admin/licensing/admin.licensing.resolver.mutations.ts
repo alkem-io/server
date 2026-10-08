@@ -1,4 +1,4 @@
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { A12_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -21,11 +21,6 @@ import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.lic
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
-
-/** A12's declared owner (the licensing-framework GRANT). */
-const A12_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-];
 
 @InstrumentResolver()
 @Resolver()

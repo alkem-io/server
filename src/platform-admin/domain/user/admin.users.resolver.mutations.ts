@@ -1,3 +1,4 @@
+import { A5_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { GLOBAL_POLICY_ADMIN_USER_ACCOUNT_DELETE } from '@common/constants/authorization/global.policy.constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
@@ -18,11 +19,6 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-
-/** A5's declared owner (the PLATFORM_USERS_ADMIN grant). */
-const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_USERS_ADMIN,
-];
 
 @InstrumentResolver()
 @Resolver()

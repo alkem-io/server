@@ -1,3 +1,4 @@
+import { A12_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
@@ -51,10 +52,6 @@ import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.bas
 /** A9's declared owner (the TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
 const A9_TRANSFER_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
-];
-/** A12's declared owner (the ACCOUNT_LICENSE_MANAGE grant). */
-const A12_BASELINE_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
 ];
 
 @InstrumentResolver()
@@ -376,7 +373,7 @@ export class AccountResolverMutations {
     // T058 — A12, single-path surface: ACCOUNT_LICENSE_MANAGE.
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
-      A12_BASELINE_INTENDED_OWNERS,
+      A12_INTENDED_OWNERS,
       {
         resourceKind: 'account-baseline-license-plan',
         resourceId: account.id,

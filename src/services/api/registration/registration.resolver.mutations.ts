@@ -1,7 +1,7 @@
 import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
+import { A5_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { GLOBAL_POLICY_REGISTRATION_PLATFORM_USERS_ADMIN_DELETE_USER } from '@common/constants/authorization/global.policy.constants';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { LogContext } from '@common/enums/logging.context';
 import { SessionRefreshRequiredException } from '@common/exceptions';
@@ -35,11 +35,6 @@ import { CurrentActor, Profiling } from '@src/common/decorators';
 import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RegistrationService } from './registration.service';
-
-/** A5's declared owner (the PLATFORM_USERS_ADMIN grant). */
-const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_USERS_ADMIN,
-];
 
 @InstrumentResolver()
 @Resolver()
@@ -180,23 +175,17 @@ export class RegistrationResolverMutations {
     const user = await this.userService.getUserByIdOrFail(deleteData.ID, {
       relations: { profile: true },
     });
-    // 027-platform-role-redesign (T062, A5, research D5) — dual path, and
-    // T076/T077 removed one of the three branches it used to have.
-    //
-    // What remains: SELF-deletion, by actor-identity comparison (`isSelf`
+    // A5 — dual path: SELF-deletion, by actor-identity comparison (`isSelf`
     // above — equivalent to holding USER_SELF_MANAGEMENT resource-scoped to
     // one's own id), and PLATFORM_USERS_ADMIN, checked against the
     // resolver-local policy scoped to that credential ALONE.
     //
-    // What went: the legacy-admin branch, which checked plain DELETE against a
-    // hardcoded `[GLOBAL_ADMIN]` policy. It existed to keep `global-admin`
-    // deleting users through the whole additive slice WITHOUT letting the root
-    // rule's now-cascading DELETE (FR-004) satisfy the same branch — because A5
-    // is outside SC-004's single named exception, closed at A6/A7. That hazard
-    // is why the branch could never simply check `user.authorization`, and it
-    // is exactly why the branch is deleted rather than re-pointed: Platform
-    // Users Admin owns A5 outright now, and any second admin path here would
-    // hand user deletion to a role spec row 2 explicitly denies it.
+    // There is deliberately no plain-DELETE branch against
+    // `user.authorization`: the root rule cascades DELETE to
+    // `platform-content-full-access`, and A5 is outside that role's single
+    // accepted exception (closed at A6/A7). Platform Users Admin owns A5
+    // outright, so any second admin path here would hand user deletion to a
+    // role that must not hold it.
     const canDeleteAsPlatformUsersAdmin =
       this.authorizationService.isAccessGranted(
         actorContext,
