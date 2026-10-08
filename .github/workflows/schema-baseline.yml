@@ -13,6 +13,9 @@ concurrency:
 jobs:
   regenerate:
     name: Regenerate Baseline
+    # The baseline branch is shared; a manual dispatch from any other ref would
+    # force-push that ref's commits into the open develop baseline PR.
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -173,12 +176,10 @@ jobs:
             exit 1
           fi
 
-          # Pushing to a URL leaves no remote-tracking ref, so pin the lease to the
-          # tip we observe now (empty = branch must not exist yet).
-          remote_url="https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          ref="refs/heads/${BASELINE_PR_BRANCH}"
-          current_tip=$(git ls-remote "$remote_url" "$ref" | awk '{print $1}')
-          git push --force-with-lease="${ref}:${current_tip}" "$remote_url" "${BASELINE_PR_BRANCH}:${ref}"
+          # The branch is bot-owned and rebuilt from the develop tip every run, so
+          # it is overwritten unconditionally; manual commits on it do not survive.
+          # Runs are serialized by the concurrency group above.
+          git push --force "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${BASELINE_PR_BRANCH}:refs/heads/${BASELINE_PR_BRANCH}"
           echo "BASELINE_FAILURE_PHASE=pull-request" >> "$GITHUB_ENV"
           echo "BASELINE_FAILURE_CONTEXT=Baseline branch ${BASELINE_PR_BRANCH} pushed." >> "$GITHUB_ENV"
 
@@ -232,28 +233,49 @@ jobs:
               core.info(`Created baseline PR #${prNumber}.`);
             }
 
-            // Close leftovers from the old one-branch-per-run scheme.
+            // Close leftovers from the old one-branch-per-run scheme: only same-repo
+            // PRs opened by this automation account. Best-effort — never fails the run.
+            const { data: current } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
             const open = await github.paginate(github.rest.pulls.list, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               base: 'develop',
               state: 'open'
             });
+            const repoFullName = `${context.repo.owner}/${context.repo.repo}`;
             for (const stale of open) {
-              if (stale.number === prNumber || !stale.head.ref.startsWith('schema-baseline/')) continue;
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: stale.number,
-                body: `Superseded by #${prNumber}, which carries the latest schema baseline.`
-              });
-              await github.rest.pulls.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: stale.number,
-                state: 'closed'
-              });
-              core.info(`Closed superseded baseline PR #${stale.number}.`);
+              if (
+                stale.number === prNumber ||
+                !stale.head.ref.startsWith('schema-baseline/') ||
+                stale.head.repo?.full_name !== repoFullName ||
+                stale.user?.login !== current.user.login
+              ) continue;
+              try {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: stale.number,
+                  state: 'closed'
+                });
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: stale.number,
+                  body: `Superseded by #${prNumber}, which carries the latest schema baseline.`
+                });
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${stale.head.ref}`
+                });
+                core.info(`Closed superseded baseline PR #${stale.number}.`);
+              } catch (error) {
+                core.warning(`Could not retire baseline PR #${stale.number}: ${error.message}`);
+              }
             }
 
             core.exportVariable('BASELINE_PR_NUMBER', prNumber.toString());
