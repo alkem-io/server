@@ -11,11 +11,11 @@ export type PreAuthCookiePayload = {
   returnTo: string;
   issued_at: number;
   /**
-   * workspace#079-app-sso-handoff FR-002/FR-003 — set only when `/login`
-   * entered app mode. It rides in the signed cookie rather than in the query
-   * because Kratos' `registration.after.oidc` re-enters a BARE
-   * `/api/auth/oidc/login` with no query string, so a flag passed only as a
-   * query parameter is provably lost on the social sign-up leg.
+   * workspace#082 — set only when the QUERY leg of `/login` entered app mode,
+   * and read only by `/callback`, which is a separate request. It is a property
+   * of ONE flow: no leg revives it from the cookie into a NEW flow. 079's stated
+   * reason for the carry-forward does not hold at Kratos v26.2.0 —
+   * specs/082-app-handoff-scheme-squat/spec.md §2 (owner).
    */
   app_challenge?: string;
 };

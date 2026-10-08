@@ -800,11 +800,12 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     expectNoKratosClear(res);
   });
 
-  // Kratos' registration.after.oidc re-enters a BARE /login with no query
-  // string, so a flag passed only as a query parameter is lost on exactly the
-  // leg stickiness exists for — and `returnTo` is rebuilt from the query
-  // alone, so carrying only the challenge would still drop the destination.
-  it('carries the challenge, the returnTo and the original issue time across a query-less re-entry', async () => {
+  // workspace#082 E — THE LOOP GUARD, inverted into the stronger assertion. Kratos
+  // v26.2.0 preserves `return_to` and the Hydra login challenge across the
+  // login→registration conversion (spec §2), so no leg of the Hydra chain lands on a
+  // bare `/login`; the carry-forward this replaces served no live flow and let a
+  // planted `app_challenge` be spent by the victim's own later sign-in (SEC-082-01).
+  it('a bare re-entry never enters app mode, whatever the cookie carries', async () => {
     const plantedAt = Math.floor(Date.now() / 1000) - 300;
     const cookie = await signPreAuthCookie(
       {
@@ -822,12 +823,9 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
       readIssuedPreAuth(res),
       PRE_AUTH_KEY
     );
-    expect(payload.app_challenge).toBe(APP_CHALLENGE);
-    expect(payload.returnTo).toBe('/spaces/alkemio');
-    // workspace#082 SEC-082-01 — RED before the fix: re-signing with a fresh issue time
-    // refreshes the JWS `exp`, so re-navigating a victim through this ungated leg on a
-    // timer keeps a planted challenge alive past the 600 s bound spec §6 R-2 claims.
-    expect(payload.issued_at).toBe(plantedAt);
+    expect(payload.app_challenge).toBeUndefined();
+    expect(payload.returnTo).toBe('/');
+    expect(payload.issued_at).toBeGreaterThan(plantedAt);
     expectNoKratosClear(res);
   });
 

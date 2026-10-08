@@ -248,53 +248,15 @@ export class OidcController {
     const client = this.oidcService.getClient();
     const rpId = client.metadata.client_id ?? null;
 
-    // FR-002/FR-003 — app mode is decided HERE and nowhere else, then carried
-    // in the signed pre-auth cookie. Both gating inputs are process-static
-    // (`appRedirectScheme` is constructor-computed, `redis` is an @Optional()
-    // constructor injection), so deciding once at the start of the flow loses
-    // nothing and leaves `/callback` with no availability branch at all.
+    // workspace#082 E — app mode is a property of ONE flow: decided on the QUERY
+    // leg, read by `/callback` from the signed pre-auth cookie, and
+    // revived by nothing (SEC-082-01). Why the query-less carry-forward this
+    // replaces was unnecessary as well as unsafe — Kratos v26.2.0 preserves
+    // `return_to` and the Hydra login challenge, so the bare `/login` it existed
+    // for is never reached inside the Hydra chain:
+    // specs/082-app-handoff-scheme-squat/spec.md §2 (owner).
     let appChallenge: string | undefined;
-    let carriedReturnTo: string | undefined;
-    let carriedIssuedAt: number | undefined;
-    if (Object.keys(req.query).length === 0) {
-      // FR-003 — the Kratos `registration.after.oidc` re-entry is a BARE
-      // `/login` with no query string, which is exactly why a query-only flag
-      // is provably lost on the social sign-up leg. Carry the challenge AND
-      // the returnTo: `login()` otherwise rebuilds returnTo from the query
-      // alone, silently replacing the user's destination with `/`.
-      //
-      // RESIDUAL (ENG-079-SRV-02): this leg carries no state, nonce or query,
-      // so it is indistinguishable from the re-entry of any OTHER flow live in
-      // the same jar. A web sign-in parked at the IdP while an app sign-in is
-      // started in the same (Android, Chrome-shared) jar therefore CAN come
-      // back through here and inherit the app flow's mode and returnTo. No
-      // discriminator exists at this point to separate them — a second cookie
-      // slot would not help, because the re-entry cannot say which slot it
-      // belongs to either — so the collision is accepted, not guarded. Owed to
-      // spec §4 Q3 as a named residual.
-      const cookieRaw = req.cookies?.[PRE_AUTH_COOKIE_NAME];
-      if (typeof cookieRaw === 'string' && cookieRaw.length > 0) {
-        try {
-          const carried = await verifyPreAuthCookie(
-            cookieRaw,
-            this.oidcService.getPreAuthSigningKey()
-          );
-          if (carried.app_challenge) {
-            appChallenge = carried.app_challenge;
-            carriedReturnTo = carried.returnTo;
-            // workspace#082 SEC-082-01 — carry the ORIGINAL issue time, never a fresh
-            // one. `signPreAuthCookie` derives `exp` from it, so recomputing it here let
-            // an attacker page that re-navigates the victim through this ungated leg on a
-            // timer keep a planted `app_challenge` alive indefinitely. Spec §6 R-2 bounds
-            // the plant at PRE_AUTH_COOKIE_MAX_AGE_S; this line is what makes that true.
-            carriedIssuedAt = carried.issued_at;
-          }
-        } catch {
-          // An expired or tampered cookie simply does not carry a flow
-          // forward; this is an ordinary web sign-in.
-        }
-      }
-    } else if (
+    if (
       typeof appChallengeRaw === 'string' &&
       APP_CHALLENGE_PATTERN.test(appChallengeRaw) &&
       this.appRedirectScheme !== undefined &&
@@ -326,26 +288,20 @@ export class OidcController {
       // zero-interaction form of SEC-079-01 is closed by workspace#082's
       // app-mode Kratos session clear on the query leg of `/login` above.
       // Residual class and current disposition:
-      // specs/082-app-handoff-scheme-squat/spec.md §6. A verified callback
-      // stays ruled out by operator decision,
-      // because a device-wide App Links claim is not acceptable with this many
-      // alkem.io links. Do NOT tighten this by guessing at another header:
+      // specs/082-app-handoff-scheme-squat/spec.md §6. A WHOLESALE `/*` App
+      // Links claim is what the operator ruled out; a PATH-SCOPED verified
+      // callback is a live option (client-appstore/docs/decisions.md §6) and is
+      // spec §7 OG-8. Do NOT tighten this by guessing at another header:
       // measure it on a device first, which is the step whose absence caused
       // the original bug.
       (typeof req.headers.referer !== 'string' ||
         req.headers.referer.length === 0)
     ) {
-      // Any `/login` carrying a query string starts a FRESH mode decision, so
-      // an abandoned app flow in the same jar cannot bleed into it. The
-      // query-less branch above is the leg where that guarantee does not hold.
       appChallenge = appChallengeRaw;
 
       // workspace#082 FR-001 (server#6545) — an app-initiated authorize must not be
       // able to spend an ambient Kratos session. Mechanism, provenance and residuals:
       // specs/082-app-handoff-scheme-squat/spec.md §1-§2.
-      //
-      // NOT on the query-less leg above: Kratos returns to a BARE /login after social
-      // registration, and clearing there would destroy the session it just created (FR-002).
       this.clearKratosSessionCookie(res);
     }
 
@@ -398,14 +354,14 @@ export class OidcController {
     const nonce = generators.nonce();
     const codeVerifier = generators.codeVerifier();
     const codeChallenge = generators.codeChallenge(codeVerifier);
-    const issuedAt = carriedIssuedAt ?? Math.floor(Date.now() / 1000);
+    const issuedAt = Math.floor(Date.now() / 1000);
 
     const cookieJws = await signPreAuthCookie(
       {
         state,
         nonce,
         code_verifier: codeVerifier,
-        returnTo: carriedReturnTo ?? validation.value,
+        returnTo: validation.value,
         issued_at: issuedAt,
         app_challenge: appChallenge,
       },
@@ -616,9 +572,11 @@ export class OidcController {
       // clearing the Kratos session on the app-mode query leg of `/login`.
       // Residual class and current disposition:
       // specs/082-app-handoff-scheme-squat/spec.md §6 and ADR 0020's
-      // 2026-10-07 amendment. The narrowing, if it is
-      // ever taken, is an Android-only verified App Link; the iOS 15 target
-      // cannot use one, which is why the scheme stays.
+      // 2026-10-07 amendment. The closure, if it is ever taken, is app
+      // attestation or a PATH-SCOPED verified callback on both platforms
+      // (client-appstore/docs/decisions.md §6) — spec §7 OG-8. The scheme stays
+      // today because ASWebAuthenticationSession accepts https callbacks only
+      // from iOS 17.4 and the app targets iOS 15.0 (079 D3).
       res.redirect(302, `${appMode.scheme}:/auth/callback?code=${code}`);
       return;
     }
