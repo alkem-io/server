@@ -17,6 +17,7 @@ import { ActivityService } from '@platform/activity/activity.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { EntityManager } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { ConversionService } from './conversion.service';
 
@@ -29,6 +30,8 @@ describe('ConversionService', () => {
   let accountHostService: Record<string, Mock>;
   let activityService: Record<string, Mock>;
   let licenseService: Record<string, Mock>;
+  // Transaction-scoped manager handed to the callback by entityManager.transaction.
+  let txManager: { save: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -65,6 +68,17 @@ describe('ConversionService', () => {
       string,
       Mock
     >;
+
+    // By default transaction runs its callback immediately with a manager
+    // whose save hands the entity back.
+    txManager = { save: vi.fn(async (s: unknown) => s) };
+    const entityManager = module.get(EntityManager) as unknown as Record<
+      string,
+      Mock
+    >;
+    vi.mocked(entityManager.transaction).mockImplementation(
+      async (cb: (m: typeof txManager) => unknown) => cb(txManager)
+    );
   });
 
   // Stubs every roleSetService accessor used by getSpaceCommunityRoles so
@@ -159,9 +173,9 @@ describe('ConversionService', () => {
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({} as never);
       const callOrder: string[] = [];
-      vi.mocked(spaceService.save).mockImplementation(async (s: any) => {
+      txManager.save.mockImplementation(async (s: any) => {
         callOrder.push(`save:${s.id}`);
-        return s as never;
+        return s;
       });
       vi.mocked(licenseService.removeLicenseOrFail).mockImplementation(
         async (id: string) => {
@@ -198,6 +212,12 @@ describe('ConversionService', () => {
         callOrder.indexOf('removeLicense:l1-license-id')
       );
       expect(callOrder).toContain('removeLicense:l1-license-id');
+      // Save and delete share one transaction: a failed delete rolls the
+      // save back instead of committing it with the old license orphaned.
+      expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith(
+        'l1-license-id',
+        txManager
+      );
       expect(accountHostService.assignLicensePlansToSpace).toHaveBeenCalledWith(
         'space-l1',
         AccountType.USER

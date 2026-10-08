@@ -245,11 +245,43 @@ describe('ClassificationService', () => {
       await service.deleteClassification('cls-1');
 
       expect(tagsetService.removeTagset).toHaveBeenCalledTimes(2);
-      expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-1');
-      expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-2');
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        classification.authorization
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+        'ts-1',
+        undefined
       );
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+        'ts-2',
+        undefined
+      );
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        classification.authorization,
+        undefined
+      );
+    });
+
+    it("routes every delete through the caller's transaction manager when given one", async () => {
+      const classification = {
+        id: 'cls-1',
+        tagsets: [{ id: 'ts-1' }],
+        authorization: { id: 'auth-1' },
+      } as unknown as Classification;
+      const em = { remove: vi.fn().mockResolvedValue(classification) };
+
+      vi.spyOn(Classification, 'findOne').mockResolvedValue(
+        classification as any
+      );
+      (tagsetService.removeTagset as Mock).mockResolvedValue({} as any);
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
+
+      await service.deleteClassification('cls-1', em as any);
+
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-1', em);
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        classification.authorization,
+        em
+      );
+      expect(em.remove).toHaveBeenCalledWith(classification);
+      expect(classificationRepository.remove).not.toHaveBeenCalled();
     });
 
     it('should throw EntityNotInitializedException when tagsets or authorization not loaded', async () => {

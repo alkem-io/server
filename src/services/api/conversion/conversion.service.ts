@@ -198,10 +198,16 @@ export class ConversionService {
       maximumNumberOfStates: L0_MAX_INNOVATION_FLOW_STATES,
     };
 
-    spaceL1 = await this.spaceService.save(spaceL1);
-    if (replacedLicense) {
-      await this.licenseService.removeLicenseOrFail(replacedLicense.id);
-    }
+    // Save and delete the replaced license in one transaction: a failed delete
+    // rolls the promotion save back rather than committing it with the old
+    // license orphaned.
+    spaceL1 = await this.entityManager.transaction(async mgr => {
+      const saved = await mgr.save(spaceL1 as Space);
+      if (replacedLicense) {
+        await this.licenseService.removeLicenseOrFail(replacedLicense.id, mgr);
+      }
+      return saved;
+    });
 
     // Ensure that the license plans for new spaces are applied
     await this.accountHostService.assignLicensePlansToSpace(
