@@ -147,20 +147,21 @@ export class RoleSetAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // 027-platform-role-redesign (T076, Slice B): both blanket
-    // entry-role-assign rules are DELETED, not re-anchored.
-    //
-    // They granted `{global-admin, global-support, beta-tester}` the right to
-    // add members and organizations to ANY community role-set. No target role
-    // inherits that: spec §Target global role model row 2 denies Content Full
-    // Access role assignment outright ("it can never elevate anyone, itself
-    // included"), and row 1's Roles Admin owns PLATFORM role assignment and
-    // nothing else (FR-003). Community membership stays with the space's or
-    // organization's own admins — their rules are unchanged — plus Platform
-    // Support where the space sets `allowPlatformSupportAsAdmin`, which arrives
-    // through `platformRolesAccess`, per space, rather than as a standing grant.
-
-    //
+    // 027-platform-role-redesign (T076, Slice B) deleted the two blanket
+    // type-only rules that gave `{global-admin, global-support(, beta-tester)}`
+    // ROLESET_ENTRY_ROLE_ASSIGN / _ASSIGN_ORGANIZATION on every role set. No
+    // target role inherits them, and the role set adds no entry-assign rule of
+    // its own. The resulting model is intended (ruling 2026-10-08,
+    // server#6623), pinned by this file's spec and the community one:
+    // - L0 Space: users enter only by invitation, application or join; nobody
+    //   holds ROLESET_ENTRY_ROLE_ASSIGN, so no direct user add, and no
+    //   cross-account VC add (`assignRoleToVirtualContributor`).
+    // - L1/L2 Space: direct user add stays with subspace/ancestor admins, plus
+    //   Platform Support where the L0 sets `allowPlatformSupportAsAdmin`
+    //   (`CommunityAuthorizationService.extendAuthorizationPolicySubspace`).
+    // - Organizations enter any Space only by invitation: nobody holds
+    //   ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION. Changing the role of one
+    //   already in the role set needs GRANT only.
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,
