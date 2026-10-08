@@ -15,6 +15,7 @@ import {
 } from '@domain/collaboration/innovation-flow/innovation.flow.constants';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
+import { LicenseService } from '@domain/common/license/license.service';
 import { SpaceMoveRoomsService } from '@domain/communication/space-move-rooms/space.move.rooms.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -55,6 +56,7 @@ export class ConversionService {
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private activityService: ActivityService,
+    private licenseService: LicenseService,
     private readonly entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -77,6 +79,7 @@ export class ConversionService {
           storageAggregator: true,
           subspaces: true,
           parentSpace: true, // Needed to be able to unset it
+          license: true, // Replaced below, so it must be deleted
         },
       }
     );
@@ -177,9 +180,11 @@ export class ConversionService {
     spaceL1.storageAggregator.parentStorageAggregator =
       storageAggregatorAccount;
 
-    // A Space L0 has a templates manager, a Space L1 does not, so create it.
-    // The license is kept: every level has the same entitlements, and the
-    // caller recomputes them from the promoted space's own credentials.
+    // Some fields on a Space L0 do not exist on Space L1 so we need to create them.
+    // The fresh license keeps the promoted space fail-closed (paid entitlements
+    // off) until the caller recomputes it; the replaced one is deleted below.
+    const replacedLicense = spaceL1.license;
+    spaceL1.license = this.spaceService.createLicenseForSpaceL0();
     spaceL1.templatesManager =
       await this.spaceService.createTemplatesManagerForSpaceL0();
 
@@ -194,6 +199,9 @@ export class ConversionService {
     };
 
     spaceL1 = await this.spaceService.save(spaceL1);
+    if (replacedLicense) {
+      await this.licenseService.removeLicenseOrFail(replacedLicense.id);
+    }
 
     // Ensure that the license plans for new spaces are applied
     await this.accountHostService.assignLicensePlansToSpace(

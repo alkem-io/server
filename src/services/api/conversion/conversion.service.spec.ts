@@ -8,6 +8,7 @@ import {
   L0_MAX_INNOVATION_FLOW_STATES,
   L0_MIN_INNOVATION_FLOW_STATES,
 } from '@domain/collaboration/innovation-flow/innovation.flow.constants';
+import { LicenseService } from '@domain/common/license/license.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -27,6 +28,7 @@ describe('ConversionService', () => {
   let spaceLookupService: Record<string, Mock>;
   let accountHostService: Record<string, Mock>;
   let activityService: Record<string, Mock>;
+  let licenseService: Record<string, Mock>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -56,6 +58,10 @@ describe('ConversionService', () => {
       Mock
     >;
     activityService = module.get(ActivityService) as unknown as Record<
+      string,
+      Mock
+    >;
+    licenseService = module.get(LicenseService) as unknown as Record<
       string,
       Mock
     >;
@@ -117,8 +123,9 @@ describe('ConversionService', () => {
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it("keeps the subspace's own license rather than orphaning it for a new one (server#6614)", async () => {
+    it('assigns a fresh Free license to the promoted L0 and deletes the replaced one (server#6614)', async () => {
       const parentLicenseId = 'parent-license-id';
+      const freshLicense = { id: 'fresh-license-id' };
       const ownLicense = { id: 'l1-license-id' };
       const spaceL1 = {
         id: 'space-l1',
@@ -145,11 +152,22 @@ describe('ConversionService', () => {
       vi.mocked(spaceService.getSpaceOrFail)
         .mockResolvedValueOnce(spaceL1 as never)
         .mockResolvedValueOnce(spaceL0Orig as never);
+      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue(
+        freshLicense as never
+      );
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({} as never);
-      vi.mocked(spaceService.save).mockImplementation(
-        async (s: unknown) => s as never
+      const callOrder: string[] = [];
+      vi.mocked(spaceService.save).mockImplementation(async (s: any) => {
+        callOrder.push(`save:${s.id}`);
+        return s as never;
+      });
+      vi.mocked(licenseService.removeLicenseOrFail).mockImplementation(
+        async (id: string) => {
+          callOrder.push(`removeLicense:${id}`);
+          return {} as never;
+        }
       );
 
       vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue(
@@ -167,13 +185,19 @@ describe('ConversionService', () => {
         spaceL1ID: 'space-l1',
       });
 
-      // Every space level is created with the same entitlement set, and the
-      // resolver resets and recomputes the license from the promoted space's
-      // own Free-plan credentials right after this call. A replacement would
-      // only orphan the old license row and its policy.
-      expect(spaceService.createLicenseForSpaceL0).not.toHaveBeenCalled();
-      expect(result.license).toBe(ownLicense);
+      // The fresh license keeps the promoted space fail-closed (paid
+      // entitlements off) until the resolver recomputes it, even if a later
+      // step fails. The replaced license must be loaded and deleted once the
+      // space no longer points at it, or it is orphaned with its policy.
+      expect(
+        vi.mocked(spaceService.getSpaceOrFail).mock.calls[0][1]
+      ).toMatchObject({ relations: { license: true } });
+      expect(result.license).toBe(freshLicense);
       expect(result.license?.id).not.toBe(parentLicenseId);
+      expect(callOrder.indexOf('save:space-l1')).toBeLessThan(
+        callOrder.indexOf('removeLicense:l1-license-id')
+      );
+      expect(callOrder).toContain('removeLicense:l1-license-id');
       expect(accountHostService.assignLicensePlansToSpace).toHaveBeenCalledWith(
         'space-l1',
         AccountType.USER
