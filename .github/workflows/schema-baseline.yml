@@ -150,7 +150,9 @@ jobs:
           fi
 
           git commit -m "chore: update schema baseline" -S
-          branch="schema-baseline/${GITHUB_RUN_ID}"
+          # One long-lived branch, rebuilt on every run from the current develop
+          # tip, so a single open PR is refreshed instead of a new one per run.
+          branch="schema-baseline/develop"
           git branch --force "$branch"
           echo "BASELINE_FAILURE_PHASE=push" >> "$GITHUB_ENV"
           echo "BASELINE_PR_BRANCH=$branch" >> "$GITHUB_ENV"
@@ -171,11 +173,16 @@ jobs:
             exit 1
           fi
 
-          git push --force-with-lease "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "${BASELINE_PR_BRANCH}"
+          # Pushing to a URL leaves no remote-tracking ref, so pin the lease to the
+          # tip we observe now (empty = branch must not exist yet).
+          remote_url="https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          ref="refs/heads/${BASELINE_PR_BRANCH}"
+          current_tip=$(git ls-remote "$remote_url" "$ref" | awk '{print $1}')
+          git push --force-with-lease="${ref}:${current_tip}" "$remote_url" "${BASELINE_PR_BRANCH}:${ref}"
           echo "BASELINE_FAILURE_PHASE=pull-request" >> "$GITHUB_ENV"
           echo "BASELINE_FAILURE_CONTEXT=Baseline branch ${BASELINE_PR_BRANCH} pushed." >> "$GITHUB_ENV"
 
-      - name: Open pull request
+      - name: Open or update pull request
         if: env.BASELINE_PR_BRANCH != ''
         uses: actions/github-script@v9
         env:
@@ -203,7 +210,14 @@ jobs:
             let prNumber;
             if (existing.length > 0) {
               prNumber = existing[0].number;
-              core.info(`Baseline PR already open (#${prNumber}).`);
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                title,
+                body
+              });
+              core.info(`Updated existing baseline PR #${prNumber}.`);
             } else {
               const pr = await github.rest.pulls.create({
                 owner: context.repo.owner,
@@ -216,6 +230,30 @@ jobs:
               });
               prNumber = pr.data.number;
               core.info(`Created baseline PR #${prNumber}.`);
+            }
+
+            // Close leftovers from the old one-branch-per-run scheme.
+            const open = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: 'develop',
+              state: 'open'
+            });
+            for (const stale of open) {
+              if (stale.number === prNumber || !stale.head.ref.startsWith('schema-baseline/')) continue;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: stale.number,
+                body: `Superseded by #${prNumber}, which carries the latest schema baseline.`
+              });
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: stale.number,
+                state: 'closed'
+              });
+              core.info(`Closed superseded baseline PR #${stale.number}.`);
             }
 
             core.exportVariable('BASELINE_PR_NUMBER', prNumber.toString());
