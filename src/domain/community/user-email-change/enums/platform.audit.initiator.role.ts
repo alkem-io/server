@@ -12,13 +12,19 @@
  */
 export enum PlatformAuditInitiatorRole {
   SELF = 'self',
-  /** Coarse legacy tier. 027-platform-role-redesign FR-025 carve-out: also
-   * reused (Slice A only) when a LEGACY BROAD credential — not any of the
-   * ten roles below — authorized the call. Unwritable for new rows once
-   * Slice B drops the legacy credentials. */
+  /** Coarse administrative tier.
+   *  - Role attribution (`resolveInitiatorRole`) never produces it.
+   *  - The coarse-tier writers still write it by design: every
+   *    platform-operations audit row (`platform.operations.audit.service.ts`),
+   *    admin account deletion (`registration.service.ts`), admin MCP API-key
+   *    revocation (`mcp-api-key.service.ts`) and admin email-change events
+   *    (`user.email.change.service.ts`).
+   *  - Historical role-attribution rows written while legacy broad
+   *    credentials still existed carry it.
+   *  - The Postgres enum value is kept, so all of those rows stay valid. */
   PLATFORM_ADMIN = 'platform_admin',
-  /** Coarse legacy tier. Also reused for a bootstrap-SEEDED write with no
-   * actor at all (FR-025 carve-out, T058a). */
+  /** Coarse tier. Also used for a bootstrap-SEEDED write with no actor at
+   * all. */
   SYSTEM = 'system',
   SERVICE = 'service',
   // --- 027-platform-role-redesign (T018/T019): the ten real platform roles ---

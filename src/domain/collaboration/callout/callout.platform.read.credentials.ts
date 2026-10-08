@@ -3,9 +3,9 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
 
 /**
  * The platform credentials that may read a DRAFT Post wherever the Post is
- * reachable. This is the single definition: the draft-Post read rule and the
- * Form response access owner both build on it, so a change to the platform
- * roles (for example the split of Global Support) reaches both at once.
+ * reachable, used by the draft-Post read rule. The Form response access owner
+ * no longer builds on it: its read-all audience mirrors the space-admin rule
+ * (role set ADMIN plus `platformRolesAccess` UPDATE holders, server#6621).
  *
  * 027-platform-role-redesign (T076, Slice B): empty. The two legacy global
  * credentials are gone; platform-wide read of a draft Post arrives through the

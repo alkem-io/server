@@ -37,17 +37,12 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       deleteData.ID
     );
-    // 027-platform-role-redesign (T049, A15, FR-007(e); corr-server-7/
-    // spec-server-7 fix): gated SOLELY on PLATFORM_FORUM_MANAGE — NOT a
-    // dual path with bare DELETE. `PLATFORM_FORUM_MANAGE`'s own grant set
-    // (platform.service.authorization.ts) is already
-    // {platform-support, global-admin, global-support} ∪ legacy, so every
-    // legacy reacher this feature must preserve (T073's GLOBAL_SUPPORT
-    // platform-subtree cascade included) already holds it directly — a
-    // second bare-DELETE branch adds NOTHING for a legitimate legacy
-    // holder, but DOES let `platform-content-full-access` in through the
-    // root cascade's CRUD (T036a), which spec.md explicitly excludes from
-    // the forum family (A15 is NOT covered by the A6/A7 exception).
+    // A15: gated SOLELY on PLATFORM_FORUM_MANAGE — NOT a dual path with bare
+    // DELETE. `PLATFORM_FORUM_MANAGE` is granted to `platform-support`
+    // (platform.service.authorization.ts); a second bare-DELETE branch would
+    // let `platform-content-full-access` in through the root cascade's CRUD,
+    // and the forum family is NOT covered by the A6/A7 content-full-access
+    // exception.
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       discussion.authorization,

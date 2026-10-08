@@ -363,10 +363,10 @@ export class UserService {
           forumDiscussionCreated: { email: true, inApp: false, push: false },
           forumDiscussionComment: { email: true, inApp: true, push: true },
           admin: {
-            userProfileCreated: { email: false, inApp: false, push: false },
-            userProfileRemoved: { email: false, inApp: false, push: false },
-            spaceCreated: { email: false, inApp: false, push: false },
-            userGlobalRoleChanged: { email: false, inApp: false, push: false },
+            userProfileCreated: { email: true, inApp: false, push: false },
+            userProfileRemoved: { email: true, inApp: false, push: false },
+            spaceCreated: { email: true, inApp: false, push: false },
+            userGlobalRoleChanged: { email: true, inApp: false, push: false },
             userEmailChanged: { email: true, inApp: false, push: false },
           },
         },
@@ -1117,9 +1117,8 @@ export class UserService {
         await this.platformRoleAssignmentAuditService.recordServiceProfileRejected(
           {
             initiatorUserId: actorContext.actorID,
-            // corr-server-3/qual-server-1 fix: a rejected actor may
-            // legitimately hold NEITHER the owning role nor a legacy
-            // credential (that is often exactly WHY the check failed), so
+            // A rejected actor may legitimately hold no owning role (that is
+            // often exactly WHY the check failed), so
             // the strict `resolveInitiatorRole` throw path is not a defect
             // here — the best-effort wrapper falls back to `SELF` instead
             // of raising a second exception while already handling a
