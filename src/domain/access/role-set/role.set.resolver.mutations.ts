@@ -136,9 +136,9 @@ export class RoleSetResolverMutations {
     // rejected afterwards, leaving the credential granted while the caller saw
     // an error (there is no transaction around the two).
     //
-    // That mattered little while the mutation required
-    // ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION (global admin / support / beta
-    // tester) for every call. R32 relaxed it to GRANT alone for an actor
+    // That mattered little while every call required
+    // ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION, which nobody holds since 027
+    // Slice B (server#6623). R32 relaxed it to GRANT alone for an actor
     // already holding the entry role, so any Space admin can now reach this
     // path — and aiming it at a Virtual Contributor already in the Space
     // granted that VC a Space role while skipping the
@@ -194,6 +194,8 @@ export class RoleSetResolverMutations {
         requiredPrivilege =
           AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT;
       } else {
+        // Nobody holds this on an L0 Space, so a VC from another account
+        // enters an L0 by invitation only (ruling 2026-10-08, server#6623).
         requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
       }
     }
@@ -544,13 +546,14 @@ export class RoleSetResolverMutations {
 
   /**
    * Bringing a NEW organization into a Space requires
-   * `ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION` (GLOBAL_ADMIN / GLOBAL_SUPPORT /
-   * BETA_TESTER) plus GRANT. Changing the role of one that is ALREADY in the
-   * role set requires GRANT alone.
+   * `ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION` plus GRANT. Nobody holds that
+   * privilege since 027 Slice B, so an organization enters any Space by
+   * invitation only (ruling 2026-10-08, server#6623). Changing the role of one
+   * that is ALREADY in the role set requires GRANT alone.
    *
    * The assign-organization privilege protects the organization's *consent*: a
    * direct add puts an organization into a Space without ever asking it, which
-   * is why it stays global-only (R6). Consent is about entering the Space, not
+   * is why nobody may do it (R6). Consent is about entering the Space, not
    * about which role the organization holds once it is in. Since
    * workspace#061 an organization enters by accepting an invitation from a
    * Space admin, and that admin must then be able to move it between Member and
