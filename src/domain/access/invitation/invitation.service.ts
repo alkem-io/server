@@ -76,17 +76,27 @@ export class InvitationService {
         roleSet: true,
       },
     });
-    await this.lifecycleService.deleteLifecycle(invitation.lifecycle.id, em);
+    // All-or-nothing: an interrupted, non-transactional delete is what leaves
+    // an invitation behind without its lifecycle
+    const removeRows = async (tx: EntityManager) => {
+      // tolerate an already-orphaned invitation, so it can still be cleaned up
+      if (invitation.lifecycle)
+        await this.lifecycleService.deleteLifecycle(
+          invitation.lifecycle.id,
+          tx
+        );
 
-    if (invitation.authorization)
-      await this.authorizationPolicyService.delete(
-        invitation.authorization,
-        em
-      );
+      if (invitation.authorization)
+        await this.authorizationPolicyService.delete(
+          invitation.authorization,
+          tx
+        );
 
+      return tx.remove(invitation as Invitation);
+    };
     const result = em
-      ? await em.remove(invitation as Invitation)
-      : await this.invitationRepository.remove(invitation as Invitation);
+      ? await removeRows(em)
+      : await this.invitationRepository.manager.transaction(removeRows);
     result.id = invitationID;
 
     if (invitation.invitedActorID && invitation.roleSet) {
