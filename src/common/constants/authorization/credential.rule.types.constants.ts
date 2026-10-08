@@ -30,8 +30,6 @@ export const CREDENTIAL_RULE_TYPES_SPACE_ROLESET_JOIN_GLOBAL_REGISTERED =
   'credentialRuleTypes-roleSetJoinGlobalRegistered';
 export const CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS =
   'credentialRuleTypes-calloutUpdatePublisherGlobalAdmins';
-export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN =
-  'credentialRuleTypes-roleSetEntryRoleAdd';
 export const CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_INVITE =
   'credentialRuleTypes-roleSetEntryRoleInvite';
 export const CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED =
