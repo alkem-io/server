@@ -201,6 +201,17 @@ export class ActivityService {
       limit?: number;
     }
   ): Promise<IActivity[]> {
+    // The collaboration list is the caller's authorization scope: an empty list
+    // means no collaboration may be read, so the only correct answer is no
+    // activity. The scope has to be enforced here rather than left to the raw
+    // SQL below, because an empty IN list cannot be spelled in Postgres and
+    // would otherwise be omitted from the WHERE clause entirely - widening the
+    // query to every visible activity on the platform. The ORM-based siblings
+    // get this for free from `In([])`, which compiles to a false predicate.
+    if (!collaborationIDs?.length) {
+      return [];
+    }
+
     const {
       types,
       visibility = true,
