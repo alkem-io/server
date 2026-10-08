@@ -165,7 +165,12 @@ describe('InvitationService', () => {
 
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
-      expect(invitationRepository.save).toHaveBeenCalledTimes(2);
+      // a single save, with the lifecycle already attached: the row is never
+      // persisted without one
+      expect(invitationRepository.save).toHaveBeenCalledTimes(1);
+      expect(invitationRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ lifecycle: mockLifecycle })
+      );
     });
   });
 
@@ -420,6 +425,43 @@ describe('InvitationService', () => {
           relations: { roleSet: true, lifecycle: true },
         })
       );
+    });
+
+    it('should filter by the loaded lifecycle without re-fetching each invitation', async () => {
+      const invited = { id: 'inv-1', lifecycle: { id: 'lc-1' } };
+      const accepted = { id: 'inv-2', lifecycle: { id: 'lc-2' } };
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue([
+        invited,
+        accepted,
+      ] as any);
+      (invitationLifecycleService.getState as Mock).mockImplementation(
+        (lifecycle: any) => (lifecycle.id === 'lc-1' ? 'invited' : 'accepted')
+      );
+      const getOrFail = vi.spyOn(service, 'getInvitationOrFail');
+
+      const result = await service.findInvitationsForActor('contributor-1', [
+        'invited',
+      ]);
+
+      expect(result).toEqual([invited]);
+      expect(getOrFail).not.toHaveBeenCalled();
+    });
+
+    it('should skip an invitation with no lifecycle instead of throwing', async () => {
+      const healthy = { id: 'inv-1', lifecycle: { id: 'lc-1' } };
+      const orphan = { id: 'inv-2', lifecycle: null };
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue([
+        healthy,
+        orphan,
+      ] as any);
+      (invitationLifecycleService.getState as Mock).mockReturnValue('invited');
+
+      const result = await service.findInvitationsForActor('contributor-1', [
+        'invited',
+      ]);
+
+      expect(result).toEqual([healthy]);
+      expect(invitationLifecycleService.getState).toHaveBeenCalledTimes(1);
     });
   });
 

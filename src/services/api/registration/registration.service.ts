@@ -633,11 +633,18 @@ export class RegistrationService {
   ): Promise<IOrganization> {
     const organizationID = deleteData.ID;
 
-    const invitations =
-      await this.invitationService.findInvitationsForActor(organizationID);
-    for (const invitation of invitations) {
-      await this.invitationService.deleteInvitation({ ID: invitation.id });
-    }
+    // One transaction, as on the user path: deleteInvitation removes the
+    // lifecycle before the invitation, which must never be visible in between
+    await this.entityManager.transaction(async em => {
+      const invitations =
+        await this.invitationService.findInvitationsForActor(organizationID);
+      for (const invitation of invitations) {
+        await this.invitationService.deleteInvitation(
+          { ID: invitation.id },
+          em
+        );
+      }
+    });
 
     let organization =
       await this.organizationLookupService.getOrganizationByIdOrFail(

@@ -6,7 +6,6 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { asyncFilter } from '@common/utils';
 import {
   CreateInvitationInput,
   DeleteInvitationInput,
@@ -60,9 +59,8 @@ export class InvitationService {
       AuthorizationPolicyType.INVITATION
     );
 
-    // save the invitation to get the id assigned
-    await this.invitationRepository.save(invitation);
-
+    // attach the lifecycle before the first save: an invitation row must never
+    // be visible without one, as state reads dereference it unconditionally
     invitation.lifecycle = await this.lifecycleService.createLifecycle();
 
     return await this.invitationRepository.save(invitation);
@@ -224,18 +222,19 @@ export class InvitationService {
         ...findOpts.relations,
         lifecycle: true,
       };
-      findOpts.select = {
-        lifecycle: {
-          machineState: true,
-        },
-      };
     }
 
     const invitations = await this.invitationRepository.find(findOpts);
 
     if (states.length) {
-      return asyncFilter(invitations, async app =>
-        states.includes(await this.getLifecycleState(app.id))
+      // Use the lifecycle loaded above rather than re-fetching each invitation;
+      // one without a lifecycle has no state, so it cannot match a state filter
+      return invitations.filter(
+        invitation =>
+          !!invitation.lifecycle &&
+          states.includes(
+            this.invitationLifecycleService.getState(invitation.lifecycle)
+          )
       );
     }
 
