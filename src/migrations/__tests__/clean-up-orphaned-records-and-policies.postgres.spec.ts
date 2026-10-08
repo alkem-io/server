@@ -52,8 +52,13 @@ const SCHEMA_DDL = [
      "licenseId" uuid REFERENCES license(id) ON DELETE CASCADE)`,
   `CREATE TABLE space (id uuid PRIMARY KEY,
      "licenseId" uuid UNIQUE REFERENCES license(id) ON DELETE SET NULL)`,
-  // A migration backup table: names a policy without a foreign key.
+  // Migration backup tables: name a policy or a profile without a foreign key.
   'CREATE TABLE _auth_profile_backup_space (id uuid PRIMARY KEY, "authorizationId" uuid)',
+  'CREATE TABLE _auth_profile_backup_user (id uuid PRIMARY KEY, "profileId" uuid)',
+  // An owner whose one-to-one key cascades, under an unconventional column
+  // name: only its foreign key says it names the profile.
+  `CREATE TABLE cascading_owner (id uuid PRIMARY KEY,
+     "ownedProfileId" uuid UNIQUE REFERENCES profile(id) ON DELETE CASCADE)`,
 ];
 
 describeMigrationPostgres(
@@ -241,12 +246,14 @@ describeMigrationPostgres(
       expect(await exists('authorization_policy', owned.ownPolicy)).toBe(true);
     });
 
-    it('never deletes a file: a bucket that still holds one is left with its policies', async () => {
+    it('never deletes a file: an unowned profile whose bucket holds one is left whole', async () => {
       const orphan = await profile({ withFile: true });
 
       await runMigration();
 
-      expect(await exists('profile', orphan.id)).toBe(false);
+      expect(await exists('profile', orphan.id)).toBe(true);
+      expect(await exists('location', orphan.location)).toBe(true);
+      expect(await exists('authorization_policy', orphan.ownPolicy)).toBe(true);
       expect(await exists('storage_bucket', orphan.bucket)).toBe(true);
       expect(
         await count(
@@ -276,6 +283,46 @@ describeMigrationPostgres(
       expect(await exists('authorization_policy', old)).toBe(false);
       expect(await exists('authorization_policy', recent)).toBe(true);
       expect(await exists('authorization_policy', backedUp)).toBe(true);
+    });
+
+    it('keeps an unowned bucket and location that no deleted profile owned (e.g. the config-named Matrix staging bucket)', async () => {
+      const bucket = randomUUID();
+      const bucketPolicy = await policy();
+      await queryRunner.query(
+        `INSERT INTO storage_bucket (id, "createdDate", "authorizationId") VALUES ($1, ${OLD}, $2)`,
+        [bucket, bucketPolicy]
+      );
+      const location = randomUUID();
+      await queryRunner.query(
+        `INSERT INTO location (id, "createdDate") VALUES ($1, ${OLD})`,
+        [location]
+      );
+
+      await runMigration();
+
+      expect(await exists('storage_bucket', bucket)).toBe(true);
+      expect(await exists('authorization_policy', bucketPolicy)).toBe(true);
+      expect(await exists('location', location)).toBe(true);
+    });
+
+    it('keeps a profile that only a backup table or an unknown cascading owner names', async () => {
+      const backedUp = await profile();
+      await queryRunner.query(
+        'INSERT INTO _auth_profile_backup_user (id, "profileId") VALUES ($1, $2)',
+        [randomUUID(), backedUp.id]
+      );
+      const cascadeOwned = await profile();
+      const owner = randomUUID();
+      await queryRunner.query(
+        'INSERT INTO cascading_owner (id, "ownedProfileId") VALUES ($1, $2)',
+        [owner, cascadeOwned.id]
+      );
+
+      await runMigration();
+
+      expect(await exists('profile', backedUp.id)).toBe(true);
+      expect(await exists('profile', cascadeOwned.id)).toBe(true);
+      expect(await exists('cascading_owner', owner)).toBe(true);
     });
 
     it('keeps an unowned record created in the last day (a create may still be in flight)', async () => {

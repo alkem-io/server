@@ -132,6 +132,9 @@ jobs:
       - name: Run Whiteboard Template tagset migration PostgreSQL contract
         run: pnpm run test:migration:whiteboard-default-tagsets:postgres
 
+      - name: Run orphaned records and policies cleanup migration PostgreSQL contract
+        run: pnpm run test:migration:orphan-cleanup:postgres
+
       - name: Test conversation direct-storage ownership in PostgreSQL
         env:
           CONVERSATION_MEDIA_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
