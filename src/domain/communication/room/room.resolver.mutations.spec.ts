@@ -10,9 +10,10 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { EventEmitter } from 'events';
 import { type Mocked } from 'vitest';
-import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
+import { RoomAttachmentAuthorization } from './room.attachment.authorization';
 import { IRoom } from './room.interface';
 import { RoomResolverMutations } from './room.resolver.mutations';
 import { RoomService } from './room.service';
@@ -34,7 +35,11 @@ describe('RoomResolverMutations', () => {
     vi.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [RoomResolverMutations, MockWinstonProvider],
+      providers: [
+        RoomResolverMutations,
+        RoomAttachmentAuthorization,
+        MockWinstonProvider,
+      ],
     })
       .useMocker(defaultMockerFactory)
       .compile();
@@ -49,6 +54,126 @@ describe('RoomResolverMutations', () => {
     communicationAdapter = module.get(CommunicationAdapter);
   });
 
+  it('propagates a response disconnect to the in-flight attachment upload', async () => {
+    roomService.getRoomOrFail.mockResolvedValue({
+      id: 'room',
+      type: RoomType.UPDATES,
+      authorization: { id: 'policy' },
+    } as any);
+    const uploads = (resolver as any).roomUploads;
+    const response = Object.assign(new EventEmitter(), {
+      writableEnded: false,
+    });
+    let begun!: () => void;
+    const started = new Promise<void>(resolve => {
+      begun = resolve;
+    });
+    uploads.upload.mockImplementation(
+      async (
+        _room: unknown,
+        _actor: unknown,
+        _file: unknown,
+        signal: AbortSignal
+      ) => {
+        begun();
+        expect(signal).toBeInstanceOf(AbortSignal);
+        await new Promise<void>(resolve =>
+          signal.addEventListener('abort', () => resolve(), { once: true })
+        );
+        expect(signal.aborted).toBe(true);
+        throw new Error('cancelled fixture upload');
+      }
+    );
+    const pending = (resolver.uploadRoomMessageAttachment as any)(
+      { roomID: 'room' },
+      {} as any,
+      actorContext,
+      { res: response }
+    );
+    const rejected = expect(pending).rejects.toThrow(
+      'cancelled fixture upload'
+    );
+    await started;
+    response.emit('close');
+    await rejected;
+    expect(response.listenerCount('close')).toBe(0);
+  });
+  describe.each([
+    'upload',
+    'send',
+    'reply',
+  ] as const)('attachment %s uses the existing room-operation gates', operation => {
+    const invoke = () =>
+      operation === 'upload'
+        ? resolver.uploadRoomMessageAttachment(
+            { roomID: 'room-1', threadID: '$parent' } as any,
+            {} as any,
+            actorContext
+          )
+        : operation === 'send'
+          ? resolver.sendMessageToRoom(
+              {
+                roomID: 'room-1',
+                message: '',
+                attachmentUpload: {
+                  externalReference: 'media',
+                  displayName: 'file.png',
+                },
+              },
+              actorContext
+            )
+          : resolver.sendMessageReplyToRoom(
+              {
+                roomID: 'room-1',
+                threadID: '$parent',
+                message: '',
+                attachmentUpload: {
+                  externalReference: 'media',
+                  displayName: 'file.png',
+                },
+              },
+              actorContext
+            );
+    const noPublication = () => {
+      expect((resolver as any).roomUploads.upload).not.toHaveBeenCalled();
+      expect(
+        (resolver as any).roomUploads.existingMedia
+      ).not.toHaveBeenCalled();
+      expect(roomLookupService.sendMessage).not.toHaveBeenCalled();
+      expect(roomLookupService.sendMessageReply).not.toHaveBeenCalled();
+    };
+    it('denies closed callout before upload or event publication', async () => {
+      roomService.getRoomOrFail.mockResolvedValue({
+        id: 'room-1',
+        type: RoomType.CALLOUT,
+        authorization: { id: 'policy' },
+      } as any);
+      roomResolverService.getCalloutForRoom.mockResolvedValue({
+        settings: { framing: { commentsEnabled: false } },
+      } as any);
+      await expect(invoke()).rejects.toThrow(CalloutClosedException);
+      noPublication();
+    });
+    it('denies direct-message consent before upload or event publication', async () => {
+      roomService.getRoomOrFail.mockResolvedValue({
+        id: 'room-1',
+        type: RoomType.CONVERSATION_DIRECT,
+        authorization: { id: 'policy' },
+      } as any);
+      communicationAdapter.getRoomMembers.mockResolvedValue([
+        actorContext.actorID,
+        'receiver',
+      ]);
+      userLookupService.getUserById.mockResolvedValue({
+        id: 'receiver',
+      } as any);
+      userLookupService.getUserByIdOrFail.mockResolvedValue({
+        settings: { communication: { allowOtherUsersToSendMessages: false } },
+      } as any);
+      await expect(invoke()).rejects.toThrow(MessagingNotEnabledException);
+      noPublication();
+    });
+  });
   it('should be defined', () => {
     expect(resolver).toBeDefined();
   });
@@ -83,39 +208,47 @@ describe('RoomResolverMutations', () => {
       );
     });
 
-    it('passes validated media to the one-event send', async () => {
-      const messageAttachmentService = (resolver as any)
-        .messageAttachmentService as Mocked<MessageAttachmentService>;
-      const resolvedRefs = [{ documentId: 'doc-1' }] as any;
-      messageAttachmentService.resolveOutboundAttachments.mockResolvedValue(
-        resolvedRefs
-      );
+    it('passes validated reference metadata to the one-event send', async () => {
+      const media = {
+        media_id: 'media',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 7,
+      };
+      const input = {
+        roomID: 'room-1',
+        message: '',
+        attachmentUpload: {
+          externalReference: 'media',
+          displayName: 'pic.png',
+        },
+      };
+      (resolver as any).roomUploads.existingMedia.mockResolvedValue(media);
       roomLookupService.sendMessage.mockResolvedValue({ id: 'msg-1' } as any);
-
-      await resolver.sendMessageToRoom(
-        { roomID: 'room-1', message: '', attachments: ['doc-1'] } as any,
-        actorContext
-      );
-
+      await resolver.sendMessageToRoom(input, actorContext);
       expect(roomLookupService.sendMessage).toHaveBeenCalledWith(
         mockRoom,
         actorContext.actorID,
-        { roomID: 'room-1', message: '', attachments: ['doc-1'] },
-        resolvedRefs
+        input,
+        media
       );
     });
 
-    it('propagates an unconfirmed send', async () => {
-      const messageAttachmentService = (resolver as any)
-        .messageAttachmentService as Mocked<MessageAttachmentService>;
-      messageAttachmentService.resolveOutboundAttachments.mockResolvedValue([
-        { documentId: 'doc-1' },
-      ] as any);
+    it('propagates an unconfirmed reference send', async () => {
+      (resolver as any).roomUploads.existingMedia.mockResolvedValue({
+        media_id: 'media',
+      });
       roomLookupService.sendMessage.mockRejectedValue(new Error('send failed'));
-
       await expect(
         resolver.sendMessageToRoom(
-          { roomID: 'room-1', message: '', attachments: ['doc-1'] } as any,
+          {
+            roomID: 'room-1',
+            message: '',
+            attachmentUpload: {
+              externalReference: 'media',
+              displayName: 'pic.png',
+            },
+          },
           actorContext
         )
       ).rejects.toThrow('send failed');

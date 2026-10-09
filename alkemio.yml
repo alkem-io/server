@@ -337,6 +337,7 @@ monitoring:
 communications:
   enabled: ${COMMUNICATIONS_ENABLED}:true
   matrix:
+    adapter_url: ${MATRIX_ADAPTER_URL}:http://localhost:8280
     connection_retries: ${COMMUNICATIONS_MATRIX_CONNECTION_RETRIES}:5
     # Timeout in milliseconds for RPC calls to the Matrix adapter
     connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30000
@@ -419,6 +420,7 @@ storage:
     # (no room context at upload time); the server re-homes rows out of it on
     # message.received. Fixed/seeded UUID shared with the Synapse provider.
     matrix_media_bucket_id: ${STORAGE_MATRIX_MEDIA_BUCKET_ID}:00000000-0000-4000-8000-000000000013
+    # Fixed operator capture; absent/invalid keeps historical COPY-only placement.
 
   # Collabora / WOPI service configuration
   collabora:

@@ -48,6 +48,7 @@ describe('FileServiceAdapter', () => {
           useValue: {
             request: vi.fn(),
             get: vi.fn(),
+            head: vi.fn(),
             post: vi.fn(),
             patch: vi.fn(),
           },
@@ -669,6 +670,18 @@ describe('FileServiceAdapter', () => {
   });
 
   describe('deleteDocument', () => {
+    it('sends an optional atomic source-bucket condition for staging cleanup', async () => {
+      (httpService.request as Mock).mockReturnValue(of(axiosResponse({})));
+      await adapter.deleteDocument('doc-1', 'bucket/with&characters');
+      const call = (httpService.request as Mock).mock.calls[0][0];
+      expect(call.method).toBe('delete');
+      const url = new URL(call.url);
+      expect(url.pathname).toBe('/internal/file/doc-1');
+      expect(url.searchParams.get('expectedStorageBucketId')).toBe(
+        'bucket/with&characters'
+      );
+    });
+
     it('should DELETE and return authorizationId and tagsetId', async () => {
       const responseData = {
         authorizationId: 'auth-1',
@@ -713,6 +726,83 @@ describe('FileServiceAdapter', () => {
         storageBucketId: 'bucket-2',
         temporaryLocation: false,
       });
+    });
+  });
+
+  describe('getReferenceMetadata', () => {
+    it('uses HEAD on the reference content resource and returns native metadata only', async () => {
+      (httpService.head as Mock).mockReturnValue(
+        of({
+          ...axiosResponse(undefined),
+          headers: {
+            'content-type': 'image/png',
+            'content-length': '42',
+            'x-alkemio-image-width': '80',
+            'x-alkemio-image-height': '60',
+          },
+        })
+      );
+      await expect(adapter.getReferenceMetadata('media-1')).resolves.toEqual({
+        mimeType: 'image/png',
+        size: 42,
+        width: 80,
+        height: 60,
+      });
+      expect(httpService.head).toHaveBeenCalledWith(
+        'http://file-service:4003/internal/file/by-reference/content?ref=media-1',
+        expect.objectContaining({ maxRedirects: 0 })
+      );
+      expect(httpService.request).not.toHaveBeenCalled();
+    });
+    it('encodes the opaque reference without a file-ID lookup', async () => {
+      (httpService.head as Mock).mockReturnValue(
+        of({
+          ...axiosResponse(undefined),
+          headers: { 'content-type': 'application/pdf', 'content-length': '3' },
+        })
+      );
+      await adapter.getReferenceMetadata('a/b&c');
+      expect((httpService.head as Mock).mock.calls[0][0]).toBe(
+        'http://file-service:4003/internal/file/by-reference/content?ref=a%2Fb%26c'
+      );
+    });
+    it.each([
+      404, 400,
+    ])('maps HTTP %s using the existing adapter error contract', async status => {
+      (httpService.head as Mock).mockReturnValue(
+        throwError(
+          () =>
+            new AxiosError(
+              'metadata failure',
+              String(status),
+              undefined,
+              null,
+              { ...axiosResponse({}, status) }
+            )
+        )
+      );
+      if (status === 404)
+        await expect(adapter.getReferenceMetadata('gone')).resolves.toBeNull();
+      else
+        await expect(adapter.getReferenceMetadata('invalid')).rejects.toThrow(
+          FileServiceAdapterException
+        );
+    });
+    it.each([
+      '',
+      '-1',
+      'NaN',
+      '9007199254740992',
+    ])('rejects invalid content length %s', async length => {
+      (httpService.head as Mock).mockReturnValue(
+        of({
+          ...axiosResponse(undefined),
+          headers: { 'content-type': 'image/png', 'content-length': length },
+        })
+      );
+      await expect(adapter.getReferenceMetadata('media')).rejects.toThrow(
+        FileServiceAdapterException
+      );
     });
   });
 
@@ -914,6 +1004,52 @@ describe('FileServiceAdapter', () => {
         authorizationId: 'auth-1',
       });
       expect(httpService.request).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('shared media storage contracts', () => {
+    it('does not replay conditional MOVE after an ambiguous committed response loss', async () => {
+      let attempts = 0;
+      const error = new AxiosError(
+        'response lost',
+        'ECONNRESET',
+        undefined,
+        {}
+      );
+      (httpService.request as Mock).mockReturnValue(
+        defer(() => {
+          attempts++;
+          return throwError(() => error);
+        })
+      );
+      await expect(
+        adapter.moveDocument('file', {
+          storageBucketId: 'target',
+          expectedStorageBucketId: 'staging',
+          tagsetId: 'tagset',
+        })
+      ).rejects.toThrow(FileServiceAdapterException);
+      expect(attempts).toBe(1);
+    });
+
+    it('sends the expected bucket and tagset in one conditional PATCH', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse({ id: 'file', storageBucketId: 'target' }))
+      );
+      const patch = {
+        storageBucketId: 'target',
+        expectedStorageBucketId: 'staging',
+        tagsetId: 'tagset',
+      };
+      await adapter.moveDocument('file', patch);
+      expect(httpService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'patch',
+          url: 'http://file-service:4003/internal/file/file',
+          data: patch,
+          maxRedirects: 0,
+        })
+      );
     });
   });
 

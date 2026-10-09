@@ -1,20 +1,17 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
-import { RoomType } from '@common/enums/room.type';
-import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
-import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
+import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import type { Request, Response } from 'express';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
-import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
+import { RoomAttachmentUploadService } from '../message-attachment/room.attachment.upload';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
@@ -22,7 +19,11 @@ import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
-import { IRoom } from './room.interface';
+import {
+  RoomMessageAttachmentUploadInput,
+  RoomMessageAttachmentUploadResult,
+} from './dto/room.dto.upload.attachment';
+import { RoomAttachmentAuthorization } from './room.attachment.authorization';
 import { RoomService } from './room.service';
 import { RoomAuthorizationService } from './room.service.authorization';
 
@@ -32,12 +33,10 @@ export class RoomResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private roomService: RoomService,
-    private roomResolverService: RoomResolverService,
     private roomAuthorizationService: RoomAuthorizationService,
     private roomLookupService: RoomLookupService,
-    private userLookupService: UserLookupService,
-    private communicationAdapter: CommunicationAdapter,
-    private messageAttachmentService: MessageAttachmentService
+    private readonly messageGate: RoomAttachmentAuthorization,
+    private readonly roomUploads: RoomAttachmentUploadService
   ) {}
 
   @Mutation(() => IMessage, {
@@ -52,30 +51,23 @@ export class RoomResolverMutations {
       relations: { authorization: true },
     });
 
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      room.authorization,
-      AuthorizationPrivilege.CREATE_MESSAGE,
-      `room send message: ${room.id}`
-    );
+    this.validateMessageContent(messageData);
+    await this.messageGate.assertOperation(room, actorContext);
 
-    await this.validateMessageOnCalloutOrFail(room);
-    await this.validateMessageOnDirectConversationOrFail(room, actorContext);
-
-    // feature 013: resolve + validate attachments (READ + type/size per the
-    // conversation bucket policy), then thread them to the matrix-adapter.
-    const attachments =
-      await this.messageAttachmentService.resolveOutboundAttachments(
-        room,
-        actorContext,
-        messageData.attachments
-      );
+    const existingMedia =
+      messageData.attachmentUpload != null
+        ? await this.roomUploads.existingMedia(
+            room,
+            actorContext,
+            messageData.attachmentUpload
+          )
+        : undefined;
 
     const message = await this.roomLookupService.sendMessage(
       room,
       actorContext.actorID,
       messageData,
-      attachments
+      existingMedia
     );
 
     // All post-send processing (notifications, activities, subscriptions)
@@ -83,85 +75,47 @@ export class RoomResolverMutations {
     return message;
   }
 
-  // [2] Accepted double-resolve: on a CALLOUT comment-room send WITH attachments
-  // the owning callout is resolved here (for commentsEnabled) and again inside
-  // resolveOutboundAttachments → getTargetBucketForRoom → resolveParentCalloutId.
-  // Left deliberately un-threaded: this validation is a resolver-layer concern
-  // that needs the FULL callout and THROWS on miss, whereas the attachment path
-  // is a generic best-effort (catch-EntityNotFound→undefined) bucket resolver in
-  // the service layer that covers callout AND post AND conversation rooms — only
-  // one of which is pre-resolved here. Passing this callout down through four
-  // nested private methods, for one branch, with divergent error contracts,
-  // would couple the layers worse than the redundant load on this non-hot path.
-  private async validateMessageOnCalloutOrFail(room: IRoom) {
-    if (room.type === RoomType.CALLOUT) {
-      const callout = await this.roomResolverService.getCalloutForRoom(room.id);
-
-      if (!callout.settings.framing.commentsEnabled) {
-        throw new CalloutClosedException(
-          `New collaborations to a closed Callout with id: '${callout.id}' are not allowed!`
-        );
-      }
+  @Mutation(() => RoomMessageAttachmentUploadResult, {
+    description:
+      'Uploads original room media into Synapse staging for a later authorized message.',
+  })
+  async uploadRoomMessageAttachment(
+    @Args('uploadData') input: RoomMessageAttachmentUploadInput,
+    @Args('file', { type: () => GraphQLUpload }) file: FileUpload,
+    @CurrentActor() actor: ActorContext,
+    @Context() context?: { req?: Request; res?: Response }
+  ): Promise<RoomMessageAttachmentUploadResult> {
+    const room = await this.roomService.getRoomOrFail(input.roomID, {
+      relations: { authorization: true },
+    });
+    await this.messageGate.assertOperation(room, actor, input.threadID);
+    const controller = new AbortController();
+    const response = context?.res ?? context?.req?.res;
+    const cancelled = () => controller.abort();
+    const closed = () => {
+      if (!response?.writableEnded) cancelled();
+    };
+    context?.req?.once('aborted', cancelled);
+    response?.once('close', closed);
+    if (context?.req?.aborted || response?.destroyed) cancelled();
+    try {
+      return await this.roomUploads.upload(
+        room,
+        actor,
+        await file,
+        controller.signal
+      );
+    } finally {
+      context?.req?.off('aborted', cancelled);
+      response?.off('close', closed);
     }
   }
 
-  /**
-   * Validates that the receiver of a direct conversation has messaging enabled.
-   * Only applies to CONVERSATION_DIRECT room types (user-to-user conversations).
-   */
-  private async validateMessageOnDirectConversationOrFail(
-    room: IRoom,
-    actorContext: ActorContext
-  ) {
-    if (room.type !== RoomType.CONVERSATION_DIRECT) {
-      return;
-    }
-
-    // Get room members from Matrix (lightweight call - no message history)
-    const members = await this.communicationAdapter.getRoomMembers(room.id);
-
-    // Find the other user (not the sender) - members contains actor IDs
-    const otherMemberActorIds = members.filter(
-      (memberId: string) => memberId !== actorContext.actorID
-    );
-
-    if (otherMemberActorIds.length === 0) {
-      // Only sender in room, skip validation
-      return;
-    }
-
-    // For direct conversations, check the first other member's messaging preferences
-    // (In practice there should only be 2 members in a direct conversation)
-    const receivingUserActorId = otherMemberActorIds[0];
-
-    // Look up user by their actor ID
-    const receivingUser =
-      await this.userLookupService.getUserById(receivingUserActorId);
-
-    if (!receivingUser) {
-      // Actor ID doesn't map to a user (might be a VC or deleted user)
-      return;
-    }
-
-    const receivingUserFull = await this.userLookupService.getUserByIdOrFail(
-      receivingUser.id,
-      {
-        relations: {
-          settings: true,
-        },
-      }
-    );
-
-    if (
-      !receivingUserFull.settings.communication.allowOtherUsersToSendMessages
-    ) {
-      throw new MessagingNotEnabledException(
-        'User is not open to receiving messages',
-        LogContext.COMMUNICATION,
-        {
-          receiverId: receivingUser.id,
-          senderId: actorContext.actorID,
-        }
+  private validateMessageContent(input: RoomSendMessageInput): void {
+    if (input.attachmentUpload != null && input.message.trim()) {
+      throw new ValidationException(
+        'Send one attachment per message',
+        LogContext.COMMUNICATION
       );
     }
   }
@@ -177,29 +131,27 @@ export class RoomResolverMutations {
       relations: { authorization: true },
     });
 
-    this.authorizationService.grantAccessOrFail(
+    this.validateMessageContent(messageData);
+    await this.messageGate.assertOperation(
+      room,
       actorContext,
-      room.authorization,
-      AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
-      `room reply to message: ${room.id}`
+      messageData.threadID
     );
 
-    await this.validateMessageOnCalloutOrFail(room);
-    await this.validateMessageOnDirectConversationOrFail(room, actorContext);
-
-    // feature 013: resolve + validate attachments before threading to adapter.
-    const attachments =
-      await this.messageAttachmentService.resolveOutboundAttachments(
-        room,
-        actorContext,
-        messageData.attachments
-      );
+    const existingMedia =
+      messageData.attachmentUpload != null
+        ? await this.roomUploads.existingMedia(
+            room,
+            actorContext,
+            messageData.attachmentUpload
+          )
+        : undefined;
 
     const reply = await this.roomLookupService.sendMessageReply(
       room,
       actorContext.actorID,
       messageData,
-      attachments
+      existingMedia
     );
 
     // All post-send processing (notifications, activities, subscriptions)

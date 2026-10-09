@@ -1,34 +1,30 @@
 import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { ActorContext } from '@core/actor-context/actor.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { Room } from '@domain/communication/room/room.entity';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { isConversationRoom } from '@domain/communication/room/room.utils';
 import { Document } from '@domain/storage/document/document.entity';
 import { IDocument } from '@domain/storage/document/document.interface';
-import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
+import {
+  FileServiceAdapterException,
+  StorageServiceUnavailableException,
+} from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
-import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { In, Repository } from 'typeorm';
 import { Conversation } from '../conversation/conversation.entity';
-import { IMessage } from '../message/message.interface';
-import { IMessageAttachment } from './message.attachment.interface';
 
 // Match file-service's existing filename contract, including its UTF-8 byte cap.
 export const sanitizeAttachmentDisplayName = (
@@ -53,15 +49,11 @@ export class MessageAttachmentService {
 
   constructor(
     config: ConfigService<AlkemioConfig, true>,
-    private readonly documentService: DocumentService,
     private readonly storageBucketService: StorageBucketService,
-    private readonly authorizationService: AuthorizationService,
     private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly roomResolverService: RoomResolverService,
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
-    @InjectRepository(Room)
-    private readonly roomRepository: Repository<Room>,
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -71,58 +63,6 @@ export class MessageAttachmentService {
       'storage.file_service.matrix_media_bucket_id',
       { infer: true }
     );
-  }
-
-  public async resolveOutboundAttachments(
-    room: IRoom,
-    actorContext: ActorContext,
-    documentIds: string[] | undefined
-  ): Promise<CommunicationMessageAttachment[]> {
-    if (!documentIds?.length) return [];
-    if (documentIds.length !== 1) {
-      throw new ValidationException(
-        'Send one attachment per message',
-        LogContext.COMMUNICATION
-      );
-    }
-    const bucket = await this.getTargetBucketForRoom(room);
-    if (!bucket)
-      throw new ValidationException(
-        'Attachments are not supported in this room',
-        LogContext.COMMUNICATION
-      );
-    const document = await this.documentService.getDocumentOrFail(
-      documentIds[0],
-      {
-        relations: { authorization: true, storageBucket: true },
-      }
-    );
-    if (document.storageBucket?.id !== bucket.id) {
-      throw new ValidationException(
-        'Attachment does not belong to this conversation',
-        LogContext.COMMUNICATION
-      );
-    }
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      document.authorization,
-      AuthorizationPrivilege.READ,
-      `send message attachment: ${document.id}`
-    );
-    if (!this.matchesBucketPolicy(bucket, document)) {
-      throw new ValidationException(
-        'Attachment type or size is not permitted in this room',
-        LogContext.COMMUNICATION
-      );
-    }
-    return [
-      {
-        documentId: document.id,
-        displayName: document.displayName,
-        mimeType: document.mimeType,
-        size: document.size,
-      },
-    ];
   }
 
   // Both Element events and web echoes use this placement before publication.
@@ -136,97 +76,107 @@ export class MessageAttachmentService {
     if (!bucket) return undefined;
     const documents = await this.loadDocuments(bucket.id, attachments);
     for (const attachment of attachments) {
-      const provider = documents.get(
-        this.referenceKey(this.matrixMediaBucketId, attachment.media_id)
+      if (!attachment.media_id) continue;
+      const targetKey = this.referenceKey(bucket.id, attachment.media_id);
+      const existing = documents.get(targetKey);
+      if (existing) {
+        this.assertCompleteAssociation(existing);
+        continue;
+      }
+      const stagedKey = this.referenceKey(
+        this.matrixMediaBucketId,
+        attachment.media_id
       );
-      if (!provider || !this.matchesBucketPolicy(bucket, provider)) continue;
-      if (this.resolveDocument(attachment, bucket.id, documents)) continue;
-      const document = await this.storageBucketService.copyDocumentToBucket(
-        bucket.id,
-        provider,
+      const source =
+        documents.get(stagedKey) ??
+        (await this.documentRepository.findOne({
+          where: { externalReference: attachment.media_id },
+          relations: { storageBucket: true, authorization: true, tagset: true },
+          order: { createdDate: 'ASC', id: 'ASC' },
+        }));
+      if (!source || !this.matchesBucketPolicy(bucket, source)) continue;
+      const displayName = sanitizeAttachmentDisplayName(
+        attachment.display_name,
+        source.displayName
+      );
+      const canMove = source.storageBucket.id === this.matrixMediaBucketId;
+      const document = await this.placeSource(
+        bucket,
+        attachment,
+        source,
         senderActorID,
-        false,
-        {
-          externalReference: attachment.media_id,
-          displayName: sanitizeAttachmentDisplayName(
-            attachment.display_name,
-            provider.displayName
-          ),
-        }
+        displayName,
+        canMove
       );
-      documents.set(
-        this.referenceKey(bucket.id, attachment.media_id),
-        document
-      );
+      this.assertCompleteAssociation(document);
+      documents.set(targetKey, document);
+      if (canMove) documents.delete(stagedKey);
     }
     return bucket.id;
   }
 
-  // One database lookup for the room history, shared by its field resolvers.
-  public async stampAttachmentBucket(
-    room: IRoom,
-    messages: IMessage[] | undefined
-  ): Promise<void> {
-    const pending =
-      messages?.filter(message => message.rawAttachments?.length) ?? [];
-    if (!pending.length) return;
-    const bucket = await this.getTargetBucketForRoom(room);
-    if (!bucket) return;
-    const documents = await this.loadDocuments(
-      bucket.id,
-      pending.flatMap(message => message.rawAttachments ?? [])
-    );
-    for (const message of pending) {
-      message.storageBucketId = bucket.id;
-      message.attachmentDocuments = documents;
-    }
-  }
-
-  public async resolveMessageAttachments(
-    message: IMessage,
-    actorContext: ActorContext
-  ): Promise<IMessageAttachment[]> {
-    const attachments = message.rawAttachments ?? [];
-    if (!attachments.length) return [];
-    let bucketId = message.storageBucketId;
-    if (!bucketId && message.roomID) {
-      const room = await this.roomRepository.findOne({
-        where: { id: message.roomID },
+  private async placeSource(
+    bucket: IStorageBucket,
+    attachment: ReceivedAttachment,
+    source: IDocument,
+    actorID: string,
+    displayName: string,
+    canMove: boolean
+  ): Promise<IDocument> {
+    const copy = (document: IDocument) =>
+      this.storageBucketService.copyDocumentToBucket(
+        bucket.id,
+        document,
+        actorID,
+        false,
+        { externalReference: attachment.media_id, displayName }
+      );
+    try {
+      return canMove
+        ? await this.storageBucketService.moveDocumentToBucket(
+            bucket.id,
+            source,
+            actorID,
+            this.matrixMediaBucketId,
+            { displayName }
+          )
+        : await copy(source);
+    } catch (error) {
+      const recoverable =
+        error instanceof StorageServiceUnavailableException ||
+        (error instanceof FileServiceAdapterException &&
+          (error.httpStatus === undefined ||
+            error.httpStatus === 409 ||
+            error.httpStatus >= 500));
+      if (!recoverable) throw error;
+      // One re-resolution, never an automatic replay of the conditional MOVE.
+      const existing = await this.documentRepository.findOne({
+        where: {
+          storageBucket: { id: bucket.id },
+          externalReference: attachment.media_id,
+        },
+        relations: { storageBucket: true, authorization: true, tagset: true },
       });
-      if (room) bucketId = (await this.getTargetBucketForRoom(room))?.id;
-    }
-    const documents =
-      message.attachmentDocuments ??
-      (bucketId
-        ? await this.loadDocuments(bucketId, attachments)
-        : new Map<string, IDocument>());
-    return attachments.map(raw => {
-      const unavailable: IMessageAttachment = {
-        displayName: raw.display_name || 'attachment',
-      };
-      const document = bucketId
-        ? this.resolveDocument(raw, bucketId, documents)
-        : undefined;
-      if (
-        !document?.authorization ||
-        !this.authorizationService.isAccessGranted(
-          actorContext,
-          document.authorization,
-          AuthorizationPrivilege.READ
-        )
-      ) {
-        return unavailable;
+      if (existing) {
+        this.assertCompleteAssociation(existing);
+        return existing;
       }
-      return {
-        id: document.id,
-        url: this.documentService.getPubliclyAccessibleURL(document),
-        displayName: raw.display_name || document.displayName,
-        mimeType: document.mimeType,
-        size: document.size,
-        width: this.imageDimension(raw.width),
-        height: this.imageDimension(raw.height),
-      };
-    });
+      const winner = await this.documentRepository.findOne({
+        where: { externalReference: attachment.media_id },
+        relations: { storageBucket: true, authorization: true, tagset: true },
+        order: { createdDate: 'ASC', id: 'ASC' },
+      });
+      if (!winner || winner.storageBucket.id === this.matrixMediaBucketId)
+        throw error;
+      if (winner.storageBucket.id === bucket.id) {
+        this.assertCompleteAssociation(winner);
+        return winner;
+      }
+      // Another destination won the first MOVE. Its association is retained;
+      // COPY applies this target's freshly composed policy. Later failures use
+      // the existing receipt retry owner, without a recursive conflict loop.
+      return copy(winner);
+    }
   }
 
   private async loadDocuments(
@@ -235,80 +185,43 @@ export class MessageAttachmentService {
   ): Promise<Map<string, IDocument>> {
     const refs = [
       ...new Set(
-        attachments.flatMap(raw => (raw.media_id ? [raw.media_id] : []))
-      ),
-    ];
-    const hints = [
-      ...new Set(
-        attachments.flatMap(raw =>
-          raw.document_id && isUUID(raw.document_id) ? [raw.document_id] : []
-        )
+        attachments.flatMap(item => (item.media_id ? [item.media_id] : []))
       ),
     ];
     if (!refs.length) return new Map();
     const rows = await this.documentRepository.find({
-      where: [
-        {
-          storageBucket: { id: In([bucketId, this.matrixMediaBucketId]) },
-          externalReference: In(refs),
-        },
-        ...(hints.length
-          ? [{ storageBucket: { id: bucketId }, id: In(hints) }]
-          : []),
-      ],
-      relations: { storageBucket: true, authorization: true },
+      where: {
+        storageBucket: { id: In([bucketId, this.matrixMediaBucketId]) },
+        externalReference: In(refs),
+      },
+      relations: { storageBucket: true, authorization: true, tagset: true },
     });
-    const documents = new Map<string, IDocument>();
-    for (const document of rows) {
-      documents.set(document.id, document);
-      if (document.externalReference)
-        documents.set(
-          this.referenceKey(
-            document.storageBucket.id,
-            document.externalReference
-          ),
-          document
-        );
-    }
-    return documents;
+    return new Map(
+      rows
+        .filter(row => row.externalReference)
+        .map(row => [
+          this.referenceKey(row.storageBucket.id, row.externalReference!),
+          row,
+        ])
+    );
   }
 
-  // A hint can reuse bytes, never authorize them or substitute different bytes.
-  private resolveDocument(
-    raw: ReceivedAttachment,
-    bucketId: string,
-    documents: Map<string, IDocument>
-  ): IDocument | undefined {
-    const provider = documents.get(
-      this.referenceKey(this.matrixMediaBucketId, raw.media_id)
-    );
-    if (!provider) return undefined;
-    const hint = raw.document_id ? documents.get(raw.document_id) : undefined;
-    if (
-      hint?.storageBucket?.id === bucketId &&
-      hint.authorization &&
-      hint.externalID === provider.externalID
-    )
-      return hint;
-    const copied = documents.get(this.referenceKey(bucketId, raw.media_id));
-    return copied?.authorization && copied.externalID === provider.externalID
-      ? copied
-      : undefined;
+  private assertCompleteAssociation(document: IDocument): void {
+    if (!document.authorization?.id || !document.tagset?.id)
+      throw new ValidationException(
+        'Incomplete attachment association',
+        LogContext.COMMUNICATION,
+        { documentID: document.id }
+      );
   }
 
   private referenceKey(bucketId: string, mediaId: string | undefined): string {
     return `${bucketId}:${mediaId ?? ''}`;
   }
 
-  private imageDimension(value: number | undefined): number | undefined {
-    return Number.isInteger(value) && value! > 0 && value! <= 2_147_483_647
-      ? value
-      : undefined;
-  }
-
-  private matchesBucketPolicy(
+  public matchesBucketPolicy(
     bucket: IStorageBucket,
-    document: IDocument
+    document: { mimeType: string; size: number }
   ): boolean {
     return (
       (!bucket.allowedMimeTypes?.length ||
@@ -317,7 +230,7 @@ export class MessageAttachmentService {
     );
   }
 
-  private async getTargetBucketForRoom(
+  public async getTargetBucketForRoom(
     room: IRoom
   ): Promise<IStorageBucket | undefined> {
     if (isConversationRoom(room)) {

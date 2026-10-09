@@ -4616,9 +4616,7 @@ type MeQueryResults {
 
 """A message that was sent in a chat room"""
 type Message {
-  """
-  Media attachments; unavailable documents retain their event filename without a download URL.
-  """
+  """Matrix media references and event metadata."""
   attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
@@ -4635,19 +4633,12 @@ type Message {
 }
 
 type MessageAttachment {
-  """The filename / display name of the attachment."""
   displayName: String!
-  """The pixel height of the attachment (images only)."""
+  """The local Matrix media reference."""
+  externalReference: String
   height: Int
-  """The file-service document id of the attachment."""
-  id: UUID
-  """The MIME type of the attachment."""
   mimeType: String
-  """The size of the attachment in bytes."""
   size: Int
-  """The Alkemio document URL (authorized via conversation policy)."""
-  url: String
-  """The pixel width of the attachment (images only)."""
   width: Int
 }
 
@@ -5372,6 +5363,10 @@ type Mutation {
   uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): StorageBucketUploadFileResult!
   """Uploads and sets an image for the specified Visual."""
   uploadImageOnVisual(file: Upload!, uploadData: VisualUploadImageInput!): Visual!
+  """
+  Uploads original room media into Synapse staging for a later authorized message.
+  """
+  uploadRoomMessageAttachment(file: Upload!, uploadData: RoomMessageAttachmentUploadInput!): RoomMessageAttachmentUploadResult!
 }
 
 type MySpaceResults {
@@ -6711,6 +6706,8 @@ type RolesResultSpace {
 }
 
 type Room {
+  """The owning bucket for reference-based attachments."""
+  attachmentBucketId: UUID
   """The authorization rules for the entity"""
   authorization: Authorization
   """The avatar URL of the Room (mxc:// or https://). Fetched from Matrix."""
@@ -6758,6 +6755,13 @@ type RoomEventSubscriptionResult {
   room: Room!
   """The identifier for the Room on which the event happened."""
   roomID: String!
+}
+
+type RoomMessageAttachmentUploadResult {
+  """The sanitized filename."""
+  displayName: String!
+  """The uploaded Matrix media reference."""
+  externalReference: String!
 }
 
 """A message event happened in the subscribed room"""
@@ -10018,6 +10022,20 @@ input RoomMarkMessageReadInput {
   threadID: MessageID
 }
 
+input RoomMessageAttachmentInput {
+  """The filename to use in this message."""
+  displayName: String!
+  """The completed local Matrix media reference."""
+  externalReference: String!
+}
+
+input RoomMessageAttachmentUploadInput {
+  """The room receiving the attachment."""
+  roomID: UUID!
+  """The existing reply parent, when uploading for a reply."""
+  threadID: MessageID
+}
+
 input RoomRemoveMessageInput {
   """The message id that should be removed"""
   messageID: MessageID!
@@ -10033,10 +10051,8 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
-  """
-  The file-service document ids of attachments to send with the message (one per event).
-  """
-  attachments: [UUID!]
+  """An already-uploaded Matrix media reference."""
+  attachmentUpload: RoomMessageAttachmentInput
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -10044,10 +10060,8 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
-  """
-  The file-service document ids of attachments to send with the message (one per event).
-  """
-  attachments: [UUID!]
+  """An already-uploaded Matrix media reference."""
+  attachmentUpload: RoomMessageAttachmentInput
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""

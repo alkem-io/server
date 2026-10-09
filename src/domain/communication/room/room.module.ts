@@ -4,11 +4,13 @@ import { TaskBoardModule } from '@domain/collaboration/callout/task-board/task.b
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { DocumentModule } from '@domain/storage/document/document.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { InAppNotificationModule } from '@platform/in-app-notification/in.app.notification.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
@@ -16,8 +18,10 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
 import { MessageAttachmentModule } from '../message-attachment/message.attachment.module';
+import { RoomAttachmentUploadService } from '../message-attachment/room.attachment.upload';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
+import { RoomAttachmentAuthorization } from './room.attachment.authorization';
 import { RoomDataLoader } from './room.data.loader';
 import { Room } from './room.entity';
 import { RoomEventResolverSubscription } from './room.event.resolver.subscription';
@@ -44,6 +48,8 @@ import { RoomServiceEvents } from './room.service.events';
     VirtualContributorMessageModule,
     UserLookupModule,
     RoomLookupModule,
+    FileServiceAdapterModule,
+    DocumentModule,
     TypeOrmModule.forFeature([Room]),
     SubscriptionServiceModule,
     InAppNotificationModule,
@@ -51,6 +57,8 @@ import { RoomServiceEvents } from './room.service.events';
   ],
   providers: [
     RoomService,
+    RoomAttachmentAuthorization,
+    RoomAttachmentUploadService,
     RoomAuthorizationService,
     RoomResolverFields,
     RoomResolverMutations,

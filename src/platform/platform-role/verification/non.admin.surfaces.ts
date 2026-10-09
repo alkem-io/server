@@ -245,4 +245,9 @@ export const NON_ADMIN_SURFACES: Readonly<
   uploadFileOnReference: NON_ADMIN,
   uploadFileOnStorageBucket: NON_ADMIN,
   uploadImageOnVisual: NON_ADMIN,
+  uploadRoomMessageAttachment: {
+    disposition: 'non-admin',
+    reason:
+      'Room CREATE_MESSAGE/CREATE_MESSAGE_REPLY and destination FILE_UPLOAD policy gates; an upload is not a platform-admin action.',
+  },
 };
