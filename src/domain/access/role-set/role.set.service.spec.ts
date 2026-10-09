@@ -3005,10 +3005,11 @@ describe('RoleSetService', () => {
         );
       });
 
-      it('grants the offered role when the offerer is a platform admin rather than an organization admin', async () => {
-        // GLOBAL_ADMIN / GLOBAL_SUPPORT hold ROLESET_ENTRY_ROLE_ASSIGN (and so
-        // INVITE) on every organization without any org-scoped credential;
-        // an invitation they issued must not lose its roles on accept.
+      it('withholds the offered role when the offerer holds only a platform credential — no platform role confers organization standing (T076)', async () => {
+        // 027-platform-role-redesign (T076, Slice B): the legacy
+        // `{global-admin, global-support}` direct-assign rule on organization
+        // role sets is gone and no target role inherits it, so a platform
+        // credential alone is not standing to offer ADMIN / OWNER.
         const target = orgRoleSet('org-rs');
         vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
           target,
@@ -3023,7 +3024,7 @@ describe('RoleSetService', () => {
         vi.spyOn(service, 'isInRole').mockResolvedValue(false);
         (actorService.hasValidCredential as Mock).mockImplementation(
           async (_actorID: string, criteria: { type: string }) =>
-            criteria.type === AuthorizationCredential.GLOBAL_SUPPORT
+            criteria.type === AuthorizationCredential.PLATFORM_SUPPORT
         );
         const assignSpy = vi
           .spyOn(service, 'assignActorToRole')
@@ -3041,8 +3042,8 @@ describe('RoleSetService', () => {
           }
         );
 
-        expect(result.extraRolesWithheld).toEqual([]);
-        expect(assignSpy).toHaveBeenCalledWith(
+        expect(result.extraRolesWithheld).toEqual([RoleName.OWNER]);
+        expect(assignSpy).not.toHaveBeenCalledWith(
           expect.objectContaining({ id: 'org-rs' }),
           RoleName.OWNER,
           'user-1',

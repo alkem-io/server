@@ -42,8 +42,13 @@ export class VirtualAssistantAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // GLOBAL admins / support may manage the assistant actor (incl. the admin
-    // capability grant — PLATFORM_ADMIN is additionally enforced at the mutation).
+    // 027-platform-role-redesign (T074/T076): the assistant actor's management
+    // rule moves off `{global-admin, global-support}` + the `PLATFORM_ADMIN`
+    // catch-all onto Platform Operations Admin, which spec §Target global role
+    // model row 5 gives "AI persona & assistant-capability config" (A11). The
+    // discovery path (`platformAdmin.virtualAssistant`) and the capability
+    // mutation are gated on the same privilege, so one role owns the whole
+    // surface rather than three legacy credentials sharing it.
     const adminManage =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
@@ -51,12 +56,9 @@ export class VirtualAssistantAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.PLATFORM_ADMIN,
+          AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_MANAGE
       );
     newRules.push(adminManage);

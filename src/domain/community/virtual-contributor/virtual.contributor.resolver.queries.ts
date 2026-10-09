@@ -34,7 +34,7 @@ export class VirtualContributorResolverQueries {
     const hasAccess = this.authorizationService.isAccessGranted(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN
+      AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
     );
 
     if (!hasAccess) {

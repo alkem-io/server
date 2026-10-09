@@ -1,3 +1,4 @@
+import { A5_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { GLOBAL_POLICY_ADMIN_IDENTITY_DELETE_KRATOS } from '@common/constants/authorization/global.policy.constants';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -15,30 +16,13 @@ import { CurrentActor } from '@src/common/decorators';
 import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { AdminIdentityService } from './admin.identity.service';
 
-/** T063 — A5's declared owner/legacy-reachers (T062's grant). */
-const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_USERS_ADMIN,
-];
-const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-];
-
 @InstrumentResolver()
 @Resolver()
 export class AdminIdentityResolverMutations {
-  /** sec-server-4 fix: consolidating A4 (email change) and A5 (identity/
-   * account deletion) onto ONE `PLATFORM_USERS_ADMIN` privilege whose grant
-   * set is the UNION of both surfaces' prior legacy reachers
-   * ({GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER} for THIS surface, pre-feature)
-   * would hand `global-support`/`global-license-manager` — who never held
-   * this surface's PLATFORM_SETTINGS_ADMIN gate — irreversible Kratos
-   * identity deletion. Checked against THIS resolver-local, hardcoded
-   * policy instead of the shared, widened platform policy — restores
-   * exactly this surface's own pre-feature reacher set, plus the new
-   * owning role. */
+  /** Irreversible Kratos identity deletion is checked against THIS
+   * resolver-local, hardcoded policy (the owning role alone) rather than the
+   * shared platform policy, so a later widening of the shared
+   * `PLATFORM_USERS_ADMIN` grant set cannot reach it. */
   private identityDeletePolicy: IAuthorizationPolicy;
 
   constructor(
@@ -52,11 +36,7 @@ export class AdminIdentityResolverMutations {
     const rule =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         GLOBAL_POLICY_ADMIN_IDENTITY_DELETE_KRATOS
       );
     this.identityDeletePolicy =
@@ -77,10 +57,8 @@ export class AdminIdentityResolverMutations {
   ): Promise<boolean> {
     // 027-platform-role-redesign (T062, A5, research D5) — sec-server-4
     // fix: re-anchored off PLATFORM_SETTINGS_ADMIN onto PLATFORM_USERS_ADMIN
-    // (the new owning role), checked against `identityDeletePolicy` — NOT
-    // the shared platform policy, whose PLATFORM_USERS_ADMIN grant set is
-    // additively widened to also admit global-support/global-license-manager
-    // (A4's legacy reachers), who never held THIS surface.
+    // (the owning role), checked against `identityDeletePolicy` — NOT the
+    // shared platform policy.
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       this.identityDeletePolicy,
@@ -103,7 +81,6 @@ export class AdminIdentityResolverMutations {
       await this.platformUserRecordAuditService.recordActionForActor(
         actorContext,
         A5_INTENDED_OWNERS,
-        A5_LEGACY_REACHERS,
         {
           action: 'adminIdentityDeleteKratosIdentity',
           targetUserId: targetUser?.id ?? kratosIdentityId,

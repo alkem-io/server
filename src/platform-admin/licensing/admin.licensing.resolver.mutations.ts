@@ -1,9 +1,8 @@
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { A12_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LicenseService } from '@domain/common/license/license.service';
-import { UUID } from '@domain/common/scalars';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
@@ -23,16 +22,6 @@ import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.licen
 import { RevokeLicensePlanFromAccount } from './dto/admin.licensing.dto.revoke.license.plan.from.account';
 import { RevokeLicensePlanFromSpace } from './dto/admin.licensing.dto.revoke.license.plan.from.space';
 
-/** T058 — A12's declared owner/legacy-reachers (T037/T040's grant). */
-const A12_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-];
-const A12_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-];
-
 @InstrumentResolver()
 @Resolver()
 export class AdminLicensingResolverMutations {
@@ -49,24 +38,13 @@ export class AdminLicensingResolverMutations {
     private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
-  @Mutation(() => String, {
-    description: 'Creates an account in Wingback',
-  })
-  async createWingbackAccount(
-    @CurrentActor() actorContext: ActorContext,
-    @Args('accountID', { type: () => UUID }) accountID: string
-  ): Promise<string> {
-    const account = await this.accountService.getAccountOrFail(accountID);
-
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      account.authorization,
-      AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-      `create Wingback account for account (${accountID})`
-    );
-
-    return this.accountLicenseService.createWingbackAccount(accountID);
-  }
+  // 027-platform-role-redesign (T079, Slice B, FR-021): `createWingbackAccount`
+  // is deleted with the rest of the Wingback integration. It was the third of
+  // the three admin mutations FR-021 removes — the other two lived in the
+  // deleted `wingback-subscription` resolver. Accounts keep their
+  // `externalSubscriptionID` column: no DDL is budgeted for this feature, and
+  // the stored values are the only record of which accounts were ever
+  // externally billed.
 
   @Mutation(() => IAccount, {
     description: 'Assign the specified LicensePlan to an Account.',
@@ -103,12 +81,10 @@ export class AdminLicensingResolverMutations {
     await this.licenseService.saveAll(updatedLicenses);
 
     // T058 — A12, single-path surface: gated on GRANT held on the
-    // licensing-framework tree, which only PLATFORM_LICENSE_MANAGER (∪
-    // legacy) holds.
+    // licensing-framework tree, which only PLATFORM_LICENSE_MANAGER holds.
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'account-license-plan',
         resourceId: account.id,
@@ -158,7 +134,6 @@ export class AdminLicensingResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'space-license-plan',
         resourceId: space.id,
@@ -209,7 +184,6 @@ export class AdminLicensingResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'account-license-plan',
         resourceId: account.id,
@@ -259,7 +233,6 @@ export class AdminLicensingResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       A12_INTENDED_OWNERS,
-      A12_LEGACY_REACHERS,
       {
         resourceKind: 'space-license-plan',
         resourceId: space.id,

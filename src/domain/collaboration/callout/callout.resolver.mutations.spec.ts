@@ -2349,7 +2349,6 @@ describe('CalloutResolverMutations', () => {
         expect.arrayContaining([
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ]),
-        expect.any(Array),
         expect.objectContaining({
           resourceKind: 'callout',
           resourceId: 'callout-1',
@@ -2372,10 +2371,14 @@ describe('CalloutResolverMutations', () => {
         publisherID: 'user-1',
       } as any);
 
+      // Both gate owners, so a Resource Admin is attributed as itself rather
+      // than failing attribution (and skipping the row, FR-027 fail-open).
       expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
         actorContext,
-        expect.any(Array),
-        expect.any(Array),
+        [
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+        ],
         expect.objectContaining({
           resourceKind: 'callout-publisher',
           resourceId: 'callout-1',

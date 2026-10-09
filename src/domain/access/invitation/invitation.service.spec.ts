@@ -32,6 +32,7 @@ describe('InvitationService', () => {
   let actorLookupService: ActorLookupService;
   let userLookupService: UserLookupService;
   let roleSetCacheService: RoleSetCacheService;
+  let txManager: { remove: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -68,6 +69,15 @@ describe('InvitationService', () => {
     actorLookupService = module.get<ActorLookupService>(ActorLookupService);
     userLookupService = module.get<UserLookupService>(UserLookupService);
     roleSetCacheService = module.get<RoleSetCacheService>(RoleSetCacheService);
+
+    // the transaction runs its callback against a manager whose remove
+    // delegates to the repository mock, so tests can stub either
+    txManager = {
+      remove: vi.fn((entity: any) => invitationRepository.remove(entity)),
+    };
+    (invitationRepository as any).manager = {
+      transaction: vi.fn(async (cb: any) => cb(txManager)),
+    };
   });
 
   describe('getInvitationOrFail', () => {
@@ -165,7 +175,12 @@ describe('InvitationService', () => {
 
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
-      expect(invitationRepository.save).toHaveBeenCalledTimes(2);
+      // a single save, with the lifecycle already attached: the row is never
+      // persisted without one
+      expect(invitationRepository.save).toHaveBeenCalledTimes(1);
+      expect(invitationRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ lifecycle: mockLifecycle })
+      );
     });
   });
 
@@ -201,14 +216,18 @@ describe('InvitationService', () => {
 
       const result = await service.deleteInvitation({ ID: 'inv-1' });
 
+      expect(
+        (invitationRepository as any).manager.transaction
+      ).toHaveBeenCalledTimes(1);
       expect(lifecycleService.deleteLifecycle).toHaveBeenCalledWith(
         'lifecycle-1',
-        undefined
+        txManager
       );
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         mockInvitation.authorization,
-        undefined
+        txManager
       );
+      expect(txManager.remove).toHaveBeenCalledWith(mockInvitation);
       expect(
         roleSetCacheService.deleteOpenInvitationFromCache
       ).toHaveBeenCalledWith('contributor-1', 'roleset-1');
@@ -299,6 +318,51 @@ describe('InvitationService', () => {
       expect(
         roleSetCacheService.deleteMembershipStatusCache
       ).not.toHaveBeenCalled();
+    });
+    it('should still delete an invitation that has already lost its lifecycle', async () => {
+      const orphan = {
+        id: 'inv-1',
+        lifecycle: null,
+        authorization: { id: 'auth-1' },
+        invitedActorID: undefined,
+        roleSet: undefined,
+      } as any;
+      vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(orphan);
+      vi.spyOn(invitationRepository, 'remove').mockResolvedValue({
+        ...orphan,
+        id: undefined,
+      });
+
+      const result = await service.deleteInvitation({ ID: 'inv-1' });
+
+      expect(lifecycleService.deleteLifecycle).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        orphan.authorization,
+        txManager
+      );
+      expect(txManager.remove).toHaveBeenCalledWith(orphan);
+      expect(result.id).toBe('inv-1');
+    });
+
+    it('should use the caller transaction instead of opening its own', async () => {
+      const invitation = {
+        id: 'inv-1',
+        lifecycle: { id: 'lifecycle-1' },
+        authorization: undefined,
+      } as any;
+      vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(invitation);
+      const em = { remove: vi.fn().mockResolvedValue({ id: undefined }) };
+
+      await service.deleteInvitation({ ID: 'inv-1' }, em as any);
+
+      expect(
+        (invitationRepository as any).manager.transaction
+      ).not.toHaveBeenCalled();
+      expect(lifecycleService.deleteLifecycle).toHaveBeenCalledWith(
+        'lifecycle-1',
+        em
+      );
+      expect(em.remove).toHaveBeenCalledWith(invitation);
     });
   });
 
@@ -420,6 +484,43 @@ describe('InvitationService', () => {
           relations: { roleSet: true, lifecycle: true },
         })
       );
+    });
+
+    it('should filter by the loaded lifecycle without re-fetching each invitation', async () => {
+      const invited = { id: 'inv-1', lifecycle: { id: 'lc-1' } };
+      const accepted = { id: 'inv-2', lifecycle: { id: 'lc-2' } };
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue([
+        invited,
+        accepted,
+      ] as any);
+      (invitationLifecycleService.getState as Mock).mockImplementation(
+        (lifecycle: any) => (lifecycle.id === 'lc-1' ? 'invited' : 'accepted')
+      );
+      const getOrFail = vi.spyOn(service, 'getInvitationOrFail');
+
+      const result = await service.findInvitationsForActor('contributor-1', [
+        'invited',
+      ]);
+
+      expect(result).toEqual([invited]);
+      expect(getOrFail).not.toHaveBeenCalled();
+    });
+
+    it('should skip an invitation with no lifecycle instead of throwing', async () => {
+      const healthy = { id: 'inv-1', lifecycle: { id: 'lc-1' } };
+      const orphan = { id: 'inv-2', lifecycle: null };
+      vi.spyOn(invitationRepository, 'find').mockResolvedValue([
+        healthy,
+        orphan,
+      ] as any);
+      (invitationLifecycleService.getState as Mock).mockReturnValue('invited');
+
+      const result = await service.findInvitationsForActor('contributor-1', [
+        'invited',
+      ]);
+
+      expect(result).toEqual([healthy]);
+      expect(invitationLifecycleService.getState).toHaveBeenCalledTimes(1);
     });
   });
 

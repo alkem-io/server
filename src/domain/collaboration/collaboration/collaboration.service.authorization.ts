@@ -1,5 +1,4 @@
 import { CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS } from '@common/constants';
-import { AuthorizationCredential } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
@@ -195,12 +194,11 @@ export class CollaborationAuthorizationService {
         );
     }
 
-    contributorCriterias.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-
-    // Add platform roles that have UPDATE access (including GLOBAL_SUPPORT if allowPlatformSupportAsAdmin is set)
+    // 027-platform-role-redesign (T076): `global-admin` removed. A platform
+    // role reaches this only through `platformRolesAccess` below, which is
+    // per-space and privilege-filtered.
+    // Add platform roles that have UPDATE access (Platform Support included
+    // where the space sets allowPlatformSupportAsAdmin)
     const platformRolesContributorCriterias =
       this.platformRolesAccessService.getCredentialsForRolesWithAccess(
         platformRolesAccess.roles,
@@ -241,10 +239,8 @@ export class CollaborationAuthorizationService {
         [AuthorizationPrivilege.UPDATE]
       );
     adminCriterias.push(...platformRolesAdminCriterias);
-    adminCriterias.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
+    // 027-platform-role-redesign (T076): `global-admin` removed — see the
+    // contributor-criteria comment above.
     if (adminCriterias.length > 0) {
       const adminsRule = this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.UPDATE],

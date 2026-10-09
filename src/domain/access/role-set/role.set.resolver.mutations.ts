@@ -56,31 +56,11 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
-    this.validateRoleSetTypeOrFail(roleSet, [
-      RoleSetType.SPACE,
-      RoleSetType.ORGANIZATION,
-    ]);
-
-    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-    switch (roleSet.type) {
-      case RoleSetType.SPACE: {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        if (roleData.role === RoleName.MEMBER) {
-          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-        }
-        break;
-      }
-      case RoleSetType.ORGANIZATION: {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        break;
-      }
-    }
-
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeAssignUser(
       actorContext,
-      roleSet.authorization,
-      privilegeRequired,
-      `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
+      roleSet,
+      roleData.role,
+      roleData.actorID
     );
 
     await this.roleSetService.assignActorToRole(
@@ -136,9 +116,9 @@ export class RoleSetResolverMutations {
     // rejected afterwards, leaving the credential granted while the caller saw
     // an error (there is no transaction around the two).
     //
-    // That mattered little while the mutation required
-    // ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION (global admin / support / beta
-    // tester) for every call. R32 relaxed it to GRANT alone for an actor
+    // That mattered little while every call required
+    // ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION, which nobody holds since 027
+    // Slice B (server#6623). R32 relaxed it to GRANT alone for an actor
     // already holding the entry role, so any Space admin can now reach this
     // path — and aiming it at a Virtual Contributor already in the Space
     // granted that VC a Space role while skipping the
@@ -176,42 +156,12 @@ export class RoleSetResolverMutations {
       }
     );
 
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
-
-    // Note re COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
-    // The ability to assign the VC is a function of the space and the VC, not of the user
-    // So it is a privilege to be able to assign from the same account,
-    // but this is separate from the business logic check that the space and the
-    // account are in the same account.
-    let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (roleData.role === RoleName.MEMBER) {
-      const sameAccount =
-        await this.roleSetService.isRoleSetAccountMatchingVcAccount(
-          roleSet,
-          roleData.actorID
-        );
-      if (sameAccount) {
-        requiredPrivilege =
-          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT;
-      } else {
-        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-      }
-    }
-
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeAssignVirtualContributor(
       actorContext,
-      roleSet.authorization,
-      requiredPrivilege,
-      `assign virtual community role: ${roleSet.id}`
+      roleSet,
+      roleData.role,
+      roleData.actorID
     );
-
-    // Also require SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS entitlement for the RoleSet
-    if (roleSet.type === RoleSetType.SPACE) {
-      this.licenseService.isEntitlementEnabledOrFail(
-        roleSet.license,
-        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
-      );
-    }
 
     await this.roleSetService.assignActorToRole(
       roleSet,
@@ -405,7 +355,12 @@ export class RoleSetResolverMutations {
     // Type-specific authorization and validation
     switch (actor.type) {
       case ActorType.USER:
-        await this.authorizeAssignUser(actorContext, roleSet, roleData.role);
+        await this.authorizeAssignUser(
+          actorContext,
+          roleSet,
+          roleData.role,
+          roleData.actorID
+        );
         break;
       case ActorType.ORGANIZATION:
         await this.authorizeAssignOrganization(
@@ -514,43 +469,65 @@ export class RoleSetResolverMutations {
   private async authorizeAssignUser(
     actorContext: ActorContext,
     roleSet: IRoleSet,
-    role: RoleName
+    role: RoleName,
+    actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [
       RoleSetType.SPACE,
       RoleSetType.ORGANIZATION,
     ]);
+    const reason = `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`;
 
-    let privilegeRequired = AuthorizationPrivilege.GRANT_GLOBAL_ADMINS;
-    switch (roleSet.type) {
-      case RoleSetType.SPACE:
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        if (role === RoleName.MEMBER) {
-          privilegeRequired = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-        }
-        break;
-      case RoleSetType.ORGANIZATION:
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        break;
+    if (roleSet.type === RoleSetType.ORGANIZATION) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT,
+        reason
+      );
+      return;
     }
 
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      privilegeRequired,
-      `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
-    );
+    // Consent is about ENTERING the Space, not about which role the actor
+    // holds once in (R32, as for organizations). A user not yet in the entry
+    // role needs the entry privilege whatever role is asked for, so Lead or
+    // Admin is never a side door into an L0, where nobody holds it
+    // (server#6623). Roles beyond the entry role also need GRANT.
+    if (
+      role === RoleName.MEMBER ||
+      !(await this.roleSetService.isInRole(
+        actorID,
+        roleSet,
+        roleSet.entryRoleName
+      ))
+    ) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
+        reason
+      );
+    }
+    if (role !== RoleName.MEMBER) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT,
+        reason
+      );
+    }
   }
 
   /**
    * Bringing a NEW organization into a Space requires
-   * `ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION` (GLOBAL_ADMIN / GLOBAL_SUPPORT /
-   * BETA_TESTER) plus GRANT. Changing the role of one that is ALREADY in the
-   * role set requires GRANT alone.
+   * `ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION` plus GRANT. Nobody holds that
+   * privilege since 027 Slice B, so an organization enters any Space by
+   * invitation only (ruling 2026-10-08, server#6623). Changing the role of one
+   * that is ALREADY in the role set requires GRANT alone.
    *
    * The assign-organization privilege protects the organization's *consent*: a
    * direct add puts an organization into a Space without ever asking it, which
-   * is why it stays global-only (R6). Consent is about entering the Space, not
+   * is why nobody may do it (R6). Consent is about entering the Space, not
    * about which role the organization holds once it is in. Since
    * workspace#061 an organization enters by accepting an invitation from a
    * Space admin, and that admin must then be able to move it between Member and
@@ -596,36 +573,49 @@ export class RoleSetResolverMutations {
     actorID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
+    const reason = `assign virtual community role: ${roleSet.id}`;
 
-    let requiredPrivilege = AuthorizationPrivilege.GRANT;
-    if (role === RoleName.MEMBER) {
+    // Entering the Space is gated as for users (server#6623). The entry
+    // privilege depends on the VC: COMMUNITY_ASSIGN_VC_FROM_ACCOUNT is a
+    // function of the Space and the VC, not of the caller, so it covers only a
+    // VC from the Space's own account. Nobody holds ROLESET_ENTRY_ROLE_ASSIGN
+    // on an L0, so a VC from another account enters an L0 by invitation only
+    // (ruling 2026-10-08).
+    if (
+      role === RoleName.MEMBER ||
+      !(await this.roleSetService.isInRole(
+        actorID,
+        roleSet,
+        roleSet.entryRoleName
+      ))
+    ) {
       const sameAccount =
         await this.roleSetService.isRoleSetAccountMatchingVcAccount(
           roleSet,
           actorID
         );
-      if (sameAccount) {
-        requiredPrivilege =
-          AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT;
-      } else {
-        requiredPrivilege = AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN;
-      }
-    }
-
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      roleSet.authorization,
-      requiredPrivilege,
-      `assign virtual community role: ${roleSet.id}`
-    );
-
-    // Also require VC access entitlement
-    if (roleSet.type === RoleSetType.SPACE) {
-      this.licenseService.isEntitlementEnabledOrFail(
-        roleSet.license,
-        LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        sameAccount
+          ? AuthorizationPrivilege.COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
+          : AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
+        reason
       );
     }
+    if (role !== RoleName.MEMBER) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT,
+        reason
+      );
+    }
+
+    this.licenseService.isEntitlementEnabledOrFail(
+      roleSet.license,
+      LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
+    );
   }
 
   // Authorization helpers for remove operations

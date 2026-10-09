@@ -19,15 +19,9 @@ import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
 
-/** T058 — A10's declared owner/legacy-reachers (T045's grant, `platform.service.authorization.ts`). */
+/** A10's declared owner (the PLATFORM_SETTINGS_ADMIN grant, `platform.service.authorization.ts`). */
 const A10_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
-];
-const A10_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
 ];
 
 @InstrumentResolver()
@@ -108,7 +102,6 @@ export class PlatformResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       A10_INTENDED_OWNERS,
-      A10_LEGACY_REACHERS,
       {
         setting: 'platformSettings',
         newValue: settingsData.integration,
@@ -145,7 +138,6 @@ export class PlatformResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       A10_INTENDED_OWNERS,
-      A10_LEGACY_REACHERS,
       {
         setting: 'iframeAllowedUrls',
         newValue: whitelistedURL,
@@ -182,7 +174,6 @@ export class PlatformResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       A10_INTENDED_OWNERS,
-      A10_LEGACY_REACHERS,
       {
         setting: 'iframeAllowedUrls',
         previousValue: whitelistedURL,
@@ -220,7 +211,6 @@ export class PlatformResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       A10_INTENDED_OWNERS,
-      A10_LEGACY_REACHERS,
       {
         setting: 'notificationEmailBlacklist',
         newValue: input.email,
@@ -258,7 +248,6 @@ export class PlatformResolverMutations {
     await this.platformConfigurationAuditService.recordChangeForActor(
       actorContext,
       A10_INTENDED_OWNERS,
-      A10_LEGACY_REACHERS,
       {
         setting: 'notificationEmailBlacklist',
         previousValue: input.email,

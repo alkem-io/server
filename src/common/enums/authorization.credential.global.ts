@@ -1,10 +1,10 @@
 export enum AuthorizationRoleGlobal {
   GLOBAL_REGISTERED = 'global-registered',
-  GLOBAL_COMMUNITY_READ = 'global-community-read',
-  GLOBAL_SUPPORT = 'global-support',
-  GLOBAL_ADMIN = 'global-admin',
   PLATFORM_OPERATIONS_ADMIN = 'platform-operations-admin',
-  // --- 027-platform-role-redesign: target role model (Slice A, additive) ---
+  // --- 027-platform-role-redesign: target role model ---
+  // T077 (Slice B): `global-community-read`, `global-support` and
+  // `global-admin` are gone. Every capability they carried is now held by the
+  // owning role below, explicitly — spec §Target global role model.
   PLATFORM_ROLES_ADMIN = 'platform-roles-admin',
   PLATFORM_CONTENT_FULL_ACCESS = 'platform-content-full-access',
   PLATFORM_RESOURCE_ADMIN = 'platform-resource-admin',

@@ -95,9 +95,9 @@ import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
+import { AdminUpdateSpaceVisibilityInput } from './dto/space.dto.admin.update.visibility';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { UpdateSpaceInput } from './dto/space.dto.update';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { UpdateSubspacesSortOrderInput } from './dto/space.dto.update.subspaces.sort.order';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
@@ -988,13 +988,20 @@ export class SpaceService {
     return result;
   }
 
-  public async updateSpacePlatformSettings(
+  /**
+   * 027-platform-role-redesign (T078, FR-020/FR-023, A14) — renamed from
+   * `updateSpacePlatformSettings`, and now genuinely only about visibility.
+   * The `nameID` half moved to `applyProtectedNameIDUpdate` below, reached
+   * from the general `update()` and gated on `UPDATE_NAMEID` rather than on
+   * this family's `ACCOUNT_LICENSE_MANAGE` — a license manager must not
+   * acquire entity renames as a side effect of holding visibility control
+   * (spec §Target global role model row 2, A17).
+   */
+  public async adminUpdateSpaceVisibility(
     space: ISpace,
-    updateData: UpdateSpacePlatformSettingsInput
+    updateData: AdminUpdateSpaceVisibilityInput
   ): Promise<ISpace> {
-    let renamedFrom: string | undefined;
-
-    if (updateData.visibility && updateData.visibility !== space.visibility) {
+    if (updateData.visibility !== space.visibility) {
       // Only update visibility on L0 spaces
       if (space.level !== SpaceLevel.L0) {
         throw new ValidationException(
@@ -1011,42 +1018,7 @@ export class SpaceService {
       space.visibility = updateData.visibility;
     }
 
-    if (updateData.nameID && updateData.nameID !== space.nameID) {
-      let reservedNameIDs: string[] = [];
-      if (space.level === SpaceLevel.L0) {
-        reservedNameIDs =
-          await this.namingService.getReservedNameIDsLevelZeroSpaces();
-      } else {
-        reservedNameIDs =
-          await this.namingService.getReservedNameIDsInLevelZeroSpace(
-            space.levelZeroSpaceID
-          );
-      }
-      // updating the nameID, check new value is allowed
-      const existingNameID = reservedNameIDs.includes(updateData.nameID);
-      if (existingNameID) {
-        throw new ValidationException(
-          `Unable to update Space nameID: the provided nameID is already taken: ${updateData.nameID}`,
-          LogContext.ACCOUNT
-        );
-      }
-
-      renamedFrom = space.nameID;
-      space.nameID = updateData.nameID;
-    }
-
     await this.save(space);
-
-    // Only after the new nameID is committed: revoking earlier leaves a window
-    // in which a concurrent read repopulates the cache from the pre-rename row.
-    if (renamedFrom !== undefined) {
-      await this.invalidateUrlCacheForSpaceSubtree(space.id);
-
-      this.logger.verbose?.(
-        `Invalidated URL cache subtree for space ${space.id} (nameID: ${renamedFrom} -> ${space.nameID})`,
-        LogContext.SPACES
-      );
-    }
 
     // Update the platform roles access for the space
     const parentPlatformRolesAccess =
@@ -1055,6 +1027,47 @@ export class SpaceService {
       space,
       parentPlatformRolesAccess
     );
+  }
+
+  /**
+   * 027-platform-role-redesign (T078, FR-020, A17) — the protected rename,
+   * lifted verbatim out of the old `updateSpacePlatformSettings`. The caller
+   * (`space.resolver.mutations.ts`'s `updateSpace`) checks `UPDATE_NAMEID`
+   * before reaching here; this method does the reserved-name validation and
+   * returns the previous nameID so the caller can sweep the URL cache AFTER
+   * the rename is committed (sweeping earlier leaves a window in which a
+   * concurrent read repopulates the cache from the pre-rename row).
+   */
+  private async applyProtectedNameIDUpdate(
+    space: ISpace,
+    nameID: string
+  ): Promise<string | undefined> {
+    if (nameID === space.nameID) {
+      return undefined;
+    }
+
+    let reservedNameIDs: string[] = [];
+    if (space.level === SpaceLevel.L0) {
+      reservedNameIDs =
+        await this.namingService.getReservedNameIDsLevelZeroSpaces();
+    } else {
+      reservedNameIDs =
+        await this.namingService.getReservedNameIDsInLevelZeroSpace(
+          space.levelZeroSpaceID
+        );
+    }
+    // updating the nameID, check new value is allowed
+    const existingNameID = reservedNameIDs.includes(nameID);
+    if (existingNameID) {
+      throw new ValidationException(
+        `Unable to update Space nameID: the provided nameID is already taken: ${nameID}`,
+        LogContext.ACCOUNT
+      );
+    }
+
+    const oldNameID = space.nameID;
+    space.nameID = nameID;
+    return oldNameID;
   }
 
   /**
@@ -1772,6 +1785,17 @@ export class SpaceService {
       );
     }
 
+    // 027-platform-role-redesign (T078, FR-020, A17): the protected section.
+    // The resolver has already required UPDATE_NAMEID when this is present —
+    // an ordinary UPDATE holder never reaches this branch.
+    let renamedFrom: string | undefined;
+    if (spaceData.nameID !== undefined) {
+      renamedFrom = await this.applyProtectedNameIDUpdate(
+        space,
+        spaceData.nameID
+      );
+    }
+
     if (spaceData.about) {
       space.about = await this.spaceAboutService.updateSpaceAbout(
         space.about,
@@ -1803,7 +1827,20 @@ export class SpaceService {
       }
     }
 
-    return await this.save(space);
+    const saved = await this.save(space);
+
+    // Only after the new nameID is committed: revoking earlier leaves a window
+    // in which a concurrent read repopulates the cache from the pre-rename row.
+    if (renamedFrom !== undefined) {
+      await this.invalidateUrlCacheForSpaceSubtree(saved.id);
+
+      this.logger.verbose?.(
+        `Invalidated URL cache subtree for space ${saved.id} (nameID: ${renamedFrom} -> ${saved.nameID})`,
+        LogContext.SPACES
+      );
+    }
+
+    return saved;
   }
 
   async getSubspaceInLevelZeroScopeOrFail(

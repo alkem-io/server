@@ -4,14 +4,13 @@ import type { TreeId } from './cascade.model';
 import type { GateExpr } from './gate.model';
 
 /**
- * 027-platform-role-redesign (T040b, research C14/D24, contracts/
- * privilege-map.md §"A-row → surfaces") — the machine-readable census: every
- * GraphQL mutation / field / MCP tool this feature's 21 live global-role
- * families (A1-A21, minus the removed A18) actually gate, one entry per
- * surface. This is the SINGLE source for `test-suites`' matrix generation,
- * this repo's own unit-coverage inventory (T070a) and drift detector
- * (`surface.drift.spec.ts`, T052a) — read `contracts/privilege-map.md`
- * first; this file is its executable form, not a paraphrase of it.
+ * The machine-readable census: every GraphQL mutation / field / MCP tool the
+ * 21 live global-role families (A1-A21, minus the removed A18) actually gate,
+ * one entry per surface. It is the single source for this repo's unit-coverage
+ * inventory (`unit.coverage.inventory.ts`) and drift detector
+ * (`surface.drift.spec.ts`). `test-suites` keeps its own hand-maintained
+ * capability table and cites this file only as provenance — nothing there
+ * imports or generates from it.
  *
  * `A20` (all upper-case) is intentionally NOT part of `ARowId` as written —
  * it IS: `ARowId` is `'A1' … 'A21' | 'A20b'`, 22 members. `A20b` re-uses
@@ -48,10 +47,8 @@ export interface SurfaceRef {
    * two differ (A1/A2: the resolver delegates to the shared assignment rule
    * engine; see `INDIRECT_ENFORCEMENT_FILES` below). */
   readonly file: string;
-  /** The resolver method / field name. A single string, except A14 — the
-   * one row whose surface is RENAMED between slices (`updateSpacePlatformSettings`
-   * at A, `adminUpdateSpaceVisibility` at B, T078). */
-  readonly member: string | { readonly A: string; readonly B: string };
+  /** The resolver method / field name. */
+  readonly member: string;
   readonly kind:
     | 'graphql-mutation'
     | 'graphql-query'
@@ -62,12 +59,10 @@ export interface SurfaceRef {
   /** The closed gate vocabulary (`gate.model.ts`) — what a caller must hold
    * to pass. */
   readonly gate: GateExpr;
-  /** POLICY INTENT (research D26/D27a) — what a human decided in spec
-   * §Action → owning role. CREDENTIALS, not role names — may be `[]` (A17:
-   * owned by no global role; A1's four retiring credential mutations: owned
-   * by nobody because they are being deleted). Never derived; never equal
-   * to `reachers()` by construction — `reachability.spec.ts` (T070m, NOT
-   * built this wave) is what asserts the two agree. */
+  /** POLICY INTENT — what a human decided for the action's owning role.
+   * CREDENTIALS, not role names — may be `[]` (A17:
+   * owned by no global role). Never derived; never equal to `reachers()` by
+   * construction — `reachability.spec.ts` is what asserts the two agree. */
   readonly intendedOwners: readonly AuthorizationCredential[];
   /** A role that reaches the surface for a documented, ACCEPTED reason
    * beyond its own intent (A16 only, this census). */
@@ -75,24 +70,6 @@ export interface SurfaceRef {
     readonly credential: AuthorizationCredential;
     readonly reason: string;
   }[];
-  /** Credentials that reach this surface TODAY, Slice A only, additively —
-   * dropped at Slice B (T076/T077/T080/T082). Never role names — this is
-   * exactly where the two vocabularies (RoleName vs AuthorizationCredential)
-   * diverge for the legacy silent-void rows this feature exists to fix
-   * (research D27). */
-  readonly legacyReachers: readonly AuthorizationCredential[];
-  /** Absent for a normal, currently-live-in-both-slices surface. */
-  readonly lifecycle?:
-    | 'retired' // absent in BOTH slices (A18)
-    | { readonly deferred: 'B' } // absent at A, live at B (A17's two surfaces)
-    | { readonly retiredIn: 'B' } // live at A, deleted at B (A1's four credential mutations)
-    // Live in BOTH slices for reachability + pin-drift purposes, but produces
-    // NO matrix cell in either — because ANOTHER census entry already covers
-    // the same invocable member, and two entries for one mutation generate two
-    // contradictory expectations for it (spec-server-25). Use this ONLY for a
-    // second declaration of an already-declared member; a genuinely
-    // uninvocable surface is a different problem.
-    | { readonly declarationOnly: true };
 }
 
 /**
@@ -110,15 +87,15 @@ export interface SurfaceRef {
  * only in the sense of NAMING the GraphQL surface; for the target role
  * model (`RULE_ENGINE_GOVERNED_ROLES`) the resolver DELEGATES the actual
  * check to `PlatformRoleAssignmentRulesService.evaluateOrFail()`, which is
- * where `GRANT_GLOBAL_ADMINS` / `FEATURE_ROLE_ASSIGN` are literally
+ * where `PLATFORM_ROLES_ASSIGN` / `FEATURE_ROLE_ASSIGN` are literally
  * checked (`checkAssignerCapability()`, via `isAccessGranted()`). The
  * census therefore declares A1/A2's `file` as the RULE-ENGINE service
  * (`SurfaceRef.file` is documented to mean "where the gate is enforced",
- * not "where the mutation is declared") — which leaves the resolver file
- * itself holding a REAL, separate `GRANT_GLOBAL_ADMINS` hit with no census
- * entry pointing at it: its own inline `else`-branch check, which governs
- * only the LEGACY (non-target, `global-*`) role-assignment path that
- * predates this feature and sits outside its 21-row census entirely.
+ * not "where the mutation is declared") — which leaves no census entry
+ * pointing at the resolver file itself. That file still writes credentials
+ * (`grantCredentialOrFail` / `revokeCredential` on the actor service), so
+ * `surface.drift.spec.ts`'s rule 4 (credential-write / credential-argument
+ * completeness) matches it and would read it as an ungated resolver.
  * Exempted here rather than mis-declared as a census surface it is not.
  */
 export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
@@ -127,7 +104,7 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // `removeRoleFromUser` and their organization-target twins),
   // `role.set.resolver.mutations.ts` — SPACE/ORGANIZATION role-sets only
   // (`validateRoleSetTypeOrFail` rejects PLATFORM), never A1/A2's surface.
-  // `GRANT_GLOBAL_ADMINS` appears there only as the `privilegeRequired`
+  // `PLATFORM_ROLES_ASSIGN` appears there only as the `privilegeRequired`
   // variable's initial value, immediately overwritten by the
   // `roleSet.type` switch for every reachable case (SPACE → `GRANT` or
   // `ROLESET_ENTRY_ROLE_ASSIGN`; ORGANIZATION → `GRANT`) — a dead literal,
@@ -150,17 +127,13 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // They are the second clause of this list's contract ("the hit belongs to a
   // code path this census does not cover"), NOT an indirection: the census's
   // 21 A-rows enumerate the ACTIONS a role takes, and none of them is "read
-  // the list the section is made of". Each field admits, alongside the
-  // retiring `PLATFORM_ADMIN` catch-all it has always checked, the ONE
-  // per-family privilege whose A-row owns what the list contains —
+  // the list the section is made of". Each field admits the ONE per-family
+  // privilege whose A-row owns what the list contains —
   // `PLATFORM_USERS_ADMIN` (A4/A5) for the user and Kratos-identity lists,
   // `PLATFORM_CONTENT_FULL_ACCESS` (A8) for the resource lists. No new
   // privilege vocabulary, no new grant: both are already declared, already
   // anchored on the platform policy, and already censused at their own
-  // action surfaces. Censusing these reads as A-row surfaces instead would
-  // multiply eight read-only affordances into the FR-024 denial matrix and
-  // restate each family's intent in a second place, where it could drift
-  // from the action it mirrors.
+  // action surfaces.
   //
   // R-F.2 (2026-09-16, research D29) — the other half of F6: three of those
   // lists (`organizations`, `innovationPacks`, `innovationHubs`) additionally
@@ -169,7 +142,7 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // and account trees, so the platform policy these lists check held nothing
   // of Support's — the customer-facing admin role could not find what it
   // services. Same disposition as above: a read, not an A-row, no census
-  // entry, no matrix cell; the privilege is mirrored in `privilege.grants.ts`
+  // entry; the privilege is mirrored in `privilege.grants.ts`
   // so its grant set is spec-covered, and names no census gate by design.
   //
   // R-F.3 (2026-09-18, licensing-section-design.md) — the License Manager's
@@ -180,9 +153,8 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // inventory read, not part of the original eight: it's the read-side
   // discovery path for A11's `updateAssistantActorCapabilities` (the client
   // finds the assistant it's about to update through this field), so it now
-  // is gated on `PLATFORM_OPERATIONS_ADMIN` (replacing `PLATFORM_ADMIN`);
-  // legacy GA/GS/GLM holders keep access because they hold both — the same
-  // disposition as every other inventory read above. Classified
+  // is gated on `PLATFORM_OPERATIONS_ADMIN` (replacing `PLATFORM_ADMIN`) —
+  // the same disposition as every other inventory read above. Classified
   // `non-admin`'s sibling `inventory-read` in `NON_ADMIN_SURFACES` (see
   // `non.admin.surfaces.ts`, `surface.completeness.spec.ts`) rather than
   // censused as an A-row, for the same reason as the other eight.
@@ -193,8 +165,8 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // actor holds ACCOUNT_LICENSE_MANAGE on the account's own policy, so the
   // License Manager can learn the account id it licenses. A read of an id,
   // not an A-row: A12's real gates stay on the assign/revoke mutations
-  // (`admin.licensing.resolver.mutations.ts`, censused). No census entry, no
-  // matrix cell — same disposition as the list reads above.
+  // (`admin.licensing.resolver.mutations.ts`, censused). No census entry —
+  // same disposition as the list reads above.
   //
   // QA C2-b fix (2026-09-25): both fields ALSO open to TRANSFER_RESOURCE_ACCEPT
   // holders — Resource Admin holds it on the account tree (A9), and without
@@ -208,20 +180,10 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   'src/domain/community/organization/organization.resolver.fields.ts',
 ];
 
-const GA = AuthorizationCredential.GLOBAL_ADMIN;
-const GS = AuthorizationCredential.GLOBAL_SUPPORT;
-const GSM = AuthorizationCredential.GLOBAL_SUPPORT_MANAGER;
-const GLM = AuthorizationCredential.GLOBAL_LICENSE_MANAGER;
-const GPM = AuthorizationCredential.GLOBAL_PLATFORM_MANAGER;
-
 export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // ===== A1 — assign/revoke a PLATFORM role =====================
-  // Owner: Roles Admin, on the two `*PlatformRole*` surfaces only. The four
-  // FR-022 credential mutations share `GRANT_GLOBAL_ADMINS` and are declared
-  // here too (T034a, research C10/D24) so the widened grant set's reach is
-  // checked against them — but their intent is `[]`: they are being
-  // DELETED (T080), not re-gated, and multiply into no matrix cell in
-  // either slice (privilege-map.md §"A1 carries SIX surfaces").
+  // Owner: Roles Admin, on the two `*PlatformRole*` surfaces and the two
+  // generic actor-credential mutations below.
   A1: [
     {
       // Enforcement location, not declaration location (see
@@ -231,145 +193,45 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       member: 'assignPlatformRoleToUser',
       kind: 'graphql-mutation',
       tree: 'role-set',
-      gate: { requires: AuthorizationPrivilege.GRANT_GLOBAL_ADMINS },
+      gate: { requires: AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN },
       intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-      legacyReachers: [GA],
     },
     {
       file: 'src/platform/platform-role/platform.role.assignment.rules.service.ts',
       member: 'removePlatformRoleFromUser',
       kind: 'graphql-mutation',
       tree: 'role-set',
-      gate: { requires: AuthorizationPrivilege.GRANT_GLOBAL_ADMINS },
+      gate: { requires: AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN },
       intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-      legacyReachers: [GA],
     },
-    // --- FR-022's four (T034a's pin) — declared, non-multiplying.
-    {
-      file: 'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.ts',
-      member: 'grantCredentialToUser',
-      kind: 'graphql-mutation',
-      tree: 'credential-admin-synthetic',
-      gate: {
-        credential: GA,
-        reason:
-          "FR-022 pin: held ahead of the shared GRANT_GLOBAL_ADMINS check (via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy) so Slice A's widening of the SHARED privilege's grant set cannot reach this mutation.",
-      },
-      intendedOwners: [],
-      legacyReachers: [GA],
-      lifecycle: { retiredIn: 'B' },
-    },
-    {
-      file: 'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.ts',
-      member: 'revokeCredentialFromUser',
-      kind: 'graphql-mutation',
-      tree: 'credential-admin-synthetic',
-      gate: {
-        credential: GA,
-        reason:
-          "FR-022 pin: held ahead of the shared GRANT_GLOBAL_ADMINS check (via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy) so Slice A's widening of the SHARED privilege's grant set cannot reach this mutation.",
-      },
-      intendedOwners: [],
-      legacyReachers: [GA],
-      lifecycle: { retiredIn: 'B' },
-    },
-    {
-      file: 'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.ts',
-      member: 'grantCredentialToOrganization',
-      kind: 'graphql-mutation',
-      tree: 'credential-admin-synthetic',
-      gate: {
-        credential: GA,
-        reason:
-          "FR-022 pin: held ahead of the shared GRANT_GLOBAL_ADMINS check (via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy) so Slice A's widening of the SHARED privilege's grant set cannot reach this mutation.",
-      },
-      intendedOwners: [],
-      legacyReachers: [GA],
-      lifecycle: { retiredIn: 'B' },
-    },
-    {
-      file: 'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.ts',
-      member: 'revokeCredentialFromOrganization',
-      kind: 'graphql-mutation',
-      tree: 'credential-admin-synthetic',
-      gate: {
-        credential: GA,
-        reason:
-          "FR-022 pin: held ahead of the shared GRANT_GLOBAL_ADMINS check (via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy) so Slice A's widening of the SHARED privilege's grant set cannot reach this mutation.",
-      },
-      intendedOwners: [],
-      legacyReachers: [GA],
-      lifecycle: { retiredIn: 'B' },
-    },
-    // --- Legacy-role branch pin (sec-server-2/corr-server-1 fix) — the
-    // SAME two resolver mutations, but their ELSE branch (every `global-*`
-    // role, plus `platform-operations-admin`/`platform-assistant-access`):
-    // held to a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy
-    // (`legacyGlobalAdminPolicy`), checked ahead of and instead of
-    // `roleSet.authorization` — so T034's widening of GRANT_GLOBAL_ADMINS to
-    // `platform-roles-admin` on the shared roleSet policy cannot reach
-    // legacy role assignment. Declared here (rather than only via the
-    // rule-engine-governed entries above) so `surface.drift.spec.ts`'s
-    // credential-pin check knows this file also carries a pin.
-    {
-      file: 'src/platform/platform-role/platform.role.resolver.mutations.ts',
-      member: 'assignPlatformRoleToUser',
-      kind: 'graphql-mutation',
-      tree: 'credential-admin-synthetic',
-      gate: {
-        credential: GA,
-        reason:
-          'sec-server-2/corr-server-1 fix: the legacy-role (else) branch is held ahead of the shared GRANT_GLOBAL_ADMINS check via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy, so Slice A widening of the shared roleSet policy cannot reach legacy role assignment.',
-      },
-      intendedOwners: [],
-      legacyReachers: [GA],
-    },
-    {
-      file: 'src/platform/platform-role/platform.role.resolver.mutations.ts',
-      member: 'removePlatformRoleFromUser',
-      kind: 'graphql-mutation',
-      tree: 'credential-admin-synthetic',
-      gate: {
-        credential: GA,
-        reason:
-          'sec-server-2/corr-server-1 fix: the legacy-role (else) branch is held ahead of the shared GRANT_GLOBAL_ADMINS check via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy, so Slice A widening of the shared roleSet policy cannot reach legacy role assignment.',
-      },
-      intendedOwners: [],
-      legacyReachers: [GA],
-    },
-    // --- sec-server-9 fix: the generic, un-censused actor-credential
-    // mutations became grantable/revokable for all 13 platform-*/feature-*
-    // role credentials the moment they joined the shared
-    // `AuthorizationCredential`/`CredentialType` enums — a complete bypass
-    // of the six-rule assignment engine and its audit trail. Both mutations
-    // now reject that vocabulary outright before their UNCHANGED
-    // `PLATFORM_ADMIN` check (still {global-admin, global-support,
-    // global-license-manager} — NOT narrowed to a [GLOBAL_ADMIN]-only pin
-    // like the FR-022 four, since this generic mutation is still legitimately
-    // used for every OTHER, non-role-family credential type). No
-    // `lifecycle.retiredIn: 'B'` marker (unlike the FR-022 four): those are
-    // deleted outright at Slice B (T080); this mutation is not — it is
-    // simply not a target-role-model owned surface. `intendedOwners: []`
-    // reflects that honestly: nobody OWNS this generic bypass, it is
-    // reachable only via the legacy, tree-scoped `PLATFORM_ADMIN` grant
-    // (`TREE_SCOPED_PRIVILEGE_GRANTS['platform'][PLATFORM_ADMIN]` below).
+    // The generic, un-censused actor-credential mutations would otherwise be
+    // able to grant/revoke all 13 platform-*/feature-* role credentials — a
+    // complete bypass of the six-rule assignment engine and its audit trail.
+    // Both mutations reject that vocabulary outright before their
+    // authorization check; they stay legitimately in use for every OTHER,
+    // non-role-family credential type.
     {
       file: 'src/domain/actor/actor/actor.resolver.mutations.ts',
       member: 'grantCredentialToActor',
       kind: 'graphql-mutation',
       tree: 'platform',
-      gate: { requires: AuthorizationPrivilege.PLATFORM_ADMIN },
-      intendedOwners: [],
-      legacyReachers: [GA, GS, GLM],
+      // Gated on `PLATFORM_ROLES_ASSIGN`, so Roles Admin owns both generic
+      // credential writes. The privilege is not what keeps them safe: they
+      // bypass the six-rule assignment engine and its audit trail, so the
+      // `RESTRICTED_ROLE_CREDENTIAL_TYPES` rejection at the resolver refuses
+      // every `platform-*`/`feature-*` credential before the authorization
+      // check.
+      gate: { requires: AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
     },
     {
       file: 'src/domain/actor/actor/actor.resolver.mutations.ts',
       member: 'revokeCredentialFromActor',
       kind: 'graphql-mutation',
       tree: 'platform',
-      gate: { requires: AuthorizationPrivilege.PLATFORM_ADMIN },
-      intendedOwners: [],
-      legacyReachers: [GA, GS, GLM],
+      // Same gate and owner as `grantCredentialToActor` above.
+      gate: { requires: AuthorizationPrivilege.PLATFORM_ROLES_ASSIGN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
     },
   ],
 
@@ -377,7 +239,7 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // Owner: Users Admin OR Roles Admin (FR-003). The user-target surfaces
   // are the SAME two resolver methods as A1 (payload role is `feature-*`
   // instead of `platform-*`) — declared as separate entries per
-  // privilege-map.md ("A1's two ⊂ A2's four"), plus the Slice-A-only
+  // privilege-map.md ("A1's two ⊂ A2's four"), plus the
   // organization-target pair (T032a).
   A2: [
     {
@@ -390,7 +252,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
         AuthorizationCredential.PLATFORM_ROLES_ADMIN,
       ],
-      legacyReachers: [],
     },
     {
       file: 'src/platform/platform-role/platform.role.assignment.rules.service.ts',
@@ -402,7 +263,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
         AuthorizationCredential.PLATFORM_ROLES_ADMIN,
       ],
-      legacyReachers: [],
     },
     {
       file: 'src/platform/platform-role/platform.role.assignment.rules.service.ts',
@@ -414,7 +274,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
         AuthorizationCredential.PLATFORM_ROLES_ADMIN,
       ],
-      legacyReachers: [],
     },
     {
       file: 'src/platform/platform-role/platform.role.assignment.rules.service.ts',
@@ -426,15 +285,12 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
         AuthorizationCredential.PLATFORM_ROLES_ADMIN,
       ],
-      legacyReachers: [],
     },
   ],
 
   // ===== A3 — authorization / license-entitlement reset (032, pre-existing)
-  // Owner: Operations Admin. Slice A does not touch this family's grant set
-  // (it already carries `platform-operations-admin`, delivered by
-  // workspace#032) — Slice B (T074/T076) drops the three legacy credentials
-  // alone. Grepped exhaustively for this census (contract's "7" was stale;
+  // Owner: Operations Admin (its grant set carries `platform-operations-admin`
+  // alone). Grepped exhaustively for this census (contract's "7" was stale;
   // 10 real gate sites — the T003 baseline predates several of these
   // mutations).
   // Per-site privilege (NOT a blanket `anyOf` across the whole family) —
@@ -514,18 +370,10 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: tree as TreeId,
       gate: { requires: privilege },
       intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
-      legacyReachers: [GA, GS, GLM],
     })
   ),
 
   // ===== A4 — change login email =====
-  // T070m finding: the ONE `PLATFORM_USERS_ADMIN` credential rule
-  // (`user.service.authorization.ts`) grants it to A4's AND A5's legacy
-  // reachers as a single undifferentiated list — the privilege carries no
-  // memory of which A-row's legacy set a credential was added for, so
-  // `GLOBAL_PLATFORM_MANAGER` (added there for A5) reaches A4 too. Fixed
-  // here rather than narrowing the shared credential rule, which would
-  // remove a legacy holder's TODAY access (forbidden in the additive slice).
   A4: [
     {
       file: 'src/platform-admin/domain/user/email-change/admin.user.email.change.resolver.mutations.ts',
@@ -534,41 +382,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
-    },
-    // --- Legacy-admin pin (spec-server-1 follow-through fix) — the SAME
-    // `deleteUser` mutation's legacy-admin branch, held to a resolver-local,
-    // hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy rather than checking
-    // bare DELETE against `user.authorization`, so the root rule's now-wider
-    // (FR-004) DELETE cascade to `platform-content-full-access` cannot
-    // satisfy it. Declared so `surface.drift.spec.ts`'s credential-pin check
-    // knows this file also carries a pin.
-    //
-    // spec-server-25 fix (2026-07-31): `lifecycle: {declarationOnly: true}`.
-    // This is the SECOND census entry for the SAME `deleteUser` mutation —
-    // A5 declares the invocable one. Without the marker BOTH multiplied, so
-    // the matrix generated `PLATFORM_USERS_ADMIN x A4 (deleteUser) -> deny`
-    // alongside `PLATFORM_USERS_ADMIN x A5 (deleteUser) -> allow`: one
-    // mutation, two contradictory expectations, the DENY one guaranteed to
-    // fail at Slice B because the ALLOW is the correct answer. Worse, that
-    // DENY cell invoked a real `deleteUser` against the shared fixture user,
-    // and corr-ts-16's DENY-before-ALLOW ordering could not protect it —
-    // that orders cells WITHIN one surface, and these are two surfaces.
-    // Reachability and pin-drift still see this entry in both slices; only
-    // matrix multiplication is suppressed.
-    {
-      file: 'src/services/api/registration/registration.resolver.mutations.ts',
-      member: 'deleteUser',
-      kind: 'graphql-mutation',
-      tree: 'credential-admin-synthetic',
-      lifecycle: { declarationOnly: true },
-      gate: {
-        credential: GA,
-        reason:
-          "spec-server-1 follow-through fix: the legacy-admin branch of deleteUser's A5 dual-path gate is held ahead of a bare DELETE check via a resolver-local, hardcoded-to-[GLOBAL_ADMIN] IAuthorizationPolicy, so FR-004's now-widened root DELETE cascade cannot let platform-content-full-access delete arbitrary users.",
-      },
-      intendedOwners: [],
-      legacyReachers: [GA],
     },
     {
       file: 'src/platform-admin/domain/user/email-change/admin.user.email.change.resolver.mutations.ts',
@@ -577,28 +390,21 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
     },
   ],
 
   // ===== A5 — delete user; reset identity/account =====
-  // `deleteUser` is the D5 dual path — but NOT a plain `{anyOf: [DELETE,
-  // PLATFORM_USERS_ADMIN]}` gate any more (spec-server-1 follow-through
-  // fix). Self-delete is checked by actor-identity comparison (equivalent
-  // to the resource-scoped USER_SELF_MANAGEMENT credential every user
-  // holds) and the legacy-admin path is pinned to a resolver-local,
-  // hardcoded `[GLOBAL_ADMIN]` policy — exactly the FR-022/T034a pin shape
-  // — rather than checking bare DELETE against `user.authorization`.
-  // Declaring the gate as bare `{anyOf: [DELETE, ...]}` would have the
-  // derivation intersect the root cascade's now-widened (FR-004) DELETE
-  // grant and report `platform-content-full-access` reaching this row — a
-  // real defect A5/SC-004 does NOT accept (the accepted exception is
-  // closed at A6/A7 only). The gate is therefore declared as
-  // `{requires: PLATFORM_USERS_ADMIN}` alone: GLOBAL_ADMIN's legacy reach
-  // (the pinned branch) and GLOBAL_SUPPORT/GLOBAL_LICENSE_MANAGER/
-  // GLOBAL_PLATFORM_MANAGER's reach are already fully accounted for via
-  // PLATFORM_USERS_ADMIN's own declared legacy grant set
-  // (`privilege.grants.ts`), so the derived set is unchanged and honest.
+  // `deleteUser` is a dual path — but NOT a plain `{anyOf: [DELETE,
+  // PLATFORM_USERS_ADMIN]}` gate. Self-delete is checked by actor-identity
+  // comparison (equivalent to the resource-scoped USER_SELF_MANAGEMENT
+  // credential every user holds), and the administrative path checks
+  // PLATFORM_USERS_ADMIN, rather than bare DELETE against
+  // `user.authorization`. Declaring the gate as bare `{anyOf: [DELETE, ...]}`
+  // would have the derivation intersect the root cascade's DELETE grant and
+  // report `platform-content-full-access` reaching this row — a real defect,
+  // because that role's single accepted exception is closed at A6/A7 only.
+  // The gate is therefore declared as `{requires: PLATFORM_USERS_ADMIN}`
+  // alone.
   A5: [
     {
       file: 'src/services/api/registration/registration.resolver.mutations.ts',
@@ -607,7 +413,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'user',
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
     },
     {
       file: 'src/platform-admin/core/identity/admin.identity.resolver.mutations.ts',
@@ -616,7 +421,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
     },
     {
       file: 'src/platform-admin/domain/user/admin.users.resolver.mutations.ts',
@@ -625,13 +429,92 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
     },
-    // workspace#038 (MCP API-key lifecycle) landed on develop AFTER the
-    // census was written, gated on PLATFORM_ADMIN. A user's keys are
-    // user-credential lifecycle — this family — so both admin surfaces are
-    // re-anchored here. Pre-feature gate was PLATFORM_ADMIN, i.e. {GA, GS,
-    // GLM}; the platform PLATFORM_USERS_ADMIN rule also admits GPM.
+    // The user-record family's read/discovery surfaces: reading user personal
+    // data in support of the family's actions. As in the A8 block, a denied
+    // read returns an empty list or a masked field rather than an error.
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'users',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'identity',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    },
+    {
+      file: 'src/platform-admin/core/identity/admin.identity.resolver.fields.ts',
+      member: 'identities',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    },
+    {
+      file: 'src/platform-admin/core/identity/admin.identity.resolver.queries.ts',
+      member: 'adminIdentitiesUnverified',
+      kind: 'graphql-query',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    },
+    {
+      file: 'src/services/api/roles/roles.resolver.fields.ts',
+      member: 'invitations',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    },
+    {
+      file: 'src/services/api/roles/roles.resolver.fields.ts',
+      member: 'applications',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    },
+    // PII read: masks the field rather than throwing when denied.
+    {
+      file: 'src/domain/community/user/user.resolver.fields.ts',
+      member: 'authentication',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+    },
+    // `User.account` resolves the account id for an ACCOUNT_LICENSE_MANAGE
+    // (A12, License Manager) or TRANSFER_RESOURCE_ACCEPT (A9, Resource Admin)
+    // holder on the account's own policy — a read of an id, not an A-row
+    // action. It is censused only because the `authentication` entry above
+    // makes this file a census file, and rule 2 of `surface.drift.spec.ts`
+    // requires its scanned and declared privileges to agree. A denied read
+    // yields `null`, not an error.
+    {
+      file: 'src/domain/community/user/user.resolver.fields.ts',
+      member: 'account',
+      kind: 'graphql-field',
+      tree: 'account',
+      gate: {
+        anyOf: [
+          AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
+          AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
+        ],
+      },
+      intendedOwners: [
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ],
+    },
+    // A user's MCP API keys are user-credential lifecycle — this family — so
+    // both admin surfaces are anchored here, on the owning role alone.
     {
       file: 'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.fields.ts',
       member: 'mcpApiKeys',
@@ -639,7 +522,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
     },
     {
       file: 'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.mutations.ts',
@@ -648,7 +530,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
     },
   ],
 
@@ -666,7 +547,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         AuthorizationCredential.PLATFORM_SUPPORT,
         AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR,
       ],
-      legacyReachers: [GA, GS, AuthorizationCredential.BETA_TESTER],
     },
     {
       file: 'src/services/api/registration/registration.resolver.mutations.ts',
@@ -691,7 +571,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
             'SC-004 accepted exception — FR-004 cascades full CRUD from the inheritance root, which satisfies the owner branch of this dual-path gate exactly as an organization owner would.',
         },
       ],
-      legacyReachers: [GA, GS],
     },
     // QA server-C2-d (ruling (a), 2026-09-25): approving / resetting /
     // reopening / archiving an organization's verification is organization
@@ -715,9 +594,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         anyOf: [AuthorizationPrivilege.UPDATE, AuthorizationPrivilege.GRANT],
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
-      // GLOBAL_COMMUNITY_READ holds CRUD+GRANT on this policy today — a READ
-      // role holding GRANT; flagged for removal at Slice B with the rest.
-      legacyReachers: [GA, GS, AuthorizationCredential.GLOBAL_COMMUNITY_READ],
     },
   ],
 
@@ -725,86 +601,85 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // Contract's "~5" corrected to 8 by grepping the tree (T040b instruction):
   // update{InnovationPack,InnovationHub} + create/update/delete of
   // templates across three template resolver files.
-  A7: (
-    [
+  A7: [
+    ...(
       [
-        'src/library/innovation-pack/innovation.pack.resolver.mutations.ts',
-        'updateInnovationPack',
-      ],
-      [
-        'src/domain/innovation-hub/innovation.hub.resolver.mutations.ts',
-        'updateInnovationHub',
-      ],
-      [
-        'src/domain/template/templates-set/templates.set.resolver.mutations.ts',
-        'createTemplate',
-      ],
-      [
-        'src/domain/template/templates-set/templates.set.resolver.mutations.ts',
-        'createTemplateFromSpace',
-      ],
-      [
-        'src/domain/template/templates-set/templates.set.resolver.mutations.ts',
-        'createTemplateFromContentSpace',
-      ],
-      [
-        'src/domain/template/template/template.resolver.mutations.ts',
-        'updateTemplate',
-      ],
-      [
-        'src/domain/template/template/template.resolver.mutations.ts',
-        'updateTemplateFromSpace',
-      ],
-      [
-        'src/domain/template/template/template.resolver.mutations.ts',
-        'deleteTemplate',
-      ],
-      // 2026-09-16 (R-F.2 sandbox walk): a CALLOUT template's content is
-      // edited through the generic `updateCallout`, whose gate had never
-      // taken A7's dual path — Support could create and delete a template
-      // in an organization's pack but not edit one. The branch is scoped
-      // to `callout.isTemplate` in code (the account cascade also reaches
-      // callouts inside an organization's SPACES, which FR-008(a) keeps
-      // closed to Support); the census declares the privilege reach — a
-      // matrix cell for this member must use a TEMPLATE callout fixture.
-      [
-        'src/domain/collaboration/callout/callout.resolver.mutations.ts',
-        'updateCallout',
-      ],
-    ] as const
-  ).map(
-    ([file, member]): SurfaceRef => ({
-      file,
-      member,
-      kind: 'graphql-mutation',
-      tree: 'account',
-      gate: {
-        anyOf: [
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES,
+        [
+          'src/library/innovation-pack/innovation.pack.resolver.mutations.ts',
+          'updateInnovationPack',
         ],
-      },
-      intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
-      // spec-server-1 fix (ninth analyze pass, FR-004/SC-004): with the
-      // root rule's reversal to full CRUD, Content Full Access now reaches
-      // ordinary UPDATE on the account tree via `ROOT_CASCADE` too — the
-      // SAME named, accepted SC-004 exception as A6.
-      acceptedExtraReachers: [
-        {
-          credential: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-          reason:
-            'SC-004 accepted exception — FR-004 cascades full CRUD from the inheritance root, which satisfies the owner branch of this dual-path gate exactly as an account owner would.',
+        [
+          'src/domain/innovation-hub/innovation.hub.resolver.mutations.ts',
+          'updateInnovationHub',
+        ],
+        [
+          'src/domain/template/templates-set/templates.set.resolver.mutations.ts',
+          'createTemplate',
+        ],
+        [
+          'src/domain/template/templates-set/templates.set.resolver.mutations.ts',
+          'createTemplateFromSpace',
+        ],
+        [
+          'src/domain/template/templates-set/templates.set.resolver.mutations.ts',
+          'createTemplateFromContentSpace',
+        ],
+        [
+          'src/domain/template/template/template.resolver.mutations.ts',
+          'updateTemplate',
+        ],
+        [
+          'src/domain/template/template/template.resolver.mutations.ts',
+          'updateTemplateFromSpace',
+        ],
+        [
+          'src/domain/template/template/template.resolver.mutations.ts',
+          'deleteTemplate',
+        ],
+        // 2026-09-16 (R-F.2 sandbox walk): a CALLOUT template's content is
+        // edited through the generic `updateCallout`, whose gate had never
+        // taken A7's dual path — Support could create and delete a template
+        // in an organization's pack but not edit one. The branch is scoped
+        // to `callout.isTemplate` in code (the account cascade also reaches
+        // callouts inside an organization's SPACES, which FR-008(a) keeps
+        // closed to Support); the census declares the privilege reach — a
+        // denial test for this member must use a TEMPLATE callout fixture.
+        [
+          'src/domain/collaboration/callout/callout.resolver.mutations.ts',
+          'updateCallout',
+        ],
+      ] as const
+    ).map(
+      ([file, member]): SurfaceRef => ({
+        file,
+        member,
+        kind: 'graphql-mutation',
+        tree: 'account',
+        gate: {
+          anyOf: [
+            AuthorizationPrivilege.UPDATE,
+            AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES,
+          ],
         },
-      ],
-      // T070m finding: NOT empty — `global-admin` still holds ordinary
-      // UPDATE on the account tree via the Slice-A-only legacy CRUD+GRANT
-      // cascade (`LEGACY_CASCADES.globalAdminRootCrud`), so it reaches this
-      // dual-path gate's OWNER branch today, exactly as any other
-      // account-tree UPDATE holder would. `global-support`'s platform-
-      // SUBTREE cascade does not cover `account`, so it is correctly absent.
-      legacyReachers: [GA],
-    })
-  ),
+        intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+        // spec-server-1 fix (ninth analyze pass, FR-004/SC-004): with the
+        // root rule's reversal to full CRUD, Content Full Access now reaches
+        // ordinary UPDATE on the account tree via `ROOT_CASCADE` too — the
+        // SAME named, accepted SC-004 exception as A6.
+        acceptedExtraReachers: [
+          {
+            credential: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+            reason:
+              'SC-004 accepted exception — FR-004 cascades full CRUD from the inheritance root, which satisfies the owner branch of this dual-path gate exactly as an account owner would.',
+          },
+        ],
+      })
+    ),
+    // R-F.2 (2026-09-16, research D29): the `platformAdmin.organizations`
+    // list is NOT censused here — like the other console inventory reads it
+    // admits `PLATFORM_SUPPORT_LISTS_READ` (plus Content Full Access) and is
+    // a read affordance, not an A-row action. See the note above A1.
+  ],
 
   // ===== A8 — delete callout/contribution/space; delete an org-owned
   // innovation pack or hub; set publisher =====
@@ -850,15 +725,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           ],
         },
         intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        // sec-server-3/corr-server-2 fix: `global-support` is deliberately
-        // NOT a legacy reacher here any more — it was reachable only
-        // through the ROOT rule's PLATFORM_CONTENT_FULL_ACCESS credential
-        // list, which no longer includes it (the root rule cascading
-        // GLOBAL_SUPPORT platform-wide, bypassing the per-space
-        // `allowPlatformSupportAsAdmin` consent gate, was the widening this
-        // fix removes). `global-admin` still reaches via
-        // `LEGACY_CASCADES.globalAdminRootCrud`'s DELETE cascade.
-        legacyReachers: [GA],
       })
     ),
     // A Form response's moderation delete. The owner branch is CREATE on the
@@ -879,7 +745,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         ],
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-      legacyReachers: [GA],
     },
     {
       file: 'src/domain/collaboration/callout/callout.resolver.mutations.ts',
@@ -887,8 +752,82 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       kind: 'graphql-mutation',
       tree: 'space',
       gate: { requires: AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER },
+      // Resource Admin: operator amendment 2026-10-07.
+      intendedOwners: [
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+      ],
+    },
+    // ===== `platformAdmin` READ/DISCOVERY surfaces, each gated on its owning
+    // family's privilege — which puts it inside `SCANNED_PRIVILEGES`, so
+    // `surface.drift.spec.ts` rule 1 sees it.
+    //
+    // A denied READ here returns an empty list or a masked field rather than
+    // throwing (`virtualContributors` literally `return []`), so a denial
+    // test cannot distinguish "denied" from "nothing to show". Reachability
+    // and drift still cover them.
+    // These five all-platform listings are the platform-content
+    // administration surface.
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'accounts',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
       intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-      legacyReachers: [GA, GS],
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'innovationHubs',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'innovationPacks',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'spaces',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+    },
+    // Primary privilege, as for its siblings; Support / License Manager reach
+    // it through their own list reads, which name no census gate. Without
+    // this entry the field would have no home in
+    // `surface.completeness.spec.ts`.
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'organizations',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'virtualContributors',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+    },
+    // Returns [] rather than throwing when denied.
+    {
+      file: 'src/domain/community/virtual-contributor/virtual.contributor.resolver.queries.ts',
+      member: 'virtualContributors',
+      kind: 'graphql-query',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS },
+      intendedOwners: [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
     },
   ],
 
@@ -898,16 +837,9 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // (`post.dto.move.ts` exists, unwired) — a granted-but-unreachable
   // privilege, not a gate site. A9 stays at 9, not 10.
   A9: [
-    // The three cross-L0 moves (spec 030) share ONE resolver-local
-    // synthetic policy checked via the (legacy, retiring) PLATFORM_ADMIN
-    // privilege — NOT the shared platform-wide PLATFORM_ADMIN grant set.
-    // KNOWN MODELLING GAP for whoever builds `reachability.spec.ts`
-    // (T070m, not this wave): `PRIVILEGE_GRANTS` has no entry for
-    // `PLATFORM_ADMIN` (it is not managed by this feature's re-anchoring
-    // tasks and its meaning varies per resolver-local policy instance), so
-    // `reachers()` cannot yet derive these three correctly from the gate
-    // alone — `intendedOwners`/`legacyReachers` below are the source of
-    // truth for them until that is resolved.
+    // The three cross-L0 moves share ONE resolver-local
+    // synthetic policy (`conversion-admin-synthetic`), checked via
+    // TRANSFER_RESOURCE_OFFER.
     // spec-server-10 fix: the resolver's OWN constructor comment says all
     // SEVEN mutations on this file share the ONE synthetic policy — the
     // census previously declared only the three cross-L0 moves. The three
@@ -930,9 +862,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         member,
         kind: 'graphql-mutation',
         tree: 'conversion-admin-synthetic',
-        gate: { requires: AuthorizationPrivilege.PLATFORM_ADMIN },
+        gate: { requires: AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER },
         intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-        legacyReachers: [GA],
       })
     ),
     // spec-server-10 fix: `convertVirtualContributorToUseKnowledgeBase`
@@ -946,9 +877,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       member: 'convertVirtualContributorToUseKnowledgeBase',
       kind: 'graphql-mutation',
       tree: 'conversion-admin-synthetic',
-      gate: { requires: AuthorizationPrivilege.PLATFORM_ADMIN },
+      gate: { requires: AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER },
       intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      legacyReachers: [GA],
     },
     {
       file: 'src/domain/collaboration/callout-contribution/callout.contribution.move.resolver.mutations.ts',
@@ -957,7 +887,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'space',
       gate: { requires: AuthorizationPrivilege.MOVE_CONTRIBUTION },
       intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      legacyReachers: [GA],
     },
     {
       file: 'src/domain/collaboration/callout-transfer/callout.transfer.resolver.mutations.ts',
@@ -965,8 +894,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       kind: 'graphql-mutation',
       // corr-server-9 fix: this surface is checked on the CalloutsSet's OWN
       // authorization (callouts.set.service.authorization.ts) — a
-      // DIFFERENT credential rule, with a DIFFERENT legacy reacher, than
-      // the `account` tree the other four A9 transfer mutations share.
+      // DIFFERENT credential rule than the `account` tree the other four A9
+      // transfer mutations share.
       tree: 'callouts-set',
       // Both TRANSFER_RESOURCE_OFFER and TRANSFER_RESOURCE_ACCEPT are
       // literally checked (AND, not OR — GateExpr has no `allOf`).
@@ -981,10 +910,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         ],
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      // GLOBAL_SUPPORT_MANAGER, not GLOBAL_SUPPORT (corr-server-9 fix) —
-      // the callouts-set rule's actual legacy reacher; GLOBAL_SUPPORT never
-      // reaches this surface (its account-tree grants are cascade:false).
-      legacyReachers: [GA, GSM],
     },
     ...(
       [
@@ -1012,7 +937,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           ],
         },
         intendedOwners: [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-        legacyReachers: [GA, GS],
       })
     ),
   ],
@@ -1020,177 +944,226 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // ===== A10 — platform settings / config =====
   // Contract's "~2" corrected to 6 (T045's own comment already says "5" for
   // platform.resolver.mutations.ts alone; +1 for the well-known-VC mutation).
-  A10: (
-    [
+  A10: [
+    ...(
       [
-        'src/platform/platform/platform.resolver.mutations.ts',
-        'updatePlatformSettings',
-      ],
-      [
-        'src/platform/platform/platform.resolver.mutations.ts',
-        'addIframeAllowedURL',
-      ],
-      [
-        'src/platform/platform/platform.resolver.mutations.ts',
-        'removeIframeAllowedURL',
-      ],
-      [
-        'src/platform/platform/platform.resolver.mutations.ts',
-        'addNotificationEmailToBlacklist',
-      ],
-      [
-        'src/platform/platform/platform.resolver.mutations.ts',
-        'removeNotificationEmailFromBlacklist',
-      ],
-      [
-        'src/platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.resolver.mutations.ts',
-        'setPlatformWellKnownVirtualContributor',
-      ],
-    ] as const
-  ).map(
-    ([file, member]): SurfaceRef => ({
-      file,
-      member,
-      kind: 'graphql-mutation',
+        [
+          'src/platform/platform/platform.resolver.mutations.ts',
+          'updatePlatformSettings',
+        ],
+        [
+          'src/platform/platform/platform.resolver.mutations.ts',
+          'addIframeAllowedURL',
+        ],
+        [
+          'src/platform/platform/platform.resolver.mutations.ts',
+          'removeIframeAllowedURL',
+        ],
+        [
+          'src/platform/platform/platform.resolver.mutations.ts',
+          'addNotificationEmailToBlacklist',
+        ],
+        [
+          'src/platform/platform/platform.resolver.mutations.ts',
+          'removeNotificationEmailFromBlacklist',
+        ],
+        [
+          'src/platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.resolver.mutations.ts',
+          'setPlatformWellKnownVirtualContributor',
+        ],
+      ] as const
+    ).map(
+      ([file, member]): SurfaceRef => ({
+        file,
+        member,
+        kind: 'graphql-mutation',
+        tree: 'platform',
+        gate: { requires: AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN },
+        intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+      })
+    ),
+    // Notification configuration — part of the platform-settings family.
+    {
+      file: 'src/services/api/notification-recipients/notification.recipients.resolver.queries.ts',
+      member: 'notificationRecipients',
+      kind: 'graphql-query',
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
-      // sec-server-23: the resolver PINS its own check to this surface's
-      // pre-feature reacher set {GA, GS, GLM} — GLOBAL_PLATFORM_MANAGER is
-      // deliberately excluded there. It stays declared HERE because FR-034's
-      // derivation reads the SHARED platform policy, which does still grant
-      // GPM the privilege; the resolver-local pin is invisible to it, exactly
-      // as sec-server-4/-7's pins are on A4/A5. Removing it would make the
-      // reachability assertion fail against a widening that genuinely exists
-      // at the policy layer, and hide it rather than record it.
-      // (This gap between derived and enforced reach is R-B / sec-server-26.)
-      legacyReachers: [GA, GPM, GS, GLM],
-    })
-  ),
+    },
+  ],
 
   // ===== A11 — operational machinery (032, pre-existing) =====
   // Contract's "~10" corrected to 15 by grepping the tree (the two
   // collaboration-migration mutations replaced the retired whiteboard one;
   // QA cross-census-1 fix, 2026-09-25, added the workspace#061 forum-sync
   // reconcile mutation, 14 -> 15).
-  A11: (
-    [
+  A11: [
+    ...(
       [
-        'src/services/ai-server/ai-server/ai.server.resolver.mutations.ts',
-        'cleanupCollections',
-        'ai-server',
-      ],
-      [
-        'src/domain/community/virtual-assistant/virtual.assistant.resolver.mutations.ts',
-        'updateAssistantActorCapabilities',
-        'virtual-assistant',
-      ],
-      [
-        'src/platform-admin/in-app-notification/in.app.notification.admin.resolver.mutations.ts',
-        'adminInAppNotificationsPrune',
-        'platform',
-      ],
-      [
-        'src/platform-admin/services/avatars/admin.avatarresolver.mutations.ts',
-        'adminUpdateContributorAvatars',
-        'platform',
-      ],
-      [
-        'src/platform-admin/services/geolocation/admin.geolocation.resolver.mutations.ts',
-        'adminUpdateGeoLocationData',
-        'platform',
-      ],
-      [
-        'src/platform-admin/services/search/admin.search.ingest.resolver.mutations.ts',
-        'adminSearchIngestFromScratch',
-        'platform',
-      ],
-      // Landed on develop by 003/006 (collaboration persistence) in place of
-      // the deleted `adminUploadFilesFromContentToStorageBucket`; gated on
-      // PLATFORM_OPERATIONS_ADMIN at the platform policy exactly like the
-      // rest of this family.
-      [
-        'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
-        'migrateLegacyMemoContent',
-        'platform',
-      ],
-      [
-        'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
-        'migrateLegacyWhiteboardContent',
-        'platform',
-      ],
-      [
-        'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.ts',
-        'refreshAllBodiesOfKnowledge',
-        'platform',
-      ],
-      [
-        'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
-        'adminCommunicationEnsureAccessToCommunications',
-        'communication-admin-synthetic',
-      ],
-      [
-        'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
-        'adminCommunicationRemoveOrphanedRoom',
-        'communication-admin-synthetic',
-      ],
-      [
-        'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
-        'adminCommunicationUpdateRoomState',
-        'communication-admin-synthetic',
-      ],
-      [
-        'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
-        'adminCommunicationMigrateOrphanedConversations',
-        'communication-admin-synthetic',
-      ],
-      [
-        'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
-        'adminCommunicationSyncSpaceHierarchy',
-        'communication-admin-synthetic',
-      ],
-      // QA cross-census-1 fix (2026-09-25): workspace#061's forum↔matrix
-      // hierarchy sync landed this mutation on `develop` after the census
-      // was written — same file, same `communicationGlobalAdminPolicy`
-      // (`communication-admin-synthetic`), same literal
-      // PLATFORM_OPERATIONS_ADMIN check as its five siblings above.
-      [
-        'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
-        'adminCommunicationReconcileForumHierarchy',
-        'communication-admin-synthetic',
-      ],
-    ] as const
-  ).map(
-    ([file, member, tree]): SurfaceRef => ({
-      file,
-      member,
-      kind: 'graphql-mutation',
-      tree: tree as TreeId,
+        [
+          'src/services/ai-server/ai-server/ai.server.resolver.mutations.ts',
+          'cleanupCollections',
+          'ai-server',
+        ],
+        [
+          'src/domain/community/virtual-assistant/virtual.assistant.resolver.mutations.ts',
+          'updateAssistantActorCapabilities',
+          'virtual-assistant',
+        ],
+        [
+          'src/platform-admin/in-app-notification/in.app.notification.admin.resolver.mutations.ts',
+          'adminInAppNotificationsPrune',
+          'platform',
+        ],
+        [
+          'src/platform-admin/services/avatars/admin.avatarresolver.mutations.ts',
+          'adminUpdateContributorAvatars',
+          'platform',
+        ],
+        [
+          'src/platform-admin/services/geolocation/admin.geolocation.resolver.mutations.ts',
+          'adminUpdateGeoLocationData',
+          'platform',
+        ],
+        [
+          'src/platform-admin/services/search/admin.search.ingest.resolver.mutations.ts',
+          'adminSearchIngestFromScratch',
+          'platform',
+        ],
+        // Landed on develop by 003/006 (collaboration persistence) in place of
+        // the deleted `adminUploadFilesFromContentToStorageBucket`; gated on
+        // PLATFORM_OPERATIONS_ADMIN at the platform policy exactly like the
+        // rest of this family.
+        [
+          'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
+          'migrateLegacyMemoContent',
+          'platform',
+        ],
+        [
+          'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
+          'migrateLegacyWhiteboardContent',
+          'platform',
+        ],
+        [
+          'src/platform-admin/domain/authorization/admin.authorization.resolver.mutations.ts',
+          'refreshAllBodiesOfKnowledge',
+          'platform',
+        ],
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationEnsureAccessToCommunications',
+          'communication-admin-synthetic',
+        ],
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationRemoveOrphanedRoom',
+          'communication-admin-synthetic',
+        ],
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationUpdateRoomState',
+          'communication-admin-synthetic',
+        ],
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationMigrateOrphanedConversations',
+          'communication-admin-synthetic',
+        ],
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationSyncSpaceHierarchy',
+          'communication-admin-synthetic',
+        ],
+        // QA cross-census-1 fix (2026-09-25): workspace#061's forum↔matrix
+        // hierarchy sync landed this mutation on `develop` after the census
+        // was written — same file, same `communicationGlobalAdminPolicy`
+        // (`communication-admin-synthetic`), same literal
+        // PLATFORM_OPERATIONS_ADMIN check as its five siblings above.
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationReconcileForumHierarchy',
+          'communication-admin-synthetic',
+        ],
+      ] as const
+    ).map(
+      ([file, member, tree]): SurfaceRef => ({
+        file,
+        member,
+        kind: 'graphql-mutation',
+        tree: tree as TreeId,
+        gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
+        intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+      })
+    ),
+    // The operational family's read/discovery surfaces: Matrix/comms
+    // housekeeping and AI persona / assistant-capability config; reading an
+    // authorization policy is the diagnostic twin of the authorization RESET
+    // it also owns.
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'virtualAssistant',
+      kind: 'graphql-field',
+      tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
-      legacyReachers: [GA, GS, GLM],
-    })
-  ),
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.fields.ts',
+      member: 'communication',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.communication.fields.ts',
+      member: 'adminCommunicationMembership',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    },
+    {
+      file: 'src/platform-admin/admin/platform.admin.resolver.communication.fields.ts',
+      member: 'adminCommunicationOrphanedUsage',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    },
+    {
+      file: 'src/services/api/lookup/lookup.resolver.fields.ts',
+      member: 'authorizationPolicy',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    },
+    {
+      file: 'src/services/api/lookup/lookup.resolver.fields.ts',
+      member: 'authorizationPrivilegesForUser',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    },
+    // The only setting behind it is `promptGraphEditingEnabled` — assistant-capability config (A11), not platform settings (A10).
+    {
+      file: 'src/domain/community/virtual-contributor/virtual.contributor.resolver.mutations.ts',
+      member: 'updateVirtualContributorPlatformSettings',
+      kind: 'graphql-mutation',
+      tree: 'virtual-contributor',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+    },
+  ],
 
   // ===== A12 — assign/revoke license plans =====
   // Contract's "2" corrected to 5: assign/revoke split into Account+Space
   // variants (checked via GRANT on the licensing-framework tree), plus the
   // baseline-plan mutation (checked via ACCOUNT_LICENSE_MANAGE directly).
   A12: [
-    // `createWingbackAccount` is Wingback-specific (wholly deleted at
-    // Slice B, FR-021/T079) but rides THIS family's own privilege today —
-    // declared so the drift scan's per-file count on this resolver file
-    // matches reality; deleted alongside the rest of Wingback, not
-    // re-gated.
-    {
-      file: 'src/platform-admin/licensing/admin.licensing.resolver.mutations.ts',
-      member: 'createWingbackAccount',
-      kind: 'graphql-mutation',
-      tree: 'account',
-      gate: { requires: AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE },
-      intendedOwners: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-      legacyReachers: [GA, GLM],
-    },
     ...(
       [
         'assignLicensePlanToAccount',
@@ -1206,15 +1179,11 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
         tree: 'licensing-framework',
         gate: { requires: AuthorizationPrivilege.GRANT },
         intendedOwners: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-        legacyReachers: [GA, GLM, GPM],
       })
     ),
-    // QA server-C1-12 (ruling (a), 2026-09-25): CREATE_INNOVATION_HUB was
-    // held ONLY by the legacy manageGlobalRoles rule (GA/GLM/GS) on the
-    // account tree — no 027 role held it, so Slice B would leave nobody able
-    // to create a hub. Platform License Manager owns it (GLM's successor for
-    // spec row 8's "create space/hub/pack/VC"), via its own non-cascading
-    // account rule (`account.service.authorization.ts`).
+    // Platform License Manager owns hub creation (with space, pack and VC
+    // creation), via its own non-cascading account rule
+    // (`account.service.authorization.ts`).
     {
       file: 'src/domain/space/account/account.resolver.mutations.ts',
       member: 'createInnovationHub',
@@ -1222,7 +1191,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'account',
       gate: { requires: AuthorizationPrivilege.CREATE_INNOVATION_HUB },
       intendedOwners: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-      legacyReachers: [GA, GLM, GS],
     },
     {
       file: 'src/domain/space/account/account.resolver.mutations.ts',
@@ -1231,7 +1199,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'account',
       gate: { requires: AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE },
       intendedOwners: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-      legacyReachers: [GA, GLM],
     },
   ],
 
@@ -1242,23 +1209,15 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // synthetic definition policy — the one real permission leak QA found in
   // either PR, since `platform-content-full-access` reaches CREATE there via
   // T036a's cascade. The gate literally checked at each resolver is bare
-  // DELETE/UPDATE/CREATE, not PLATFORM_SETTINGS_ADMIN — one of the two
-  // documented exceptions (alongside A9's three conversion mutations) where
-  // the enforced call site's own privilege is a bare CRUD verb rather than
-  // this feature's dedicated one. corr-server-7/corr-server-10 fix: that bare
-  // CRUD check is now against a resolver-local SYNTHETIC in-memory policy
+  // DELETE/UPDATE/CREATE, not PLATFORM_SETTINGS_ADMIN — the one documented
+  // exception where the enforced call site's own privilege is a bare CRUD
+  // verb rather than this feature's dedicated one. That bare CRUD check is
+  // against a resolver-local SYNTHETIC in-memory policy
   // (`GLOBAL_POLICY_LICENSE_DEFINITION_ADMIN`) granting exactly
-  // {platform-settings-admin, global-admin, global-support,
-  // global-license-manager, global-platform-manager} — NOT
-  // `licensingFramework.authorization`, which inherits the root policy and
-  // would otherwise let `platform-content-full-access` reach these surfaces
-  // via T036a's CRUD cascade, a family SC-004's exception does not cover.
-  // GLOBAL_ADMIN is now an EXPLICIT legacy reacher (it previously reached
-  // A13 only via that same undeclared root cascade). GLOBAL_SUPPORT is too
-  // (corr-server-12 fix): pre-feature, these resolvers checked
-  // `licensingFramework.authorization` directly, which inherits
-  // `platform.authorization` and its `globalSupportPlatformAdmin`
-  // `cascade: true` rule — a reach the census likewise omitted until now.
+  // {platform-settings-admin} — NOT `licensingFramework.authorization`,
+  // which inherits the root policy and would otherwise let
+  // `platform-content-full-access` reach these surfaces via the root rule's
+  // CRUD cascade, a family the content-full-access exception does not cover.
   A13: (
     [
       [
@@ -1300,27 +1259,19 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'licensing-framework',
       gate: { requires: literalGate },
       intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
-      legacyReachers: [GA, GS, GLM, GPM],
     })
   ),
 
   // ===== A14 — change space visibility =====
-  // The one row whose `member` moves between slices (T078 renames it).
+  // T078 renamed it from `updateSpacePlatformSettings` (T083a: B form only).
   A14: [
     {
       file: 'src/domain/space/space/space.resolver.mutations.ts',
-      member: {
-        A: 'updateSpacePlatformSettings',
-        B: 'adminUpdateSpaceVisibility',
-      },
+      member: 'adminUpdateSpaceVisibility',
       kind: 'graphql-mutation',
       tree: 'space',
       gate: { requires: AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE },
       intendedOwners: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-      // T070m finding: `global-license-manager` already holds
-      // ACCOUNT_LICENSE_MANAGE today (account.service.authorization.ts,
-      // pre-dating T037's additive extension) — omitted here originally.
-      legacyReachers: [GA, GLM],
     },
   ],
 
@@ -1337,7 +1288,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           'A15 in-space support is gated by a per-space setting (space.settings.privacy.allowPlatformSupportAsAdmin), not a platform privilege — the same flag legacy global-support keys on.',
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
-      legacyReachers: [GS],
     },
     // Contract's A15 count ("2") pre-dates the discovery that the forum
     // family is TWO mutations, not one ("forum update" was shorthand) —
@@ -1351,7 +1301,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'forum',
       gate: { requires: AuthorizationPrivilege.PLATFORM_FORUM_MANAGE },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
-      legacyReachers: [GA, GS],
     },
     {
       file: 'src/platform/forum-discussion/discussion.resolver.mutations.ts',
@@ -1360,13 +1309,20 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'forum',
       gate: { requires: AuthorizationPrivilege.PLATFORM_FORUM_MANAGE },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
-      legacyReachers: [GA, GS],
+    },
+    // The SECONDARY gate only. An ordinary member creates a discussion through CREATE_DISCUSSION; the RELEASES category additionally requires the forum privilege, which is Support's (A15).
+    {
+      file: 'src/platform/forum/forum.resolver.mutations.ts',
+      member: 'createDiscussion',
+      kind: 'graphql-mutation',
+      tree: 'forum',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_FORUM_MANAGE },
+      intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
     },
     // workspace#060 (forum reorganisation) landed on develop after the
     // census, gating category removal on PLATFORM_ADMIN. Removing a forum
     // category is editorial control of the forum — this family — so it is
-    // re-anchored onto PLATFORM_FORUM_MANAGE. Its pre-feature reacher set
-    // was PLATFORM_ADMIN's {GA, GS, GLM}; the forum rule carries {GA, GS}.
+    // anchored on PLATFORM_FORUM_MANAGE.
     // `createDiscussion` in the same file is a member surface
     // (CREATE_DISCUSSION) whose admin-only-category branch takes the same
     // privilege over the forum policy; it is not a separate A-row surface.
@@ -1377,7 +1333,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_FORUM_MANAGE },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
-      legacyReachers: [GA, GS],
     },
   ],
 
@@ -1405,63 +1360,45 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
             'A9 target resolution — QA server-C1-1 ruling (b′) "mover-only reads": the resource mover holds READ + READ_ABOUT in every space\'s platformRolesAccess so it can resolve the space it moves, but its space READ is NON-cascading (space.service.authorization.ts): the space itself and its About card, never its content.',
         },
       ],
-      // T070m finding: Slice A's legacy root cascade
-      // (`platform.authorization.policy.service.ts`'s god-mode rule) grants
-      // plain READ on the space tree to global-admin, alongside the void
-      // `global-spaces-reader` row — both read across spaces right now, and
-      // the additive rule requires each stay reachable through Slice A.
-      // `global-support` is deliberately ABSENT here (sec-server-3/
-      // corr-server-2 fix): its cross-space READ came ONLY from the root
-      // rule's now-removed GLOBAL_SUPPORT membership — it has no unconditional
-      // READ on the space tree from any other rule (only per-space,
-      // flag-gated privileges via `allowPlatformSupportAsAdmin`). Retired
-      // outright at Slice B (T072/T081), same as every other legacy reacher.
-      legacyReachers: [AuthorizationCredential.GLOBAL_SPACES_READER, GA],
     },
   ],
 
-  // ===== A17 — change an entity's nameID — 2 surfaces, both Slice B =====
+  // ===== A17 — change an entity's nameID — 2 surfaces =====
   // Intent is EMPTY and legitimately so: owned by the entity admin, no
-  // global role reaches it (spec row 2, FR-020). Both surfaces arrive with
-  // T078 — declared here now, deferred, so `reachability.spec.ts` (T070m)
-  // covers them from the moment they exist rather than needing rediscovery.
+  // global role reaches it (spec row 2). The privilege is granted on each entity's OWN policy — the user's
+  // self-management credential, the organization's admins, the VC's account
+  // admin, and (on a rule deliberately separate from the space-admin rule,
+  // which also admits platform roles holding UPDATE) the space's own admins.
+  // None of those is a platform credential, which is why the derived reacher
+  // set stays empty.
   A17: [
     {
-      // Does not exist yet — T078 (Slice B) creates it. Not a real path:
-      // deliberately unresolvable so it can never accidentally match a
-      // real scan hit. `surface.drift.spec.ts` never dereferences a
-      // `deferred` entry's `file` (both drift rules discover hits by
-      // scanning `src/**/*.ts` forward, then look the file up in the
-      // census — they never check a census file for existence).
-      file: '(T078, Slice B — updateActorNameID mutation not yet created)',
+      file: 'src/domain/actor/actor/actor.resolver.mutations.ts',
       member: 'updateActorNameID',
       kind: 'graphql-mutation',
       tree: 'user',
       gate: { requires: AuthorizationPrivilege.UPDATE_NAMEID },
       intendedOwners: [],
-      legacyReachers: [],
-      lifecycle: { deferred: 'B' },
     },
     {
-      file: '(T078, Slice B — content-entity nameID protected section not yet created)',
-      member: 'nameID (protected section of the general content-entity update)',
+      // The protected section of the general `updateSpace` mutation: supplying
+      // `nameID` requires UPDATE_NAMEID IN ADDITION to the ordinary UPDATE the
+      // rest of the input needs.
+      file: 'src/domain/space/space/space.resolver.mutations.ts',
+      member: 'updateSpace (protected nameID section)',
       kind: 'graphql-field',
       tree: 'space',
       gate: { requires: AuthorizationPrivilege.UPDATE_NAMEID },
       intendedOwners: [],
-      legacyReachers: [],
-      lifecycle: { deferred: 'B' },
     },
   ],
 
   // ===== A18 — direct-edit user.email via platform settings =====
-  // Removed as a bug (FR-020), never re-gated in EITHER slice — zero
-  // entries in both. This row's array is intentionally empty; its
-  // `{retired}` marker lives structurally (an absent lifecycle would be
-  // wrong here too, but with no surfaces there is nothing to attach it to —
-  // `reachability.spec.ts`, T070m, is told to skip A18 entirely by its
-  // empty array, matching the `retired` semantics of every other row's
-  // marker).
+  // Removed as a bug, never re-gated — zero entries. This row's array is
+  // intentionally empty; its `{retired}` marker lives structurally (with no
+  // surfaces there is nothing to attach it to — `reachability.spec.ts` skips
+  // A18 entirely by its empty array, matching the `retired` semantics of
+  // every other row's marker).
   A18: [],
 
   // ===== A19 — read the audit trail — 3 gate sites, 2 GraphQL surfaces =====
@@ -1473,7 +1410,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_AUDIT_READ },
       intendedOwners: [AuthorizationCredential.PLATFORM_AUDIT_READER],
-      legacyReachers: [GA, GS, GLM],
     },
     {
       file: 'src/platform-admin/domain/user/email-change/admin.user.email.change.resolver.fields.ts',
@@ -1482,7 +1418,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_AUDIT_READ },
       intendedOwners: [AuthorizationCredential.PLATFORM_AUDIT_READER],
-      legacyReachers: [GA, GS, GLM],
     },
     {
       file: 'src/platform-admin/domain/user/email-change/admin.user.email.change.resolver.fields.ts',
@@ -1491,7 +1426,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_AUDIT_READ },
       intendedOwners: [AuthorizationCredential.PLATFORM_AUDIT_READER],
-      legacyReachers: [GA, GS, GLM],
     },
   ],
 
@@ -1527,7 +1461,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           AuthorizationCredential.PLATFORM_ROLES_ADMIN,
           AuthorizationCredential.PLATFORM_AUDIT_READER,
         ],
-        legacyReachers: [GA, GS, GLM],
       })
     ),
     ...(
@@ -1543,16 +1476,11 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           AuthorizationCredential.PLATFORM_ROLES_ADMIN,
           AuthorizationCredential.PLATFORM_AUDIT_READER,
         ],
-        // sec-server-10 fix: SAME legacy reach as the four field resolvers
-        // above — `PLATFORM_ROLE_HOLDERS_READ`'s grant set
-        // (`privilege.grants.ts`) is a single, tree-independent
-        // `ManagedPrivilege` entry, so `reachers()` derives the identical
-        // {global-admin, global-support, global-license-manager} set here
-        // regardless of which resolver file the gate is checked from. This
-        // pre-existing legacy reach is UNCHANGED by the sec-server-10 fix —
-        // what changed is that a `platform-*` credential argument no longer
-        // ALSO satisfies the blanket `READ_USERS` any registered user holds.
-        legacyReachers: [GA, GS, GLM],
+        // The `PLATFORM_ROLE_HOLDERS_READ` grant set (`privilege.grants.ts`) is
+        // tree-independent, so `reachers()` derives the same set here as for the
+        // four field resolvers above. A `platform-*` credential argument no
+        // longer ALSO satisfies the blanket `READ_USERS` any registered user
+        // holds.
       })
     ),
   ],
@@ -1585,7 +1513,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           AuthorizationCredential.PLATFORM_ROLES_ADMIN,
           AuthorizationCredential.PLATFORM_AUDIT_READER,
         ],
-        legacyReachers: [GA, GS, GLM],
       })
     ),
     ...(
@@ -1607,11 +1534,8 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           AuthorizationCredential.PLATFORM_ROLES_ADMIN,
           AuthorizationCredential.PLATFORM_AUDIT_READER,
         ],
-        // sec-server-10 fix: same reasoning as A20's query entries above —
-        // `reachers()` derives this from the shared `ManagedPrivilege`
-        // grant sets regardless of tree/file, so the legacy reach here must
-        // match the field resolvers' identical privilege pair exactly.
-        legacyReachers: [GA, GS, GLM],
+        // Same derivation as A20's query entries above: `reachers()` reads the
+        // shared, tree-independent grant sets, whichever file checks the gate.
       })
     ),
   ],
@@ -1625,7 +1549,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.SET_SERVICE_PROFILE },
       intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-      legacyReachers: [GA, GS, GLM],
     },
     // sec-server-11 fix: `user.resolver.mutations.ts`'s `updateUser` now
     // gates SET_SERVICE_PROFILE itself, ahead of delegating to
@@ -1640,7 +1563,6 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.SET_SERVICE_PROFILE },
       intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-      legacyReachers: [GA, GS, GLM],
     },
   ],
 };

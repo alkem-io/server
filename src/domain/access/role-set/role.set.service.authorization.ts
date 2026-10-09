@@ -1,7 +1,6 @@
 import {
   CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
   CREDENTIAL_RULE_ROLESET_VIRTUAL_REMOVAL,
-  CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
 } from '@common/constants';
 import {
@@ -148,30 +147,21 @@ export class RoleSetAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdminAddMembers =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN
-      );
-    newRules.push(globalAdminAddMembers);
-
-    const globalAdminAddOrganizations =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.BETA_TESTER,
-        ],
-        'assign-organization-global-admins-beta-testers'
-      );
-    newRules.push(globalAdminAddOrganizations);
-
-    //
+    // 027-platform-role-redesign (T076, Slice B) deleted the two blanket
+    // type-only rules that gave `{global-admin, global-support(, beta-tester)}`
+    // ROLESET_ENTRY_ROLE_ASSIGN / _ASSIGN_ORGANIZATION on every role set. No
+    // target role inherits them, and the role set adds no entry-assign rule of
+    // its own. The resulting model is intended (ruling 2026-10-08,
+    // server#6623), pinned by this file's spec and the community one:
+    // - L0 Space: users enter only by invitation, application or join; nobody
+    //   holds ROLESET_ENTRY_ROLE_ASSIGN, so no direct user add, and no
+    //   cross-account VC add (`assignRoleToVirtualContributor`).
+    // - L1/L2 Space: direct user add stays with subspace/ancestor admins, plus
+    //   Platform Support where the L0 sets `allowPlatformSupportAsAdmin`
+    //   (`CommunityAuthorizationService.extendAuthorizationPolicySubspace`).
+    // - Organizations enter any Space only by invitation: nobody holds
+    //   ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION. Changing the role of one
+    //   already in the role set needs GRANT only.
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,

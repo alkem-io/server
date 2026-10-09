@@ -10,6 +10,20 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IApplication } from '../application';
 import { IInvitation } from '../invitation';
 
+const KNOWN_ROLE_NAMES: ReadonlySet<string> = new Set(Object.values(RoleName));
+
+/**
+ * A cached role list that names a role the API no longer has is a miss. A
+ * migration that deletes a role (027 Slice B dropped `global-admin`) leaves
+ * Redis untouched, and serving the stale name fails `RoleName` serialization
+ * for the whole response; as a miss it is recomputed from credentials and
+ * overwritten.
+ */
+const knownRolesOrMiss = (
+  roles: RoleName[] | undefined
+): RoleName[] | undefined =>
+  roles?.every(role => KNOWN_ROLE_NAMES.has(role)) ? roles : undefined;
+
 @Injectable()
 export class RoleSetCacheService {
   private readonly cache_ttl: number;
@@ -200,7 +214,7 @@ export class RoleSetCacheService {
   ): Promise<RoleName[] | undefined> {
     return this.cacheGet<RoleName[]>(
       this.getAgentRolesCacheKey(actorID, roleSetId)
-    );
+    ).then(knownRolesOrMiss);
   }
 
   /**
@@ -229,7 +243,8 @@ export class RoleSetCacheService {
     const keys = entries.map(e =>
       this.getAgentRolesCacheKey(e.actorID, e.roleSetId)
     );
-    return this.cacheMget<RoleName[]>(keys);
+    const cached = await this.cacheMget<RoleName[]>(keys);
+    return cached.map(knownRolesOrMiss);
   }
 
   /**

@@ -101,7 +101,7 @@ describe('ConversionResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         expect.anything(),
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
         expect.any(String)
       );
       expect(
@@ -135,7 +135,6 @@ describe('ConversionResolverMutations', () => {
         platformResourceAuditService.recordEventForActor
       ).toHaveBeenCalledWith(
         actorContext,
-        expect.any(Array),
         expect.any(Array),
         expect.objectContaining({
           resourceKind: 'space',
@@ -227,7 +226,6 @@ describe('ConversionResolverMutations', () => {
       ).toHaveBeenCalledWith(
         actorContext,
         expect.any(Array),
-        expect.any(Array),
         expect.objectContaining({
           resourceKind: 'space',
           resourceId: 'space-l1',
@@ -293,7 +291,6 @@ describe('ConversionResolverMutations', () => {
         platformResourceAuditService.recordEventForActor
       ).toHaveBeenCalledWith(
         actorContext,
-        expect.any(Array),
         expect.any(Array),
         expect.objectContaining({
           resourceKind: 'space',
@@ -448,7 +445,6 @@ describe('ConversionResolverMutations', () => {
         platformResourceAuditService.recordEventForActor
       ).toHaveBeenCalledWith(
         actorContext,
-        expect.any(Array),
         expect.any(Array),
         expect.objectContaining({
           resourceKind: 'virtual-contributor',

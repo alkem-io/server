@@ -154,7 +154,15 @@ describe('RegistrationResolverMutations', () => {
   });
 
   describe('deleteUser', () => {
-    it('should check DELETE privilege (against the resolver-local legacy-admin policy, NOT user.authorization — spec-server-1 follow-through fix) and delete user', async () => {
+    // 027-platform-role-redesign (T076/T077, Slice B): re-aimed. The
+    // legacy-admin branch — plain DELETE against a hardcoded `[GLOBAL_ADMIN]`
+    // policy — is deleted, so the privilege this asserts is PLATFORM_USERS_ADMIN.
+    // The "NOT user.authorization" half is UNCHANGED and still load-bearing:
+    // FR-004 cascades DELETE platform-wide to `platform-content-full-access`,
+    // and A5 sits outside SC-004's accepted exception (closed at A6/A7), so a
+    // check against the merged `user.authorization` would hand user deletion to
+    // a role spec row 2 explicitly denies it.
+    it('should check PLATFORM_USERS_ADMIN against the resolver-local policy, NOT user.authorization, and delete user', async () => {
       const user = {
         id: 'user-1',
         authorization: { id: 'auth-1' },
@@ -179,19 +187,14 @@ describe('RegistrationResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         expect.anything(),
-        AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         expect.any(String)
       );
-      // NOT `user.authorization` — since the root content rule now cascades
-      // DELETE platform-wide (FR-004), checking the merged, cascaded
-      // `user.authorization` here would let a Content Full Access holder
-      // delete any user account (A5 is outside SC-004's single accepted
-      // exception, closed at A6/A7 only). The legacy-admin branch is pinned
-      // to `legacyGlobalAdminDeleteUserPolicy` instead.
+      // The surviving half of spec-server-1: never against `user.authorization`.
       expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalledWith(
         actorContext,
         user.authorization,
-        AuthorizationPrivilege.DELETE,
+        expect.anything(),
         expect.any(String)
       );
       expect(result).toBe(user);
@@ -426,24 +429,29 @@ describe('RegistrationResolverMutations', () => {
         ) => requested === privilege
       );
 
-    it('audits a deletion performed on the LEGACY global-admin branch (spec-server-27) — the normal Slice A path', async () => {
-      const user = deleteUserAuditSetup('user-1');
+    // 027-platform-role-redesign (T076/T077, Slice B): INVERTED. spec-server-27
+    // found that the audit condition named only the PLATFORM_USERS_ADMIN branch
+    // and so silently skipped the legacy `global-admin` branch — the NORMAL path
+    // for the whole additive slice, leaving the platform's most destructive
+    // action recorded nowhere. That branch is now deleted, which closes the
+    // finding by removal: a bare DELETE holder is no longer an admin path at
+    // all, so it must neither delete nor be audited as having done so.
+    it('a bare DELETE holder is no longer an administrative path — no deletion, no audit row (spec-server-27, closed by removal)', async () => {
+      deleteUserAuditSetup('user-1');
       grantOnly(AuthorizationPrivilege.DELETE);
+      // The fall-through `grantAccessOrFail` is what refuses the call; the
+      // shared setup stubs it to resolve, so make it behave like the real one.
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('forbidden');
+      });
 
-      await resolver.deleteUser(actorContext, { ID: 'user-1' });
+      await expect(
+        resolver.deleteUser(actorContext, { ID: 'user-1' })
+      ).rejects.toBeDefined();
 
       expect(
         platformUserRecordAuditService.recordActionForActor
-      ).toHaveBeenCalledWith(
-        actorContext,
-        expect.any(Array),
-        expect.any(Array),
-        expect.objectContaining({
-          action: 'deleteUser',
-          targetUserId: user.id,
-          outcome: 'identity_deleted',
-        })
-      );
+      ).not.toHaveBeenCalled();
     });
 
     it('audits a deletion performed on the PLATFORM_USERS_ADMIN branch', async () => {
@@ -550,13 +558,11 @@ describe('RegistrationResolverMutations', () => {
     });
   });
 
-  // 027-platform-role-redesign (sec-server-4 fix): wires the REAL
-  // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `platformUsersAdminDeleteUserPolicy` is a genuine, hardcoded
-  // [PLATFORM_USERS_ADMIN]-only policy — NOT `user.authorization`, whose
-  // PLATFORM_USERS_ADMIN grant set additively admits global-support/
-  // global-license-manager/global-platform-manager too (A4's legacy
-  // reachers). None of those three ever held deleteUser pre-feature.
+  // Wires the REAL AuthorizationPolicyService + AuthorizationService so the
+  // constructor's `platformUsersAdminDeleteUserPolicy` is a genuine,
+  // hardcoded [PLATFORM_USERS_ADMIN]-only policy — NOT `user.authorization`.
+  // Asserts that non-owning platform roles are denied deleteUser and the
+  // owning role is allowed.
   describe('deleteUser — platform-users-admin pin, real-engine integration', () => {
     let realResolver: RegistrationResolverMutations;
     let realUserService: Record<string, Mock>;
@@ -603,21 +609,21 @@ describe('RegistrationResolverMutations', () => {
       );
     });
 
-    it('denies a global-support-only actor (never held deleteUser pre-feature)', async () => {
-      const actor = buildActorContext('global-support');
+    it('DENIES a platform-support actor — support is not the user-record family', async () => {
+      const actor = buildActorContext('platform-support');
       await expect(
         realResolver.deleteUser(actor, { ID: 'user-target' })
       ).rejects.toThrow();
     });
 
-    it('denies a global-license-manager-only actor (never held deleteUser pre-feature)', async () => {
-      const actor = buildActorContext('global-license-manager');
+    it('DENIES a platform-license-manager actor — licensing is not the user-record family', async () => {
+      const actor = buildActorContext('platform-license-manager');
       await expect(
         realResolver.deleteUser(actor, { ID: 'user-target' })
       ).rejects.toThrow();
     });
 
-    it('allows a platform-users-admin actor (the new owning role)', async () => {
+    it('allows a platform-users-admin actor (the owning role)', async () => {
       const actor = buildActorContext('platform-users-admin');
       await expect(
         realResolver.deleteUser(actor, { ID: 'user-target' })

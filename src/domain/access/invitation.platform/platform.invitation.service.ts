@@ -23,12 +23,19 @@ import { IPlatformInvitation } from './platform.invitation.interface';
 
 @Injectable()
 export class PlatformInvitationService {
-  private acceptedPlatformRoles: RoleName[] = [
-    RoleName.PLATFORM_BETA_TESTER,
-    RoleName.PLATFORM_VC_CAMPAIGN,
-    // 027: the Feature successor of platform-vc-campaign (Slice A keeps both).
-    RoleName.FEATURE_VC_CAMPAIGN,
-  ];
+  /**
+   * 027-platform-role-redesign (T077, Slice B): a platform invitation could
+   * carry `platform-beta-tester` or `platform-vc-campaign`; both roles are
+   * gone. `feature-beta-tester` is deliberately NOT added here — a Feature
+   * role granted through `assignPlatformRoleToOrganization` / `…ToUser` runs
+   * the six assignment rules and the fail-closed audit write (FR-012), and
+   * routing it through an invitation would bypass both.
+   *
+   * `feature-vc-campaign` is the one exception, carried over from Slice A: it
+   * is the successor of `platform-vc-campaign`, whose invitation path was the
+   * targeting half of the dashboard Virtual Contributor offer (runbook §2b).
+   */
+  private acceptedPlatformRoles: RoleName[] = [RoleName.FEATURE_VC_CAMPAIGN];
 
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,

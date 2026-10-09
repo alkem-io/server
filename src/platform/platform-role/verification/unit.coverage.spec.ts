@@ -87,13 +87,8 @@ describe('unit.coverage.inventory (T070b — path existence)', () => {
             assertRealSpec(spec);
           }
         } else {
-          // {retired: true} (A18) or {deferred: 'B'} (A17) — nothing to
-          // check yet; this row's spec does not exist until the slice that
-          // creates its surface.
-          expect(
-            'retired' in entry ||
-              ('deferred' in entry && entry.deferred === 'B')
-          ).toBe(true);
+          // {retired: true} (A18) — no surface, so no spec to check.
+          expect('retired' in entry).toBe(true);
         }
       });
     }
@@ -105,13 +100,9 @@ describe('unit.coverage.inventory (T070b — path existence)', () => {
       PrivilegeCoverageEntry,
     ][]) {
       it(`${privilege}: declared spec(s) exist and actually mention the privilege (qual-server-10)`, () => {
-        if ('deferred' in entry) {
-          expect(entry.deferred).toBe('B');
-        } else {
-          const token = PRIVILEGE_KEY_BY_VALUE[privilege] ?? privilege;
-          assertRealSpecCovers(entry.ruleSpec, token);
-          assertRealSpecCovers(entry.grantSetSpec, token);
-        }
+        const token = PRIVILEGE_KEY_BY_VALUE[privilege] ?? privilege;
+        assertRealSpecCovers(entry.ruleSpec, token);
+        assertRealSpecCovers(entry.grantSetSpec, token);
       });
     }
   });

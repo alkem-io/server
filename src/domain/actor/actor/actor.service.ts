@@ -3,6 +3,7 @@ import { ActorType } from '@common/enums/actor.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
+  ValidationException,
 } from '@common/exceptions';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import { ActorTypeCacheService } from '@domain/actor/actor-lookup/actor.lookup.service.cache';
@@ -40,6 +41,17 @@ export const getActorType = (actor: IActor): ActorType => {
 
 /** @deprecated Use getActorType instead */
 export const getContributorType = getActorType;
+
+/**
+ * 027-platform-role-redesign (T078, FR-020) — the actor types `updateActorNameID`
+ * accepts. The contract names exactly three; `account` and `virtual-assistant`
+ * carry no public URL path, so they are not renameable.
+ */
+const RENAMEABLE_ACTOR_TYPES: ReadonlySet<ActorType> = new Set([
+  ActorType.USER,
+  ActorType.ORGANIZATION,
+  ActorType.VIRTUAL_CONTRIBUTOR,
+]);
 
 /** @deprecated Use ActorAuthorizationService instead */
 export {
@@ -111,6 +123,65 @@ export class ActorService {
    */
   async saveActor(actor: IActor): Promise<IActor> {
     return await this.actorRepository.save(actor as Actor);
+  }
+
+  /**
+   * 027-platform-role-redesign (T078, FR-020, A17) — the ONE generic rename
+   * mechanism for actors, replacing the per-type `nameID` fields that used to
+   * ride `updateUserPlatformSettings` / `updateOrganizationPlatformSettings`.
+   *
+   * Only user / organization / virtual-contributor are renameable here.
+   * `account` and `virtual-assistant` are deliberately excluded: neither has a
+   * public URL path a rename would repoint, so admitting them would widen the
+   * mechanism past what FR-020 describes.
+   *
+   * Uniqueness is checked WITHIN the actor's own type, mirroring the five
+   * partial unique indexes on `actor.nameID` (`UQ_actor_nameID_user` and
+   * siblings) — a user and an organization may legitimately share a nameID,
+   * and a global uniqueness check here would reject renames the database
+   * accepts.
+   *
+   * Authorization is NOT checked here: the caller checks `UPDATE_NAMEID` on
+   * the actor's own policy. Keeping the check at the resolver is what makes
+   * the census's single A17 gate site true.
+   */
+  async updateNameID(actorID: string, nameID: string): Promise<IActor> {
+    const actor = await this.getActorOrFail(actorID);
+    const actorType = getActorType(actor);
+
+    if (!RENAMEABLE_ACTOR_TYPES.has(actorType)) {
+      throw new ValidationException(
+        'This type of Actor cannot be renamed',
+        LogContext.COMMUNITY,
+        { actorID, actorType }
+      );
+    }
+
+    if (actor.nameID === nameID) {
+      return actor;
+    }
+
+    const existing = await this.actorRepository.findOne({
+      where: { nameID, type: actorType },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ValidationException(
+        'An Actor of this type already uses the requested nameID',
+        LogContext.COMMUNITY,
+        { actorID, actorType }
+      );
+    }
+
+    actor.nameID = nameID;
+    const saved = await this.saveActor(actor);
+
+    // A rename changes how this actor is looked up and how its URL resolves,
+    // so a cached copy carrying the OLD nameID is not merely stale, it points
+    // at a path that no longer exists.
+    await this.invalidateAllActorCaches(actorID);
+
+    return saved;
   }
 
   /**

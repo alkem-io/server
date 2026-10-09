@@ -51,7 +51,7 @@ import { type Mock, vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { SpaceAbout } from '../space.about';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { AdminUpdateSpaceVisibilityInput } from './dto/space.dto.admin.update.visibility';
 import { Space } from './space.entity';
 import { SpaceService } from './space.service';
 
@@ -128,7 +128,7 @@ describe('SpaceService', () => {
     });
   });
 
-  describe('updateSpacePlatformSettings', () => {
+  describe('adminUpdateSpaceVisibility + the protected nameID section (T078)', () => {
     it('should invalidate URL cache when nameID is updated for L0 space', async () => {
       // Arrange
       const spaceId = 'space-1';
@@ -161,10 +161,7 @@ describe('SpaceService', () => {
         },
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
-        spaceID: spaceId,
-        nameID: newNameID,
-      };
+      const updateData = { spaceID: spaceId, nameID: newNameID };
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
@@ -202,20 +199,24 @@ describe('SpaceService', () => {
         .mockResolvedValue(undefined);
 
       // Act
-      await service.updateSpacePlatformSettings(mockSpace, updateData);
+      const renamedFrom = await (service as any).applyProtectedNameIDUpdate(
+        mockSpace,
+        updateData.nameID
+      );
 
-      // Assert
+      // Assert — the rename itself sweeps nothing: the caller (`update()`)
+      // sweeps only AFTER the new nameID is committed, so a concurrent read
+      // cannot repopulate the cache from the pre-rename row.
       expect(mockSpace.nameID).toBe(newNameID);
+      expect(renamedFrom).toBe('old-space-name');
+      expect(revokeUrlCacheSpy).not.toHaveBeenCalled();
+      await service.invalidateUrlCacheForSpaceSubtree(mockSpace.id);
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${spaceId}`); // Main space cache invalidated
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Subspace cache invalidated
       const revokedProfileIds = revokeUrlCacheSpy.mock.calls
         .map(call => call[0])
         .filter((id: string) => id.startsWith('profile-'));
       expect(revokedProfileIds).toHaveLength(2);
-      // The sweep must run against the committed row, not the in-memory one.
-      expect(revokeUrlCacheSpy.mock.invocationCallOrder[0]).toBeGreaterThan(
-        vi.mocked(service.save).mock.invocationCallOrder[0]
-      );
     });
 
     it('should invalidate URL cache when nameID is updated for subspace', async () => {
@@ -272,10 +273,7 @@ describe('SpaceService', () => {
         },
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
-        spaceID: subspaceId,
-        nameID: newNameID,
-      };
+      const updateData = { spaceID: subspaceId, nameID: newNameID };
 
       // Mock the naming service to return empty reserved nameIDs
       const mockNamingService = {
@@ -317,10 +315,16 @@ describe('SpaceService', () => {
         .mockResolvedValue(undefined);
 
       // Act
-      await service.updateSpacePlatformSettings(mockSubspace, updateData);
+      const renamedFrom = await (service as any).applyProtectedNameIDUpdate(
+        mockSubspace,
+        updateData.nameID
+      );
 
-      // Assert
+      // Assert — see the L0 case: the sweep is the caller's, after the commit.
       expect(mockSubspace.nameID).toBe(newNameID);
+      expect(renamedFrom).toBe('old-subspace-name');
+      expect(revokeUrlCacheSpy).not.toHaveBeenCalled();
+      await service.invalidateUrlCacheForSpaceSubtree(mockSubspace.id);
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(`profile-${subspaceId}`); // Main subspace cache invalidated
       expect(revokeUrlCacheSpy).toHaveBeenCalledWith(
         `profile-${childSubspaceId}`
@@ -344,7 +348,7 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.ACTIVE,
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
+      const updateData: AdminUpdateSpaceVisibilityInput = {
         spaceID: spaceId,
         visibility: SpaceVisibility.INACTIVE,
       };
@@ -369,13 +373,13 @@ describe('SpaceService', () => {
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
-      await service.updateSpacePlatformSettings(mockSpace, updateData);
+      await service.adminUpdateSpaceVisibility(mockSpace, updateData);
 
       // Assert
       expect(mockSpace.visibility).toBe(SpaceVisibility.INACTIVE);
     });
 
-    it('should not invalidate URL cache when nameID is not changed', async () => {
+    it('should not invalidate URL cache for a visibility-only update', async () => {
       // Arrange
       const spaceId = 'space-1';
       const nameID = 'same-space-name';
@@ -388,7 +392,7 @@ describe('SpaceService', () => {
         visibility: SpaceVisibility.ACTIVE,
       } as Space;
 
-      const updateData: UpdateSpacePlatformSettingsInput = {
+      const updateData: AdminUpdateSpaceVisibilityInput = {
         spaceID: spaceId,
         visibility: SpaceVisibility.DEMO, // Only changing visibility, not nameID
       };
@@ -414,7 +418,7 @@ describe('SpaceService', () => {
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
 
       // Act
-      await service.updateSpacePlatformSettings(mockSpace, updateData);
+      await service.adminUpdateSpaceVisibility(mockSpace, updateData);
 
       // Assert
       expect(revokeUrlCacheSpy).not.toHaveBeenCalled();
@@ -1669,7 +1673,7 @@ describe('SpaceService', () => {
       } as any;
 
       await expect(
-        service.updateSpacePlatformSettings(mockSpace, {
+        service.adminUpdateSpaceVisibility(mockSpace, {
           spaceID: 'space-1',
           visibility: SpaceVisibility.INACTIVE,
         })
