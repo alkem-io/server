@@ -1,77 +1,60 @@
 import { ValidationException } from '@common/exceptions';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
+import { plainToInstance } from 'class-transformer';
 import { BaseHandler } from './base.handler';
 
-const UUID_A = '11111111-1111-4111-8111-111111111111';
-const UUID_B = '22222222-2222-4222-8222-222222222222';
+const roomID = '11111111-1111-4111-8111-111111111111';
+const media = { externalReference: 'native_media', displayName: 'image.png' };
 
-const reply = (attachments?: string[]): RoomSendMessageReplyInput =>
-  Object.assign(new RoomSendMessageReplyInput(), {
-    roomID: UUID_A,
-    message: 'hello',
-    threadID: 'thread-1',
-    attachments,
-  });
-
-/**
- * `BaseHandler.handle` matches with `types.includes(metatype)` — REFERENCE
- * equality on the constructor — so a SUBCLASS of a listed input is NOT covered
- * by its parent's entry. `RoomSendMessageReplyInput extends
- * RoomSendMessageInput`, so before it was listed in its own right the reply
- * mutation ran NO class-validator rules at all: `attachments` had no size cap,
- * no uniqueness check and no UUID check.
- */
 describe('BaseHandler', () => {
-  let handler: BaseHandler;
-
-  beforeEach(() => {
-    handler = new BaseHandler();
-  });
-
-  describe('RoomSendMessageReplyInput (feature 013 attachments)', () => {
-    it('accepts a well-formed reply with one attachment', async () => {
+  const handler = new BaseHandler();
+  describe.each([
+    RoomSendMessageInput,
+    RoomSendMessageReplyInput,
+  ])('%s reference validation', inputType => {
+    const input = (attachmentUpload: unknown = media) =>
+      plainToInstance(inputType, {
+        roomID,
+        message: '',
+        threadID: '$parent',
+        attachmentUpload,
+      });
+    it('accepts a plain media reference for send and reply', async () => {
+      await expect(handler.handle(input(), inputType)).resolves.toBeNull();
+    });
+    it.each([
+      '',
+      'mxc://matrix.example/media',
+      'a'.repeat(257),
+    ])('rejects an invalid media reference %s', async externalReference => {
       await expect(
-        handler.handle(reply([UUID_A]), RoomSendMessageReplyInput)
+        handler.handle(input({ ...media, externalReference }), inputType)
+      ).rejects.toThrow(ValidationException);
+    });
+    it('validates nested filename length', async () => {
+      await expect(
+        handler.handle(
+          input({ ...media, displayName: 'a'.repeat(513) }),
+          inputType
+        )
+      ).rejects.toThrow(ValidationException);
+    });
+    it('keeps ordinary text messages valid without an attachment', async () => {
+      await expect(
+        handler.handle(
+          plainToInstance(inputType, {
+            roomID,
+            threadID: '$parent',
+            message: 'hello',
+          }),
+          inputType
+        )
       ).resolves.toBeNull();
     });
-
-    it('rejects more than the maximum number of attachments on a REPLY', async () => {
-      await expect(
-        handler.handle(reply([UUID_A, UUID_B]), RoomSendMessageReplyInput)
-      ).rejects.toThrow(ValidationException);
-    });
-
-    it('rejects a non-UUID attachment id on a REPLY', async () => {
-      await expect(
-        handler.handle(reply(['not-a-uuid']), RoomSendMessageReplyInput)
-      ).rejects.toThrow(ValidationException);
-    });
-
-    it('rejects a repeated attachment id on a REPLY', async () => {
-      await expect(
-        handler.handle(reply([UUID_A, UUID_A]), RoomSendMessageReplyInput)
-      ).rejects.toThrow(ValidationException);
-    });
   });
-
-  describe('RoomSendMessageInput', () => {
-    it('still rejects more than the maximum number of attachments', async () => {
-      const input = Object.assign(new RoomSendMessageInput(), {
-        roomID: UUID_A,
-        message: 'hello',
-        attachments: [UUID_A, UUID_B],
-      });
-
-      await expect(handler.handle(input, RoomSendMessageInput)).rejects.toThrow(
-        ValidationException
-      );
-    });
-  });
-
   it('does not validate a type that is not registered', async () => {
     class UnregisteredInput {}
-
     await expect(
       handler.handle(new UnregisteredInput(), UnregisteredInput)
     ).resolves.toBeNull();

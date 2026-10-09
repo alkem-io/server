@@ -92,6 +92,66 @@ jobs:
           path: coverage-ci/content-signing/
           retention-days: 1
 
+  attachment-placement-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      # Candidate from the companion file-service PR; the old release lacks these operations.
+      ATTACHMENT_FILE_SERVICE_CAPABILITY_REF: 4eba13256ca9751bcf9064490defbf68cfe6a226
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.22.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Checkout pinned file-service capability source
+        uses: actions/checkout@v7
+        with:
+          repository: alkem-io/file-service
+          ref: ${{ env.ATTACHMENT_FILE_SERVICE_CAPABILITY_REF }}
+          path: .attachment-placement-file-service
+
+      - name: Build capability image with resolved source provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          revision="$(git -C .attachment-placement-file-service rev-parse HEAD)"
+          image="attachment-placement-file-service:${revision}"
+          docker build --label org.opencontainers.image.source=https://github.com/alkem-io/file-service --label "org.opencontainers.image.revision=${revision}" --tag "$image" .attachment-placement-file-service
+          echo "ATTACHMENT_PLACEMENT_FILE_SERVICE_IMAGE=$image" >> "$GITHUB_ENV"
+          echo "ATTACHMENT_PLACEMENT_FILE_SERVICE_SOURCE=https://github.com/alkem-io/file-service/commit/$revision" >> "$GITHUB_ENV"
+
+      - name: Run attachment placement and policy real-service gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export ATTACHMENT_PLACEMENT_REPORT_ROOT="$RUNNER_TEMP/attachment-placement-reports"
+          mkdir -p "$ATTACHMENT_PLACEMENT_REPORT_ROOT"
+          .scripts/attachment-placement/test-real-services.sh 2>&1 | tee "$ATTACHMENT_PLACEMENT_REPORT_ROOT/run.log"
+
+      - name: Upload attachment placement fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: attachment-placement-evidence
+          path: ${{ runner.temp }}/attachment-placement-reports/
+          retention-days: 1
+
   migration-whiteboard-default-tagsets-postgres:
     runs-on: ubuntu-latest
     permissions:

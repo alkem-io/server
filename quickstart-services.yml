@@ -22,7 +22,7 @@ services:
     ports:
       - 8888:8080
       - 8088:8088
-      - 8280:8280
+      - 127.0.0.1:8280:8280
       - 3000:80
       - 5432:5432
       - 8008:8008
@@ -471,7 +471,9 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter:v0.8.21
+    # The 082 upload capability requires a reviewed published image; the default
+    # remains the actual released baseline until artifact gate A is satisfied.
+    image: ${MATRIX_ADAPTER_IMAGE:-alkemio/matrix-adapter:v0.8.21}
     depends_on:
       - rabbitmq
     environment:
@@ -488,7 +490,6 @@ services:
       - LOGGING_CONSOLE_ENABLED
       - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
-      - FILE_SERVICE_URL=http://file-service:4003
       - WAIT_HOSTS=host.docker.internal:3000
       - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
@@ -503,8 +504,6 @@ services:
     restart: always
     networks:
       - alkemio_dev_net
-    ports:
-      - 8280
     entrypoint: ["/wait"]
 
   redis:
@@ -628,7 +627,9 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.3.2
+    # Select the published 082 reference-serving/conditional-storage capability only
+    # after review; do not infer a future release tag from this feature branch.
+    image: ${FILE_SERVICE_IMAGE:-alkemio/file-service:v0.3.2}
     depends_on:
       postgres:
         condition: service_healthy

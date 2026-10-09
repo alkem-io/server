@@ -1,17 +1,13 @@
 import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
-import { AuthorizationPrivilege } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
-import { ActorContext } from '@core/actor-context/actor.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IDocument } from '@domain/storage/document/document.interface';
-import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { createMock } from '@golevelup/ts-vitest';
 import { ConfigService } from '@nestjs/config';
+import { FileServiceAdapterException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
-import { IMessage } from '../message/message.interface';
 import { IRoom } from '../room/room.interface';
 import {
   MessageAttachmentService,
@@ -21,22 +17,12 @@ import {
 const providerID = '11111111-1111-4111-8111-111111111111';
 const documentID = '22222222-2222-4222-8222-222222222222';
 const room = { id: 'room', type: RoomType.CONVERSATION_GROUP } as IRoom;
-const actor = { actorID: 'bob' } as ActorContext;
 const raw: ReceivedAttachment = {
   media_id: 'media',
   display_name: 'from-element.png',
   mime_type: 'image/png',
   size: 10,
 };
-const message = (attachment = raw): IMessage => ({
-  id: 'event',
-  message: '',
-  sender: 'alice',
-  timestamp: 1,
-  reactions: [],
-  roomID: room.id,
-  rawAttachments: [attachment],
-});
 const makeDocument = (values: Partial<IDocument> = {}): IDocument =>
   ({
     id: documentID,
@@ -47,20 +33,18 @@ const makeDocument = (values: Partial<IDocument> = {}): IDocument =>
     externalReference: 'media',
     storageBucket: { id: 'conversation' },
     authorization: { id: 'policy' },
+    tagset: { id: 'tags' },
     createdBy: 'alice',
     temporaryLocation: false,
     ...values,
   }) as IDocument;
 
 describe('MessageAttachmentService', () => {
-  const documents = createMock<DocumentService>();
   const storage = createMock<StorageBucketService>();
-  const auth = createMock<AuthorizationService>();
   const aggregators = createMock<StorageAggregatorResolverService>();
   const rooms = createMock<RoomResolverService>();
-  const documentRepository = { find: vi.fn() };
+  const documentRepository = { find: vi.fn(), findOne: vi.fn() };
   const conversationRepository = { findOne: vi.fn() };
-  const roomRepository = { findOne: vi.fn() };
   const bucket = {
     id: 'conversation',
     authorization: { id: 'bucket-policy' },
@@ -79,118 +63,124 @@ describe('MessageAttachmentService', () => {
       authorization: undefined,
     });
     documentRepository.find.mockResolvedValue([provider]);
-    roomRepository.findOne.mockResolvedValue(room);
     conversationRepository.findOne.mockResolvedValue({
       storageAggregator: { directStorage: bucket },
     });
-    documents.getDocumentOrFail.mockResolvedValue(makeDocument());
-    documents.getPubliclyAccessibleURL.mockReturnValue(
-      'https://alkemio.test/api/private/rest/storage/document'
-    );
-    auth.isAccessGranted.mockReturnValue(true);
     storage.copyDocumentToBucket.mockResolvedValue(makeDocument());
+    storage.moveDocumentToBucket.mockResolvedValue(
+      makeDocument({ id: providerID })
+    );
     service = new MessageAttachmentService(
       { get: () => 'matrix' } as unknown as ConfigService<AlkemioConfig, true>,
-      documents,
       storage,
-      auth,
       aggregators,
       rooms,
       conversationRepository as any,
-      roomRepository as any,
       documentRepository as any,
       { warn: vi.fn(), error: vi.fn(), log: vi.fn() }
     );
   });
 
-  it('allows an authorized member to send an existing durable document', async () => {
-    const refs = await service.resolveOutboundAttachments(room, actor, [
-      documentID,
-    ]);
-    expect(refs).toEqual([
-      {
-        documentId: documentID,
-        displayName: 'stored.png',
-        mimeType: 'image/png',
-        size: 10,
-      },
-    ]);
-    expect(auth.grantAccessOrFail).toHaveBeenCalledWith(
-      actor,
-      expect.anything(),
-      AuthorizationPrivilege.READ,
-      expect.any(String)
-    );
-  });
-
-  it.each([
-    { storageBucket: { id: 'other' } },
-    { size: 51 },
-    { mimeType: 'application/x-executable' },
-  ])('rejects an out-of-scope or disallowed outbound document: %j', async overrides => {
-    documents.getDocumentOrFail.mockResolvedValue(
-      makeDocument(overrides as any)
-    );
-    await expect(
-      service.resolveOutboundAttachments(room, actor, [documentID])
-    ).rejects.toThrow();
-  });
-
-  it('rejects an outbound batch before loading documents', async () => {
-    await expect(
-      service.resolveOutboundAttachments(room, actor, [documentID, providerID])
-    ).rejects.toThrow('one attachment');
-    expect(documents.getDocumentOrFail).not.toHaveBeenCalled();
-  });
-
-  it('copies Element media before any read and leaves the provider row unchanged', async () => {
-    const before = structuredClone(provider);
-    expect(await service.prepareInboundAttachments(room, 'alice', [raw])).toBe(
-      'conversation'
-    );
-    expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
+  it('moves staging media with its identity and completes before publication', async () => {
+    provider.createdDate = new Date('2026-09-01T00:00:00.000Z');
+    await service.prepareInboundAttachments(room, 'alice', [raw]);
+    expect(storage.moveDocumentToBucket).toHaveBeenCalledWith(
       'conversation',
       provider,
       'alice',
-      false,
-      {
-        externalReference: 'media',
-        displayName: 'from-element.png',
-      }
+      'matrix',
+      { displayName: raw.display_name }
     );
-    expect(provider).toEqual(before);
-  });
-
-  it('reuses a web hint only for the same bucket and content hash', async () => {
-    documentRepository.find.mockResolvedValue([
-      provider,
-      makeDocument({ externalReference: undefined }),
-    ]);
-    await service.prepareInboundAttachments(room, 'bob', [
-      { ...raw, document_id: documentID },
-    ]);
     expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
   });
-
   it.each([
-    { externalID: 'different-bytes' },
-    { storageBucket: { id: 'other-conversation' } },
-    { authorization: undefined },
-  ])('ignores an invalid hint and copies the actual media: %j', async overrides => {
-    documentRepository.find.mockResolvedValue([
-      provider,
-      makeDocument({ externalReference: undefined, ...overrides } as any),
-    ]);
-    await service.prepareInboundAttachments(room, 'bob', [
-      { ...raw, document_id: documentID },
-    ]);
+    409,
+    undefined,
+  ])('re-resolves an already committed target after MOVE error %s', async status => {
+    provider.createdDate = new Date('2026-09-01T00:00:00.000Z');
+    storage.moveDocumentToBucket.mockRejectedValue(
+      new FileServiceAdapterException(
+        'uncertain/conflict',
+        'moveDocument',
+        status
+      )
+    );
+    const target = makeDocument({ id: providerID });
+    documentRepository.findOne.mockResolvedValue(target);
+    await expect(
+      service.prepareInboundAttachments(room, 'alice', [raw])
+    ).resolves.toBe('conversation');
+    expect(storage.moveDocumentToBucket).toHaveBeenCalledTimes(1);
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
+    expect(documentRepository.findOne).toHaveBeenCalledTimes(1);
+    expect(documentRepository.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          storageBucket: { id: 'conversation' },
+          externalReference: 'media',
+        },
+      })
+    );
+  });
+  it('copies the winner in another bucket after one source conflict without a second MOVE', async () => {
+    provider.createdDate = new Date('2026-09-01T00:00:00.000Z');
+    storage.moveDocumentToBucket.mockRejectedValue(
+      new FileServiceAdapterException('conflict', 'moveDocument', 409)
+    );
+    const winner = makeDocument({
+      id: providerID,
+      storageBucket: { id: 'first' } as any,
+    });
+    documentRepository.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(winner);
+    await expect(
+      service.prepareInboundAttachments(room, 'bob', [raw])
+    ).resolves.toBe('conversation');
+    expect(storage.moveDocumentToBucket).toHaveBeenCalledTimes(1);
     expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
       'conversation',
-      provider,
+      winner,
       'bob',
       false,
-      expect.anything()
+      expect.objectContaining({ externalReference: 'media' })
     );
+    expect(documentRepository.findOne).toHaveBeenCalledTimes(2);
+  });
+
+  it('copies an already placed source without stealing its original bucket', async () => {
+    documentRepository.find.mockResolvedValue([]);
+    const source = makeDocument({
+      id: providerID,
+      storageBucket: { id: 'first' } as any,
+    });
+    documentRepository.findOne.mockResolvedValue(source);
+    await service.prepareInboundAttachments(room, 'bob', [raw]);
+    expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
+      'conversation',
+      source,
+      'bob',
+      false,
+      expect.objectContaining({ externalReference: 'media' })
+    );
+    expect(storage.moveDocumentToBucket).not.toHaveBeenCalled();
+  });
+  it('reuses a complete canonical association without needing a staging row', async () => {
+    documentRepository.find.mockResolvedValue([makeDocument()]);
+    await service.prepareInboundAttachments(room, 'bob', [raw]);
+    expect(documentRepository.findOne).not.toHaveBeenCalled();
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
+    expect(storage.moveDocumentToBucket).not.toHaveBeenCalled();
+  });
+  it('diagnoses an incomplete destination instead of looping on its unique reference', async () => {
+    documentRepository.find.mockResolvedValue([
+      provider,
+      makeDocument({ tagset: undefined }),
+    ]);
+    await expect(
+      service.prepareInboundAttachments(room, 'bob', [raw])
+    ).rejects.toThrow('Incomplete attachment association');
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
   });
 
   it('a repeated event reuses the scoped conversation copy', async () => {
@@ -203,11 +193,12 @@ describe('MessageAttachmentService', () => {
     conversationRepository.findOne.mockResolvedValue({
       storageAggregator: { directStorage: { ...bucket, id: 'other' } },
     });
-    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
+    documentRepository.find.mockResolvedValue([makeDocument()]);
+    documentRepository.findOne.mockResolvedValue(makeDocument());
     await service.prepareInboundAttachments(room, 'bob', [raw]);
     expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
       'other',
-      provider,
+      expect.objectContaining({ storageBucket: { id: 'conversation' } }),
       'bob',
       false,
       expect.anything()
@@ -215,12 +206,12 @@ describe('MessageAttachmentService', () => {
   });
 
   it('propagates a placement failure to the receipt boundary', async () => {
-    storage.copyDocumentToBucket.mockRejectedValue(
-      new Error('copy unavailable')
+    storage.moveDocumentToBucket.mockRejectedValue(
+      new Error('move unavailable')
     );
     await expect(
       service.prepareInboundAttachments(room, 'alice', [raw])
-    ).rejects.toThrow('copy unavailable');
+    ).rejects.toThrow('move unavailable');
   });
 
   it('leaves unsupported or absent provider media unavailable without copying', async () => {
@@ -229,60 +220,6 @@ describe('MessageAttachmentService', () => {
     documentRepository.find.mockResolvedValue([]);
     await service.prepareInboundAttachments(room, 'alice', [raw]);
     expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
-  });
-
-  it('reads use the event name and authorized document metadata, without writes', async () => {
-    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
-    const result = await service.resolveMessageAttachments(
-      message({ ...raw, width: 24, height: 24 }),
-      actor
-    );
-    expect(result).toEqual([
-      {
-        id: documentID,
-        url: expect.any(String),
-        displayName: 'from-element.png',
-        mimeType: 'image/png',
-        size: 10,
-        width: 24,
-        height: 24,
-      },
-    ]);
-    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
-  });
-
-  it('denied and missing documents expose only the event filename', async () => {
-    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
-    auth.isAccessGranted.mockReturnValue(false);
-    expect(await service.resolveMessageAttachments(message(), actor)).toEqual([
-      { displayName: raw.display_name },
-    ]);
-    documentRepository.find.mockResolvedValue([]);
-    expect(await service.resolveMessageAttachments(message(), actor)).toEqual([
-      { displayName: raw.display_name },
-    ]);
-    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
-  });
-
-  it('batch history performs one document lookup across all field resolutions', async () => {
-    documentRepository.find.mockResolvedValue([provider, makeDocument()]);
-    const messages = [
-      message(),
-      message({
-        ...raw,
-        document_id: documentID,
-        display_name: 'reshared.png',
-      }),
-    ];
-    await service.stampAttachmentBucket(room, messages);
-    const results = await Promise.all(
-      messages.map(item => service.resolveMessageAttachments(item, actor))
-    );
-    expect(documentRepository.find).toHaveBeenCalledTimes(1);
-    expect(results.map(items => items[0].displayName)).toEqual([
-      'from-element.png',
-      'reshared.png',
-    ]);
   });
 
   it('comment media uses the existing callout bucket', async () => {
@@ -295,11 +232,11 @@ describe('MessageAttachmentService', () => {
       'alice',
       [raw]
     );
-    expect(storage.copyDocumentToBucket).toHaveBeenCalledWith(
+    expect(storage.moveDocumentToBucket).toHaveBeenCalledWith(
       'conversation',
       provider,
       'alice',
-      false,
+      'matrix',
       expect.anything()
     );
   });

@@ -325,13 +325,12 @@ describe('MessageInboxService', () => {
     // has to be carried over from the original message — otherwise
     // `Message.attachments` resolves to [] and editing a message makes its
     // media vanish for every live subscriber.
-    it('carries the attachment resolution fields over from the original message', async () => {
+    it('carries native attachment metadata over from the original message', async () => {
       const originalMessage = {
         id: 'orig-msg-1',
         timestamp: 999,
         reactions: [],
         rawAttachments: [{ media_id: 'media-1' }],
-        storageBucketId: 'bucket-1',
         roomID: 'room-1',
       };
       const room = makeRoom();
@@ -356,7 +355,6 @@ describe('MessageInboxService', () => {
         MutationType.UPDATE,
         expect.objectContaining({
           rawAttachments: [{ media_id: 'media-1' }],
-          storageBucketId: 'bucket-1',
           roomID: 'room-1',
         })
       );

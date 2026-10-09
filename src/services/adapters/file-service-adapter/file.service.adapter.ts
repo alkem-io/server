@@ -3,6 +3,7 @@ import {
   HttpClientBase,
   type HttpClientBaseConfig,
 } from '@common/http/http.client.base';
+import { classifyError, isRetriable } from '@common/http/retry.policy';
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -36,6 +37,13 @@ const FILE_PATH_PREFIX = '/internal/file';
 // indistinguishable in the bucket.
 const SNAPSHOT_FILENAME = 'snapshot.ybin';
 const SNAPSHOT_DISPLAY_NAME = 'collaboration-snapshot';
+
+export interface ReferenceContentMetadata {
+  mimeType: string;
+  size: number;
+  width?: number;
+  height?: number;
+}
 
 @Injectable()
 export class FileServiceAdapter extends HttpClientBase {
@@ -358,13 +366,20 @@ export class FileServiceAdapter extends HttpClientBase {
    * Returns `authorizationId` and `tagsetId` so the server can clean up the
    * corresponding auth policy and tagset rows (both server-owned).
    */
-  async deleteDocument(documentId: string): Promise<DeleteDocumentResult> {
+  async deleteDocument(
+    documentId: string,
+    expectedStorageBucketId?: string
+  ): Promise<DeleteDocumentResult> {
     this.checkEnabledAndCircuit('deleteDocument');
-
+    const path = this.filePath(documentId);
+    const query =
+      expectedStorageBucketId === undefined
+        ? ''
+        : `?${new URLSearchParams({ expectedStorageBucketId })}`;
     return this.sendRequest<DeleteDocumentResult>(
       'deleteDocument',
       'delete',
-      this.filePath(documentId)
+      path + query
     );
   }
 
@@ -385,22 +400,78 @@ export class FileServiceAdapter extends HttpClientBase {
       | 'externalReference'
       | 'temporaryLocation'
       | 'displayName'
+      | 'expectedStorageBucketId'
+      | 'tagsetId'
     >
   ): Promise<UpdateDocumentResult> {
-    // DELEGATE to updateDocument: identical endpoint/verb/body/return type, so
-    // there is ONE PATCH implementation. Re-home callers keep the narrower typed
-    // surface via this signature; only the shared transport differs (the
-    // operation is logged/circuit-accounted as `updateDocument`).
-    return this.updateDocument(documentId, patch);
+    if (patch.expectedStorageBucketId === undefined) {
+      return this.updateDocument(documentId, patch);
+    }
+    // A conditional MOVE can commit and lose its response. Replaying it may
+    // then return 409; that must never be mistaken for an unused policy/tagset.
+    this.checkEnabledAndCircuit('moveDocument');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.request<UpdateDocumentResult>({
+          method: 'patch',
+          url: `${this.baseUrl}${this.filePath(documentId)}`,
+          data: patch,
+          timeout: this.requestTimeout,
+          maxRedirects: 0,
+        })
+      );
+      this.circuitBreaker.onSuccess();
+      return response.data;
+    } catch (error) {
+      if (isRetriable(classifyError(error), 'patch')) {
+        this.circuitBreaker.onFailure();
+      }
+      throw this.handleError('moveDocument', error, { documentId });
+    }
+  }
+
+  async getReferenceMetadata(
+    reference: string,
+    signal?: AbortSignal
+  ): Promise<ReferenceContentMetadata | null> {
+    this.checkEnabledAndCircuit('getReferenceMetadata');
+    const query = new URLSearchParams({ ref: reference });
+    try {
+      const response = await firstValueFrom(
+        this.httpService.head(
+          `${this.baseUrl}${FILE_PATH_PREFIX}/by-reference/content?${query}`,
+          { timeout: this.requestTimeout, signal, maxRedirects: 0 }
+        )
+      );
+      const length = String(response.headers['content-length'] ?? '');
+      const mimeType = String(response.headers['content-type'] ?? '');
+      const size = Number(length);
+      if (!/^\d+$/.test(length) || !Number.isSafeInteger(size) || !mimeType)
+        throw new Error('Invalid reference metadata response');
+      this.circuitBreaker.onSuccess();
+      const width = Number(response.headers['x-alkemio-image-width']);
+      const height = Number(response.headers['x-alkemio-image-height']);
+      return {
+        mimeType,
+        size,
+        ...(Number.isInteger(width) && width > 0 ? { width } : {}),
+        ...(Number.isInteger(height) && height > 0 ? { height } : {}),
+      };
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) return null;
+      if (isRetriable(classifyError(error), 'get'))
+        this.circuitBreaker.onFailure();
+      throw this.handleError('getReferenceMetadata', error);
+    }
   }
 
   /**
    * Resolve a document by its opaque `externalReference` (feature 013).
    *
-   * - `bucketId` omitted → global lookup (provider `fetch` form): returns any
+   * - `bucketId` omitted → global metadata lookup: returns any
    *   document whose `externalReference = ref` (all share one blob). Used to
    *   decide MOVE vs COPY during re-home.
-   * - `bucketId` present → bucket-scoped lookup (read resolution): the document
+   * - `bucketId` present → bucket-scoped placement lookup: the document
    *   in that bucket carrying the reference.
    *
    * Returns `null` on 404 (no match) rather than throwing.

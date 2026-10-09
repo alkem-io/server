@@ -1,5 +1,6 @@
 import { RoomType } from '@common/enums/room.type';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { UUID } from '@domain/common/scalars';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { VcInteractionsByThread } from '../vc-interaction/vc.interaction.entity';
 import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
@@ -28,6 +29,12 @@ export abstract class IRoom extends IAuthorizable {
       'The avatar URL of the Room (mxc:// or https://). Fetched from Matrix.',
   })
   avatarUrl?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description: 'The owning bucket for reference-based attachments.',
+  })
+  attachmentBucketId?: string;
 
   // Internal storage (JSON column)
   vcInteractionsByThread!: VcInteractionsByThread;

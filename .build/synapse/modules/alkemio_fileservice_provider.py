@@ -1,10 +1,10 @@
 # Copyright 2026 Alkemio Foundation
 # SPDX-License-Identifier: EUPL-1.2
 
-"""Store local Matrix originals in file-service, with stable matrix_media rows.
+"""Stage local Matrix originals in file-service and retrieve them by reference.
 
-Synapse owns media serving. Conversation documents share the stored bytes without
-moving provider rows. This canonical module supplies generated deployment copies.
+Synapse owns media serving. References remain retrievable after bucket placement.
+This canonical module supplies generated deployment copies.
 """
 
 import math
@@ -14,9 +14,11 @@ from urllib.parse import quote
 
 import treq
 from synapse.api.errors import HttpResponseException
+from synapse.http.client import read_body_with_max_size
 from synapse.logging.context import make_deferred_yieldable
 from synapse.media.media_storage import FileResponder
 from synapse.media.storage_provider import StorageProvider
+from synapse.util.async_helpers import timeout_deferred
 
 
 class FileServiceStorageProvider(StorageProvider):
@@ -87,7 +89,7 @@ class FileServiceStorageProvider(StorageProvider):
         try:
             document = await self.http.get_json(
                 self.base_url + "/internal/file/by-reference",
-                args={"ref": file_info.file_id, "bucketId": self.bucket_id},
+                args={"ref": file_info.file_id},
             )
         except HttpResponseException as error:
             if error.code == 404:
@@ -98,11 +100,20 @@ class FileServiceStorageProvider(StorageProvider):
         spool = tempfile.TemporaryFile()
         try:
             document_id = quote(document["id"], safe="")
-            await self.http.get_file(
-                f"{self.base_url}/internal/file/{document_id}/content",
-                spool,
-                max_size=self.max_size,
+            # get_file maps every upstream HTTP failure to 502, hiding a
+            # deletion between reference lookup and this content request.
+            response = await self.http.request(
+                "GET", f"{self.base_url}/internal/file/{document_id}/content"
             )
+            if response.code == 404:
+                spool.close()
+                return None
+            if response.code > 299:
+                raise HttpResponseException(response.code, "Content download failed", b"")
+            await make_deferred_yieldable(timeout_deferred(
+                read_body_with_max_size(response, spool, self.max_size),
+                30, self.reactor,
+            ))
             spool.seek(0)
             return FileResponder(self.hs, spool)
         except BaseException:
