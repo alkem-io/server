@@ -6,7 +6,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { Activity } from './activity.entity';
 import { ActivityService } from './activity.service';
@@ -270,6 +270,19 @@ describe('ActivityService', () => {
       expect(qb.andWhere).toHaveBeenCalled();
     });
 
+    it('should add a negated triggeredBy predicate on the builder handed to the paginator when excludeUserID is set', async () => {
+      const qb = createDeepQB();
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      await service.getPaginatedActivity(['collab-1'], {
+        excludeUserID: 'user-1',
+      });
+
+      expect(qb.andWhere).toHaveBeenCalledWith({
+        triggeredBy: Not('user-1'),
+      });
+    });
+
     it('should build query without optional filters', async () => {
       const qb = createDeepQB();
       activityRepository.createQueryBuilder!.mockReturnValue(qb);
@@ -328,6 +341,32 @@ describe('ActivityService', () => {
 
       const queryParams = entityManager.connection.query.mock.calls[0][1];
       expect(queryParams).toContain('user-1');
+    });
+
+    it('should include a negated triggeredBy condition with an aligned placeholder when excludeUserID provided', async () => {
+      entityManager.connection = {
+        query: vi.fn().mockResolvedValue([]),
+      };
+      activityRepository.find!.mockResolvedValue([]);
+
+      await service.getGroupedActivity(['c1'], {
+        types: [ActivityEventType.CALLOUT_PUBLISHED],
+        userID: 'user-1',
+        excludeUserID: 'user-2',
+      });
+
+      const [queryStr, queryParams] =
+        entityManager.connection.query.mock.calls[0];
+      // $1 visibility, $2 collaborationID, $3 type, $4 triggeredBy =, $5 triggeredBy !=
+      expect(queryStr).toContain('activity."triggeredBy" = $4');
+      expect(queryStr).toContain('activity."triggeredBy" != $5');
+      expect(queryParams).toEqual([
+        true,
+        'c1',
+        ActivityEventType.CALLOUT_PUBLISHED,
+        'user-1',
+        'user-2',
+      ]);
     });
 
     it('should apply limit when specified', async () => {

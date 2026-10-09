@@ -25,6 +25,7 @@ import { EntityManager, In } from 'typeorm';
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
   myActivity?: boolean;
+  excludeMyActivity?: boolean;
   spaceIds?: Array<string>;
   roles?: Array<ActivityFeedRoles>;
   pagination?: PaginationArgs;
@@ -55,6 +56,7 @@ export class ActivityFeedService {
     const {
       types = [],
       myActivity = false,
+      excludeMyActivity = false,
       pagination: paginationArgs = {},
       excludeTypes,
       ...qualifyingSpacesOptions
@@ -73,6 +75,7 @@ export class ActivityFeedService {
     return this.getPaginatedActivity(collaborationIds, {
       types,
       userID: myActivity ? actorContext.actorID : undefined,
+      excludeUserID: excludeMyActivity ? actorContext.actorID : undefined,
       visibility: true,
       paginationArgs,
       sort: 'DESC', // the most recent first
@@ -87,6 +90,7 @@ export class ActivityFeedService {
     const {
       types = [],
       myActivity = false,
+      excludeMyActivity = false,
       limit,
       ...qualifyingSpacesOptions
     } = filters ?? {};
@@ -104,6 +108,7 @@ export class ActivityFeedService {
     return this.getGroupedActivity(collaborationIds, {
       types,
       userID: myActivity ? actorContext.actorID : undefined,
+      excludeUserID: excludeMyActivity ? actorContext.actorID : undefined,
       visibility: true,
       limit: limit ? limit : undefined,
       sort: 'DESC', // the most recent first
@@ -171,6 +176,7 @@ export class ActivityFeedService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      excludeUserID?: string;
       sort?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
       excludeTypes?: ActivityEventType[];
@@ -205,6 +211,7 @@ export class ActivityFeedService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      excludeUserID?: string;
       sort?: 'ASC' | 'DESC';
       limit?: number;
     }
