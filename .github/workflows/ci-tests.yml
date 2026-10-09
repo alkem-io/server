@@ -101,7 +101,6 @@ jobs:
       NODE_OPTIONS: "--max-old-space-size=4096"
       # Candidate from the companion file-service PR; the old release lacks these operations.
       ATTACHMENT_FILE_SERVICE_CAPABILITY_REF: 4eba13256ca9751bcf9064490defbf68cfe6a226
-      ATTACHMENT_PLACEMENT_REPORT_ROOT: ${{ runner.temp }}/attachment-placement-reports
     steps:
       - uses: actions/checkout@v7
 
@@ -141,6 +140,8 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
+          export ATTACHMENT_PLACEMENT_REPORT_ROOT="$RUNNER_TEMP/attachment-placement-reports"
+          mkdir -p "$ATTACHMENT_PLACEMENT_REPORT_ROOT"
           .scripts/attachment-placement/test-real-services.sh 2>&1 | tee "$ATTACHMENT_PLACEMENT_REPORT_ROOT/run.log"
 
       - name: Upload attachment placement fixture evidence
