@@ -393,15 +393,23 @@ describe('ActivityService', () => {
       expect(queryStr).toContain('ASC');
     });
 
-    it('should handle empty collaborationIDs', async () => {
+    // An empty collaboration scope means the actor may read NO collaboration,
+    // so the only correct answer is no activity. The datastore is deliberately
+    // primed to return rows here: if the scope were dropped from the raw SQL
+    // instead of short-circuiting, those rows would surface as platform-wide
+    // activity and this test would go red on the returned value, not on the
+    // shape of the generated query.
+    it('should return no activity without querying when the collaboration scope is empty', async () => {
       entityManager.connection = {
-        query: vi.fn().mockResolvedValue([]),
+        query: vi.fn().mockResolvedValue([{ latest: '1' }]),
       };
-      activityRepository.find!.mockResolvedValue([]);
+      activityRepository.find!.mockResolvedValue([{ id: 'a1' }] as any);
 
-      await service.getGroupedActivity([]);
+      const result = await service.getGroupedActivity([]);
 
-      expect(entityManager.connection.query).toHaveBeenCalled();
+      expect(result).toEqual([]);
+      expect(entityManager.connection.query).not.toHaveBeenCalled();
+      expect(activityRepository.find).not.toHaveBeenCalled();
     });
   });
 
