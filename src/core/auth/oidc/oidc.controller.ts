@@ -463,6 +463,26 @@ export class OidcController {
       LogContext.AUTH
     );
 
+    if (appMode) {
+      // FR-005 — establish NOTHING in this jar. The session belongs to the
+      // app's WebView, which cannot see the auth browser's cookies.
+      //
+      // FR-007 — clear the Kratos session cookie with the full
+      // {name, domain, path} triple. server#6315: a Set-Cookie that mismatches
+      // any one of the three does not fail, it stores a SECOND cookie and
+      // leaves the original alive — which is how a session survived sign-out
+      // in every environment that configures a domain.
+      //
+      // SEC-082-SRV-07 — placed HERE, at the app-mode decision, not at the
+      // success exit. Every `rejectCallback` below 302s to the app scheme
+      // without touching cookies, so a clear at the success exit alone left
+      // the jar holding a live 720 h Kratos session whenever the flow failed
+      // after the user had authenticated — e.g. a transient Redis outage on
+      // `handoff_store_failed`. One owner, one placement, every exit equal.
+      this.clearKratosSessionCookie(res);
+      this.clearPreAuthCookie(res);
+    }
+
     if (typeof queryState !== 'string' || queryState !== preAuth.state) {
       return rejectCallback(
         res,
@@ -526,17 +546,8 @@ export class OidcController {
     };
 
     if (appMode) {
-      // FR-005 — establish NOTHING in this jar. The session belongs to the
-      // app's WebView, which cannot see the auth browser's cookies.
-      //
-      // FR-007 — clear the Kratos session cookie with the full
-      // {name, domain, path} triple. server#6315: a Set-Cookie that mismatches
-      // any one of the three does not fail, it stores a SECOND cookie and
-      // leaves the original alive — which is how a session survived sign-out
-      // in every environment that configures a domain.
-      this.clearKratosSessionCookie(res);
-      this.clearPreAuthCookie(res);
-
+      // The jar was already emptied where app mode was decided, so that every
+      // exit below leaves it in the same state. Nothing to clear here.
       let code: string;
       try {
         code = await storeAppHandoff(appMode.redis, {
