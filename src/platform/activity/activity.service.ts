@@ -149,6 +149,7 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      excludeUserID?: string;
       orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
       excludeTypes?: ActivityEventType[];
@@ -158,6 +159,7 @@ export class ActivityService {
       types,
       visibility = true,
       userID,
+      excludeUserID,
       orderBy = 'DESC',
       paginationArgs = {},
       excludeTypes,
@@ -172,6 +174,10 @@ export class ActivityService {
 
     if (userID) {
       qb.andWhere({ triggeredBy: userID });
+    }
+
+    if (excludeUserID) {
+      qb.andWhere({ triggeredBy: Not(excludeUserID) });
     }
 
     if (excludeTypes && excludeTypes.length > 0) {
@@ -197,6 +203,7 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      excludeUserID?: string;
       orderBy?: 'ASC' | 'DESC';
       limit?: number;
     }
@@ -216,6 +223,7 @@ export class ActivityService {
       types,
       visibility = true,
       userID,
+      excludeUserID,
       orderBy = 'DESC',
       limit,
     } = options ?? {};
@@ -249,11 +257,18 @@ export class ActivityService {
       queryParameters.push(userID);
     }
 
+    let excludeTriggeredByCondition: string | undefined;
+    if (excludeUserID) {
+      excludeTriggeredByCondition = `activity."triggeredBy" != $${paramIndex++}`;
+      queryParameters.push(excludeUserID);
+    }
+
     const whereConditions = [
       visibilityCondition,
       collaborationIdsCondition,
       typesCondition,
       triggeredByCondition,
+      excludeTriggeredByCondition,
     ]
       .filter(condition => condition !== undefined)
       .join(' AND ');

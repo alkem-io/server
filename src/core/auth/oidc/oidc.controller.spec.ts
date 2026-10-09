@@ -606,6 +606,14 @@ function readIssuedPreAuth(res: any): string {
   return issued.value;
 }
 
+// workspace#082 [FR-001/FR-002] — only the app-mode QUERY leg of /login may clear the
+// Kratos SSO cookie; every other leg must leave it alone.
+function expectNoKratosClear(res: { cookies: { name: string }[] }): void {
+  expect(res.cookies.some(c => c.name === KRATOS_SESSION_COOKIE_NAME)).toBe(
+    false
+  );
+}
+
 function appTokenSet(nonce: string, issuedAt: number) {
   return {
     access_token: 'at',
@@ -656,6 +664,19 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBe(APP_CHALLENGE);
     expect(res.statusCode).toBe(302);
+    // workspace#082 [AC1.1/FR-001] — the app-mode QUERY leg clears the Kratos SSO
+    // cookie with the full {name, domain, path} triple and Max-Age=0; a mismatch
+    // on any one stores a SECOND cookie and leaves the original alive (server#6315).
+    const clearedOnLogin = res.cookies.find(
+      (c: { name: string }) => c.name === KRATOS_SESSION_COOKIE_NAME
+    );
+    expect(clearedOnLogin).toBeDefined();
+    expect(clearedOnLogin.value).toBe('');
+    expect(clearedOnLogin.opts).toEqual({
+      domain: COOKIE_CONFIG.domain,
+      path: '/',
+      maxAge: 0,
+    });
   });
 
   // SEC-079-02 — app mode establishes no session in THIS jar and clears the
@@ -697,6 +718,7 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBeUndefined();
     expect(res.statusCode).toBe(302);
+    expectNoKratosClear(res);
   });
 
   it('refuses app mode for a same-origin link click, which carries a Referer', async () => {
@@ -741,6 +763,7 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     expect(payload.app_challenge).toBeUndefined();
     expect(attempted.res.statusCode).toBe(web.res.statusCode);
     expect(attempted.res.redirectedTo).toBe(web.res.redirectedTo);
+    expectNoKratosClear(attempted.res);
   });
 
   it('does NOT enter app mode when no Redis client is wired', async () => {
@@ -756,6 +779,7 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     expect(payload.app_challenge).toBeUndefined();
     expect(attempted.res.statusCode).toBe(web.res.statusCode);
     expect(attempted.res.redirectedTo).toBe(web.res.redirectedTo);
+    expectNoKratosClear(attempted.res);
   });
 
   it.each([
@@ -771,20 +795,22 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBeUndefined();
     expect(res.statusCode).toBe(302);
+    expectNoKratosClear(res);
   });
 
-  // Kratos' registration.after.oidc re-enters a BARE /login with no query
-  // string, so a flag passed only as a query parameter is lost on exactly the
-  // leg stickiness exists for — and `returnTo` is rebuilt from the query
-  // alone, so carrying only the challenge would still drop the destination.
-  it('carries both the challenge and the returnTo across a query-less re-entry', async () => {
+  // workspace#082 — the loop guard, inverted. Kratos v26.2.0 preserves `return_to`
+  // and the Hydra login challenge across the login→registration conversion (spec
+  // §2), so no leg lands on a bare `/login`; 079's carry-forward served no live flow
+  // and let a planted `app_challenge` be spent by the victim's own later sign-in.
+  it('a bare re-entry never enters app mode, whatever the cookie carries', async () => {
+    const plantedAt = Math.floor(Date.now() / 1000) - 300;
     const cookie = await signPreAuthCookie(
       {
         state: 's',
         nonce: 'n',
         code_verifier: 'v',
         returnTo: '/spaces/alkemio',
-        issued_at: Math.floor(Date.now() / 1000),
+        issued_at: plantedAt,
         app_challenge: APP_CHALLENGE,
       },
       PRE_AUTH_KEY
@@ -794,8 +820,10 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
       readIssuedPreAuth(res),
       PRE_AUTH_KEY
     );
-    expect(payload.app_challenge).toBe(APP_CHALLENGE);
-    expect(payload.returnTo).toBe('/spaces/alkemio');
+    expect(payload.app_challenge).toBeUndefined();
+    expect(payload.returnTo).toBe('/');
+    expect(payload.issued_at).toBeGreaterThan(plantedAt);
+    expectNoKratosClear(res);
   });
 
   it('carries nothing forward from a query-less re-entry in web mode', async () => {
@@ -839,6 +867,7 @@ describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', ()
     );
     expect(payload.app_challenge).toBeUndefined();
     expect(payload.returnTo).toBe('/x');
+    expectNoKratosClear(res);
   });
 });
 

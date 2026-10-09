@@ -3,6 +3,7 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -368,6 +369,106 @@ describe('ActivityFeedService', () => {
       );
     });
 
+    it('should pass actorID as excludeUserID when excludeMyActivity is true', async () => {
+      const actorContext = setupForActivityFeed();
+      activityService.getPaginatedActivity.mockResolvedValue({
+        items: [],
+        total: 0,
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      } as any);
+      activityLogService.convertRawActivityToResults.mockResolvedValue([]);
+
+      await service.getActivityFeed(actorContext, { excludeMyActivity: true });
+
+      expect(activityService.getPaginatedActivity).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          userID: undefined,
+          excludeUserID: 'user-1',
+        })
+      );
+    });
+
+    it('should pass undefined excludeUserID when excludeMyActivity is absent or false', async () => {
+      const actorContext = setupForActivityFeed();
+      activityService.getPaginatedActivity.mockResolvedValue({
+        items: [],
+        total: 0,
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      } as any);
+      activityLogService.convertRawActivityToResults.mockResolvedValue([]);
+
+      await service.getActivityFeed(actorContext);
+      await service.getActivityFeed(actorContext, { excludeMyActivity: false });
+
+      expect(activityService.getPaginatedActivity).toHaveBeenNthCalledWith(
+        1,
+        [],
+        expect.objectContaining({ excludeUserID: undefined })
+      );
+      expect(activityService.getPaginatedActivity).toHaveBeenNthCalledWith(
+        2,
+        [],
+        expect.objectContaining({ excludeUserID: undefined })
+      );
+    });
+
+    it('should pass both userID and excludeUserID when both flags are true, without throwing', async () => {
+      const actorContext = setupForActivityFeed();
+      activityService.getPaginatedActivity.mockResolvedValue({
+        items: [],
+        total: 0,
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      } as any);
+      activityLogService.convertRawActivityToResults.mockResolvedValue([]);
+
+      await expect(
+        service.getActivityFeed(actorContext, {
+          myActivity: true,
+          excludeMyActivity: true,
+        })
+      ).resolves.toBeDefined();
+
+      expect(activityService.getPaginatedActivity).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          userID: 'user-1',
+          excludeUserID: 'user-1',
+        })
+      );
+    });
+
+    it('should still narrow collaborationIds by spaceIds and roles when excluding own activity', async () => {
+      const actorContext = setupForActivityFeed([
+        {
+          type: AuthorizationCredential.SPACE_ADMIN,
+          resourceID: 'space-1',
+        } as ICredentialDefinition,
+        makeCredential('space-2'),
+      ]);
+      entityManager.find.mockResolvedValueOnce([
+        makeSpace('space-1', SpaceLevel.L2, 'collab-1'),
+      ]);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      activityService.getPaginatedActivity.mockResolvedValue({
+        items: [],
+        total: 0,
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      } as any);
+      activityLogService.convertRawActivityToResults.mockResolvedValue([]);
+
+      await service.getActivityFeed(actorContext, {
+        spaceIds: ['space-1', 'space-2'],
+        roles: [ActivityFeedRoles.ADMIN],
+        excludeMyActivity: true,
+      });
+
+      expect(activityService.getPaginatedActivity).toHaveBeenCalledWith(
+        ['collab-1'],
+        expect.objectContaining({ excludeUserID: 'user-1' })
+      );
+    });
+
     it('should pass types and excludeTypes filters through', async () => {
       const actorContext = setupForActivityFeed();
       activityService.getPaginatedActivity.mockResolvedValue({
@@ -500,6 +601,29 @@ describe('ActivityFeedService', () => {
         [],
         expect.objectContaining({
           userID: 'user-1',
+        })
+      );
+    });
+
+    it('should pass actorID as excludeUserID when excludeMyActivity is true', async () => {
+      const actorContext = setupForGroupedFeed();
+      const mockEntries = Array.from({ length: 10 }, (_, i) => ({
+        id: `entry-${i}`,
+      }));
+      activityService.getGroupedActivity.mockResolvedValue(mockEntries as any);
+      activityLogService.convertRawActivityToResults.mockResolvedValue(
+        mockEntries as any
+      );
+
+      await service.getGroupedActivityFeed(actorContext, {
+        excludeMyActivity: true,
+      });
+
+      expect(activityService.getGroupedActivity).toHaveBeenCalledWith(
+        [],
+        expect.objectContaining({
+          userID: undefined,
+          excludeUserID: 'user-1',
         })
       );
     });
