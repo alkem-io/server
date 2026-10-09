@@ -12,17 +12,22 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
-import { CollaborationMigrationService } from '@services/collaboration-integration/migration';
+import { CollaborationClientModule } from '@services/collaboration-client/collaboration-client.module';
+import {
+  CollaborationMigrationService,
+  MemoImageRepairService,
+} from '@services/collaboration-integration/migration';
 import { AlkemioConfig } from '@src/types';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 
 /**
  * Minimal one-shot operator context for the 006 legacy-content back-fill +
- * verification (Release A). Imports ONLY what `CollaborationMigrationService`
- * needs: config, Winston, the DB (via the shared runtime options helper, which
- * forces `migrationsRun:false` — the operator NEVER applies schema migrations),
- * the Memo/Whiteboard repos, and `FileServiceAdapter`.
+ * verification (Release A), plus the explicit memo image repair. Imports ONLY
+ * what those one-shot services need: config, Winston, the DB (via the shared
+ * runtime options helper, which forces `migrationsRun:false` — the operator NEVER
+ * applies schema migrations), the content repos, `FileServiceAdapter`, and the
+ * live collaboration client used for concurrency-safe memo repair.
  *
  * Deliberately excluded (§12 side-effect trace): `ScheduleModule` (so the
  * collaboration lifecycle publisher is inert because this worker never deletes),
@@ -65,6 +70,7 @@ import { join } from 'path';
     }),
     TypeOrmModule.forFeature([Memo, Whiteboard, CalloutContributionDefaults]),
     FileServiceAdapterModule,
+    CollaborationClientModule,
     // In-memory (no-store) cache purely to satisfy the global `CACHE_MANAGER`
     // token that `StorageBucketService`'s transitive `UrlGeneratorCacheService`
     // injects. The migration never calls the URL generator, so this cache is
@@ -91,6 +97,6 @@ import { join } from 'path';
     // pattern `AuthResetWorkerModule` uses for its isolated worker.
     GraphqlGuardModule,
   ],
-  providers: [CollaborationMigrationService],
+  providers: [CollaborationMigrationService, MemoImageRepairService],
 })
 export class CollaborationMigrationWorkerModule {}
