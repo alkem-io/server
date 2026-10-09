@@ -50,4 +50,11 @@ export class IMessageAttachment {
     description: 'The pixel height of the attachment (images only).',
   })
   height?: number;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Set by Room.messageAttachments: true when the media is stored but not yet placed in this room, so resolving it again shortly can return the document; false otherwise. Null where not evaluated.',
+  })
+  pending?: boolean;
 }
