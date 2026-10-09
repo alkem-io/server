@@ -22,7 +22,7 @@ services:
     ports:
       - 8888:8080
       - 8088:8088
-      - 8280:8280
+      - 127.0.0.1:8280:8280
       - 3000:80
       - 5432:5432
       - 8008:8008
@@ -504,9 +504,6 @@ services:
     restart: always
     networks:
       - alkemio_dev_net
-    # Host-run server only. No public listener/Traefik route for media upload.
-    ports:
-      - '127.0.0.1:${MATRIX_ADAPTER_HOST_PORT:-8280}:8280'
     entrypoint: ["/wait"]
 
   redis:

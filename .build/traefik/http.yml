@@ -127,6 +127,11 @@ http:
         servers:
           - url: 'h2c://file-service:4003/'
 
+    matrix-adapter:
+      loadBalancer:
+        servers:
+          - url: 'http://matrix-adapter:8280/'
+
     # 004-web-ai-assistant (LOCAL DEV): assistant-service runs on the host.
     assistant-service:
       loadBalancer:
@@ -429,6 +434,17 @@ http:
         - alkemio-resolve
       entryPoints:
         - 'web'
+
+    media-upload:
+      rule: 'Method(`POST`) && Path(`/api/private/rest/messaging/media/upload`)'
+      service: 'matrix-adapter'
+      middlewares:
+        - strip-api-private-prefix
+        - strip-client-alkemio-headers
+        - alkemio-resolve
+      entryPoints:
+        - 'web'
+      priority: 150
 
     # file-service internal endpoints.
     # Placed on the public `web` entrypoint in the dev compose stack so the

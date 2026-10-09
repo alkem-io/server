@@ -337,7 +337,6 @@ monitoring:
 communications:
   enabled: ${COMMUNICATIONS_ENABLED}:true
   matrix:
-    adapter_url: ${MATRIX_ADAPTER_URL}:http://localhost:8280
     connection_retries: ${COMMUNICATIONS_MATRIX_CONNECTION_RETRIES}:5
     # Timeout in milliseconds for RPC calls to the Matrix adapter
     connection_timeout: ${COMMUNICATIONS_MATRIX_CONNECTION_TIMEOUT}:30000

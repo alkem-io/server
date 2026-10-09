@@ -143,7 +143,6 @@ export type AlkemioConfig = {
   communications: {
     enabled: boolean;
     matrix: {
-      adapter_url: string;
       connection_retries: number;
       connection_timeout: number;
     };

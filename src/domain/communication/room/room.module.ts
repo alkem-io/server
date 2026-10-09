@@ -18,7 +18,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
 import { MessageAttachmentModule } from '../message-attachment/message.attachment.module';
-import { RoomAttachmentUploadService } from '../message-attachment/room.attachment.upload';
+import { RoomAttachmentSendService } from '../message-attachment/room.attachment.send';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 import { RoomAttachmentAuthorization } from './room.attachment.authorization';
@@ -58,7 +58,7 @@ import { RoomServiceEvents } from './room.service.events';
   providers: [
     RoomService,
     RoomAttachmentAuthorization,
-    RoomAttachmentUploadService,
+    RoomAttachmentSendService,
     RoomAuthorizationService,
     RoomResolverFields,
     RoomResolverMutations,

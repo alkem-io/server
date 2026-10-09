@@ -50,7 +50,6 @@ import { VisualUploadImageInput } from '@domain/common/visual/dto/visual.dto.upl
 import { UpdateWhiteboardEntityInput } from '@domain/common/whiteboard/types';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
-import { RoomMessageAttachmentUploadInput } from '@domain/communication/room/dto/room.dto.upload.attachment';
 import { UpdateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.update';
 import {
   CreateOrganizationInput,
@@ -158,7 +157,6 @@ export class BaseHandler extends AbstractHandler {
       // Matching uses constructor identity; inherited input validators require
       // registering each concrete mutation input.
       RoomSendMessageReplyInput,
-      RoomMessageAttachmentUploadInput,
       CreateCalloutFramingInput,
       CreateCalloutContributionDefaultsInput,
       CreateSpaceAboutInput,

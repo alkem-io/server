@@ -3,7 +3,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { RoomMessageAttachmentInput } from './room.dto.upload.attachment';
+import { RoomMessageAttachmentInput } from './room.dto.attachment';
 
 @InputType()
 export class RoomSendMessageInput {

@@ -4,14 +4,12 @@ import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
-import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
-import type { Request, Response } from 'express';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
-import { RoomAttachmentUploadService } from '../message-attachment/room.attachment.upload';
+import { RoomAttachmentSendService } from '../message-attachment/room.attachment.send';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
@@ -19,10 +17,6 @@ import { RoomRemoveMessageInput } from './dto/room.dto.remove.message';
 import { RoomRemoveReactionToMessageInput } from './dto/room.dto.remove.message.reaction';
 import { RoomSendMessageInput } from './dto/room.dto.send.message';
 import { RoomSendMessageReplyInput } from './dto/room.dto.send.message.reply';
-import {
-  RoomMessageAttachmentUploadInput,
-  RoomMessageAttachmentUploadResult,
-} from './dto/room.dto.upload.attachment';
 import { RoomAttachmentAuthorization } from './room.attachment.authorization';
 import { RoomService } from './room.service';
 import { RoomAuthorizationService } from './room.service.authorization';
@@ -36,7 +30,7 @@ export class RoomResolverMutations {
     private roomAuthorizationService: RoomAuthorizationService,
     private roomLookupService: RoomLookupService,
     private readonly messageGate: RoomAttachmentAuthorization,
-    private readonly roomUploads: RoomAttachmentUploadService
+    private readonly roomAttachments: RoomAttachmentSendService
   ) {}
 
   @Mutation(() => IMessage, {
@@ -56,7 +50,7 @@ export class RoomResolverMutations {
 
     const existingMedia =
       messageData.attachmentUpload != null
-        ? await this.roomUploads.existingMedia(
+        ? await this.roomAttachments.existingMedia(
             room,
             actorContext,
             messageData.attachmentUpload
@@ -73,42 +67,6 @@ export class RoomResolverMutations {
     // All post-send processing (notifications, activities, subscriptions)
     // now handled by MessageInboxService via Matrix event
     return message;
-  }
-
-  @Mutation(() => RoomMessageAttachmentUploadResult, {
-    description:
-      'Uploads original room media into Synapse staging for a later authorized message.',
-  })
-  async uploadRoomMessageAttachment(
-    @Args('uploadData') input: RoomMessageAttachmentUploadInput,
-    @Args('file', { type: () => GraphQLUpload }) file: FileUpload,
-    @CurrentActor() actor: ActorContext,
-    @Context() context?: { req?: Request; res?: Response }
-  ): Promise<RoomMessageAttachmentUploadResult> {
-    const room = await this.roomService.getRoomOrFail(input.roomID, {
-      relations: { authorization: true },
-    });
-    await this.messageGate.assertOperation(room, actor, input.threadID);
-    const controller = new AbortController();
-    const response = context?.res ?? context?.req?.res;
-    const cancelled = () => controller.abort();
-    const closed = () => {
-      if (!response?.writableEnded) cancelled();
-    };
-    context?.req?.once('aborted', cancelled);
-    response?.once('close', closed);
-    if (context?.req?.aborted || response?.destroyed) cancelled();
-    try {
-      return await this.roomUploads.upload(
-        room,
-        actor,
-        await file,
-        controller.signal
-      );
-    } finally {
-      context?.req?.off('aborted', cancelled);
-      response?.off('close', closed);
-    }
   }
 
   private validateMessageContent(input: RoomSendMessageInput): void {
@@ -140,7 +98,7 @@ export class RoomResolverMutations {
 
     const existingMedia =
       messageData.attachmentUpload != null
-        ? await this.roomUploads.existingMedia(
+        ? await this.roomAttachments.existingMedia(
             room,
             actorContext,
             messageData.attachmentUpload

@@ -1,7 +1,6 @@
 import { ValidationException } from '@common/exceptions';
 import { RoomSendMessageInput } from '@domain/communication/room/dto/room.dto.send.message';
 import { RoomSendMessageReplyInput } from '@domain/communication/room/dto/room.dto.send.message.reply';
-import { RoomMessageAttachmentUploadInput } from '@domain/communication/room/dto/room.dto.upload.attachment';
 import { plainToInstance } from 'class-transformer';
 import { BaseHandler } from './base.handler';
 
@@ -53,17 +52,6 @@ describe('BaseHandler', () => {
         )
       ).resolves.toBeNull();
     });
-  });
-  it('registers upload input thread validation', async () => {
-    await expect(
-      handler.handle(
-        plainToInstance(RoomMessageAttachmentUploadInput, {
-          roomID,
-          threadID: 'x'.repeat(513),
-        }),
-        RoomMessageAttachmentUploadInput
-      )
-    ).rejects.toThrow(ValidationException);
   });
   it('does not validate a type that is not registered', async () => {
     class UnregisteredInput {}

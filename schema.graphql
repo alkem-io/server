@@ -5363,10 +5363,6 @@ type Mutation {
   uploadFileOnStorageBucket(file: Upload!, uploadData: StorageBucketUploadFileInput!): StorageBucketUploadFileResult!
   """Uploads and sets an image for the specified Visual."""
   uploadImageOnVisual(file: Upload!, uploadData: VisualUploadImageInput!): Visual!
-  """
-  Uploads original room media into Synapse staging for a later authorized message.
-  """
-  uploadRoomMessageAttachment(file: Upload!, uploadData: RoomMessageAttachmentUploadInput!): RoomMessageAttachmentUploadResult!
 }
 
 type MySpaceResults {
@@ -6755,13 +6751,6 @@ type RoomEventSubscriptionResult {
   room: Room!
   """The identifier for the Room on which the event happened."""
   roomID: String!
-}
-
-type RoomMessageAttachmentUploadResult {
-  """The sanitized filename."""
-  displayName: String!
-  """The uploaded Matrix media reference."""
-  externalReference: String!
 }
 
 """A message event happened in the subscribed room"""
@@ -10027,13 +10016,6 @@ input RoomMessageAttachmentInput {
   displayName: String!
   """The completed local Matrix media reference."""
   externalReference: String!
-}
-
-input RoomMessageAttachmentUploadInput {
-  """The room receiving the attachment."""
-  roomID: UUID!
-  """The existing reply parent, when uploading for a reply."""
-  threadID: MessageID
 }
 
 input RoomRemoveMessageInput {
