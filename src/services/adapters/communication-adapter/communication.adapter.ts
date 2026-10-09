@@ -844,10 +844,9 @@ export class CommunicationAdapter {
    *
    * The RPC envelope's top-level `success` flag only reflects whether the
    * request was processed — it can be `true` even when an individual room's
-   * kick failed (e.g. Matrix rejects the kick with a 403/M_FORBIDDEN
-   * insufficient-power-level error). The authoritative per-room outcome
-   * lives in `response.results`, so it is always consulted here rather than
-   * trusting the envelope alone.
+   * removal failed (e.g. Matrix rejects it with a 403/M_FORBIDDEN). The
+   * authoritative per-room outcome lives in `response.results`, so it is
+   * always consulted here rather than trusting the envelope alone.
    *
    * @param options.ensureAllSucceeded - When true, throws a
    * `CommunicationAdapterException` (carrying the first per-room adapter

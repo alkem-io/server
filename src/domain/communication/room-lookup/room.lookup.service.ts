@@ -98,14 +98,21 @@ export class RoomLookupService {
     }));
   }
 
+  async getRoom(
+    roomID: string,
+    options?: FindOneOptions<Room>
+  ): Promise<Room | null> {
+    return this.roomRepository.findOne({
+      where: { id: roomID },
+      ...options,
+    });
+  }
+
   async getRoomOrFail(
     roomID: string,
     options?: FindOneOptions<Room>
   ): Promise<Room> {
-    const room = await this.roomRepository.findOne({
-      where: { id: roomID },
-      ...options,
-    });
+    const room = await this.getRoom(roomID, options);
     if (!room)
       throw new EntityNotFoundException(
         `Not able to locate Room with the specified ID: ${roomID}`,
