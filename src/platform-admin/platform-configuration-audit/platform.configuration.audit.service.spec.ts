@@ -59,7 +59,6 @@ describe('PlatformConfigurationAuditService', () => {
         credentials: [{ type: 'platform-settings-admin', resourceID: '' }],
       } as any,
       ['platform-settings-admin' as any],
-      [],
       { setting: 'platformSettings', outcome: 'success' }
     );
 

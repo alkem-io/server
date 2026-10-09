@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
@@ -125,6 +126,72 @@ describe('RoleSetAuthorizationService', () => {
 
       expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThanOrEqual(1);
+    });
+
+    // server#6623 (ruling 2026-10-08): invitation-only is the intended end
+    // state. The role set must not add a blanket entry-assign grant of its own;
+    // re-adding one (e.g. the pre-027 global-admin/support/beta-tester rules)
+    // needs a new ruling and must change this test.
+    it('grants ROLESET_ENTRY_ROLE_ASSIGN and _ASSIGN_ORGANIZATION to nobody (server#6623)', async () => {
+      const authorization = {
+        id: 'auth-1',
+        credentialRules: [],
+        privilegeRules: [],
+      } as any;
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue({
+        id: 'rs-1',
+        roles: [],
+        applications: [],
+        invitations: [],
+        platformInvitations: [],
+        license: { id: 'lic-1' },
+        authorization,
+      });
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockReturnValue(authorization);
+      // Real rule construction, so any restored rule surfaces with its grants.
+      (
+        authorizationPolicyService.createCredentialRule as Mock
+      ).mockImplementation(
+        AuthorizationPolicyService.prototype.createCredentialRule
+      );
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as Mock
+      ).mockImplementation(
+        AuthorizationPolicyService.prototype.createCredentialRuleUsingTypesOnly
+      );
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as Mock
+      ).mockImplementation((auth, rules) => {
+        auth.credentialRules.push(...rules);
+        return auth;
+      });
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mockImplementation((auth, rules) => {
+        auth.privilegeRules.push(...rules);
+        return auth;
+      });
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockReturnValue([]);
+
+      const [roleSetAuthorization] = await service.applyAuthorizationPolicy(
+        'rs-1',
+        undefined
+      );
+
+      const granted = [
+        ...roleSetAuthorization.credentialRules,
+        ...roleSetAuthorization.privilegeRules,
+      ].flatMap(rule => rule.grantedPrivileges);
+      expect(granted).not.toContain(
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN
+      );
+      expect(granted).not.toContain(
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION
+      );
     });
   });
 

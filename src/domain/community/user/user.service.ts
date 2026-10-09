@@ -1117,9 +1117,8 @@ export class UserService {
         await this.platformRoleAssignmentAuditService.recordServiceProfileRejected(
           {
             initiatorUserId: actorContext.actorID,
-            // corr-server-3/qual-server-1 fix: a rejected actor may
-            // legitimately hold NEITHER the owning role nor a legacy
-            // credential (that is often exactly WHY the check failed), so
+            // A rejected actor may legitimately hold no owning role (that is
+            // often exactly WHY the check failed), so
             // the strict `resolveInitiatorRole` throw path is not a defect
             // here — the best-effort wrapper falls back to `SELF` instead
             // of raising a second exception while already handling a

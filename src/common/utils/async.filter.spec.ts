@@ -63,4 +63,13 @@ describe('asyncFilter', () => {
     await asyncFilter(arr, async n => n > 3);
     expect(arr).toEqual(copy);
   });
+
+  it('should reject when the predicate rejects, rather than leaving it unhandled', async () => {
+    const failing = async (n: number) => {
+      if (n === 2) throw new TypeError('boom');
+      return true;
+    };
+
+    await expect(asyncFilter([1, 2, 3], failing)).rejects.toThrow('boom');
+  });
 });
