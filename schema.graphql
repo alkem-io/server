@@ -862,6 +862,12 @@ enum PushSubscriptionStatus {
   EXPIRED
 }
 
+"""Whether a role was added or removed."""
+enum RoleChangeType {
+  ADDED
+  REMOVED
+}
+
 enum RoleName {
   ADMIN
   ANONYMOUS
@@ -3568,6 +3574,10 @@ type InAppNotificationPayloadPlatformForumDiscussion implements InAppNotificatio
 }
 
 type InAppNotificationPayloadPlatformGlobalRoleChange implements InAppNotificationPayload {
+  """
+  Whether the role was added or removed; absent on records written before this field existed.
+  """
+  changeType: RoleChangeType
   """The new role."""
   role: String!
   """The payload type."""
@@ -8286,6 +8296,10 @@ input ActivityCreatedSubscriptionInput {
 }
 
 input ActivityFeedGroupedQueryArgs {
+  """
+  Excludes events that the current user triggered; Includes all by default. Combined with myActivity both filters apply, composing to an empty result; that is not an error.
+  """
+  excludeMyActivity: Boolean
   """What events to exclude."""
   excludeTypes: [ActivityEventType!]
   """Number of activities to return."""
@@ -8303,6 +8317,10 @@ input ActivityFeedGroupedQueryArgs {
 }
 
 input ActivityFeedQueryArgs {
+  """
+  Excludes events that the current user triggered; Includes all by default. Combined with myActivity both filters apply, composing to an empty result; that is not an error.
+  """
+  excludeMyActivity: Boolean
   """What events to exclude."""
   excludeTypes: [ActivityEventType!]
   """

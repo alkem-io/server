@@ -9,7 +9,6 @@ import {
 import {
   isAnyOfGate,
   isConditionGate,
-  isCredentialGate,
   isRequiresGate,
   privilegesNamedByGate,
 } from './gate.model';
@@ -21,11 +20,10 @@ import {
 import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
 
 /**
- * 027-platform-role-redesign (T052a, research D24, FR-010) — the census
- * DRIFT DETECTOR. Three rules, all against `src/**\/*.ts` as it exists on
- * disk right now — none of them read `A_ROW_SURFACES` as ground truth about
- * the CODE; they read it as ground truth about what was DECLARED, and
- * check the code against it.
+ * The census DRIFT DETECTOR. Three rules, all against `src/**\/*.ts` as it
+ * exists on disk right now — none of them read `A_ROW_SURFACES` as ground
+ * truth about the CODE; they read it as ground truth about what was
+ * DECLARED, and check the code against it.
  *
  * - Rule 1 — a whole NEW gated surface: every file where a scanned
  *   privilege appears at a gate-position call must be a file this census
@@ -33,34 +31,30 @@ import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
  * - Rule 2 — a gate added INSIDE an already-censused file: the set of
  *   scanned privileges actually found in a censused file must equal the
  *   set the census declares for it.
- * - Rule 3 — the two NON-privilege gate components (`{credential}` /
- *   `{condition}`) must agree with the code, in BOTH directions. Rules 1/2
- *   only see privilege-shaped gates; this is the only mechanical check on
- *   the other two (fifteenth analyze pass, closing C2).
+ * - Rule 3 — the NON-privilege gate component (`{condition}`) must agree
+ *   with the code, in BOTH directions. Rules 1/2 only see privilege-shaped
+ *   gates; this is the only mechanical check on it.
  *
  * **Stated limits — do not paper over them:**
  *  1. A resolver that forgets to gate an action AT ALL is invisible to a
  *     scan built around "which privilege is checked" — there is no gate to
- *     find. That gap is closed by `test-suites`' denial cells (FR-024),
- *     which fail when an UNGATED surface answers a role that should be
- *     denied. The two detectors are complements, which is why FR-033 keeps
- *     both layers.
+ *     find. That gap is closed by `test-suites`' denial cells, which fail
+ *     when an UNGATED surface answers a role that should be denied. The two
+ *     detectors are complements, which is why both layers are kept.
  *  2. `SCANNED_PRIVILEGES` deliberately EXCLUDES the five baseline CRUD
- *     verbs (`CREATE`/`READ`/`UPDATE`/`DELETE`/`GRANT`) and the retiring
- *     `PLATFORM_ADMIN` catch-all, even where a census gate expression names
- *     one of them (A6/A7/A8's `anyOf` owner branch; A9's three
- *     resolver-local-`PLATFORM_ADMIN`-policy conversion mutations; A13's
- *     bare-CRUD-gated license definitions; A16's plain `READ`). These six
- *     are the vocabulary reused by ordinary, non-administrative gates
+ *     verbs (`CREATE`/`READ`/`UPDATE`/`DELETE`/`GRANT`), even where a census
+ *     gate expression names one of them (A6/A7/A8's `anyOf` owner branch;
+ *     A13's bare-CRUD-gated license definitions; A16's plain `READ`). These
+ *     five are the vocabulary reused by ordinary, non-administrative gates
  *     across this ~3k-file codebase — a text scan that included them would
  *     flag dozens of files that have nothing to do with this feature's
  *     eight admin families (verified empirically while building this
  *     census: 28+ files check bare `DELETE` at a gate-position call shape
- *     alone). A new gate site added to one of THOSE six privileges is
+ *     alone). A new gate site added to one of THOSE five privileges is
  *     therefore ALSO invisible here — the same class of blind spot as (1),
  *     for a different reason (over-, not under-, matching a privilege
  *     name), and covered by the same complement (`test-suites`' denial
- *     cells, plus this repo's own per-policy grant-set specs, T070f).
+ *     cells, plus this repo's own per-policy grant-set specs).
  *
  * **Text scan, not an AST pass.** The three gate-position shapes
  * (`@AuthorizationActorHasPrivilege(…)`, `grantAccessOrFail(…, …)`,
@@ -75,10 +69,7 @@ import { GATE_CALL_PATTERN, listSourceFiles } from './source.scan';
  * whole-file join is the cheapest thing that does not choke on that shape.
  */
 
-// `listSourceFiles()` / `GATE_CALL_PATTERN` live in `source.scan.ts` (QA
-// cross-census-3). This file's former rule 1b and its hand-picked
-// `PLATFORM_ADMIN_SCAN_ALLOWLIST` are gone: Slice B (T074) deleted the
-// privilege they scanned for.
+// `listSourceFiles()` / `GATE_CALL_PATTERN` live in `source.scan.ts`.
 
 interface FileScan {
   readonly hasGateCall: boolean;
@@ -100,18 +91,12 @@ function scanFile(repoRelativePath: string): FileScan {
   return { hasGateCall, scannedPrivileges, content };
 }
 
-/** Every (non-placeholder) `file` value declared anywhere in the census,
- * mapped to every entry declared at that file — across all 22 rows. A
- * placeholder (A17's two `(T078, Slice B — …)` strings) is never a real
- * path and is excluded; it can never be scanned in from disk, so excluding
- * it here only avoids a confusing `fs.readFileSync` attempt. */
+/** Every `file` value declared anywhere in the census, mapped to every
+ * entry declared at that file — across all 22 rows. */
 function censusEntriesByFile(): ReadonlyMap<string, readonly SurfaceRef[]> {
   const byFile = new Map<string, SurfaceRef[]>();
   for (const surfaces of Object.values(A_ROW_SURFACES)) {
     for (const surface of surfaces) {
-      if (surface.file.startsWith('(')) {
-        continue; // not-yet-created (Slice B) surface — see a.row.surfaces.ts
-      }
       const existing = byFile.get(surface.file) ?? [];
       existing.push(surface);
       byFile.set(surface.file, existing);
@@ -121,15 +106,8 @@ function censusEntriesByFile(): ReadonlyMap<string, readonly SurfaceRef[]> {
 }
 
 /** Privileges a file's census entries declare for RULE 2 — the union, over
- * every entry at that file, of (a) privileges its `requires`/`anyOf` gate
- * names, and (b) for a `{credential}`/`{condition}` gate, any
- * `SCANNED_PRIVILEGES` member whose enum key appears as a substring of the
- * gate's own `reason` text. (b) exists for exactly one documented shape —
- * T034a's FR-022 pin, whose `reason` deliberately names the shared
- * `PLATFORM_ROLES_ASSIGN` privilege it is pinned ahead of, which the code
- * ALSO still passes as a literal (checked-against-a-narrower-policy)
- * argument to `grantAccessOrFail` — a real, scannable token that a
- * privilege-only view of a `{credential}` gate would otherwise miss. */
+ * every entry at that file, of the privileges its `requires`/`anyOf` gate
+ * names. A `{condition}` gate names no privilege, so it declares none. */
 function declaredPrivilegesForFile(
   entries: readonly SurfaceRef[]
 ): ReadonlySet<AuthorizationPrivilege> {
@@ -138,13 +116,6 @@ function declaredPrivilegesForFile(
     for (const privilege of privilegesNamedByGate(entry.gate)) {
       if (!EXCLUDED_FROM_SCAN.has(privilege)) {
         declared.add(privilege);
-      }
-    }
-    if (isCredentialGate(entry.gate) || isConditionGate(entry.gate)) {
-      for (const privilege of SCANNED_PRIVILEGES) {
-        if (entry.gate.reason.includes(privilegeEnumKey(privilege))) {
-          declared.add(privilege);
-        }
       }
     }
   }
@@ -175,7 +146,7 @@ describe('surface.drift.spec (T052a) — census vs. code', () => {
     ...INDIRECT_ENFORCEMENT_FILES,
   ]);
 
-  it('SCANNED_PRIVILEGES is non-empty and excludes the six baseline verbs', () => {
+  it('SCANNED_PRIVILEGES is non-empty and excludes the five baseline verbs', () => {
     expect(SCANNED_PRIVILEGES.length).toBeGreaterThan(0);
     for (const excluded of EXCLUDED_FROM_SCAN) {
       expect(SCANNED_PRIVILEGES).not.toContain(excluded);
@@ -250,38 +221,8 @@ describe('surface.drift.spec (T052a) — census vs. code', () => {
     }
   });
 
-  describe('rule 3 — the two non-privilege gate components agree with the code', () => {
-    // --- (a) the credential-level pin (T034a, FR-022) — a fixed call
-    // shape: `createGlobalRolesAuthorizationPolicy([AuthorizationRoleGlobal
-    // .GLOBAL_ADMIN], …)`, a SINGLE-element array (the two-and-three-
-    // element arrays elsewhere, e.g. the conversion and admin-communication
-    // resolvers' OWN synthetic policies, are a DIFFERENT shape — they
-    // already include a new role and are not a pin).
-    const CREDENTIAL_PIN_PATTERN =
-      /createGlobalRolesAuthorizationPolicy\(\s*\[\s*AuthorizationRoleGlobal\.GLOBAL_ADMIN\s*\]/;
-
-    it('credential-pin declarations and code agree, in both directions', () => {
-      const declaredFiles = new Set<string>();
-      for (const [file, entries] of censusFiles) {
-        if (entries.some(e => isCredentialGate(e.gate))) {
-          declaredFiles.add(file);
-        }
-      }
-      const codeFiles = new Set<string>();
-      for (const file of sourceFiles) {
-        if (CREDENTIAL_PIN_PATTERN.test(scans.get(file)!.content)) {
-          codeFiles.add(file);
-        }
-      }
-      const diff = symmetricDifference(declaredFiles, codeFiles);
-      expect(
-        setsEqual(declaredFiles, codeFiles),
-        `credential-pin file sets differ: symmetric difference = [${diff.join(', ')}] ` +
-          `(declared=[${[...declaredFiles].join(', ')}], code=[${[...codeFiles].join(', ')}])`
-      ).toBe(true);
-    });
-
-    // --- (b) named runtime conditions (currently just A15's
+  describe('rule 3 — the non-privilege condition component agrees with the code', () => {
+    // Named runtime conditions (currently just A15's
     // `allowPlatformSupportAsAdmin`) — matched as an `if (…propertyName)`
     // predicate so a plain data-plumbing reference (the DTOs, the bootstrap
     // templates, `search.result.service.ts`'s query shape) does not count
@@ -327,13 +268,12 @@ describe('surface.drift.spec (T052a) — census vs. code', () => {
   // Exercise every gate shape's type guard at least once so a future
   // change to `gate.model.ts`'s union shows up as a real assertion here,
   // not only as a `tsc` exhaustiveness error in `reachability.ts`.
-  it('every declared gate is one of the four closed shapes', () => {
+  it('every declared gate is one of the three closed shapes', () => {
     for (const surfaces of Object.values(A_ROW_SURFACES)) {
       for (const surface of surfaces) {
         const shapes = [
           isRequiresGate(surface.gate),
           isAnyOfGate(surface.gate),
-          isCredentialGate(surface.gate),
           isConditionGate(surface.gate),
         ];
         expect(shapes.filter(Boolean).length).toBe(1);
