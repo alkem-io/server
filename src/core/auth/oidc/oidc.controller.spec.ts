@@ -608,6 +608,18 @@ function readIssuedPreAuth(res: any): string {
 
 // workspace#082 [FR-001/FR-002] — only the app-mode QUERY leg of /login may clear the
 // Kratos SSO cookie; every other leg must leave it alone.
+// SEC-082-SRV-07 — in app mode the browser jar must be emptied on EVERY exit, not
+// only on success: a `rejectCallback` 302s to the app scheme without touching
+// cookies, so a clear placed at the success exit alone left a live 720 h Kratos
+// session behind whenever the flow failed after the user had authenticated.
+function expectKratosCleared(res: {
+  cookies: { name: string; value: string; opts?: unknown }[];
+}): void {
+  const cleared = res.cookies.find(c => c.name === KRATOS_SESSION_COOKIE_NAME);
+  expect(cleared).toBeDefined();
+  expect(cleared!.value).toBe('');
+}
+
 function expectNoKratosClear(res: { cookies: { name: string }[] }): void {
   expect(res.cookies.some(c => c.name === KRATOS_SESSION_COOKIE_NAME)).toBe(
     false
@@ -625,7 +637,7 @@ function appTokenSet(nonce: string, issuedAt: number) {
   };
 }
 
-describe('OidcController — /login decides app mode (FR-001/FR-002/FR-003)', () => {
+describe('OidcController — /login decides app mode (FR-001/FR-002)', () => {
   async function login(
     opts: {
       query?: Record<string, unknown>;
@@ -987,6 +999,7 @@ describe('OidcController — app-mode /callback hands off instead of signing in 
       `${APP_SCHEME}:/auth/callback?error=state_mismatch`
     );
     expect(res.send).not.toHaveBeenCalled();
+    expectKratosCleared(res);
   });
 
   it('302s to the app scheme on nonce_mismatch', async () => {
@@ -1000,6 +1013,7 @@ describe('OidcController — app-mode /callback hands off instead of signing in 
       `${APP_SCHEME}:/auth/callback?error=nonce_mismatch`
     );
     expect(res.send).not.toHaveBeenCalled();
+    expectKratosCleared(res);
   });
 
   // An unhandled throw would 500 inside the auth browser, emit nothing, leave
@@ -1013,6 +1027,7 @@ describe('OidcController — app-mode /callback hands off instead of signing in 
       `${APP_SCHEME}:/auth/callback?error=handoff_store_failed`
     );
     expect(res.send).not.toHaveBeenCalled();
+    expectKratosCleared(res);
   });
 
   it('leaves the web callback byte-identical when no challenge is present (FR-016)', async () => {
