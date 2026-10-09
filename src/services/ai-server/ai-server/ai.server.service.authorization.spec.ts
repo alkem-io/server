@@ -185,7 +185,6 @@ describe('AiServerAuthorizationService', () => {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
       ]) {
         expect(granted).not.toContain(excluded);
       }

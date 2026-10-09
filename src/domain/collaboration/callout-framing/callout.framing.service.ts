@@ -20,6 +20,9 @@ import {
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
+import { ICalloutForm } from '@domain/collaboration/callout-form/callout.form.interface';
+import { CalloutFormService } from '@domain/collaboration/callout-form/callout.form.service';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
@@ -73,6 +76,7 @@ export class CalloutFramingService {
     private mediaGalleryService: MediaGalleryService,
     private pollService: PollService,
     private collaboraDocumentService: CollaboraDocumentService,
+    private calloutFormService: CalloutFormService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(CalloutFraming)
@@ -83,8 +87,25 @@ export class CalloutFramingService {
     calloutFramingData: CreateCalloutFramingInput,
     storageAggregator: IStorageAggregator,
     actorContext: ActorContext,
-    userID?: string
+    userID?: string,
+    options?: { allowFormFraming?: boolean }
   ): Promise<ICalloutFraming> {
+    // Deny by default: a FORM framing is only ever created through the
+    // create-Post mutation, after its admin-only guard, which is the one
+    // caller that passes the capability. Every other path that builds
+    // framings (knowledge bases, templates, space/subspace creation, ...)
+    // fails closed here, before anything is created.
+    if (
+      calloutFramingData.type === CalloutFramingType.FORM &&
+      !options?.allowFormFraming
+    ) {
+      throw new ValidationException(
+        'FORM framing can only be created through createCalloutOnCalloutsSet by a space admin',
+        LogContext.COLLABORATION,
+        { code: CalloutFormErrorCode.FORM_FRAMING_NOT_ALLOWED }
+      );
+    }
+
     const calloutFraming: ICalloutFraming = CalloutFraming.create(
       calloutFramingData as DeepPartial<CalloutFraming>
     );
@@ -199,6 +220,19 @@ export class CalloutFramingService {
           LogContext.COLLABORATION
         );
       }
+    }
+
+    if (calloutFraming.type === CalloutFramingType.FORM) {
+      if (!calloutFramingData.form) {
+        throw new ValidationException(
+          'Form input is required when framing type is FORM',
+          LogContext.COLLABORATION
+        );
+      }
+      // Persisted together with the framing through the inverse-side cascade.
+      calloutFraming.form = this.calloutFormService.createCalloutForm(
+        calloutFramingData.form
+      );
     }
 
     return calloutFraming;
@@ -437,13 +471,6 @@ export class CalloutFramingService {
     actorContext: ActorContext,
     userID?: string
   ): Promise<ICalloutFraming> {
-    if (calloutFramingData.profile) {
-      calloutFraming.profile = await this.profileService.updateProfile(
-        calloutFraming.profile,
-        calloutFramingData.profile
-      );
-    }
-
     if (calloutFramingData.type) {
       const oldType = calloutFraming.type;
       const newType = calloutFramingData.type;
@@ -455,6 +482,21 @@ export class CalloutFramingService {
         throw new ValidationException(
           'A SPACES callout framing has a fixed kind and cannot be changed to another framing type.',
           LogContext.COLLABORATION
+        );
+      }
+
+      // A FORM framing is created with its callout and can never be switched
+      // to or from another kind: the Form (and its responses) would be
+      // orphaned or born unguarded.
+      if (
+        newType !== oldType &&
+        (oldType === CalloutFramingType.FORM ||
+          newType === CalloutFramingType.FORM)
+      ) {
+        throw new ValidationException(
+          'A FORM callout framing has a fixed kind: it cannot be changed to or from another framing type.',
+          LogContext.COLLABORATION,
+          { code: CalloutFormErrorCode.FORM_FRAMING_FIXED_KIND }
         );
       }
 
@@ -470,6 +512,16 @@ export class CalloutFramingService {
         );
       }
       calloutFraming.type = calloutFramingData.type;
+    }
+
+    // The profile is written only after every type-change guard above has
+    // passed: this update is not transactional, so validating first is what
+    // keeps a rejected request from persisting a partial edit.
+    if (calloutFramingData.profile) {
+      calloutFraming.profile = await this.profileService.updateProfile(
+        calloutFraming.profile,
+        calloutFramingData.profile
+      );
     }
 
     await this.deleteInconsistentFramingContent(calloutFraming);
@@ -703,6 +755,10 @@ export class CalloutFramingService {
         calloutFraming.collaboraDocument.id
       );
     }
+
+    // No branch for a FORM: callout_form.framingId is ON DELETE CASCADE and
+    // callout_form_response.formId is ON DELETE CASCADE, so removing the
+    // framing below removes the Form and every response with it.
 
     if (calloutFraming.authorization) {
       await this.authorizationPolicyService.delete(
@@ -1150,13 +1206,28 @@ export class CalloutFramingService {
     return this.pollService.getPollForFraming(calloutFramingInput.id);
   }
 
+  public async getForm(
+    calloutFramingInput: ICalloutFraming
+  ): Promise<ICalloutForm | null> {
+    if (calloutFramingInput.form) {
+      return calloutFramingInput.form;
+    }
+    if (calloutFramingInput.type !== CalloutFramingType.FORM) {
+      return null;
+    }
+    return this.calloutFormService.getFormForFraming(calloutFramingInput.id);
+  }
+
   public async getCollaboraDocument(
     calloutFramingInput: ICalloutFraming
   ): Promise<ICollaboraDocument | null> {
     const calloutFraming = await this.getCalloutFramingOrFail(
       calloutFramingInput.id,
       {
-        relations: { collaboraDocument: true },
+        // `document` comes along so the CollaboraDocument.previewUrl field
+        // resolver can build its URL from the already-loaded relation instead
+        // of issuing one query per document on a board.
+        relations: { collaboraDocument: { document: true } },
       }
     );
     return calloutFraming.collaboraDocument ?? null;

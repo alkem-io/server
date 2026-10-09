@@ -157,7 +157,7 @@ describe('AdminUserEmailChangeResolverMutations', () => {
 
     it('denies a global-platform-manager-only actor (never held this surface pre-feature)', async () => {
       const actor = buildActorContext(
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER
+        AuthorizationCredential.PLATFORM_SETTINGS_ADMIN
       );
       await expect(
         realResolver.adminUserEmailChange(actor, {
@@ -172,8 +172,14 @@ describe('AdminUserEmailChangeResolverMutations', () => {
       ).rejects.toBeInstanceOf(UserEmailChangeException);
     });
 
-    it('allows a global-admin actor (pre-existing legacy reach preserved)', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
+    // 027-platform-role-redesign (T076, Slice B): INVERTED. This asserted the
+    // legacy credential's pre-feature reach through the additive slice; T076
+    // dropped every legacy credential from A4's grant set, so Platform Users
+    // Admin holds the login-email change alone (FR-007(d), spec row 6).
+    it('DENIES a platform-content-full-access actor — changing a login email is the user-record family', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
       await expect(
         realResolver.adminUserEmailChange(actor, {
           userID: 'subject-1',
@@ -184,7 +190,7 @@ describe('AdminUserEmailChangeResolverMutations', () => {
             role: 'Organization Administrator',
           },
         })
-      ).resolves.toBeDefined();
+      ).rejects.toThrow();
     });
 
     it('allows a platform-users-admin actor (the new owning role)', async () => {

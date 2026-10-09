@@ -68,7 +68,10 @@ describe('groupCredentialsByEntity', () => {
 
   it('should ignore credentials that do not match any known category', () => {
     const credentials = [
-      makeCredential(AuthorizationCredential.GLOBAL_ADMIN, 'global-1'),
+      makeCredential(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        'global-1'
+      ),
     ];
 
     const result = groupCredentialsByEntity(credentials);

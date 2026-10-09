@@ -61,6 +61,7 @@ describe('RegistrationService', () => {
   let platformInvitationService: {
     findPlatformInvitationsForUser: Mock;
     recordProfileCreated: Mock;
+    deleteAllForEmail: Mock;
   };
   let invitationService: {
     save: Mock;
@@ -195,6 +196,210 @@ describe('RegistrationService', () => {
     });
   });
 
+  describe('registerNewUser with open platform invitations', () => {
+    const kratosData = {
+      email: 'new@company.com',
+      emailVerified: true,
+      authenticationID: 'auth-1',
+      firstName: 'New',
+      lastName: 'Person',
+      avatarURL: '',
+    };
+    const newUser = { id: 'user-new', email: 'new@company.com' };
+    const orgRoleSet = { id: 'org-rs-1', authorization: { id: 'org-auth' } };
+    const domainOrg = {
+      id: 'org-1',
+      domain: 'company.com',
+      settings: { membership: { allowUsersMatchingDomainToJoin: true } },
+      verification: {
+        status: OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION,
+      },
+      roleSet: orgRoleSet,
+    };
+
+    const setUpFinalizationChain = () => {
+      userService.createUser.mockResolvedValue(newUser);
+      organizationLookupService.getOrganizationByDomain.mockResolvedValue(
+        domainOrg
+      );
+      roleSetService.assignActorToRole.mockResolvedValue(undefined);
+      userAuthorizationService.grantCredentialsAllUsersReceive.mockResolvedValue(
+        newUser
+      );
+      userAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      authorizationPolicyService.save.mockResolvedValue(undefined);
+      userService.getAccount.mockResolvedValue({ id: 'account-1' });
+      accountAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      notificationPlatformAdapter.platformUserProfileCreated.mockResolvedValue(
+        undefined
+      );
+      const savedInvitation = { id: 'inv-1', invitedToParent: false };
+      roleSetService.createInvitationExistingActor.mockResolvedValue(
+        savedInvitation
+      );
+      invitationService.save.mockResolvedValue(savedInvitation);
+      invitationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        { id: 'inv-auth' }
+      );
+      platformInvitationService.recordProfileCreated.mockResolvedValue(
+        undefined
+      );
+    };
+
+    const openInvitation = {
+      id: 'pi-1',
+      roleSet: orgRoleSet,
+      createdBy: 'inviter-1',
+      roleSetExtraRoles: ['admin'],
+      roleSetInvitedToParent: false,
+      welcomeMessage: 'Welcome aboard',
+      suggestedLanguage: 'nl',
+      createdDate: new Date('2024-01-01'),
+    };
+
+    it('skips the domain auto-join for an organization with an open invitation and converts the same list', async () => {
+      setUpFinalizationChain();
+      platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+        [openInvitation]
+      );
+      userService.updateUserSettings = vi.fn().mockResolvedValue(newUser);
+
+      await service.registerNewUser(kratosData);
+
+      expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).toHaveBeenCalledTimes(1);
+      expect(roleSetService.createInvitationExistingActor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          invitedActorID: 'user-new',
+          roleSetID: 'org-rs-1',
+          createdBy: 'inviter-1',
+          extraRoles: ['admin'],
+          invitedToParent: false,
+          welcomeMessage: 'Welcome aboard',
+          suggestedLanguage: 'nl',
+        })
+      );
+      expect(
+        platformInvitationService.recordProfileCreated
+      ).toHaveBeenCalledWith(openInvitation);
+    });
+
+    it('reads the open invitations exactly once per registration', async () => {
+      setUpFinalizationChain();
+      platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+        [openInvitation]
+      );
+      userService.updateUserSettings = vi.fn().mockResolvedValue(newUser);
+
+      await service.registerNewUser(kratosData);
+
+      expect(
+        platformInvitationService.findPlatformInvitationsForUser
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('still auto-joins by domain when the open invitation targets another role set', async () => {
+      setUpFinalizationChain();
+      platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+        [{ ...openInvitation, roleSet: { id: 'other-rs' } }]
+      );
+      userService.updateUserSettings = vi.fn().mockResolvedValue(newUser);
+
+      await service.registerNewUser(kratosData);
+
+      expect(roleSetService.assignActorToRole).toHaveBeenCalledTimes(1);
+      expect(roleSetService.assignActorToRole).toHaveBeenCalledWith(
+        orgRoleSet,
+        expect.any(String),
+        'user-new'
+      );
+    });
+
+    it('auto-joins by domain when there is no invitation (control)', async () => {
+      setUpFinalizationChain();
+      platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+        []
+      );
+
+      await service.registerNewUser(kratosData);
+
+      expect(roleSetService.assignActorToRole).toHaveBeenCalledTimes(1);
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('finalizeUserRegistration', () => {
+    const user = { id: 'user-admin', email: 'admin.created@example.com' };
+
+    beforeEach(() => {
+      userAuthorizationService.grantCredentialsAllUsersReceive.mockResolvedValue(
+        user
+      );
+      userAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      authorizationPolicyService.save.mockResolvedValue(undefined);
+      userService.getAccount.mockResolvedValue({ id: 'account-1' });
+      accountAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      notificationPlatformAdapter.platformUserProfileCreated.mockResolvedValue(
+        undefined
+      );
+    });
+
+    it('reads the open invitations itself when no list is supplied and converts them', async () => {
+      const roleSet = { id: 'rs-1', authorization: { id: 'auth-1' } };
+      platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+        [
+          {
+            id: 'pi-1',
+            roleSet,
+            createdBy: 'inviter-1',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: true,
+            createdDate: new Date('2024-01-01'),
+          },
+        ]
+      );
+      const saved = { id: 'inv-1', invitedToParent: true };
+      roleSetService.createInvitationExistingActor.mockResolvedValue(saved);
+      invitationService.save.mockResolvedValue(saved);
+      invitationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        { id: 'inv-auth' }
+      );
+      platformInvitationService.recordProfileCreated.mockResolvedValue(
+        undefined
+      );
+
+      await service.finalizeUserRegistration(user as any);
+
+      expect(
+        platformInvitationService.findPlatformInvitationsForUser
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        platformInvitationService.findPlatformInvitationsForUser
+      ).toHaveBeenCalledWith('admin.created@example.com');
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not read again when the caller supplies the list', async () => {
+      await service.finalizeUserRegistration(user as any, []);
+
+      expect(
+        platformInvitationService.findPlatformInvitationsForUser
+      ).not.toHaveBeenCalled();
+    });
+  });
+
   describe('assignUserToOrganizationByDomain', () => {
     const user = { id: 'user-1', email: 'test@company.com' } as any;
 
@@ -271,6 +476,54 @@ describe('RegistrationService', () => {
         'user-1'
       );
     });
+
+    it('should skip the join and return false when the organization role set is in the skip set', async () => {
+      organizationLookupService.getOrganizationByDomain.mockResolvedValue({
+        id: 'org-1',
+        domain: 'company.com',
+        settings: { membership: { allowUsersMatchingDomainToJoin: true } },
+        verification: {
+          status: OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION,
+        },
+        roleSet: { id: 'rs-1' },
+      });
+
+      const result = await service.assignUserToOrganizationByDomain(
+        user,
+        new Set(['rs-1'])
+      );
+
+      expect(result).toBe(false);
+      expect(roleSetService.assignActorToRole).not.toHaveBeenCalled();
+    });
+
+    it('should not put the email address in the skip log line', async () => {
+      const verbose = vi.fn();
+      (service as any).logger = { verbose };
+      organizationLookupService.getOrganizationByDomain.mockResolvedValue({
+        id: 'org-1',
+        domain: 'company.com',
+        settings: { membership: { allowUsersMatchingDomainToJoin: true } },
+        verification: {
+          status: OrganizationVerificationEnum.VERIFIED_MANUAL_ATTESTATION,
+        },
+        roleSet: { id: 'rs-1' },
+      });
+
+      await service.assignUserToOrganizationByDomain(user, new Set(['rs-1']));
+
+      expect(verbose).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(verbose.mock.calls[0])).not.toContain(
+        'test@company.com'
+      );
+      expect(verbose.mock.calls[0][0]).toEqual(
+        expect.objectContaining({
+          userID: 'user-1',
+          organizationID: 'org-1',
+          roleSetID: 'rs-1',
+        })
+      );
+    });
   });
 
   describe('processPendingInvitations', () => {
@@ -282,11 +535,12 @@ describe('RegistrationService', () => {
     } as any;
 
     it('should return empty array when no platform invitations exist', async () => {
-      platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-        []
-      );
+      const platformInvitations: any[] = [];
 
-      const result = await service.processPendingInvitations(user);
+      const result = await service.processPendingInvitations(
+        user,
+        platformInvitations
+      );
 
       expect(result).toEqual([]);
     });
@@ -299,9 +553,10 @@ describe('RegistrationService', () => {
         roleSetExtraRoles: [],
         roleSetInvitedToParent: false,
       };
-      platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-        [{ id: 'pi-1', roleSet: undefined }, invitationWithRoleSet]
-      );
+      const platformInvitations: any[] = [
+        { id: 'pi-1', roleSet: undefined },
+        invitationWithRoleSet,
+      ];
       const savedInvitation = { id: 'inv-1', invitedToParent: false };
       roleSetService.createInvitationExistingActor.mockResolvedValue(
         savedInvitation
@@ -315,12 +570,56 @@ describe('RegistrationService', () => {
         undefined
       );
 
-      const result = await service.processPendingInvitations(user);
+      const result = await service.processPendingInvitations(
+        user,
+        platformInvitations
+      );
 
       expect(result).toHaveLength(1);
       expect(
         roleSetService.createInvitationExistingActor
       ).toHaveBeenCalledTimes(1);
+    });
+
+    it('should carry the welcome message and suggested language into the converted invitation', async () => {
+      const roleSet = { id: 'rs-1', authorization: { id: 'auth-1' } };
+      const platformInvitations: any[] = [
+        {
+          id: 'pi-1',
+          roleSet,
+          createdBy: 'creator-1',
+          roleSetExtraRoles: ['admin'],
+          roleSetInvitedToParent: true,
+          welcomeMessage: 'Hello there',
+          suggestedLanguage: 'nl',
+          createdDate: new Date('2024-01-01'),
+        },
+      ];
+      const saved = { id: 'inv-1', invitedToParent: true };
+      roleSetService.createInvitationExistingActor.mockResolvedValue(saved);
+      invitationService.save.mockResolvedValue(saved);
+      invitationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        { id: 'auth-1' }
+      );
+      authorizationPolicyService.save.mockResolvedValue(undefined);
+      platformInvitationService.recordProfileCreated.mockResolvedValue(
+        undefined
+      );
+      userService.updateUserSettings = vi.fn().mockResolvedValue(user);
+
+      await service.processPendingInvitations(user, platformInvitations);
+
+      expect(roleSetService.createInvitationExistingActor).toHaveBeenCalledWith(
+        {
+          invitedActorID: 'user-1',
+          roleSetID: 'rs-1',
+          createdBy: 'creator-1',
+          extraRoles: ['admin'],
+          invitedToParent: true,
+          welcomeMessage: 'Hello there',
+          suggestedLanguage: 'nl',
+        }
+      );
     });
 
     describe('language seeding from platform invitations', () => {
@@ -331,29 +630,23 @@ describe('RegistrationService', () => {
       } as any;
 
       beforeEach(() => {
-        // Suppress the role-set and auth flow for these seeding-focused tests.
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          []
-        );
         userService.updateUserSettings = vi.fn().mockResolvedValue(freshUser);
       });
 
       it('should seed language from an nl invitation and latch the flag', async () => {
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-nl',
-              roleSet: undefined, // no roleSet → skipped in loop, but seeding runs first
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'nl',
-              createdDate: new Date('2024-01-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-nl',
+            roleSet: undefined, // no roleSet → skipped in loop, but seeding runs first
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'nl',
+            createdDate: new Date('2024-01-01'),
+          },
+        ];
 
-        await service.processPendingInvitations(freshUser);
+        await service.processPendingInvitations(freshUser, platformInvitations);
 
         expect(userService.updateUserSettings).toHaveBeenCalledWith(freshUser, {
           language: 'nl',
@@ -362,21 +655,19 @@ describe('RegistrationService', () => {
 
       it('should skip an ineligible suggestion (de) and not seed', async () => {
         // eligible = 'nl' from the default configService mock; 'de' is not eligible.
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-de',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'de',
-              createdDate: new Date('2024-01-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-de',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'de',
+            createdDate: new Date('2024-01-01'),
+          },
+        ];
 
-        await service.processPendingInvitations(freshUser);
+        await service.processPendingInvitations(freshUser, platformInvitations);
 
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
       });
@@ -390,22 +681,20 @@ describe('RegistrationService', () => {
           if (key === 'language') return { eligible: 'nl,xx', default: 'en' };
           return undefined;
         });
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-xx',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'xx',
-              createdDate: new Date('2024-01-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-xx',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'xx',
+            createdDate: new Date('2024-01-01'),
+          },
+        ];
 
         await expect(
-          service.processPendingInvitations(freshUser)
+          service.processPendingInvitations(freshUser, platformInvitations)
         ).resolves.not.toThrow();
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
       });
@@ -420,30 +709,28 @@ describe('RegistrationService', () => {
           if (key === 'language') return { eligible: 'nl,en', default: 'en' };
           return undefined;
         });
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-old',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'en', // older, eligible — must NOT win
-              createdDate: new Date('2024-01-01'),
-            },
-            {
-              id: 'pi-new',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'nl', // newer, eligible — must win
-              createdDate: new Date('2024-06-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-old',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'en', // older, eligible — must NOT win
+            createdDate: new Date('2024-01-01'),
+          },
+          {
+            id: 'pi-new',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'nl', // newer, eligible — must win
+            createdDate: new Date('2024-06-01'),
+          },
+        ];
 
-        await service.processPendingInvitations(freshUser);
+        await service.processPendingInvitations(freshUser, platformInvitations);
 
         // The latest-created eligible invitation (pi-new → 'nl') must be
         // selected and the call must happen exactly once.  If the sort were
@@ -461,41 +748,40 @@ describe('RegistrationService', () => {
           email: 'set@example.com',
           settings: { language: 'en', languageOfferAnswered: true },
         } as any;
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-nl',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'nl',
-              createdDate: new Date('2024-01-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-nl',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'nl',
+            createdDate: new Date('2024-01-01'),
+          },
+        ];
 
-        await service.processPendingInvitations(userWithLanguage);
+        await service.processPendingInvitations(
+          userWithLanguage,
+          platformInvitations
+        );
 
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
       });
 
       it('should not seed when no suggestedLanguage on any invitation', async () => {
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-no-lang',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: undefined,
-              createdDate: new Date('2024-01-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-no-lang',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: undefined,
+            createdDate: new Date('2024-01-01'),
+          },
+        ];
 
-        await service.processPendingInvitations(freshUser);
+        await service.processPendingInvitations(freshUser, platformInvitations);
 
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
       });
@@ -527,21 +813,22 @@ describe('RegistrationService', () => {
           .fn()
           .mockResolvedValue(userWithSettings);
 
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-nl-prod',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'nl',
-              createdDate: new Date('2024-01-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-nl-prod',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'nl',
+            createdDate: new Date('2024-01-01'),
+          },
+        ];
 
-        await service.processPendingInvitations(userWithoutSettings);
+        await service.processPendingInvitations(
+          userWithoutSettings,
+          platformInvitations
+        );
 
         // getUserByIdOrFail must be called with settings relation to hydrate settings
         expect(userService.getUserByIdOrFail).toHaveBeenCalledWith(
@@ -557,21 +844,19 @@ describe('RegistrationService', () => {
 
       it('should not reload settings when user.settings is already loaded', async () => {
         // freshUser already has settings populated — no extra DB fetch needed.
-        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
-          [
-            {
-              id: 'pi-nl-preloaded',
-              roleSet: undefined,
-              createdBy: 'creator',
-              roleSetExtraRoles: [],
-              roleSetInvitedToParent: false,
-              suggestedLanguage: 'nl',
-              createdDate: new Date('2024-01-01'),
-            },
-          ]
-        );
+        const platformInvitations: any[] = [
+          {
+            id: 'pi-nl-preloaded',
+            roleSet: undefined,
+            createdBy: 'creator',
+            roleSetExtraRoles: [],
+            roleSetInvitedToParent: false,
+            suggestedLanguage: 'nl',
+            createdDate: new Date('2024-01-01'),
+          },
+        ];
 
-        await service.processPendingInvitations(freshUser);
+        await service.processPendingInvitations(freshUser, platformInvitations);
 
         // No reload when settings are already on the object
         expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
@@ -594,7 +879,7 @@ describe('RegistrationService', () => {
         { id: 'app-1' },
       ]);
       applicationService.deleteApplication.mockResolvedValue(undefined);
-      const user = { id: 'user-1' };
+      const user = { id: 'user-1', email: 'Gone@Example.com' };
       const account = {
         id: 'account-1',
         externalSubscriptionID: 'wingback-1',
@@ -620,6 +905,7 @@ describe('RegistrationService', () => {
         identityDeletionSucceeded: true,
       });
       fileServiceAdapter.deleteDocument.mockResolvedValue(undefined);
+      platformInvitationService.deleteAllForEmail.mockResolvedValue(2);
       return { deleteData, user, account, deletedUser };
     };
 
@@ -642,6 +928,49 @@ describe('RegistrationService', () => {
       expect(
         accountService.deleteAccountOrFailForAccountDeletion
       ).toHaveBeenCalledWith(account, expect.anything());
+      expect(result).toBe(deletedUser);
+    });
+
+    it('erases the platform invitations for the account email inside the transaction, before the user deletion', async () => {
+      const { deleteData } = setUpHappyPath();
+      const order: string[] = [];
+      platformInvitationService.deleteAllForEmail.mockImplementation(
+        async () => {
+          order.push('invitations');
+          return 2;
+        }
+      );
+      userService.deleteUserDbOnly.mockImplementation(async () => {
+        order.push('user');
+        return {
+          user: { id: 'user-1' },
+          documentIDs: [],
+          storageBucketIDs: [],
+        };
+      });
+      const txManager = { tx: true };
+      entityManager.transaction.mockImplementation(async (cb: any) =>
+        cb(txManager)
+      );
+
+      await service.deleteUserWithPendingMemberships(deleteData as any, 'self');
+
+      expect(platformInvitationService.deleteAllForEmail).toHaveBeenCalledWith(
+        'Gone@Example.com',
+        txManager
+      );
+      expect(order).toEqual(['invitations', 'user']);
+    });
+
+    it('completes when no platform invitation exists for the email', async () => {
+      const { deleteData, deletedUser } = setUpHappyPath();
+      platformInvitationService.deleteAllForEmail.mockResolvedValue(0);
+
+      const result = await service.deleteUserWithPendingMemberships(
+        deleteData as any,
+        'self'
+      );
+
       expect(result).toBe(deletedUser);
     });
 

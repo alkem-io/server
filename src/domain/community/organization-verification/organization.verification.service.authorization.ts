@@ -1,6 +1,5 @@
 import {
   CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_VERIFICATION_PLATFORM_SUPPORT,
 } from '@common/constants';
 import {
@@ -52,35 +51,17 @@ export class OrganizationVerificationAuthorizationService {
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const globalAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-        ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-        ],
-        CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS_ALL
-      );
-    // Slice B: GLOBAL_COMMUNITY_READ is a READ role that holds GRANT here —
-    // flagged for removal with the rest of this legacy rule (QA server-C2-d).
-    newRules.push(globalAdmin);
-
     // QA server-C2-d (ruling (a), A6 organization lifecycle): Platform
     // Support approves / resets / reopens / archives an organization's
     // verification. UPDATE passes the resolver's gate
     // (`organization.verification.resolver.mutations.ts`), GRANT passes the
     // MANUALLY_VERIFY / RESET / REOPEN / ARCHIVE lifecycle guards
     // (`organization.verification.service.lifecycle.ts`), READ lets it see
-    // the state it acts on. Never CREATE/DELETE. Additive in Slice A — the
-    // legacy rule above is untouched. The client's verify toggle keys on
-    // Update && Grant, so it appears for Support with no client change.
+    // the state it acts on. Never CREATE/DELETE. Slice B (T076) deletes the
+    // legacy `{global-admin, global-support, global-community-read}` rule this
+    // sat beside, so this is Platform Support's only rule on the tree. The
+    // client's verify toggle keys on Update && Grant, so it appears for Support
+    // with no client change.
     const platformSupport =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [

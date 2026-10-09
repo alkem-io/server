@@ -1,4 +1,10 @@
-import { ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES } from '@common/constants/authorization';
+import {
+  getPlatformAdminNotificationCriteria,
+  isPlatformAdminNotificationEvent,
+  ORGANIZATION_NOTIFICATION_CREDENTIAL_TYPES,
+  PLATFORM_ADMIN_NOTIFICATION_ROUTING,
+  type PlatformAdminNotificationEvent,
+} from '@common/constants/authorization';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -18,6 +24,7 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
 import {
+  DEFAULT_FORM_RESPONSE_CHANNELS,
   DEFAULT_INVITATION_RESPONSE_CHANNELS,
   DEFAULT_ORGANIZATION_ASSOCIATE_CHANNELS,
   DEFAULT_ORGANIZATION_SPACE_INVITATION_CHANNELS,
@@ -49,6 +56,44 @@ const DEFAULT_CALLOUT_REACTION_CHANNELS: IUserSettingsNotificationChannels =
     inApp: true,
     push: true,
   });
+
+export type PlatformAdminNotificationResolutionCause =
+  | 'ok'
+  | 'channel-off'
+  | 'provisioning-gap'
+  | 'stale-policy'
+  | 'actor-only';
+
+export interface PlatformAdminNotificationResolutionCounts {
+  criteriaCount: number;
+  candidateCount: number;
+  channelEnabledCount: number;
+  privilegedCount: number;
+  actorExcludedCount: number;
+  recipientCount: number;
+}
+
+// The severity-by-cause resolution for one channel's platform-admin
+// recipient set, in the order data-model.md §5 specifies — first match
+// wins. Pure, so it is tested directly against every staged condition
+// without touching the service's dependencies.
+export function resolvePlatformAdminRecipientCause(
+  counts: PlatformAdminNotificationResolutionCounts
+): PlatformAdminNotificationResolutionCause {
+  if (counts.criteriaCount > 0 && counts.candidateCount === 0) {
+    return 'provisioning-gap';
+  }
+  if (counts.channelEnabledCount === 0) {
+    return 'channel-off';
+  }
+  if (counts.privilegedCount === 0) {
+    return 'stale-policy';
+  }
+  if (counts.recipientCount === 0 && counts.actorExcludedCount > 0) {
+    return 'actor-only';
+  }
+  return 'ok';
+}
 
 @Injectable()
 export class NotificationRecipientsService {
@@ -177,8 +222,18 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
 
+    // Tolerant lookup: this entity only populates the optional GraphQL
+    // passthrough field below. Actor exclusion further down works off the
+    // raw id string alone, so it is unaffected either way. A self-deletion
+    // removes the acting user's row before this call ever runs (the
+    // deletion must complete regardless of whether this notification can be
+    // sent), which would make an `OrFail` lookup here throw on every single
+    // self-deletion and abort recipient resolution before any candidate,
+    // channel, or privilege filtering — and before the resolution
+    // observability entry — ever runs.
     const triggeredBy = eventData.triggeredBy
-      ? await this.userLookupService.getUserByIdOrFail(eventData.triggeredBy)
+      ? ((await this.userLookupService.getUserById(eventData.triggeredBy)) ??
+        undefined)
       : undefined;
 
     if (!triggeredBy) {
@@ -188,25 +243,119 @@ export class NotificationRecipientsService {
       );
     }
 
+    // The acting operator is excluded from their own platform-admin
+    // notification here, in resolution, for every channel — driven by the
+    // routing table's row flag, and by identity regardless of which
+    // credential made them a candidate. Doing it here rather
+    // than per-channel in each adapter gives the exclusion one owner and
+    // means this recipient-resolution query already reflects the truth.
+    const excludeActor =
+      isPlatformAdminNotificationEvent(eventData.eventType) &&
+      PLATFORM_ADMIN_NOTIFICATION_ROUTING[eventData.eventType].excludeActor &&
+      !!eventData.triggeredBy;
+    const withoutActor = (recipients: IUser[]) =>
+      excludeActor
+        ? recipients.filter(recipient => recipient.id !== eventData.triggeredBy)
+        : recipients;
+
+    const emailRecipientsFinal = withoutActor(emailRecipientsWithPrivilege);
+    const inAppRecipientsFinal = withoutActor(inAppRecipientsWithPrivilege);
+    const pushRecipientsFinal = withoutActor(pushRecipientsWithPrivilege);
+
+    if (isPlatformAdminNotificationEvent(eventData.eventType)) {
+      this.emitPlatformAdminNotificationResolutionObservation(
+        eventData.eventType,
+        credentialCriteria.length,
+        candidateRecipients.length,
+        {
+          email: {
+            channelEnabledCount: emailRecipientsWithNotificationEnabled.length,
+            privilegedCount: emailRecipientsWithPrivilege.length,
+            recipients: emailRecipientsFinal,
+          },
+          inApp: {
+            channelEnabledCount: inAppRecipientsWithNotificationEnabled.length,
+            privilegedCount: inAppRecipientsWithPrivilege.length,
+            recipients: inAppRecipientsFinal,
+          },
+          push: {
+            channelEnabledCount: pushRecipientsWithNotificationEnabled.length,
+            privilegedCount: pushRecipientsWithPrivilege.length,
+            recipients: pushRecipientsFinal,
+          },
+        }
+      );
+    }
+
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsWithPrivilege.length} recipients: ${emailRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
+      `[${eventData.eventType}] - 5a. Email has ${emailRecipientsFinal.length} recipients: ${emailRecipientsFinal.map(recipient => recipient.id).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
+      `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsFinal.length} recipients: ${inAppRecipientsFinal.map(recipient => recipient.id).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5c. Push has ${pushRecipientsWithPrivilege.length} recipients: ${pushRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
+      `[${eventData.eventType}] - 5c. Push has ${pushRecipientsFinal.length} recipients: ${pushRecipientsFinal.map(recipient => recipient.id).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
 
     return {
-      emailRecipients: emailRecipientsWithPrivilege,
-      inAppRecipients: inAppRecipientsWithPrivilege,
-      pushRecipients: pushRecipientsWithPrivilege,
+      emailRecipients: emailRecipientsFinal,
+      inAppRecipients: inAppRecipientsFinal,
+      pushRecipients: pushRecipientsFinal,
       triggeredBy,
     };
+  }
+
+  // One structured, operator-visible log entry per channel for each of the
+  // five platform-admin events — never a throw, so a logging failure can
+  // never take down recipient resolution or the action that triggered it.
+  private emitPlatformAdminNotificationResolutionObservation(
+    eventType: PlatformAdminNotificationEvent,
+    criteriaCount: number,
+    candidateCount: number,
+    channels: Record<
+      'email' | 'inApp' | 'push',
+      {
+        channelEnabledCount: number;
+        privilegedCount: number;
+        recipients: IUser[];
+      }
+    >
+  ): void {
+    for (const channel of ['email', 'inApp', 'push'] as const) {
+      try {
+        const { channelEnabledCount, privilegedCount, recipients } =
+          channels[channel];
+        const actorExcludedCount = privilegedCount - recipients.length;
+        const counts = {
+          criteriaCount,
+          candidateCount,
+          channelEnabledCount,
+          privilegedCount,
+          actorExcludedCount,
+          recipientCount: recipients.length,
+        };
+        const cause = resolvePlatformAdminRecipientCause(counts);
+        const entry = {
+          message: 'platform-admin notification recipients resolved',
+          eventType,
+          channel,
+          ...counts,
+          cause,
+        };
+        if (cause === 'stale-policy') {
+          this.logger.error?.(entry, '', LogContext.NOTIFICATIONS);
+        } else if (cause === 'provisioning-gap') {
+          this.logger.warn?.(entry, LogContext.NOTIFICATIONS);
+        } else {
+          this.logger.log?.(entry, LogContext.NOTIFICATIONS);
+        }
+      } catch {
+        // Observability must never be able to fail recipient resolution.
+      }
+    }
   }
 
   private async filterRecipientsWithPrivileges(
@@ -368,6 +517,16 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
         return notificationSettings.space.admin
           .collaborationCalloutContributionCreated;
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE:
+        // Defend on read against a row that predates the backfill migration or
+        // was inserted by an old pod during a rolling deploy.
+        // `UserSettings.applyFormResponseNotificationDefaults` (@AfterLoad)
+        // already heals entity-loaded rows; this covers other load paths.
+        return (
+          notificationSettings.space?.admin
+            ?.collaborationCalloutFormResponseReceived ??
+          DEFAULT_FORM_RESPONSE_CHANNELS
+        );
       case NotificationEvent.USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION:
         return notificationSettings.space.admin.userEmailChanged;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
@@ -464,6 +623,13 @@ export class NotificationRecipientsService {
           inApp: false,
           push: false,
         };
+      // The submitter's receipt for a Form response: email only, no setting.
+      case NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT:
+        return {
+          email: true,
+          inApp: false,
+          push: false,
+        };
 
       default:
         throw new NotificationEventException(
@@ -505,7 +671,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
       case NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
-        credentialCriteria = this.getGlobalAdminCriteria();
+        credentialCriteria = getPlatformAdminNotificationCriteria(eventType);
         break;
       }
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
@@ -534,7 +700,8 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
-      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION: {
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getSpaceAdminCredentialCriteria(spaceID);
         break;
@@ -565,6 +732,7 @@ export class NotificationRecipientsService {
         break;
       }
       case NotificationEvent.USER_SIGN_UP_WELCOME:
+      case NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT:
       case NotificationEvent.USER_MENTIONED:
       case NotificationEvent.USER_COMMENT_REPLY:
       case NotificationEvent.USER_MESSAGE:
@@ -727,6 +895,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
+      case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE:
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED:
       case NotificationEvent.SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_DECLINED:
@@ -762,6 +931,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
       case NotificationEvent.USER_SIGN_UP_WELCOME:
+      case NotificationEvent.USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT:
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:
       case NotificationEvent.PLATFORM_FORUM_DISCUSSION_COMMENT:
@@ -1012,23 +1182,6 @@ export class NotificationRecipientsService {
       {
         type: AuthorizationCredential.ACCOUNT_ADMIN,
         resourceID: virtual.account.id,
-      },
-    ];
-  }
-
-  private getGlobalAdminCriteria(): CredentialsSearchInput[] {
-    return [
-      {
-        type: AuthorizationCredential.GLOBAL_ADMIN,
-        resourceID: '',
-      },
-      {
-        type: AuthorizationCredential.GLOBAL_SUPPORT,
-        resourceID: '',
-      },
-      {
-        type: AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        resourceID: '',
       },
     ];
   }

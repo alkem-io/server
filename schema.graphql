@@ -108,22 +108,13 @@ enum AuthenticationType {
 
 enum AuthorizationCredential {
   ACCOUNT_ADMIN
-  ASSISTANT_ACCESS
-  BETA_TESTER
   FEATURE_BETA_TESTER
   FEATURE_ORGANIZATION_CREATOR
   FEATURE_VC_CAMPAIGN
   FEATURE_VIRTUAL_ASSISTANT
-  GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
-  GLOBAL_COMMUNITY_READ
   GLOBAL_GUEST
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
@@ -144,7 +135,6 @@ enum AuthorizationCredential {
   SPACE_SUBSPACE_ADMIN
   USER_GROUP_MEMBER
   USER_SELF_MANAGEMENT
-  VC_CAMPAIGN
 }
 
 enum AuthorizationPolicyType {
@@ -242,18 +232,17 @@ enum AuthorizationPrivilege {
   FILE_DELETE
   FILE_UPLOAD
   GRANT
-  GRANT_GLOBAL_ADMINS
   LICENSE_RESET
   MOVE_CONTRIBUTION
   MOVE_POST
   MOVE_TASK
-  PLATFORM_ADMIN
   PLATFORM_AUDIT_READ
   PLATFORM_CONTENT_FULL_ACCESS
   PLATFORM_FORUM_MANAGE
   PLATFORM_LICENSING_LISTS_READ
   PLATFORM_OPERATIONS_ADMIN
   PLATFORM_ROLE_HOLDERS_READ
+  PLATFORM_ROLES_ASSIGN
   PLATFORM_SETTINGS_ADMIN
   PLATFORM_SUPPORT_LISTS_READ
   PLATFORM_SUPPORT_ORG_RESOURCES
@@ -314,9 +303,38 @@ enum CalloutDescriptionDisplayMode {
   EXPANDED
 }
 
+"""The answer type of a Form question."""
+enum CalloutFormQuestionType {
+  LONG_TEXT
+  MULTIPLE_CHOICE
+  SHORT_TEXT
+  SINGLE_CHOICE
+}
+
+"""Whether a member can submit one or several responses to a Form."""
+enum CalloutFormResponseMode {
+  MULTIPLE
+  SINGLE
+}
+
+"""
+Who can read all responses of a Form. ADMINS: only the space admins. MEMBERS: the members of the space as well.
+"""
+enum CalloutFormResponseVisibility {
+  ADMINS
+  MEMBERS
+}
+
+"""Whether a Form accepts new responses."""
+enum CalloutFormState {
+  CLOSED
+  OPEN
+}
+
 enum CalloutFramingType {
   COLLABORA_DOCUMENT
   CONTRIBUTORS
+  FORM
   LINK
   MEDIA_GALLERY
   MEMO
@@ -405,22 +423,13 @@ enum ConversationEventType {
 enum CredentialType {
   ACCOUNT_ADMIN
   ACCOUNT_LICENSE_PLUS
-  ASSISTANT_ACCESS
-  BETA_TESTER
   FEATURE_BETA_TESTER
   FEATURE_ORGANIZATION_CREATOR
   FEATURE_VC_CAMPAIGN
   FEATURE_VIRTUAL_ASSISTANT
-  GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
-  GLOBAL_COMMUNITY_READ
   GLOBAL_GUEST
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
   GLOBAL_REGISTERED
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
@@ -451,7 +460,6 @@ enum CredentialType {
   SPACE_SUBSPACE_ADMIN
   USER_GROUP_MEMBER
   USER_SELF_MANAGEMENT
-  VC_CAMPAIGN
 }
 
 """
@@ -636,6 +644,7 @@ enum NotificationEvent {
   ORGANIZATION_ADMIN_MESSAGE
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_INVITATION
   ORGANIZATION_ADMIN_SPACE_COMMUNITY_JOINED
+  ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM
   ORGANIZATION_MESSAGE_SENDER
   PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED
   PLATFORM_ADMIN_SPACE_CREATED
@@ -644,6 +653,7 @@ enum NotificationEvent {
   PLATFORM_FORUM_DISCUSSION_COMMENT
   PLATFORM_FORUM_DISCUSSION_CREATED
   SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
+  SPACE_ADMIN_COLLABORATION_CALLOUT_FORM_RESPONSE
   SPACE_ADMIN_COMMUNITY_APPLICATION
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
   SPACE_ADMIN_ORGANIZATION_COMMUNITY_INVITATION_ACCEPTED
@@ -665,6 +675,7 @@ enum NotificationEvent {
   SPACE_COMMUNITY_CALENDAR_EVENT_CREATED
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
+  USER_COLLABORATION_CALLOUT_FORM_RESPONSE_RECEIPT
   USER_COMMENT_REPLY
   USER_CONVERSATION_MESSAGE_DIRECT
   USER_CONVERSATION_MESSAGE_GROUP
@@ -851,6 +862,12 @@ enum PushSubscriptionStatus {
   EXPIRED
 }
 
+"""Whether a role was added or removed."""
+enum RoleChangeType {
+  ADDED
+  REMOVED
+}
+
 enum RoleName {
   ADMIN
   ANONYMOUS
@@ -859,20 +876,11 @@ enum RoleName {
   FEATURE_ORGANIZATION_CREATOR
   FEATURE_VC_CAMPAIGN
   FEATURE_VIRTUAL_ASSISTANT
-  GLOBAL_ADMIN
-  GLOBAL_COMMUNITY_READER
-  GLOBAL_LICENSE_MANAGER
-  GLOBAL_PLATFORM_MANAGER
-  GLOBAL_SPACES_READER
-  GLOBAL_SUPPORT
-  GLOBAL_SUPPORT_MANAGER
   GUEST
   LEAD
   MEMBER
   OWNER
-  PLATFORM_ASSISTANT_ACCESS
   PLATFORM_AUDIT_READER
-  PLATFORM_BETA_TESTER
   PLATFORM_CONTENT_FULL_ACCESS
   PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
@@ -882,7 +890,6 @@ enum RoleName {
   PLATFORM_SPACES_READER
   PLATFORM_SUPPORT
   PLATFORM_USERS_ADMIN
-  PLATFORM_VC_CAMPAIGN
   REGISTERED
 }
 
@@ -2120,6 +2127,114 @@ type CalloutContributorsSettings {
   mapView: CalloutContributorsMapView
 }
 
+type CalloutForm {
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """
+  The optional plain-text description of the Form, at most 2048 characters. Null when not set.
+  """
+  description: String
+  """The ID of the entity"""
+  id: UUID!
+  """The ordered questions of the Form."""
+  questions: [CalloutFormQuestion!]!
+  """The settings of the Form."""
+  settings: CalloutFormSettings!
+  """
+  The optional plain-text title of the Form, at most 512 characters. Null when not set.
+  """
+  title: String
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type CalloutFormAnswer {
+  """The question text as it was when the response was given (snapshot)."""
+  prompt: String!
+  questionID: UUID!
+  """The selected options of a choice question."""
+  selectedOptions: [CalloutFormAnswerOption!]
+  """The answer to a text question."""
+  text: String
+  """The question type as it was when the response was given (snapshot)."""
+  type: CalloutFormQuestionType!
+}
+
+type CalloutFormAnswerOption {
+  id: UUID!
+  """The label of the option as it was when the response was given."""
+  label: String!
+}
+
+type CalloutFormQuestion {
+  """Optional helper text shown under the question."""
+  explanation: String
+  """The ID of the question, stable across edits of the Form."""
+  id: UUID!
+  """
+  The selectable options. Present for the two choice types, absent for the text types.
+  """
+  options: [CalloutFormQuestionOption!]
+  """The question text."""
+  prompt: String!
+  """Whether an answer is required to submit a response."""
+  required: Boolean!
+  """The answer type of the question."""
+  type: CalloutFormQuestionType!
+}
+
+type CalloutFormQuestionOption {
+  """The ID of the option, stable across edits of the Form."""
+  id: UUID!
+  """The label shown to the respondent."""
+  label: String!
+}
+
+type CalloutFormResponse {
+  """
+  The answers, snapshotted from the Form definition at submission. Unanswered optional questions have no entry.
+  """
+  answers: [CalloutFormAnswer!]!
+  """
+  The member who submitted the response. Null once that account has been deleted.
+  """
+  createdBy: User
+  """When the response was submitted."""
+  createdDate: DateTime!
+  id: UUID!
+}
+
+type CalloutFormResponses {
+  """
+  The responses the viewer may read: every response when canReadAll, otherwise only their own.
+  """
+  all: PaginatedCalloutFormResponses!
+  """
+  Whether the viewer can moderate the Form: edit its definition and delete any response.
+  """
+  canModerate: Boolean!
+  """Whether the viewer can read every response of the Form."""
+  canReadAll: Boolean!
+  formID: UUID!
+  """The viewer's own responses, oldest first; at most the 50 newest."""
+  mine: [CalloutFormResponse!]!
+}
+
+type CalloutFormSettings {
+  """
+  Whether the Form box starts collapsed for every viewer. Presentation only. Defaults to false (expanded).
+  """
+  defaultCollapsed: Boolean!
+  """
+  Whether a member can submit one or several responses. Defaults to SINGLE.
+  """
+  responseMode: CalloutFormResponseMode!
+  """Whether the Form accepts new responses. Defaults to OPEN."""
+  state: CalloutFormState!
+  """Who can read all the responses. Defaults to ADMINS."""
+  visibility: CalloutFormResponseVisibility!
+}
+
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2137,6 +2252,10 @@ type CalloutFraming {
   contributors(type: ActorType!): [ContributorCollectionItem!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  The Form attached to this Callout Framing, if any. Present when framing.type = FORM. Only the definition: responses are read through lookup.calloutFormResponses.
+  """
+  form: CalloutForm
   """The ID of the entity"""
   id: UUID!
   """The Link for framing the associated Callout."""
@@ -2384,6 +2503,10 @@ type CollaboraDocument {
   documentType: CollaboraDocumentType!
   """The ID of the entity"""
   id: UUID!
+  """
+  An authorized, same-origin preview image endpoint for the current saved document, or null when there is no backing file to preview. NOT a bearer URL: every request against it is independently authorized against the current document READ policy.
+  """
+  previewUrl: String
   """The Profile for this CollaboraDocument."""
   profile: Profile!
   """The date at which the entity was last updated."""
@@ -2637,17 +2760,35 @@ type ContributorCollectionCounts {
 }
 
 type ContributorCollectionItem {
+  """
+  Organizations only. The count of platform-wide associates of the organization (distinct users holding its associate role) — the same number as the organization's 'associates' metric; NOT the number of members of this space. Null for Users and Virtual Contributors.
+  """
+  associatesCount: Int
   avatarUrl: String
   displayName: String!
   id: UUID!
+  """
+  Users only. The calendar month in which the user's current membership of the space that owns this callout began ("member since"): the creation date of the member credential, truncated to the first day of the month, 00:00 UTC. Leaving and re-joining restarts it. Null for Organizations and Virtual Contributors, and for a user listed without the member role.
+  """
+  joinedDate: DateTime
   """
   Location of the contributor; null for Virtual Contributors or when not readable.
   """
   location: ContributorLocation
   """The role label for this contributor (lead/admin/member)."""
   roleLabel: String
+  """All contributor types. The profile tagline, trimmed; null when empty."""
+  tagline: String
+  """
+  All contributor types. The profile tagsets merged in order — Users: skills, then keywords; Organizations and Virtual Contributors: keywords, then capabilities. Blank tags removed; duplicates (ignoring case) kept once, first occurrence wins; never the default tagset. Empty list when none. Clients decide how many to show.
+  """
+  tags: [String!]
   type: ActorType!
   url: String
+  """
+  Organizations only. The organization's website, trimmed; null when empty or when it is not an absolute http/https URL. Null for Users and Virtual Contributors.
+  """
+  website: String
 }
 
 type ContributorLocation {
@@ -2858,9 +2999,64 @@ type CreateCalloutData {
   taskBoard: CreateCalloutTaskBoardData
 }
 
+type CreateCalloutFormData {
+  """
+  The optional plain-text description of the Form, at most 2048 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  description: String
+  """
+  The ordered questions of the Form. Between 1 and 50; the count is enforced with a reason code.
+  """
+  questions: [CreateCalloutFormQuestionData!]!
+  """
+  The Form settings. Defaults: visibility ADMINS, responseMode SINGLE, state OPEN.
+  """
+  settings: CreateCalloutFormSettingsData
+  """
+  The optional plain-text title of the Form, at most 512 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  title: String
+}
+
+type CreateCalloutFormQuestionData {
+  """Optional helper text. At most 2048 characters."""
+  explanation: String
+  """
+  The options of a choice question (2 to 20). Must be absent for the text types.
+  """
+  options: [CreateCalloutFormQuestionOptionData!]
+  """The question text. Required, at most 512 characters."""
+  prompt: String!
+  """Whether an answer is required. Defaults to false."""
+  required: Boolean
+  type: CalloutFormQuestionType!
+}
+
+type CreateCalloutFormQuestionOptionData {
+  """The label of the option. Unique within the question."""
+  label: String!
+}
+
+type CreateCalloutFormSettingsData {
+  """
+  Whether the Form box starts collapsed for every viewer. Defaults to false (expanded).
+  """
+  defaultCollapsed: Boolean
+  """One or several responses per member. Defaults to SINGLE."""
+  responseMode: CalloutFormResponseMode
+  """Whether the Form accepts responses. Defaults to OPEN."""
+  state: CalloutFormState
+  """Who can read all the responses. Defaults to ADMINS."""
+  visibility: CalloutFormResponseVisibility
+}
+
 type CreateCalloutFramingData {
   """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
   collaboraDocument: CreateCollaboraDocumentData
+  """
+  Form definition to attach to this Callout Framing. Required when type = FORM; rejected for every other type.
+  """
+  form: CreateCalloutFormData
   link: CreateLinkData
   memo: CreateMemoData
   """
@@ -3121,6 +3317,11 @@ type CredentialDefinition {
   type: String!
 }
 
+type DeletedCalloutFormResponse {
+  """The id of the deleted Form response."""
+  id: UUID!
+}
+
 type DirectMessageDeliveryResult {
   """
   Set when status = SENT — the (existing or newly created) 1:1 conversation the message was delivered to.
@@ -3373,6 +3574,10 @@ type InAppNotificationPayloadPlatformForumDiscussion implements InAppNotificatio
 }
 
 type InAppNotificationPayloadPlatformGlobalRoleChange implements InAppNotificationPayload {
+  """
+  Whether the role was added or removed; absent on records written before this field existed.
+  """
+  changeType: RoleChangeType
   """The new role."""
   role: String!
   """The payload type."""
@@ -4133,6 +4338,10 @@ type LookupQueryResults {
   calendarEvent(ID: UUID!): CalendarEvent
   """Lookup the specified Callout"""
   callout(ID: UUID!): Callout
+  """
+  Lookup the responses of the specified Form, as far as the current user may read them: every response for a space admin (and for members when the Form shows responses to members), otherwise only the current user's own. Requires READ on the Post that holds the Form. This is the only way to read Form responses.
+  """
+  calloutFormResponses(after: UUID, first: Int, formID: UUID!): CalloutFormResponses!
   """Lookup the specified CalloutsSet"""
   calloutsSet(ID: UUID!): CalloutsSet
   """Lookup the specified Collaboration"""
@@ -4589,6 +4798,8 @@ type Mutation {
   adminUpdateContributorAvatars(profileID: UUID!): Profile!
   """Updates the GeoLocation data where required on the platform."""
   adminUpdateGeoLocationData: Boolean!
+  """Update the visibility of the specified Space."""
+  adminUpdateSpaceVisibility(updateData: AdminUpdateSpaceVisibilityInput!): Space!
   """
   Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.
   """
@@ -4601,10 +4812,6 @@ type Mutation {
   Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
-  """Create a test customer on wingback."""
-  adminWingbackCreateTestCustomer: String!
-  """Get wingback customer entitlements."""
-  adminWingbackGetCustomerEntitlements(customerID: String!): [LicensingGrantedEntitlement!]!
   """Reset the Authorization Policy on the specified AiServer."""
   aiServerAuthorizationPolicyReset: AiServer!
   """Creates a new AiPersona on the aiServer."""
@@ -4737,14 +4944,16 @@ type Mutation {
   Materializes a server-owned live Whiteboard draft for a Template form. GraphQL returns identifiers only.
   """
   createWhiteboardDraftOnTemplatesSet(draftData: CreateWhiteboardDraftOnTemplatesSetInput!): UUID!
-  """Creates an account in Wingback"""
-  createWingbackAccount(accountID: UUID!): String!
   """Removes the specified Application."""
   deleteApplication(deleteData: DeleteApplicationInput!): Application!
   """Deletes the specified CalendarEvent."""
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
+  """
+  Delete a Form response. The member who submitted it can always withdraw it (also on a closed Form); otherwise the privilege to create callouts on the collection the Post is in (space admin) is required.
+  """
+  deleteCalloutFormResponse(deleteData: DeleteCalloutFormResponseInput!): DeletedCalloutFormResponse!
   """
   Permanently removes a Classification from a Space. No template and no other Space is affected.
   """
@@ -4817,10 +5026,6 @@ type Mutation {
   eventOnOrganizationVerification(eventData: OrganizationVerificationEventInput!): OrganizationVerification!
   """Grant a credential to an Actor."""
   grantCredentialToActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Credential!
-  """Grants an authorization credential to an Organization."""
-  grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
-  """Grants an authorization credential to a User."""
-  grantCredentialToUser(grantCredentialData: GrantAuthorizationCredentialInput!): User!
   """
   Import an existing file as a CollaboraDocument contribution on the callout. file-service-go sniffs the MIME from content and rejects formats Collabora cannot edit.
   """
@@ -4943,16 +5148,16 @@ type Mutation {
   Replace a Whiteboard from another Whiteboard through the live collaboration room. Content and media are copied server-side; snapshot bytes never pass through GraphQL.
   """
   replaceWhiteboardContentFromSource(input: ReplaceWhiteboardContentFromSourceInput!): Whiteboard!
+  """
+  Sends the invitation email of an open platform invitation again (Space or Organization role sets); throttled per role set and address, and counted against an hourly email budget.
+  """
+  resendPlatformInvitation(resendData: ResendPlatformInvitationInput!): PlatformInvitation!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
-  """Removes an authorization credential from an Organization."""
-  revokeCredentialFromOrganization(revokeCredentialData: RevokeOrganizationAuthorizationCredentialInput!): Organization!
-  """Removes an authorization credential from a User."""
-  revokeCredentialFromUser(revokeCredentialData: RevokeAuthorizationCredentialInput!): User!
   """Revokes the specified LicensePlan on an Account."""
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
@@ -4980,6 +5185,10 @@ type Mutation {
   """
   setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
+  Submit a response to a Form. Requires CONTRIBUTE on the Post. The Post must be published and the Form open; a single-response Form rejects the submission while the member holds any response; a Form that is part of a template never accepts responses. acknowledgedVisibility is the audience the respondent was shown.
+  """
+  submitCalloutFormResponse(responseData: SubmitCalloutFormResponseInput!): CalloutFormResponse!
+  """
   Subscribe the current user's device to push notifications. If the subscription endpoint already exists, it is updated. If the user has reached the maximum number of subscriptions (10), the oldest subscription is automatically replaced.
   """
   subscribeToPushNotifications(subscriptionData: SubscribeToPushNotificationsInput!): PushSubscription!
@@ -4999,6 +5208,10 @@ type Mutation {
   Disable a push notification subscription for the current user. The subscription is retained but will not receive notifications until re-enabled.
   """
   unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
+  """
+  Update the nameID (URL path) of the specified Actor. A protected update: renaming repoints every inbound link to the entity.
+  """
+  updateActorNameID(updateData: UpdateActorNameIDInput!): Actor!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """
@@ -5011,6 +5224,10 @@ type Mutation {
   updateCalendarEvent(eventData: UpdateCalendarEventInput!): CalendarEvent!
   """Update a Callout."""
   updateCallout(calloutData: UpdateCalloutEntityInput!): Callout!
+  """
+  Update the definition and/or the settings of a Form. Requires the privilege to create callouts on the collection the Post is in (space admin), the same as creating a Form; for a Form in a standalone callout template, the privilege to update that template callout instead. Serialized against submissions.
+  """
+  updateCalloutForm(formData: UpdateCalloutFormInput!): CalloutForm!
   """
   Update the information describing the publishing of the specified Callout.
   """
@@ -5075,8 +5292,6 @@ type Mutation {
   updateNotificationState(notificationData: UpdateNotificationStateInput!): NotificationEventInAppState!
   """Updates the specified Organization."""
   updateOrganization(organizationData: UpdateOrganizationInput!): Organization!
-  """Updates the specified Organization platform settings."""
-  updateOrganizationPlatformSettings(organizationData: UpdateOrganizationPlatformSettingsInput!): Organization!
   """Updates one of the Setting on an Organization"""
   updateOrganizationSettings(settingsData: UpdateOrganizationSettingsInput!): Organization!
   """Updates one of the Setting on the Platform"""
@@ -5097,8 +5312,6 @@ type Mutation {
   updateReference(referenceData: UpdateReferenceInput!): Reference!
   """Updates the Space."""
   updateSpace(spaceData: UpdateSpaceInput!): Space!
-  """Update the platform settings, such as nameID, of the specified Space."""
-  updateSpacePlatformSettings(updateData: UpdateSpacePlatformSettingsInput!): Space!
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
   """
@@ -5127,10 +5340,6 @@ type Mutation {
   updateUser(userData: UpdateUserInput!): User!
   """Updates the specified User Group."""
   updateUserGroup(userGroupData: UpdateUserGroupInput!): UserGroup!
-  """
-  Update the platform settings, such as nameID, email, for the specified User.
-  """
-  updateUserPlatformSettings(updateData: UpdateUserPlatformSettingsInput!): User!
   """Updates one of the Setting on a User"""
   updateUserSettings(settingsData: UpdateUserSettingsInput!): User!
   """Updates the specified VirtualContributor."""
@@ -5341,6 +5550,12 @@ type PageInfo {
   startCursor: String
 }
 
+type PaginatedCalloutFormResponses {
+  pageInfo: PageInfo!
+  responses: [CalloutFormResponse!]!
+  total: Float!
+}
+
 type PaginatedInAppNotifications {
   inAppNotifications: [InAppNotification!]!
   pageInfo: PageInfo!
@@ -5525,7 +5740,7 @@ type PlatformAdminQueryResults {
     withTags: Boolean
   ): PaginatedUsers!
   """
-  The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins (and legacy holders); the discovery path for updateAssistantActorCapabilities.
+  The singleton virtual-assistant actor, including its current admin capability grant and ID. Only available to Platform Operations Admins; the discovery path for updateAssistantActorCapabilities.
   """
   virtualAssistant: VirtualAssistant!
   """
@@ -6370,7 +6585,7 @@ type RoleSet {
   """
   organizationsInRoles(roles: [RoleName!]!): [OrganizationsInRolesResponse!]!
   """
-  Invitations to join this RoleSet in an entry role for users not yet on the Alkemio platform.
+  Open (not yet consumed) invitations to join this RoleSet in an entry role for people not yet on the Alkemio platform.
   """
   platformInvitations: [PlatformInvitation!]!
   """The Role Definitions from this RoleSet to return."""
@@ -7732,6 +7947,8 @@ type UserSettingsNotificationSpace {
 type UserSettingsNotificationSpaceAdmin {
   """Receive a notification when a contribution is created (admin)"""
   collaborationCalloutContributionCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a Form response is submitted (admin)"""
+  collaborationCalloutFormResponseReceived: UserSettingsNotificationChannels!
   """Receive a notification when a message is sent to a Space I lead"""
   communicationMessageReceived: UserSettingsNotificationChannels!
   """Receive a notification when an application is received"""
@@ -8191,6 +8408,13 @@ input AdminRevokeMcpApiKeyInput {
   userID: UUID!
 }
 
+input AdminUpdateSpaceVisibilityInput {
+  """The Space whose visibility is to be updated."""
+  spaceID: UUID!
+  """Visibility of the Space, only on L0 spaces."""
+  visibility: SpaceVisibility!
+}
+
 input AdminUserEmailChangeDriftResolveInput {
   """
   The admin-chosen canonical email. MUST equal either the old or new email recorded on the drift_detected audit entry. Both sides are force-aligned to this value.
@@ -8271,6 +8495,14 @@ input AssistantCapabilityToggleInput {
   capability: String!
   """Whether the capability is enabled."""
   enabled: Boolean!
+}
+
+input CalloutFormAnswerInput {
+  questionID: UUID!
+  """The selected option IDs of a choice question."""
+  selectedOptionIDs: [UUID!]
+  """The answer to a text question."""
+  text: String
 }
 
 input CastPollVoteInput {
@@ -8453,9 +8685,64 @@ input CreateCalloutContributorsSettingsInput {
   mapView: CreateCalloutContributorsMapViewInput
 }
 
+input CreateCalloutFormInput {
+  """
+  The optional plain-text description of the Form, at most 2048 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  description: String
+  """
+  The ordered questions of the Form. Between 1 and 50; the count is enforced with a reason code.
+  """
+  questions: [CreateCalloutFormQuestionInput!]!
+  """
+  The Form settings. Defaults: visibility ADMINS, responseMode SINGLE, state OPEN.
+  """
+  settings: CreateCalloutFormSettingsInput
+  """
+  The optional plain-text title of the Form, at most 512 characters. Trimmed; empty or whitespace-only is stored as null.
+  """
+  title: String
+}
+
+input CreateCalloutFormQuestionInput {
+  """Optional helper text. At most 2048 characters."""
+  explanation: String
+  """
+  The options of a choice question (2 to 20). Must be absent for the text types.
+  """
+  options: [CreateCalloutFormQuestionOptionInput!]
+  """The question text. Required, at most 512 characters."""
+  prompt: String!
+  """Whether an answer is required. Defaults to false."""
+  required: Boolean = false
+  type: CalloutFormQuestionType!
+}
+
+input CreateCalloutFormQuestionOptionInput {
+  """The label of the option. Unique within the question."""
+  label: String!
+}
+
+input CreateCalloutFormSettingsInput {
+  """
+  Whether the Form box starts collapsed for every viewer. Defaults to false (expanded).
+  """
+  defaultCollapsed: Boolean = false
+  """One or several responses per member. Defaults to SINGLE."""
+  responseMode: CalloutFormResponseMode
+  """Whether the Form accepts responses. Defaults to OPEN."""
+  state: CalloutFormState
+  """Who can read all the responses. Defaults to ADMINS."""
+  visibility: CalloutFormResponseVisibility
+}
+
 input CreateCalloutFramingInput {
   """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
   collaboraDocument: CreateCollaboraDocumentInput
+  """
+  Form definition to attach to this Callout Framing. Required when type = FORM; rejected for every other type.
+  """
+  form: CreateCalloutFormInput
   link: CreateLinkInput
   memo: CreateMemoInput
   """
@@ -9144,6 +9431,10 @@ input DeleteCalendarEventInput {
   ID: UUID!
 }
 
+input DeleteCalloutFormResponseInput {
+  responseID: UUID!
+}
+
 input DeleteCalloutInput {
   ID: UUID!
 }
@@ -9328,22 +9619,6 @@ input GrantAssistantActorCapabilitiesInput {
   enabledCapabilities: [AssistantCapabilityToggleInput!]!
   """The VirtualAssistant actor whose admin grant is being set."""
   virtualAssistantID: UUID!
-}
-
-input GrantAuthorizationCredentialInput {
-  """The resource to which this credential is tied."""
-  resourceID: UUID
-  type: AuthorizationCredential!
-  """The user to whom the credential is being granted."""
-  userID: UUID!
-}
-
-input GrantOrganizationAuthorizationCredentialInput {
-  """The Organization to whom the credential is being granted."""
-  organizationID: UUID!
-  """The resource to which this credential is tied."""
-  resourceID: UUID
-  type: AuthorizationCredential!
 }
 
 input ImportCollaboraDocumentInput {
@@ -9691,12 +9966,9 @@ input ReplaceWhiteboardContentFromSourceInput {
   targetWhiteboardID: UUID!
 }
 
-input RevokeAuthorizationCredentialInput {
-  """The resource to which access is being removed."""
-  resourceID: String!
-  type: AuthorizationCredential!
-  """The user from whom the credential is being removed."""
-  userID: UUID!
+input ResendPlatformInvitationInput {
+  """The open platform invitation whose email is sent again."""
+  ID: UUID!
 }
 
 input RevokeLicensePlanFromAccount {
@@ -9719,14 +9991,6 @@ input RevokeLicensePlanFromSpace {
 
 input RevokeMcpApiKeyInput {
   keyID: UUID!
-}
-
-input RevokeOrganizationAuthorizationCredentialInput {
-  """The Organization from whom the credential is being removed."""
-  organizationID: UUID!
-  """The resource to which access is being removed."""
-  resourceID: UUID
-  type: AuthorizationCredential!
 }
 
 input RolesActorInput {
@@ -9870,6 +10134,15 @@ input StorageBucketUploadFileOnReferenceInput {
   referenceID: String!
 }
 
+input SubmitCalloutFormResponseInput {
+  """
+  The response visibility the respondent was shown before submitting. The submission is rejected when the Form is now visible to a wider audience.
+  """
+  acknowledgedVisibility: CalloutFormResponseVisibility!
+  answers: [CalloutFormAnswerInput!]!
+  formID: UUID!
+}
+
 input SubscribeToPushNotificationsInput {
   """The auth key from PushSubscription.getKey('auth'), Base64URL-encoded"""
   auth: String!
@@ -9932,6 +10205,13 @@ input TransferCalloutInput {
 input UnsubscribeFromPushNotificationsInput {
   """The ID of the push subscription to remove."""
   subscriptionID: UUID!
+}
+
+input UpdateActorNameIDInput {
+  """The Actor (User, Organization or VirtualContributor) to rename."""
+  actorID: UUID!
+  """The new URL path (nameID) for the Actor."""
+  nameID: NameID!
 }
 
 input UpdateAiPersonaInput {
@@ -10041,6 +10321,53 @@ input UpdateCalloutEntityInput {
   settings: UpdateCalloutSettingsInput
   """The sort order to assign to this Callout."""
   sortOrder: Float
+}
+
+input UpdateCalloutFormInput {
+  """
+  The optional plain-text description of the Form, at most 2048 characters. Trimmed; empty or whitespace-only (or null) clears it; omit to leave it unchanged.
+  """
+  description: String
+  formID: UUID!
+  """
+  The complete ordered list of questions. Omit to leave the questions unchanged.
+  """
+  questions: [UpdateCalloutFormQuestionInput!]
+  settings: UpdateCalloutFormSettingsInput
+  """
+  The optional plain-text title of the Form, at most 512 characters. Trimmed; empty or whitespace-only (or null) clears it; omit to leave it unchanged.
+  """
+  title: String
+}
+
+input UpdateCalloutFormQuestionInput {
+  explanation: String
+  """
+  The ID of an existing question. Absent for a new question; an unknown ID is rejected.
+  """
+  id: UUID
+  options: [UpdateCalloutFormQuestionOptionInput!]
+  prompt: String!
+  required: Boolean!
+  type: CalloutFormQuestionType!
+}
+
+input UpdateCalloutFormQuestionOptionInput {
+  """
+  The ID of an existing option. Absent for a new option; an unknown ID is rejected.
+  """
+  id: UUID
+  label: String!
+}
+
+input UpdateCalloutFormSettingsInput {
+  """
+  Whether the Form box starts collapsed for every viewer. Omit (or null) to leave it unchanged.
+  """
+  defaultCollapsed: Boolean
+  responseMode: CalloutFormResponseMode
+  state: CalloutFormState
+  visibility: CalloutFormResponseVisibility
 }
 
 input UpdateCalloutFramingInput {
@@ -10446,13 +10773,6 @@ input UpdateOrganizationInput {
   website: String
 }
 
-input UpdateOrganizationPlatformSettingsInput {
-  """Upate the URL path for the Organization."""
-  nameID: NameID!
-  """The ID of the Organization to update."""
-  organizationID: UUID!
-}
-
 input UpdateOrganizationSettingsEntityInput {
   """"""
   membership: UpdateOrganizationSettingsMembershipInput
@@ -10570,15 +10890,10 @@ input UpdateSpaceInput {
   """Update the Space About information."""
   about: UpdateSpaceAboutInput
   ID: UUID!
-}
-
-input UpdateSpacePlatformSettingsInput {
-  """Upate the URL path for the Space."""
+  """
+  Update the URL path (nameID) for the Space. Protected: additionally requires the UPDATE_NAMEID privilege.
+  """
   nameID: NameID
-  """The identifier for the Space whose license etc is to be updated."""
-  spaceID: UUID!
-  """Visibility of the Space, only on L0 spaces."""
-  visibility: SpaceVisibility
 }
 
 input UpdateSpaceSettingsCollaborationInput {
@@ -10747,16 +11062,6 @@ input UpdateUserInput {
   serviceProfile: Boolean
 }
 
-input UpdateUserPlatformSettingsInput {
-  email: String
-  """Upate the URL path for the User."""
-  nameID: NameID
-  """
-  The identifier for the User whose platform managed information is to be updated.
-  """
-  userID: String!
-}
-
 input UpdateUserSettingsAssistantInput {
   """
   Per-capability enable/disable toggles bounding what the assistant may do on behalf of this user.
@@ -10903,6 +11208,8 @@ input UpdateUserSettingsNotificationSoundInput {
 input UpdateUserSettingsNotificationSpaceAdminInput {
   """Receive a notification when a contribution is added (admin)"""
   collaborationCalloutContributionCreated: NotificationSettingInput
+  """Receive a notification when a Form response is submitted (admin)"""
+  collaborationCalloutFormResponseReceived: NotificationSettingInput
   """Receive a notification when a message is sent to a Space I lead"""
   communicationMessageReceived: NotificationSettingInput
   """Receive a notification when an application is received"""

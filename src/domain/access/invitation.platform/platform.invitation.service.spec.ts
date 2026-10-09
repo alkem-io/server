@@ -118,22 +118,24 @@ describe('PlatformInvitationService', () => {
       expect(invitationData.email).toBe('test@example.com');
     });
 
-    it('should allow invitations with accepted platform roles for platform roleSets', async () => {
+    // 027-platform-role-redesign (T077, Slice B): `platform-beta-tester` is
+    // retired and its successor `feature-beta-tester` is granted ONLY through
+    // `assignPlatformRoleTo{User,Organization}`, which run the six assignment
+    // rules and the fail-closed audit write (FR-012). An invitation would
+    // bypass both, so it is rejected. (`feature-vc-campaign` is the one
+    // accepted feature role — see the test below.)
+    it('rejects an invitation carrying feature-beta-tester — the assignment surface owns that, with the rules and the audit write', async () => {
       const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
       const invitationData = {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.PLATFORM_BETA_TESTER],
+        roleSetExtraRoles: [RoleName.FEATURE_BETA_TESTER],
       };
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
-      ).resolves.toBeDefined();
+      ).rejects.toThrow(ValidationException);
     });
 
     it('should throw ValidationException when inviting to disallowed platform role', async () => {
@@ -142,7 +144,7 @@ describe('PlatformInvitationService', () => {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.GLOBAL_ADMIN],
+        roleSetExtraRoles: [RoleName.PLATFORM_CONTENT_FULL_ACCESS],
       };
 
       await expect(
@@ -156,7 +158,7 @@ describe('PlatformInvitationService', () => {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.GLOBAL_ADMIN],
+        roleSetExtraRoles: [RoleName.PLATFORM_CONTENT_FULL_ACCESS],
       };
 
       vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
@@ -168,22 +170,19 @@ describe('PlatformInvitationService', () => {
       ).resolves.toBeDefined();
     });
 
-    it('should allow PLATFORM_VC_CAMPAIGN as an accepted platform role', async () => {
+    // T077: same inversion as above for the second retired role's successor.
+    it('rejects an invitation carrying feature-organization-creator for the same reason', async () => {
       const roleSet = { type: RoleSetType.PLATFORM } as IRoleSet;
       const invitationData = {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
-        roleSetExtraRoles: [RoleName.PLATFORM_VC_CAMPAIGN],
+        roleSetExtraRoles: [RoleName.FEATURE_ORGANIZATION_CREATOR],
       };
-
-      vi.spyOn(platformInvitationRepository, 'save').mockImplementation(
-        async (entity: any) => entity
-      );
 
       await expect(
         service.createPlatformInvitation(roleSet, invitationData)
-      ).resolves.toBeDefined();
+      ).rejects.toThrow(ValidationException);
     });
 
     it('should allow FEATURE_VC_CAMPAIGN (the platform-vc-campaign successor) as an accepted platform role', async () => {
@@ -210,9 +209,12 @@ describe('PlatformInvitationService', () => {
         email: 'user@test.com',
         createdBy: 'user-1',
         roleSetInvitedToParent: false,
+        // T077: the fixture role was `platform-beta-tester`. Any role at all is
+        // disallowed now, so this asserts the LIST check rather than a single
+        // membership — a `Platform …` role is the strongest case.
         roleSetExtraRoles: [
-          RoleName.PLATFORM_BETA_TESTER,
-          RoleName.GLOBAL_ADMIN,
+          RoleName.FEATURE_BETA_TESTER,
+          RoleName.PLATFORM_ROLES_ADMIN,
         ],
       };
 
@@ -333,13 +335,32 @@ describe('PlatformInvitationService', () => {
 
       expect(platformInvitationRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { email: 'user@test.com' },
+          where: { email: 'user@test.com', profileCreated: false },
         })
       );
     });
   });
 
   describe('getExistingPlatformInvitationForRoleSet', () => {
+    it('should only consider open (not yet consumed) invitations', async () => {
+      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([]);
+
+      await service.getExistingPlatformInvitationForRoleSet(
+        'USER@test.com',
+        'roleset-1'
+      );
+
+      expect(platformInvitationRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            email: 'user@test.com',
+            profileCreated: false,
+            roleSet: { id: 'roleset-1' },
+          }),
+        })
+      );
+    });
+
     it('should return the invitation when exactly one exists', async () => {
       const mockInvitation = { id: 'inv-1' } as PlatformInvitation;
       vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue([
@@ -374,12 +395,17 @@ describe('PlatformInvitationService', () => {
         mockInvitations
       );
 
-      await expect(
-        service.getExistingPlatformInvitationForRoleSet(
-          'user@test.com',
-          'roleset-1'
-        )
-      ).rejects.toThrow(RoleSetMembershipException);
+      const error = await service
+        .getExistingPlatformInvitationForRoleSet('user@test.com', 'roleset-1')
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(RoleSetMembershipException);
+      expect(error.message).not.toContain('user@test.com');
+      expect(JSON.stringify(error.details)).not.toContain('user@test.com');
+      expect(error.details).toEqual({
+        roleSetID: 'roleset-1',
+        platformInvitationIDs: ['inv-1', 'inv-2'],
+      });
     });
 
     it('should search with lowercase email', async () => {
@@ -394,10 +420,64 @@ describe('PlatformInvitationService', () => {
         expect.objectContaining({
           where: {
             email: 'user@test.com',
+            profileCreated: false,
             roleSet: { id: 'roleset-1' },
           },
         })
       );
+    });
+  });
+
+  describe('findOpenForRoleSet', () => {
+    it('should query only open invitations of the role set', async () => {
+      const open = [{ id: 'inv-1' }] as PlatformInvitation[];
+      vi.spyOn(platformInvitationRepository, 'find').mockResolvedValue(open);
+
+      const result = await service.findOpenForRoleSet('roleset-1');
+
+      expect(result).toBe(open);
+      expect(platformInvitationRepository.find).toHaveBeenCalledWith({
+        where: { roleSet: { id: 'roleset-1' }, profileCreated: false },
+        relations: { roleSet: true },
+      });
+    });
+  });
+
+  describe('deleteAllForEmail', () => {
+    const buildManager = (found: unknown[]) => {
+      const em = {
+        find: vi.fn().mockResolvedValue(found),
+        remove: vi.fn().mockResolvedValue(undefined),
+      };
+      return em;
+    };
+
+    it('should remove the policy and the row of every match and return the count', async () => {
+      const policyA = { id: 'pol-a' };
+      const invA = { id: 'inv-a', authorization: policyA };
+      const invB = { id: 'inv-b' };
+      const em = buildManager([invA, invB]);
+
+      const count = await service.deleteAllForEmail('a@test.com', em as any);
+
+      expect(count).toBe(2);
+      expect(em.remove).toHaveBeenCalledWith(policyA);
+      expect(em.remove).toHaveBeenCalledWith(invA);
+      expect(em.remove).toHaveBeenCalledWith(invB);
+      expect(em.remove).toHaveBeenCalledTimes(3);
+    });
+
+    it('should look the address up trimmed and lowercased', async () => {
+      const em = buildManager([]);
+
+      const count = await service.deleteAllForEmail('  A@Test.COM ', em as any);
+
+      expect(count).toBe(0);
+      expect(em.find).toHaveBeenCalledWith(
+        PlatformInvitation,
+        expect.objectContaining({ where: { email: 'a@test.com' } })
+      );
+      expect(em.remove).not.toHaveBeenCalled();
     });
   });
 });

@@ -19,12 +19,10 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
  * satisfy these bare CREATE/READ/UPDATE/DELETE checks too — a reach
  * family SC-004's exception does not cover.
  *
- * GLOBAL_ADMIN is included (corr-server-10 fix): it reached A13 today only
- * via the root cascade, an implicit reach the declaration omitted.
- * GLOBAL_SUPPORT is included (corr-server-12 fix): it reaches A13 via
- * `globalSupportPlatformAdmin`'s cascade off `platform.authorization`
- * (platform.service.authorization.ts) into `licensingFramework.
- * authorization` — an implicit reach the declaration likewise omitted.
+ * Slice B (T076): the legacy reachers Slice A carried for additivity
+ * (GLOBAL_ADMIN — corr-server-10; GLOBAL_SUPPORT — corr-server-12;
+ * GLOBAL_LICENSE_MANAGER; GLOBAL_PLATFORM_MANAGER) are retired, so Platform
+ * Settings Admin is A13's only reacher.
  *
  * server-C2-a closed the one A13 surface (createLicensePlan) the T058
  * census missed — it kept checking `licensing.authorization` directly and
@@ -36,12 +34,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy/author
 export const A13_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
 ];
-export const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-];
+export const A13_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 /**
  * Pure builder — takes no service dependency, so every A13 resolver can
