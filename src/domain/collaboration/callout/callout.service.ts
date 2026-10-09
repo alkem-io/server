@@ -810,36 +810,35 @@ export class CalloutService {
 
     // The reaction table has no database-level FK back to the callout (the
     // polymorphic target reference is intentionally FK-free), so its rows must
-    // be removed explicitly. Delete the reactions and remove the callout row in
-    // a single transaction so they commit or roll back together — leaving no
-    // orphaned reactions if the row removal fails, and no lost reactions if it
-    // succeeds. The external side effects above (notably the Matrix room
-    // deletion) run BEFORE this transaction and are deliberately kept outside
-    // it: they are not database work and cannot participate in a DB rollback.
+    // be removed explicitly. Likewise the callout's classification is NOT
+    // cascade-removed with the callout row (the FK sits on the callout), so it
+    // is deleted explicitly, after the row. Both run in the row's transaction
+    // so they commit or roll back together: a failure leaves the callout in
+    // place, and the delete retryable, instead of orphaning what it owns. The
+    // external side effects above (notably the Matrix room deletion) run
+    // BEFORE this transaction and are deliberately kept outside it: they are
+    // not database work and cannot participate in a DB rollback.
     const result = await this.entityManager.transaction(async manager => {
       await this.reactionService.deleteAllForEntity(
         ReactionType.POST,
         calloutID,
         manager
       );
-      return manager.remove(callout as Callout);
+      const removed = await manager.remove(callout as Callout);
+      if (callout.classification) {
+        await this.classificationService.deleteClassification(
+          callout.classification.id,
+          manager
+        );
+      }
+      return removed;
     });
     result.id = calloutID;
 
-    // Remove the board's column template LAST — but the callout's own
-    // classification (which carries the board's marker tagset) is NOT
-    // cascade-removed with the callout: removing the callout row leaves the
-    // classification and its marker tagset orphaned, and that marker tagset's
-    // FK to the template would block the drop below (QueryFailedError on
-    // tagset_template). Delete the orphaned classification first to release the
-    // FK, then drop the standalone template it referenced. Non-board callouts
-    // have no such template and skip both.
+    // On a Tasks board the column template goes last: the classification's
+    // marker tagset, deleted above, holds an FK to it that would otherwise
+    // block the drop (QueryFailedError on tagset_template).
     if (boardTemplate) {
-      if (callout.classification) {
-        await this.classificationService.deleteClassification(
-          callout.classification.id
-        );
-      }
       await this.tagsetTemplateService.removeTagsetTemplate(boardTemplate);
     }
 

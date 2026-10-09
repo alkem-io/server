@@ -8,6 +8,7 @@ import {
   L0_MAX_INNOVATION_FLOW_STATES,
   L0_MIN_INNOVATION_FLOW_STATES,
 } from '@domain/collaboration/innovation-flow/innovation.flow.constants';
+import { LicenseService } from '@domain/common/license/license.service';
 import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -16,6 +17,7 @@ import { ActivityService } from '@platform/activity/activity.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { EntityManager } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { ConversionService } from './conversion.service';
 
@@ -27,6 +29,9 @@ describe('ConversionService', () => {
   let spaceLookupService: Record<string, Mock>;
   let accountHostService: Record<string, Mock>;
   let activityService: Record<string, Mock>;
+  let licenseService: Record<string, Mock>;
+  // Transaction-scoped manager handed to the callback by entityManager.transaction.
+  let txManager: { save: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -59,6 +64,21 @@ describe('ConversionService', () => {
       string,
       Mock
     >;
+    licenseService = module.get(LicenseService) as unknown as Record<
+      string,
+      Mock
+    >;
+
+    // By default transaction runs its callback immediately with a manager
+    // whose save hands the entity back.
+    txManager = { save: vi.fn(async (s: unknown) => s) };
+    const entityManager = module.get(EntityManager) as unknown as Record<
+      string,
+      Mock
+    >;
+    vi.mocked(entityManager.transaction).mockImplementation(
+      async (cb: (m: typeof txManager) => unknown) => cb(txManager)
+    );
   });
 
   // Stubs every roleSetService accessor used by getSpaceCommunityRoles so
@@ -117,13 +137,15 @@ describe('ConversionService', () => {
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it('assigns a fresh Free license to the promoted L0 (no inheritance from parent)', async () => {
+    it('assigns a fresh Free license to the promoted L0 and deletes the replaced one (server#6614)', async () => {
       const parentLicenseId = 'parent-license-id';
       const freshLicense = { id: 'fresh-license-id' };
+      const ownLicense = { id: 'l1-license-id' };
       const spaceL1 = {
         id: 'space-l1',
         nameID: 'l1-name',
         levelZeroSpaceID: 'space-l0',
+        license: ownLicense,
         community: { roleSet: { id: 'roleset-l1' } },
         collaboration: { innovationFlow: { id: 'flow-l1', states: [] } },
         storageAggregator: { id: 'sa-l1', parentStorageAggregator: undefined },
@@ -150,8 +172,16 @@ describe('ConversionService', () => {
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({} as never);
-      vi.mocked(spaceService.save).mockImplementation(
-        async (s: unknown) => s as never
+      const callOrder: string[] = [];
+      txManager.save.mockImplementation(async (s: any) => {
+        callOrder.push(`save:${s.id}`);
+        return s;
+      });
+      vi.mocked(licenseService.removeLicenseOrFail).mockImplementation(
+        async (id: string) => {
+          callOrder.push(`removeLicense:${id}`);
+          return {} as never;
+        }
       );
 
       vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue(
@@ -169,9 +199,25 @@ describe('ConversionService', () => {
         spaceL1ID: 'space-l1',
       });
 
-      expect(spaceService.createLicenseForSpaceL0).toHaveBeenCalledTimes(1);
+      // The fresh license keeps the promoted space fail-closed (paid
+      // entitlements off) until the resolver recomputes it, even if a later
+      // step fails. The replaced license must be loaded and deleted once the
+      // space no longer points at it, or it is orphaned with its policy.
+      expect(
+        vi.mocked(spaceService.getSpaceOrFail).mock.calls[0][1]
+      ).toMatchObject({ relations: { license: true } });
       expect(result.license).toBe(freshLicense);
       expect(result.license?.id).not.toBe(parentLicenseId);
+      expect(callOrder.indexOf('save:space-l1')).toBeLessThan(
+        callOrder.indexOf('removeLicense:l1-license-id')
+      );
+      expect(callOrder).toContain('removeLicense:l1-license-id');
+      // Save and delete share one transaction: a failed delete rolls the
+      // save back instead of committing it with the old license orphaned.
+      expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith(
+        'l1-license-id',
+        txManager
+      );
       expect(accountHostService.assignLicensePlansToSpace).toHaveBeenCalledWith(
         'space-l1',
         AccountType.USER
@@ -455,7 +501,6 @@ describe('ConversionService', () => {
       ]);
       vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
       vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
-      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue({});
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({});
@@ -520,9 +565,6 @@ describe('ConversionService', () => {
       vi.mocked(spaceService.getSpaceOrFail)
         .mockResolvedValueOnce(spaceL1 as never)
         .mockResolvedValueOnce(spaceL0Orig as never);
-      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue(
-        {} as never
-      );
       vi.mocked(
         spaceService.createTemplatesManagerForSpaceL0
       ).mockResolvedValue({} as never);
