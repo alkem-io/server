@@ -322,6 +322,7 @@ export class RoleSetResolverMutations {
     await this.authorizeRemoveOrganization(
       actorContext,
       roleSet,
+      roleData.role,
       roleData.actorID
     );
 
@@ -476,6 +477,7 @@ export class RoleSetResolverMutations {
         await this.authorizeRemoveOrganization(
           actorContext,
           roleSet,
+          roleData.role,
           roleData.actorID
         );
         break;
@@ -672,25 +674,37 @@ export class RoleSetResolverMutations {
     );
   }
 
-  // Space admins pass through the role set's own GRANT rules; the organization's
-  // own admins and owners pass through the extended policy, which grants GRANT
-  // to holders of the ACCOUNT_ADMIN credential on the organization's account.
+  // Space admins pass through the role set's own GRANT rules for any role. The
+  // organization's own admins and owners (ACCOUNT_ADMIN on its account) may only
+  // remove MEMBER: leaving drops every role (see removeActorFromRole), while
+  // Lead alone stays the Space admins' decision.
   private async authorizeRemoveOrganization(
     actorContext: ActorContext,
     roleSet: IRoleSet,
+    role: RoleName,
     organizationID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
-    const extendedAuthorization =
-      await this.roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval(
-        roleSet,
-        organizationID
-      );
+    let authorization = roleSet.authorization;
+    if (
+      role === RoleName.MEMBER &&
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT
+      )
+    ) {
+      authorization =
+        await this.roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval(
+          roleSet,
+          organizationID
+        );
+    }
 
     this.authorizationService.grantAccessOrFail(
       actorContext,
-      extendedAuthorization,
+      authorization,
       AuthorizationPrivilege.GRANT,
       `remove community role organization: ${roleSet.id}`
     );

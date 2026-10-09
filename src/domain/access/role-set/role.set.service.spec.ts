@@ -2427,6 +2427,88 @@ describe('RoleSetService', () => {
       ).toHaveBeenCalledWith('actor-1', 'rs-parent');
     });
 
+    describe('leaving a SPACE as a member', () => {
+      const spaceRoleSet = () =>
+        ({
+          id: 'rs-space',
+          type: RoleSetType.SPACE,
+          roles: [
+            {
+              name: RoleName.MEMBER,
+              credential: { type: 'space-member', resourceID: 'space-1' },
+              userPolicy: { minimum: -1, maximum: -1 },
+              organizationPolicy: { minimum: -1, maximum: -1 },
+              virtualContributorPolicy: { minimum: -1, maximum: -1 },
+            },
+            {
+              name: RoleName.LEAD,
+              credential: { type: 'space-lead', resourceID: 'space-1' },
+              userPolicy: { minimum: -1, maximum: -1 },
+              // A minimum on Lead must not block the organization leaving.
+              organizationPolicy: { minimum: 1, maximum: 2 },
+              virtualContributorPolicy: { minimum: -1, maximum: -1 },
+            },
+          ],
+        }) as any;
+
+      beforeEach(() => {
+        (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+        (actorService.hasValidCredential as Mock).mockResolvedValue(true);
+        vi.spyOn(service, 'getParentRoleSet').mockResolvedValue(undefined);
+        const communityResolverService = (service as any)
+          .communityResolverService;
+        (
+          communityResolverService.getCommunicationForRoleSet as Mock
+        ).mockResolvedValue({ id: 'comm-1' });
+        (
+          communityResolverService.getSpaceForRoleSetOrFail as Mock
+        ).mockResolvedValue({ id: 'space-1' });
+        (
+          (service as any).spaceLookupService.getAllDescendantSpaceIDs as Mock
+        ).mockResolvedValue([]);
+      });
+
+      it('revokes the Lead role too when an organization leaves', async () => {
+        (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+          ActorType.ORGANIZATION
+        );
+
+        await service.removeActorFromRole(
+          spaceRoleSet(),
+          RoleName.MEMBER,
+          'org-1',
+          false
+        );
+
+        expect(actorService.revokeCredential).toHaveBeenCalledWith('org-1', {
+          type: 'space-member',
+          resourceID: 'space-1',
+        });
+        expect(actorService.revokeCredential).toHaveBeenCalledWith('org-1', {
+          type: 'space-lead',
+          resourceID: 'space-1',
+        });
+      });
+
+      it('keeps a user’s other roles untouched', async () => {
+        (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+          ActorType.USER
+        );
+
+        await service.removeActorFromRole(
+          spaceRoleSet(),
+          RoleName.MEMBER,
+          'user-1',
+          false
+        );
+
+        expect(actorService.revokeCredential).not.toHaveBeenCalledWith(
+          'user-1',
+          { type: 'space-lead', resourceID: 'space-1' }
+        );
+      });
+    });
+
     it('a descendant deleted mid-cascade does not abort the remaining descendants’ revocations (best-effort cache resolution)', async () => {
       const roleSet = {
         id: 'rs-parent',
