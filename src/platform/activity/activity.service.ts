@@ -149,6 +149,7 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      excludeUserID?: string;
       orderBy?: 'ASC' | 'DESC';
       paginationArgs?: PaginationArgs;
       excludeTypes?: ActivityEventType[];
@@ -158,6 +159,7 @@ export class ActivityService {
       types,
       visibility = true,
       userID,
+      excludeUserID,
       orderBy = 'DESC',
       paginationArgs = {},
       excludeTypes,
@@ -172,6 +174,10 @@ export class ActivityService {
 
     if (userID) {
       qb.andWhere({ triggeredBy: userID });
+    }
+
+    if (excludeUserID) {
+      qb.andWhere({ triggeredBy: Not(excludeUserID) });
     }
 
     if (excludeTypes && excludeTypes.length > 0) {
@@ -197,14 +203,27 @@ export class ActivityService {
       types?: ActivityEventType[];
       visibility?: boolean;
       userID?: string;
+      excludeUserID?: string;
       orderBy?: 'ASC' | 'DESC';
       limit?: number;
     }
   ): Promise<IActivity[]> {
+    // The collaboration list is the caller's authorization scope: an empty list
+    // means no collaboration may be read, so the only correct answer is no
+    // activity. The scope has to be enforced here rather than left to the raw
+    // SQL below, because an empty IN list cannot be spelled in Postgres and
+    // would otherwise be omitted from the WHERE clause entirely - widening the
+    // query to every visible activity on the platform. The ORM-based siblings
+    // get this for free from `In([])`, which compiles to a false predicate.
+    if (!collaborationIDs?.length) {
+      return [];
+    }
+
     const {
       types,
       visibility = true,
       userID,
+      excludeUserID,
       orderBy = 'DESC',
       limit,
     } = options ?? {};
@@ -238,11 +257,18 @@ export class ActivityService {
       queryParameters.push(userID);
     }
 
+    let excludeTriggeredByCondition: string | undefined;
+    if (excludeUserID) {
+      excludeTriggeredByCondition = `activity."triggeredBy" != $${paramIndex++}`;
+      queryParameters.push(excludeUserID);
+    }
+
     const whereConditions = [
       visibilityCondition,
       collaborationIdsCondition,
       typesCondition,
       triggeredByCondition,
+      excludeTriggeredByCondition,
     ]
       .filter(condition => condition !== undefined)
       .join(' AND ');
