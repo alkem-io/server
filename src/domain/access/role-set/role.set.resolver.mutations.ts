@@ -326,14 +326,18 @@ export class RoleSetResolverMutations {
       roleData.actorID
     );
 
+    // Resolved before the removal so a non-organization ID never loses a role.
+    const organization =
+      await this.organizationLookupService.getOrganizationByIdOrFail(
+        roleData.actorID
+      );
+
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
       roleData.actorID
     );
-    return await this.organizationLookupService.getOrganizationByIdOrFail(
-      roleData.actorID
-    );
+    return organization;
   }
 
   @Mutation(() => IVirtualContributor, {

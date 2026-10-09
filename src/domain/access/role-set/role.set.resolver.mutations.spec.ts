@@ -485,6 +485,33 @@ describe('RoleSetResolverMutations', () => {
       expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
     });
 
+    it('should not remove anything when a GRANT holder targets an actor that is not an organization', async () => {
+      const actorContext = { actorID: 'space-admin-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockRejectedValue(new Error('Organization not found'));
+
+      await expect(
+        resolver.removeRoleFromOrganization(actorContext, {
+          roleSetID: 'rs-1',
+          actorID: 'user-1',
+          role: RoleName.MEMBER,
+        } as any)
+      ).rejects.toThrow('Organization not found');
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+    });
+
     it('should skip the organization lookup when the actor already holds GRANT on the role set', async () => {
       const actorContext = { actorID: 'space-admin-1' } as any;
       const mockRoleSet = {
