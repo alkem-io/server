@@ -112,15 +112,17 @@ export class KnowledgeBaseService {
       this.delete(knowledgeBase);
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       knowledgeBase.profile,
-      knowledgeBaseData.profile?.visuals,
+      knowledgeBaseData.profile,
       [],
-      rollbackKnowledgeBase
+      rollbackKnowledgeBase,
+      actorContext
     );
     if (knowledgeBase.calloutsSet) {
       await this.calloutsSetService.materializeCalloutsSetContent(
         knowledgeBase.calloutsSet,
         knowledgeBaseData.calloutsSetData?.calloutsData,
-        rollbackKnowledgeBase
+        rollbackKnowledgeBase,
+        actorContext
       );
     }
 

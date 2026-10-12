@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
 import type { MaterializedWhiteboardContent } from '@domain/common/whiteboard/whiteboard.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
@@ -67,7 +68,8 @@ export class CalloutContributionDefaultsService {
     defaults: ICalloutContributionDefaults,
     storageBucket: IStorageBucket,
     rollback: () => Promise<unknown>,
-    sourceData?: CreateCalloutContributionDefaultsInput
+    sourceData?: CreateCalloutContributionDefaultsInput,
+    actorContext?: ActorContext
   ): Promise<void> {
     let createdDocumentIDs: string[] = [];
     try {
@@ -76,7 +78,11 @@ export class CalloutContributionDefaultsService {
         const reuploaded =
           await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
             defaults.postDescription,
-            storageBucket
+            storageBucket,
+            {
+              sourceStorageBucketID: sourceData?.sourceStorageBucketID,
+              actorContext,
+            }
           );
         if (reuploaded !== defaults.postDescription) {
           defaults.postDescription = reuploaded;

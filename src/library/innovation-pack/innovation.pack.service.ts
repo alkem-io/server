@@ -104,7 +104,7 @@ export class InnovationPackService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        innovationPackData.profileData?.visuals,
+        innovationPackData.profileData,
         [VisualType.AVATAR, VisualType.CARD],
         () => this.deleteInnovationPack({ ID: saved.id })
       );

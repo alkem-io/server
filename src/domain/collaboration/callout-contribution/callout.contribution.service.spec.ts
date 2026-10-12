@@ -98,7 +98,8 @@ describe('CalloutContributionService', () => {
         contributionData.post,
         storageAggregator,
         userID,
-        undefined
+        undefined,
+        actorContextData.actorContext
       );
     });
 

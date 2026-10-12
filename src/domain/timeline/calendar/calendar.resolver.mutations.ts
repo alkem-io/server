@@ -48,7 +48,8 @@ export class CalendarResolverMutations {
 
     const calendarEvent = await this.calendarService.createCalendarEvent(
       eventData,
-      actorContext.actorID
+      actorContext.actorID,
+      actorContext
     );
     await this.calendarEventService.save(calendarEvent);
 

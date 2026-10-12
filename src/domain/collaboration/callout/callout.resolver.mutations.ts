@@ -642,7 +642,8 @@ export class CalloutResolverMutations {
     await this.calloutContributionService.materializeCalloutContributionContent(
       contribution,
       contributionData,
-      () => this.calloutContributionService.delete(contribution.id)
+      () => this.calloutContributionService.delete(contribution.id),
+      actorContext
     );
 
     const destinationStorageBucket =

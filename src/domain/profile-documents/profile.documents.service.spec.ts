@@ -1,6 +1,8 @@
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetType } from '@common/enums/tagset.type';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IDocument } from '@domain/storage/document';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -81,6 +83,7 @@ describe('ProfileDocumentsService', () => {
   let documentService: DocumentService;
   let storageBucketService: StorageBucketService;
   let fileServiceAdapter: FileServiceAdapter;
+  let authorizationService: AuthorizationService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -115,6 +118,10 @@ describe('ProfileDocumentsService', () => {
             deleteDocument: vi.fn(),
           },
         },
+        {
+          provide: AuthorizationService,
+          useValue: { isAccessGranted: vi.fn().mockReturnValue(false) },
+        },
         MockWinstonProvider,
       ],
     }).compile();
@@ -124,6 +131,8 @@ describe('ProfileDocumentsService', () => {
     storageBucketService =
       module.get<StorageBucketService>(StorageBucketService);
     fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
+    authorizationService =
+      module.get<AuthorizationService>(AuthorizationService);
   });
   describe('reuploadFileOnStorageBucket', () => {
     it('should throw EntityNotInitializedException when storageBucket.documents is not initialized', async () => {
@@ -297,7 +306,8 @@ describe('ProfileDocumentsService', () => {
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
         storageBucketDestination,
-        true
+        true,
+        { sourceStorageBucketID: storageBucketOrigin.id }
       );
 
       expect(result).toBe(resultUrl);
@@ -315,6 +325,135 @@ describe('ProfileDocumentsService', () => {
       // remaining intact; deletion would corrupt the source's content
       // and any other clones that reference the same source doc.
       expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    describe('copying a file stored in another bucket', () => {
+      const setup = () => {
+        const fileUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
+        const origin = mockStorageBucket();
+        const destination = mockStorageBucket();
+        const doc = mockDocument(origin, { temporaryLocation: false });
+        vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+        vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
+        const copiedUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
+        vi.spyOn(documentService, 'getPubliclyAccessibleURL').mockReturnValue(
+          copiedUrl
+        );
+        vi.spyOn(
+          storageBucketService,
+          'copyDocumentToBucket'
+        ).mockResolvedValue(
+          mockDocument(destination, { id: uniqueId() }, false)
+        );
+        return { fileUrl, origin, destination, doc, copiedUrl };
+      };
+
+      it('leaves the URL exactly as written when no one is entitled to the copy', async () => {
+        const { fileUrl, destination } = setup();
+
+        const result = await service.reuploadFileOnStorageBucket(
+          fileUrl,
+          destination
+        );
+
+        expect(result).toBe(fileUrl);
+        expect(
+          storageBucketService.copyDocumentToBucket
+        ).not.toHaveBeenCalled();
+      });
+
+      it('leaves the URL exactly as written when the actor cannot READ the file', async () => {
+        const { fileUrl, destination, doc } = setup();
+        const actorContext = new ActorContext();
+        vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
+
+        const result = await service.reuploadFileOnStorageBucket(
+          fileUrl,
+          destination,
+          false,
+          { actorContext }
+        );
+
+        expect(result).toBe(fileUrl);
+        expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+          actorContext,
+          doc.authorization,
+          'read'
+        );
+        expect(
+          storageBucketService.copyDocumentToBucket
+        ).not.toHaveBeenCalled();
+      });
+
+      it('copies the file when the actor can READ it', async () => {
+        const { fileUrl, destination, doc, copiedUrl } = setup();
+        vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+        const result = await service.reuploadFileOnStorageBucket(
+          fileUrl,
+          destination,
+          false,
+          { actorContext: new ActorContext() }
+        );
+
+        expect(result).toBe(copiedUrl);
+        expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+          destination.id,
+          doc,
+          undefined,
+          true
+        );
+      });
+
+      it('copies a file from the server-chosen source bucket without a per-file check', async () => {
+        const { fileUrl, origin, destination, copiedUrl } = setup();
+
+        const result = await service.reuploadFileOnStorageBucket(
+          fileUrl,
+          destination,
+          false,
+          { sourceStorageBucketID: origin.id }
+        );
+
+        expect(result).toBe(copiedUrl);
+        expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+      });
+
+      it('does not treat a file from a different bucket as coming from the source', async () => {
+        const { fileUrl, destination } = setup();
+
+        const result = await service.reuploadFileOnStorageBucket(
+          fileUrl,
+          destination,
+          false,
+          { sourceStorageBucketID: 'some-other-bucket' }
+        );
+
+        expect(result).toBe(fileUrl);
+        expect(
+          storageBucketService.copyDocumentToBucket
+        ).not.toHaveBeenCalled();
+      });
+
+      it('keeps an unreadable file URL unchanged inside markdown', async () => {
+        const { fileUrl, destination } = setup();
+        vi.spyOn(documentService, 'getDocumentsBaseUrlPath').mockReturnValue(
+          ALKEMIO_DOCUMENT_URL
+        );
+        const unreadableUrl = `${ALKEMIO_DOCUMENT_URL}/${EXAMPLE_DOCUMENT_UUID}`;
+        const markdown = `![x](${unreadableUrl}) and ${fileUrl}`;
+
+        const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
+          markdown,
+          destination,
+          { actorContext: new ActorContext() }
+        );
+
+        expect(result).toBe(markdown);
+        expect(
+          storageBucketService.copyDocumentToBucket
+        ).not.toHaveBeenCalled();
+      });
     });
 
     describe('reuploadDocumentsInMarkdownProfile', () => {

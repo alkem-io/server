@@ -969,7 +969,8 @@ describe('CalloutFramingService', () => {
       expect(memoService.replaceMemoContent).toHaveBeenCalledWith(
         'memo-1',
         'actor-1',
-        'new content'
+        'new content',
+        expect.anything()
       );
     });
 

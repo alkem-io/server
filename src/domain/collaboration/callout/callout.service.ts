@@ -313,7 +313,8 @@ export class CalloutService {
   public async materializeCalloutContent(
     callout: ICallout,
     calloutData: CreateCalloutInput | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<void> {
     if (!callout.framing) {
       throw new RelationshipNotFoundException(
@@ -332,7 +333,8 @@ export class CalloutService {
     await this.calloutFramingService.materializeCalloutFramingContent(
       callout.framing,
       calloutData?.framing,
-      rollback
+      rollback,
+      actorContext
     );
     // contributionDefaults.postDescription may carry markdown URLs that
     // reference documents in another bucket (template clone) or in a
@@ -367,7 +369,8 @@ export class CalloutService {
       callout.contributionDefaults,
       callout.framing.profile.storageBucket,
       rollback,
-      calloutData?.contributionDefaults
+      calloutData?.contributionDefaults,
+      actorContext
     );
     // Pair persisted contributions to their input data by `type` + the
     // nested entity's stable identifier (Link.uri for LINK, nameID for
@@ -386,7 +389,8 @@ export class CalloutService {
       await this.contributionService.materializeCalloutContributionContent(
         contribution,
         inputForContrib,
-        rollback
+        rollback,
+        actorContext
       );
     }
   }

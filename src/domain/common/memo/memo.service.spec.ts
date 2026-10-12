@@ -487,7 +487,8 @@ describe('MemoService', () => {
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
       ).toHaveBeenCalledWith(
         '![image](https://alkem.io/source-document)',
-        expect.objectContaining({ id: 'sb-1' })
+        expect.objectContaining({ id: 'sb-1' }),
+        { sourceStorageBucketID: undefined, actorContext: undefined }
       );
       const [snapshot] = vi.mocked(fileServiceAdapter.createSnapshotInBucket)
         .mock.calls[0];

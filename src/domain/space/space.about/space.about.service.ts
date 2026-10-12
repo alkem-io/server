@@ -7,6 +7,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -112,7 +113,8 @@ export class SpaceAboutService {
   public async materializeSpaceAboutContent(
     spaceAbout: ISpaceAbout,
     spaceAboutData: CreateSpaceAboutInput,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<ISpaceAbout> {
     if (!spaceAbout.profile) {
       throw new RelationshipNotFoundException(
@@ -124,9 +126,10 @@ export class SpaceAboutService {
     spaceAbout.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         spaceAbout.profile,
-        spaceAboutData.profileData.visuals,
+        spaceAboutData.profileData,
         [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD],
-        rollback
+        rollback,
+        actorContext
       );
     // createSpaceAbout always populates `spaceAbout.guidelines` (auto-creating
     // an empty one if `spaceAboutData.guidelines` wasn't supplied), so a
@@ -142,7 +145,8 @@ export class SpaceAboutService {
     try {
       await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
         spaceAbout.guidelines,
-        spaceAboutData.guidelines
+        spaceAboutData.guidelines,
+        actorContext
       );
     } catch (error) {
       // Same convention as the OrRollback helper: rollback-failure is

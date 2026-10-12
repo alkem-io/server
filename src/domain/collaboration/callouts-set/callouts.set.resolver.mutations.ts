@@ -303,7 +303,8 @@ export class CalloutsSetResolverMutations {
     await this.calloutService.materializeCalloutContent(
       savedCallout,
       calloutData,
-      () => this.calloutService.deleteCallout(savedCallout.id)
+      () => this.calloutService.deleteCallout(savedCallout.id),
+      actorContext
     );
 
     // The final callout is now durable and fully materialized. Persist the

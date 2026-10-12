@@ -258,13 +258,30 @@ describe('ProfileService', () => {
         .mockResolvedValue(profile);
       profileRepository.save = vi.fn().mockResolvedValue(profile) as any;
 
-      await service.materializeProfileContentAndVisuals(profile, visualsData, [
-        VisualType.CARD,
-      ]);
+      const actorContext = { actorID: 'user-1' } as any;
 
-      expect(addVisualsSpy).toHaveBeenCalledWith(profile, visualsData, [
-        VisualType.CARD,
-      ]);
+      await service.materializeProfileContentAndVisuals(
+        profile,
+        {
+          displayName: 'Profile',
+          visuals: visualsData,
+          sourceStorageBucketID: 'source-sb',
+        },
+        [VisualType.CARD],
+        actorContext
+      );
+
+      // The source bucket and the actor travel together to every file copy.
+      const copyAuthority = {
+        sourceStorageBucketID: 'source-sb',
+        actorContext,
+      };
+      expect(addVisualsSpy).toHaveBeenCalledWith(
+        profile,
+        visualsData,
+        [VisualType.CARD],
+        copyAuthority
+      );
       expect(profileRepository.save).toHaveBeenCalledWith(profile);
     });
 
@@ -1076,7 +1093,12 @@ describe('ProfileService', () => {
     const assertReuploadInternalUrlRequired = (expected: boolean) => {
       expect(
         profileDocumentsService.reuploadFileOnStorageBucket
-      ).toHaveBeenCalledWith(expect.any(String), expect.anything(), expected);
+      ).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.anything(),
+        expected,
+        {}
+      );
     };
 
     it.each(

@@ -90,7 +90,8 @@ export class CalloutsSetService {
   public async materializeCalloutsSetContent(
     calloutsSet: ICalloutsSet,
     calloutsData: CreateCalloutInput[] | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<void> {
     if (!calloutsSet.callouts) {
       throw new EntityNotInitializedException(
@@ -111,7 +112,8 @@ export class CalloutsSetService {
       await this.calloutService.materializeCalloutContent(
         callout,
         callout.nameID ? inputByNameID.get(callout.nameID) : undefined,
-        rollback
+        rollback,
+        actorContext
       );
     }
   }

@@ -1768,6 +1768,41 @@ type ActorRoles {
   spaces: [RolesResultSpace!]!
 }
 
+type AdminTemplateFileRepairIssue {
+  entityID: String!
+  location: String!
+  reason: String!
+  templateID: String!
+}
+
+type AdminTemplateFileRepairResult {
+  copiedReferences: Int!
+  dryRun: Boolean!
+  failed: [AdminTemplateFileRepairIssue!]!
+  references: [AdminTemplateForeignFileReference!]!
+  templatesScanned: Int!
+  templatesWithForeignFiles: Int!
+}
+
+"""
+A file a template references that is stored outside the template entity referencing it.
+"""
+type AdminTemplateForeignFileReference {
+  """Whether this run copied the file into the template."""
+  copied: Boolean!
+  """The entity holding the reference."""
+  entityID: String!
+  fileID: String!
+  """
+  Where in the template the reference sits, e.g. profileDescription, visualUri, linkUri, whiteboard.
+  """
+  location: String!
+  """The bucket the file is stored in today."""
+  storageBucketID: String!
+  templateID: String!
+  templateName: String!
+}
+
 type AiPersona {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4786,6 +4821,10 @@ type Mutation {
   adminLicensePolicyDeleteCredentialRule(deleteData: DeleteLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
+  """
+  Lists, and on request copies, the files templates reference but do not store. A dry run by default; applying it needs the template IDs to repair.
+  """
+  adminRepairTemplateFiles(repairData: AdminTemplateFileRepairInput!): AdminTemplateFileRepairResult!
   """Platform Users Admin: revoke a named user's MCP API key. Idempotent."""
   adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
@@ -8414,6 +8453,17 @@ input AdminRevokeMcpApiKeyInput {
   Owner of the key. Required — it scopes the revoke and the audit subject.
   """
   userID: UUID!
+}
+
+input AdminTemplateFileRepairInput {
+  """
+  List the references without copying anything. Set to false to copy them.
+  """
+  dryRun: Boolean! = true
+  """
+  The templates to process. Required to apply the repair; omitted on a dry run, every template is audited.
+  """
+  templateIDs: [UUID!]
 }
 
 input AdminUpdateSpaceVisibilityInput {

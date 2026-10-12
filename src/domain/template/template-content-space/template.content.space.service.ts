@@ -96,7 +96,8 @@ export class TemplateContentSpaceService {
   public async materializeTemplateContentSpaceContent(
     templateContentSpace: ITemplateContentSpace,
     templateContentSpaceData: CreateTemplateContentSpaceInput | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<void> {
     // Fail-fast on partial loads or DTO mismatches — silently skipping
     // would leave content unmaterialized while the call still succeeds.
@@ -154,18 +155,21 @@ export class TemplateContentSpaceService {
     await this.spaceAboutService.materializeSpaceAboutContent(
       templateContentSpace.about!,
       templateContentSpaceData!.about,
-      rollback
+      rollback,
+      actorContext
     );
     await this.collaborationService.materializeCollaborationContent(
       templateContentSpace.collaboration!,
       templateContentSpaceData!.collaborationData,
-      rollback
+      rollback,
+      actorContext
     );
     for (let i = 0; i < persistedSubspaces.length; i++) {
       await this.materializeTemplateContentSpaceContent(
         persistedSubspaces[i],
         inputSubspaces[i],
-        rollback
+        rollback,
+        actorContext
       );
     }
   }

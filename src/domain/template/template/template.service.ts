@@ -232,6 +232,8 @@ export class TemplateService {
             // (and per-document-authorizes any re-homed media) under this actorContext, so the
             // authorization is centralized in the service, not left to each resolver.
             sourceWhiteboardID: templateData.whiteboard.sourceWhiteboardID,
+            sourceStorageBucketID:
+              templateData.whiteboard.sourceStorageBucketID,
             previewSettings: templateData.whiteboard.previewSettings,
           },
           storageAggregator,
@@ -322,9 +324,10 @@ export class TemplateService {
     // Helper mutates the profile in place; no explicit reassignment needed.
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
-      templateData.profileData.visuals,
+      templateData.profileData,
       [VisualType.CARD],
-      () => this.delete(saved)
+      () => this.delete(saved),
+      actorContext
     );
 
     // rollbackTemplate logs at ERROR (not WARN) when delete itself fails,
@@ -361,7 +364,8 @@ export class TemplateService {
       try {
         await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
           saved.communityGuidelines,
-          templateData.communityGuidelinesData
+          templateData.communityGuidelinesData,
+          actorContext
         );
       } catch (error) {
         // Awaited inside its own try/catch so the rethrown rollback error
@@ -383,7 +387,8 @@ export class TemplateService {
       await this.calloutService.materializeCalloutContent(
         saved.callout,
         templateData.calloutData,
-        rollbackTemplate
+        rollbackTemplate,
+        actorContext
       );
     }
 
@@ -395,7 +400,8 @@ export class TemplateService {
       await this.templateContentSpaceService.materializeTemplateContentSpaceContent(
         saved.contentSpace,
         templateData.contentSpaceData,
-        rollbackTemplate
+        rollbackTemplate,
+        actorContext
       );
     }
 

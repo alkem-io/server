@@ -357,7 +357,8 @@ describe('TemplateService', () => {
       expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'co-1' }),
         calloutData,
-        expect.any(Function)
+        expect.any(Function),
+        expect.anything()
       );
     });
 
@@ -387,7 +388,8 @@ describe('TemplateService', () => {
       ).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'tcs-1' }),
         contentSpaceData,
-        expect.any(Function)
+        expect.any(Function),
+        expect.anything()
       );
     });
 

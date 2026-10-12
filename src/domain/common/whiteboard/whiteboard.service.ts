@@ -11,7 +11,6 @@ import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  ForbiddenException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
@@ -24,6 +23,7 @@ import {
 } from '@domain/common/collaboration-metadata';
 import type { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile';
+import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -168,8 +168,12 @@ export class WhiteboardService {
     const requestedProfile = whiteboardData.profile ?? {
       displayName: 'Whiteboard',
     };
-    const profileData = {
+    const profileData: CreateProfileInput = {
       ...requestedProfile,
+      // The new whiteboard's profile is copied from the same source as its
+      // content, so files in that source's bucket travel with it.
+      sourceStorageBucketID:
+        sourceBucketId ?? requestedProfile.sourceStorageBucketID,
       ...(requestedProfile.tagsets
         ? {
             tagsets: requestedProfile.tagsets.filter(
@@ -211,9 +215,10 @@ export class WhiteboardService {
     const saved = await this.whiteboardRepository.save(whiteboard);
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
-      profileData.visuals,
+      profileData,
       [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW],
-      () => this.deleteWhiteboard(saved.id)
+      () => this.deleteWhiteboard(saved.id),
+      actorContext
     );
 
     // Phase 3: persist the editor's Yjs-V2 snapshot verbatim into the new
@@ -324,13 +329,15 @@ export class WhiteboardService {
   public async materializeContentIntoBucket(
     content: string | undefined,
     targetBucketID: string,
-    sourceBucketID?: string
+    sourceBucketID?: string,
+    copyAnyFile = false
   ): Promise<MaterializedWhiteboardContent> {
     const snapshot = content
       ? Buffer.from(content, 'base64')
       : Buffer.from(await whiteboardSceneToYjsV2State(''));
     const result = await this.rehomeSnapshotAssets(snapshot, targetBucketID, {
       sourceBucketId: sourceBucketID,
+      copyAnyFile,
     });
     return {
       content: result.snapshot.toString('base64'),
@@ -412,15 +419,33 @@ export class WhiteboardService {
       targetStorageBucketID,
       source.storageBucketID
     );
+    await this.applyMaterializedContent(
+      targetWhiteboardID,
+      materialized,
+      actorContext.actorID
+    );
+    return target;
+  }
+
+  /**
+   * Writes materialized content into a whiteboard THROUGH its live collaboration
+   * room (never a direct snapshot write, which a live room's next save would
+   * clobber). On failure the media copied for it are deleted.
+   */
+  private async applyMaterializedContent(
+    whiteboardID: string,
+    materialized: MaterializedWhiteboardContent,
+    actorID: string
+  ): Promise<void> {
     try {
       const fork = await loadWhiteboardFork();
       const desired = fork.decodeSnapshot(
         Buffer.from(materialized.content, 'base64')
       );
       await this.collaborationDocumentService.mutate(
-        targetWhiteboardID,
+        whiteboardID,
         'whiteboard',
-        actorContext.actorID,
+        actorID,
         doc => {
           const scene = new fork.Scene(undefined, { doc });
           scene.beginLogicalMutation();
@@ -442,7 +467,79 @@ export class WhiteboardService {
       );
       throw error;
     }
-    return target;
+  }
+
+  /**
+   * The file IDs a whiteboard snapshot's images point at. Content that is not a
+   * Yjs-V2 snapshot (empty, or a legacy scene) has none.
+   */
+  public async listAssetFileIDs(content: string): Promise<string[]> {
+    if (!content?.trim() || parseLegacyWhiteboardScene(content)) {
+      return [];
+    }
+    const fork = await loadWhiteboardFork();
+    const doc = new Y.Doc();
+    try {
+      try {
+        Y.applyUpdateV2(doc, Buffer.from(content, 'base64'));
+      } catch {
+        // Not a Yjs-V2 snapshot: legacy compressed content the content
+        // migration has not converted yet.
+        throw new ValidationException(
+          'Whiteboard content is not a canonical snapshot yet; run migrateLegacyWhiteboardContent first',
+          LogContext.WHITEBOARDS
+        );
+      }
+      const locators = fork.readAssetLocators(
+        doc.getMap<unknown>(fork.FILES)
+      ) as Record<string, string>;
+      return [...new Set(Object.values(locators))];
+    } finally {
+      doc.destroy();
+    }
+  }
+
+  /**
+   * Copies every image a whiteboard references from another bucket into its own
+   * bucket and points the whiteboard at the copies. Only for the admin template
+   * repair, after an operator chose to publish those images with the template.
+   * Returns how many images were copied.
+   */
+  public async copyForeignAssetsIntoOwnBucket(
+    whiteboardID: string,
+    actorContext: ActorContext
+  ): Promise<number> {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
+      loadEagerRelations: false,
+      relations: { profile: { storageBucket: true } },
+    });
+    const storageBucketID = whiteboard.profile?.storageBucket?.id;
+    if (!storageBucketID) {
+      throw new EntityNotInitializedException(
+        'Whiteboard storage bucket unresolved; cannot copy its images',
+        LogContext.WHITEBOARDS,
+        { whiteboardId: whiteboardID }
+      );
+    }
+    const content = await this.getWhiteboardContent(whiteboardID);
+    if (!content) {
+      return 0;
+    }
+    const materialized = await this.materializeContentIntoBucket(
+      content,
+      storageBucketID,
+      undefined,
+      true
+    );
+    if (materialized.createdDocumentIDs.length === 0) {
+      return 0;
+    }
+    await this.applyMaterializedContent(
+      whiteboardID,
+      materialized,
+      actorContext.actorID
+    );
+    return materialized.createdDocumentIDs.length;
   }
 
   /**
@@ -454,12 +551,12 @@ export class WhiteboardService {
    * see whiteboard.fork). For every locator this loads its source document, AUTHORIZES it,
    * and — unless it already lives in the target bucket — asks file-service to copy it there.
    * File-service alone owns deduplication; this service treats the returned document id as
-   * opaque and compensates it only when the copy reports `reused !== true`. Authorization is
-   * caller-scoped:
-   *   - source clone (`sourceBucketId` set): the locator's document MUST live in that exact
-   *     resolver-authorized source bucket — a foreign locator is a crafted reference → reject;
-   *   - direct untrusted content: per-document READ under `actorContext` (same rule as a
-   *     live content replacement).
+   * opaque and compensates it only when the copy reports `reused !== true`. A document is
+   * copied when it lives in `sourceBucketId` (the server-chosen source of a clone) or when
+   * `actorContext` can READ it — the same rule as every other file copy (see
+   * DocumentCopyAuthority). Any other locator is kept exactly as it is: the image resolves
+   * for whoever can read the original and stays broken for everyone else, and the create
+   * itself does not fail.
    * PHASE 1 authorizes + copies EVERY locator; PHASE 2 rewrites the map in ONE `doc.transact`
    * under `LOCAL_ORIGIN`. A copy failure before the rewrite best-effort deletes the fresh
    * target copies and publishes NO locator (the caller's entity rollback removes a
@@ -470,7 +567,11 @@ export class WhiteboardService {
   private async rehomeSnapshotAssets(
     snapshot: Uint8Array,
     targetBucketId: string,
-    authz: { actorContext?: ActorContext; sourceBucketId?: string }
+    authz: {
+      actorContext?: ActorContext;
+      sourceBucketId?: string;
+      copyAnyFile?: boolean;
+    }
   ): Promise<{ snapshot: Buffer; createdTargetLocators: string[] }> {
     // Returns the re-homed snapshot AND the file-service ids of any media copied into
     // `targetBucketId` on this call. A failure DURING re-home is compensated here (the
@@ -515,33 +616,23 @@ export class WhiteboardService {
         );
         const sourceDocumentBucketId = sourceDocument.storageBucket?.id;
 
-        if (authz.sourceBucketId != null) {
-          // Source clone: every locator MUST belong to the authorized source bucket.
-          if (sourceDocumentBucketId !== authz.sourceBucketId) {
-            throw new ForbiddenException(
-              'Whiteboard source-copy references a document outside the authorized source bucket',
-              LogContext.WHITEBOARDS,
-              { fileId }
-            );
-          }
-        } else if (authz.actorContext) {
-          // Direct untrusted content: per-document READ under the initiating actor.
-          this.authorizationService.grantAccessOrFail(
-            authz.actorContext,
-            sourceDocument.authorization,
-            AuthorizationPrivilege.READ,
-            `re-home whiteboard media document: ${sourceLocator}`
-          );
-        } else {
-          throw new ValidationException(
-            'Whiteboard default content with media must name a server-authorized source Whiteboard',
-            LogContext.WHITEBOARDS,
-            { fileId }
-          );
-        }
-
         if (sourceDocumentBucketId === targetBucketId) {
           // Already target-owned — retain the locator, do not copy.
+          desired[fileId] = sourceLocator;
+          continue;
+        }
+        const copyAllowed =
+          authz.copyAnyFile === true ||
+          (authz.sourceBucketId != null &&
+            sourceDocumentBucketId === authz.sourceBucketId) ||
+          (authz.actorContext != null &&
+            this.authorizationService.isAccessGranted(
+              authz.actorContext,
+              sourceDocument.authorization,
+              AuthorizationPrivilege.READ
+            ));
+        if (!copyAllowed) {
+          // Keep the reference as it is; never hand the bytes over by copying.
           desired[fileId] = sourceLocator;
           continue;
         }

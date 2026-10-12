@@ -114,7 +114,8 @@ describe('CalloutContributionDefaultsService', () => {
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
       ).toHaveBeenCalledWith(
         'markdown with ![image](http://old-url)',
-        storageBucket
+        storageBucket,
+        { sourceStorageBucketID: undefined, actorContext: undefined }
       );
       expect(defaults.postDescription).toBe(reuploaded);
       expect(repository.save).toHaveBeenCalledWith(defaults);

@@ -298,6 +298,26 @@ describe('InputCreatorService', () => {
       expect(result!.nameID).toBe('my-board');
       expect(result!.previewSettings).toEqual({ zoom: 1 });
     });
+
+    it('names the source whiteboard bucket as the boundary for its images', async () => {
+      // Creating a space from a template copies the template whiteboard's own
+      // images whoever the creator is; the bucket is what makes them "own".
+      fileServiceAdapter.getContentBatch.mockResolvedValue([]);
+      const whiteboard = {
+        profile: {
+          displayName: 'Template Board',
+          storageBucket: { id: 'template-wb-bucket' },
+        },
+        contentPointer: 'wb-pointer',
+        nameID: 'template-board',
+      } as any;
+
+      const result =
+        await service.buildCreateWhiteboardInputFromWhiteboard(whiteboard);
+
+      expect(result!.sourceStorageBucketID).toBe('template-wb-bucket');
+      expect(result!.profile!.sourceStorageBucketID).toBe('template-wb-bucket');
+    });
   });
 
   describe('buildCreateMemoInputFromMemo', () => {
@@ -356,6 +376,15 @@ describe('InputCreatorService', () => {
       expect(result.referencesData).toEqual([]);
       expect(result.tagsets).toEqual([]);
       expect(result.visuals).toEqual([]);
+    });
+
+    it("carries the source profile's bucket so its own files are copied", () => {
+      const result = service.buildCreateProfileInputFromProfile({
+        displayName: 'Source',
+        storageBucket: { id: 'source-profile-bucket' },
+      } as any);
+
+      expect(result.sourceStorageBucketID).toBe('source-profile-bucket');
     });
   });
 
@@ -597,6 +626,35 @@ describe('InputCreatorService', () => {
         whiteboardContent: 'canonical-default-with-media-locators',
         sourceStorageBucketID: 'source-callout-bucket',
       });
+    });
+
+    it('names the source framing bucket for a default post description too', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'callout-with-post-default',
+        nameID: 'post-default',
+        sortOrder: 1,
+        framing: {
+          id: 'framing-1',
+          type: CalloutFramingType.NONE,
+          profile: {
+            displayName: 'Test',
+            description: '',
+            tagsets: [],
+            storageBucket: { id: 'source-callout-bucket' },
+          },
+        },
+        contributionDefaults: { postDescription: '![x](image-url)' },
+        settings: {},
+        classification: { tagsets: [] },
+      });
+
+      const result = await service.buildCreateCalloutInputFromCallout(
+        'callout-with-post-default'
+      );
+
+      expect(result?.contributionDefaults?.sourceStorageBucketID).toBe(
+        'source-callout-bucket'
+      );
     });
 
     it('rejects a stored Whiteboard default whose owning Callout bucket is missing', async () => {

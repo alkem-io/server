@@ -9,6 +9,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -60,7 +61,8 @@ export class InnovationFlowService {
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
     storageAggregator: IStorageAggregator,
-    flowTagsetTemplate: ITagsetTemplate
+    flowTagsetTemplate: ITagsetTemplate,
+    actorContext?: ActorContext
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = InnovationFlow.create({
       settings: innovationFlowData.settings,
@@ -121,9 +123,10 @@ export class InnovationFlowService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        innovationFlowData.profile?.visuals,
+        innovationFlowData.profile,
         [VisualType.CARD],
-        () => this.deleteInnovationFlow(saved.id)
+        () => this.deleteInnovationFlow(saved.id),
+        actorContext
       );
     return saved;
   }

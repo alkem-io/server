@@ -116,7 +116,7 @@ export class InnovationHubService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        createData.profileData.visuals,
+        createData.profileData,
         [VisualType.BANNER_WIDE],
         () => this.delete(saved.id)
       );

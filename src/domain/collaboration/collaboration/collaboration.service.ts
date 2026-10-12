@@ -147,7 +147,8 @@ export class CollaborationService {
       await this.innovationFlowService.createInnovationFlow(
         collaborationData.innovationFlowData,
         storageAggregator,
-        flowStatesTagsetTemplate
+        flowStatesTagsetTemplate,
+        actorContext
       );
 
     if (collaborationData.calloutsSetData.calloutsData) {
@@ -183,7 +184,8 @@ export class CollaborationService {
   public async materializeCollaborationContent(
     collaboration: ICollaboration,
     collaborationData: CreateCollaborationInput | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<void> {
     if (!collaboration.calloutsSet) {
       throw new EntityNotInitializedException(
@@ -199,7 +201,8 @@ export class CollaborationService {
     await this.calloutsSetService.materializeCalloutsSetContent(
       collaboration.calloutsSet,
       collaborationData?.calloutsSetData?.calloutsData,
-      rollback
+      rollback,
+      actorContext
     );
   }
 
