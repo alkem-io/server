@@ -1742,7 +1742,7 @@ describe('WhiteboardService', () => {
     });
 
     it('creates the whiteboard when a template image is stored outside the template and the creator cannot READ it', async () => {
-      // The #6596 shape: the template whiteboard references an image stored in a
+      // A template whiteboard references an image stored in a
       // private subspace. The create succeeds and the image keeps its reference.
       const content = await buildAssetSnapshotBase64({ 'file-1': 'loc-1' });
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
