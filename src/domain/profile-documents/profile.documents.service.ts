@@ -122,8 +122,11 @@ export class ProfileDocumentsService {
     if (docInThisBucket) {
       // It should be just `fileUrl` but rewrite it just in case
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
-    } else if (docInContent.temporaryLocation) {
-      // Move temporary document to the new bucket via Go file-service-go.
+    } else if (
+      docInContent.temporaryLocation &&
+      this.isOwnTemporaryUpload(docInContent, copyAuthority)
+    ) {
+      // Move the creator's own temporary upload to the new bucket via Go file-service-go.
       // file-service-go updates the row's `storageBucketId` and clears
       // `temporaryLocation` in the DB.
       await this.fileServiceAdapter.updateDocument(docInContent.id, {
@@ -202,6 +205,19 @@ export class ProfileDocumentsService {
       // (skipDedup=true makes each copy a unique new row).
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
+  }
+
+  /**
+   * A temporary upload is claimed (moved) only by the person who uploaded it.
+   * Anyone else's, such as one a template still points at, is copied under the
+   * copy rule instead: moving it would take it away from wherever else it is
+   * referenced, and would skip the read check. Flows with no actor keep moving.
+   */
+  private isOwnTemporaryUpload(
+    document: IDocument,
+    { actorContext }: DocumentCopyAuthority
+  ): boolean {
+    return !actorContext || document.createdBy === actorContext.actorID;
   }
 
   private isCopyAllowed(

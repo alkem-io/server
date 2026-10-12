@@ -405,6 +405,79 @@ describe('ProfileDocumentsService', () => {
         );
       });
 
+      describe("someone else's temporary upload", () => {
+        const temporary = () => {
+          const ctx = setup();
+          ctx.doc.temporaryLocation = true;
+          ctx.doc.createdBy = 'uploader';
+          return ctx;
+        };
+        const actor = (actorID: string) => {
+          const actorContext = new ActorContext();
+          actorContext.actorID = actorID;
+          return actorContext;
+        };
+
+        it('moves the upload when the actor is its uploader', async () => {
+          const { fileUrl, destination, doc } = temporary();
+
+          await service.reuploadFileOnStorageBucket(
+            fileUrl,
+            destination,
+            false,
+            {
+              actorContext: actor('uploader'),
+            }
+          );
+
+          expect(fileServiceAdapter.updateDocument).toHaveBeenCalledWith(
+            doc.id,
+            {
+              storageBucketId: destination.id,
+              temporaryLocation: false,
+            }
+          );
+          expect(
+            storageBucketService.copyDocumentToBucket
+          ).not.toHaveBeenCalled();
+        });
+
+        it('copies, never moves, an upload the actor can read but did not make', async () => {
+          const { fileUrl, destination, copiedUrl } = temporary();
+          vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+          const result = await service.reuploadFileOnStorageBucket(
+            fileUrl,
+            destination,
+            false,
+            { actorContext: actor('someone-else') }
+          );
+
+          expect(result).toBe(copiedUrl);
+          expect(fileServiceAdapter.updateDocument).not.toHaveBeenCalled();
+        });
+
+        it('leaves an upload the actor can neither claim nor read as written', async () => {
+          const { fileUrl, destination } = temporary();
+          vi.mocked(authorizationService.isAccessGranted).mockReturnValue(
+            false
+          );
+
+          const result = await service.reuploadFileOnStorageBucket(
+            fileUrl,
+            destination,
+            false,
+            { actorContext: actor('someone-else') }
+          );
+
+          expect(result).toBe(fileUrl);
+          expect(fileServiceAdapter.updateDocument).not.toHaveBeenCalled();
+          expect(
+            storageBucketService.copyDocumentToBucket
+          ).not.toHaveBeenCalled();
+        });
+      });
+
       it('copies a file from the server-chosen source bucket without a per-file check', async () => {
         const { fileUrl, origin, destination, copiedUrl } = setup();
 

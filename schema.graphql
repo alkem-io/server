@@ -4839,7 +4839,7 @@ type Mutation {
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """
-  Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. A dry run by default.
+  Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. Rewriting a whiteboard also needs the operator to be able to edit it, e.g. through Platform Content Full Access. A dry run by default.
   """
   adminRepairTemplateFiles(repairData: AdminTemplateFileRepairInput!): AdminTemplateFileRepairResult!
   """Platform Users Admin: revoke a named user's MCP API key. Idempotent."""

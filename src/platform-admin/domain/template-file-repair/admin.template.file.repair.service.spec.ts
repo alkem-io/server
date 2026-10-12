@@ -48,6 +48,16 @@ const createService = (
       ];
     }
     if (sql.includes('from memo')) return [{ contentPointer: null }];
+    if (sql.includes('from whiteboard w')) {
+      return [
+        {
+          authorization: readableBy(
+            AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+          ),
+        },
+      ];
+    }
+    if (sql.startsWith('select id from file')) return [{ id: FOREIGN }];
     return [];
   });
   const entityManager = { query };
@@ -86,12 +96,22 @@ const createService = (
     whiteboards as any,
     {} as any,
     authorization as any,
+    { getDocumentsBaseUrlPath: () => URL_BASE } as any,
     MockWinstonProvider.useValue as any
   );
   return { service, query, profileDocuments, whiteboards };
 };
 
-const actor = { actorID: 'ops-1' } as ActorContext;
+const actor = {
+  actorID: 'ops-1',
+  credentials: [
+    { type: AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN, resourceID: '' },
+    {
+      type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+      resourceID: '',
+    },
+  ],
+} as ActorContext;
 
 describe('AdminTemplateFileRepairService', () => {
   it('lists only references stored outside their own bucket on a dry run, and copies nothing', async () => {
@@ -253,6 +273,51 @@ describe('AdminTemplateFileRepairService', () => {
       ['repaired markdown', 'state-1']
     );
     expect(result.copiedReferences).toBe(2);
+  });
+
+  it('points a link written with a retired host at this server before copying', async () => {
+    const ctx = createService([
+      slot({
+        text: `![a](https://acc.alkem.io/api/private/rest/storage/document/${FOREIGN})`,
+      }),
+    ]);
+
+    await ctx.service.repair(undefined, false, actor);
+
+    expect(
+      ctx.profileDocuments.reuploadDocumentsInMarkdownToStorageBucket
+    ).toHaveBeenCalledWith(
+      `![a](${URL_BASE}/${FOREIGN})`,
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it('refuses to rewrite a whiteboard the operator cannot edit, copying nothing', async () => {
+    const ctx = createService([
+      slot({ kind: 'whiteboard', entityID: 'wb-1', text: null }),
+    ]);
+    const opsOnly = {
+      actorID: 'ops-1',
+      credentials: [
+        {
+          type: AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+          resourceID: '',
+        },
+      ],
+    } as ActorContext;
+
+    const result = await ctx.service.repair(undefined, false, opsOnly);
+
+    expect(
+      ctx.whiteboards.copyForeignAssetsIntoOwnBucket
+    ).not.toHaveBeenCalled();
+    expect(result.failed).toEqual([
+      expect.objectContaining({
+        location: 'whiteboard',
+        reason: expect.stringContaining('Platform Content Full Access'),
+      }),
+    ]);
   });
 
   it('reports references to files that no longer exist', async () => {

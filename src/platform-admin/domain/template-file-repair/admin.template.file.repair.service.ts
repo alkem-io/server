@@ -9,6 +9,7 @@ import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { DocumentCopyAuthority } from '@domain/profile-documents/document.copy.authority';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -95,6 +96,10 @@ select t.id "templateID", s.id "spaceID", ip."accountId" "accountID"
   left join innovation_pack ip on ip."templatesSetId" = t."templatesSetId"
  where t.id = any($1::uuid[])
 `;
+
+/** A document URL on any host, capturing the part before the file ID. */
+const HOSTED_DOCUMENT_URL_PATTERN =
+  /https?:\/\/[^/\s)"'\]]+\/api\/private\/rest\/storage\/document\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
 
 const DOCUMENT_URL_PATTERN =
   /\/api\/private\/rest\/storage\/document\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
@@ -228,6 +233,7 @@ export class AdminTemplateFileRepairService {
     private readonly whiteboardService: WhiteboardService,
     private readonly fileServiceAdapter: FileServiceAdapter,
     private readonly authorizationService: AuthorizationService,
+    private readonly documentService: DocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -280,7 +286,7 @@ export class AdminTemplateFileRepairService {
       let copied = false;
       if (!dryRun && copyable > 0) {
         try {
-          copied = await this.repairSlot(slot, owner);
+          copied = await this.repairSlot(slot, owner, actorContext);
           if (copied) {
             copiedReferences += copyable;
           } else {
@@ -443,10 +449,17 @@ export class AdminTemplateFileRepairService {
    * Copies the slot's foreign files the owner can read; true when the stored
    * reference changed.
    */
-  private async repairSlot(slot: Slot, owner: ActorContext): Promise<boolean> {
+  private async repairSlot(
+    slot: Slot,
+    owner: ActorContext,
+    operator: ActorContext
+  ): Promise<boolean> {
     const copyAuthority: DocumentCopyAuthority = { actorContext: owner };
     switch (slot.kind) {
       case 'whiteboard':
+        // The rewrite goes through the whiteboard's live room as the operator,
+        // so the operator needs the same right to edit it as any other editor.
+        await this.assertOperatorCanEditWhiteboard(slot.entityID, operator);
         return await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
           slot.entityID,
           owner
@@ -494,7 +507,7 @@ export class AdminTemplateFileRepairService {
       await this.storageBucketService.getStorageBucketOrFail(slot.bucketID, {
         relations: { documents: true },
       });
-    const text = slot.text ?? '';
+    const text = await this.withCurrentHost(slot.text ?? '');
     const repaired = SINGLE_URI_SLOTS.has(slot.kind)
       ? await this.profileDocumentsService.reuploadFileOnStorageBucket(
           text,
@@ -507,11 +520,64 @@ export class AdminTemplateFileRepairService {
           storageBucket,
           copyAuthority
         );
-    if (!repaired || repaired === text) {
+    if (!repaired || repaired === slot.text) {
       return false;
     }
     await this.updateText(slot, repaired);
     return true;
+  }
+
+  /**
+   * Points document URLs written with another host (a retired domain, or a
+   * copy of another environment's data) at this server, for files that exist
+   * here, so the copy step recognises them.
+   */
+  private async withCurrentHost(text: string): Promise<string> {
+    const base = this.documentService.getDocumentsBaseUrlPath();
+    const foreignHosted = [
+      ...text.matchAll(HOSTED_DOCUMENT_URL_PATTERN),
+    ].filter(match => !match[0].startsWith(base));
+    if (foreignHosted.length === 0) {
+      return text;
+    }
+    const rows: { id: string }[] = await this.entityManager.query(
+      'select id from file where id = any($1::uuid[])',
+      [[...new Set(foreignHosted.map(match => match[1].toLowerCase()))]]
+    );
+    const existing = new Set(rows.map(row => row.id));
+    return text.replace(HOSTED_DOCUMENT_URL_PATTERN, (url, fileID: string) =>
+      existing.has(fileID.toLowerCase()) && !url.startsWith(base)
+        ? `${base}/${fileID}`
+        : url
+    );
+  }
+
+  private async assertOperatorCanEditWhiteboard(
+    whiteboardID: string,
+    operator: ActorContext
+  ): Promise<void> {
+    const [row]: { authorization: IAuthorizationPolicy | null }[] =
+      await this.entityManager.query(
+        `select json_build_object('id', ap.id, 'type', ap.type,
+                  'credentialRules', ap."credentialRules",
+                  'privilegeRules', ap."privilegeRules") authorization
+           from whiteboard w join authorization_policy ap on ap.id = w."authorizationId"
+          where w.id = $1`,
+        [whiteboardID]
+      );
+    if (
+      !row?.authorization ||
+      !this.authorizationService.isAccessGranted(
+        operator,
+        row.authorization,
+        AuthorizationPrivilege.UPDATE_CONTENT
+      )
+    ) {
+      throw new ValidationException(
+        'The operator cannot edit this whiteboard: run the repair as a user who also holds Platform Content Full Access',
+        LogContext.TEMPLATES
+      );
+    }
   }
 
   private async updateText(slot: Slot, value: string): Promise<void> {

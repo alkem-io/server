@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
+import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
@@ -15,6 +16,7 @@ import { AdminTemplateFileRepairService } from './admin.template.file.repair.ser
     PlatformAuthorizationPolicyModule,
     PlatformOperationsAuditModule,
     ProfileDocumentsModule,
+    DocumentModule,
     StorageBucketModule,
     WhiteboardModule,
     FileServiceAdapterModule,
