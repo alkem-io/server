@@ -931,6 +931,38 @@ describe('CalloutService', () => {
       expect(deletedInTransaction).toBe(false);
     });
 
+    it("keeps a board's column template when its classification delete fails", async () => {
+      const boardTemplate = { id: 'tmpl-1' };
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        authorization: { id: 'auth-1' },
+        classification: {
+          id: 'cls-1',
+          tagsets: [
+            {
+              name: TagsetReservedName.TASK,
+              tags: ['Backlog'],
+              tagsetTemplate: boardTemplate,
+            },
+          ],
+        },
+      } as any);
+      vi.mocked(classificationService.deleteClassification).mockRejectedValue(
+        new Error('boom')
+      );
+
+      // The surviving marker tagset still references the template, so dropping
+      // it would fail and turn a committed delete into a rejection.
+      await expect(service.deleteCallout('callout-1')).resolves.toMatchObject({
+        id: 'callout-1',
+      });
+      expect(tagsetTemplateService.removeTagsetTemplate).not.toHaveBeenCalled();
+    });
+
     it('resolves and logs when the classification delete fails after the callout is deleted', async () => {
       vi.mocked(repository.findOne).mockResolvedValue({
         id: 'callout-1',

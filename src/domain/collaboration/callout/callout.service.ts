@@ -839,29 +839,31 @@ export class CalloutService {
     // the one-off cleanup migration (alkem-io/server#6655) has swept. It is
     // logged, not thrown: the callout is already deleted, and a rejection
     // would read to the caller as a failed delete.
-    if (callout.classification) {
-      try {
+    //
+    // On a Tasks board the column template goes last: the classification's
+    // marker tagset holds an FK to it that would otherwise block the drop
+    // (QueryFailedError on tagset_template). So it is only dropped once the
+    // classification is gone, inside the same logged-not-thrown block.
+    try {
+      if (callout.classification) {
         await this.classificationService.deleteClassification(
           callout.classification.id
         );
-      } catch (error: any) {
-        this.logger.error(
-          {
-            message: 'Failed to delete the classification of a deleted callout',
-            calloutId: calloutID,
-            classificationId: callout.classification.id,
-          },
-          error?.stack,
-          LogContext.COLLABORATION
-        );
       }
-    }
-
-    // On a Tasks board the column template goes last: the classification's
-    // marker tagset, deleted above, holds an FK to it that would otherwise
-    // block the drop (QueryFailedError on tagset_template).
-    if (boardTemplate) {
-      await this.tagsetTemplateService.removeTagsetTemplate(boardTemplate);
+      if (boardTemplate) {
+        await this.tagsetTemplateService.removeTagsetTemplate(boardTemplate);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        {
+          message: 'Failed to clean up the classification of a deleted callout',
+          calloutId: calloutID,
+          classificationId: callout.classification?.id,
+          boardTemplateId: boardTemplate?.id,
+        },
+        error?.stack,
+        LogContext.COLLABORATION
+      );
     }
 
     return result;
