@@ -1648,7 +1648,7 @@ describe('WhiteboardService', () => {
       const result = await service.materializeContentIntoBucket(
         sourceContent,
         'callout-bucket',
-        'authorized-template-bucket'
+        { sourceBucketId: 'authorized-template-bucket' }
       );
 
       expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();

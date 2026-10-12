@@ -833,6 +833,9 @@ describe('TemplateService', () => {
       inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
         [{ framing: { type: 'form' } }, { framing: { type: 'poll' } }] as any
       );
+      inputCreatorService.withoutSourceBuckets.mockImplementation(
+        input => input
+      );
       calloutsSetService.addCallouts.mockResolvedValue([]);
       templateContentSpaceService.save.mockImplementation(
         async (entity: any) => entity

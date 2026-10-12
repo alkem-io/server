@@ -320,6 +320,44 @@ describe('InputCreatorService', () => {
     });
   });
 
+  describe('withoutSourceBuckets', () => {
+    it('drops every source bucket, however deep, and keeps everything else', () => {
+      const input = {
+        about: {
+          profileData: { displayName: 'A', sourceStorageBucketID: 'b-1' },
+        },
+        collaborationData: {
+          calloutsSetData: {
+            calloutsData: [
+              {
+                framing: {
+                  whiteboard: { content: 'snap', sourceStorageBucketID: 'b-2' },
+                  mediaGallery: { visuals: [], sourceStorageBucketID: 'b-3' },
+                },
+                contributionDefaults: {
+                  whiteboardContent: 'w',
+                  sourceStorageBucketID: 'b-4',
+                },
+              },
+            ],
+          },
+        },
+      };
+
+      const result = service.withoutSourceBuckets(input);
+
+      expect(JSON.stringify(result)).not.toContain('sourceStorageBucketID');
+      expect(result.collaborationData.calloutsSetData.calloutsData[0]).toEqual({
+        framing: {
+          whiteboard: { content: 'snap' },
+          mediaGallery: { visuals: [] },
+        },
+        contributionDefaults: { whiteboardContent: 'w' },
+      });
+      expect(input.about.profileData.sourceStorageBucketID).toBe('b-1');
+    });
+  });
+
   describe('buildCreateMemoInputFromMemo', () => {
     it('should throw EntityNotInitializedException when memo profile is missing', async () => {
       const memo = { id: 'memo-1', profile: undefined } as any;

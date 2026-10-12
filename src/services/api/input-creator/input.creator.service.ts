@@ -90,6 +90,29 @@ export class InputCreatorService {
     return Buffer.from(item.contentBase64, 'base64');
   }
 
+  /**
+   * Drops every source bucket from a built input. Used when the input is built
+   * from a live space for a template: the saver's READ was checked on the space
+   * only, not on each nested subspace or callout, so none of their buckets may
+   * be trusted; every file then needs the saver's own READ to be copied.
+   */
+  public withoutSourceBuckets<T>(input: T): T {
+    const strip = (value: unknown): unknown => {
+      if (Array.isArray(value)) {
+        return value.map(strip);
+      }
+      if (value && typeof value === 'object' && !(value instanceof Date)) {
+        return Object.fromEntries(
+          Object.entries(value)
+            .filter(([key]) => key !== 'sourceStorageBucketID')
+            .map(([key, entry]) => [key, strip(entry)])
+        );
+      }
+      return value;
+    };
+    return strip(input) as T;
+  }
+
   public async buildCreateCalloutInputsFromCallouts(
     callouts: ICallout[]
   ): Promise<CreateCalloutInput[]> {

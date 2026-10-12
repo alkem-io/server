@@ -177,10 +177,15 @@ export class TemplatesSetService {
     templateSpaceInput: CreateTemplateFromSpaceOnTemplatesSetInput,
     actorContext: ActorContext
   ): Promise<ITemplate> {
+    // Built from a live space: READ was checked on that space only, not on
+    // each subspace or callout under it, so their buckets are not trusted and
+    // every file needs the saver's own READ to be copied.
     const createSpaceContentInput =
-      await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
-        templateSpaceInput.spaceID,
-        templateSpaceInput.recursive
+      this.inputCreatorService.withoutSourceBuckets(
+        await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
+          templateSpaceInput.spaceID,
+          templateSpaceInput.recursive
+        )
       );
     const templateInput: CreateTemplateInput = {
       ...templateSpaceInput,

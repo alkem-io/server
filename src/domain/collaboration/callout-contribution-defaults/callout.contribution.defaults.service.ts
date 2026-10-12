@@ -94,7 +94,10 @@ export class CalloutContributionDefaultsService {
           await this.whiteboardService.materializeContentIntoBucket(
             sourceData.whiteboardContent,
             storageBucket.id,
-            sourceData.sourceStorageBucketID
+            {
+              sourceBucketId: sourceData.sourceStorageBucketID,
+              actorContext,
+            }
           );
         defaults.whiteboardContent = materialized.content;
         createdDocumentIDs = materialized.createdDocumentIDs;
@@ -137,7 +140,7 @@ export class CalloutContributionDefaultsService {
     return this.whiteboardService.materializeContentIntoBucket(
       sourceData.whiteboardContent,
       targetStorageBucketID,
-      sourceData.sourceStorageBucketID
+      { sourceBucketId: sourceData.sourceStorageBucketID }
     );
   }
 

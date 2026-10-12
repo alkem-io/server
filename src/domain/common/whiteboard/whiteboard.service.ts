@@ -132,11 +132,12 @@ export class WhiteboardService {
     // media. The two branches carry DIFFERENT trust:
     //  - `sourceWhiteboardID` (clone / Save-as-Template): the service authorizes
     //    READ on the source it dereferences HERE (the resolver only authorizes
-    //    CREATE on the destination parent); embedded-media locators are then
-    //    constrained to the source's OWN bucket. A source with no stored snapshot
+    //    CREATE on the destination parent); images in the source's OWN bucket are
+    //    then copied without a per-file check. A source with no stored snapshot
     //    seeds an EMPTY board — never a fallback to client `content`.
-    //  - direct `content`: locators are untrusted → per-document READ under the
-    //    initiating actor (identical rule to a live content replacement).
+    //  - direct `content` (with `sourceStorageBucketID` when the server copied it
+    //    from a template): any other image is copied only if the initiating actor
+    //    can READ it; otherwise its reference is kept as it is.
     let initialScene: string | undefined;
     let sourceBucketId = sourceStorageBucketID;
     let sourcePreviewURI: string | undefined;
@@ -329,16 +330,20 @@ export class WhiteboardService {
   public async materializeContentIntoBucket(
     content: string | undefined,
     targetBucketID: string,
-    sourceBucketID?: string,
-    copyAnyFile = false
+    authz: {
+      sourceBucketId?: string;
+      actorContext?: ActorContext;
+      copyAnyFile?: boolean;
+    } = {}
   ): Promise<MaterializedWhiteboardContent> {
     const snapshot = content
       ? Buffer.from(content, 'base64')
       : Buffer.from(await whiteboardSceneToYjsV2State(''));
-    const result = await this.rehomeSnapshotAssets(snapshot, targetBucketID, {
-      sourceBucketId: sourceBucketID,
-      copyAnyFile,
-    });
+    const result = await this.rehomeSnapshotAssets(
+      snapshot,
+      targetBucketID,
+      authz
+    );
     return {
       content: result.snapshot.toString('base64'),
       createdDocumentIDs: result.createdTargetLocators,
@@ -417,7 +422,7 @@ export class WhiteboardService {
     const materialized = await this.materializeContentIntoBucket(
       source.content,
       targetStorageBucketID,
-      source.storageBucketID
+      { sourceBucketId: source.storageBucketID }
     );
     await this.applyMaterializedContent(
       targetWhiteboardID,
@@ -483,10 +488,8 @@ export class WhiteboardService {
       try {
         Y.applyUpdateV2(doc, Buffer.from(content, 'base64'));
       } catch {
-        // Not a Yjs-V2 snapshot: legacy compressed content the content
-        // migration has not converted yet.
         throw new ValidationException(
-          'Whiteboard content is not a canonical snapshot yet; run migrateLegacyWhiteboardContent first',
+          'Whiteboard content is not a Yjs snapshot',
           LogContext.WHITEBOARDS
         );
       }
@@ -528,8 +531,7 @@ export class WhiteboardService {
     const materialized = await this.materializeContentIntoBucket(
       content,
       storageBucketID,
-      undefined,
-      true
+      { copyAnyFile: true }
     );
     if (materialized.createdDocumentIDs.length === 0) {
       return 0;
@@ -833,10 +835,9 @@ export class WhiteboardService {
     // representation — no Excalidraw scene/JSON). Re-home embedded media through the
     // SAME authorized, locator-native owner the create/clone flow uses
     // (`rehomeSnapshotAssets`): the snapshot's FILES Y.Map holds opaque file-service
-    // locator strings, and every locator is per-document READ-authorized under the
-    // initiating actor and copied into this whiteboard's own bucket if it lives
-    // elsewhere. Direct untrusted content → no `sourceBucketId` (per-document READ),
-    // matching the live-replacement rule. One owner for both create and update — the
+    // locator strings; a locator stored elsewhere is copied into this whiteboard's
+    // own bucket if the initiating actor can READ it, and kept as it is otherwise.
+    // Direct untrusted content → no `sourceBucketId`. One owner for both create and update — the
     // BinaryFileData-shaped `rehomeSnapshotMedia` no-op path is gone.
     const { snapshot, createdTargetLocators } = await this.rehomeSnapshotAssets(
       Buffer.from(updateWhiteboardContent, 'base64'),

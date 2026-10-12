@@ -1,4 +1,5 @@
 import { ValidationException } from '@common/exceptions';
+import { compressText, decompressText } from '@common/utils/compression.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { describe, expect, it, vi } from 'vitest';
@@ -19,7 +20,7 @@ const slot = (overrides: Record<string, unknown>) => ({
 });
 
 const createService = (slots: unknown[]) => {
-  const query = vi.fn(async (sql: string) => {
+  const query = vi.fn(async (sql: string, _params?: unknown[]) => {
     if (sql.includes('with recursive')) return slots;
     if (sql.startsWith('select id, "storageBucketId" from file')) {
       return [
@@ -46,6 +47,11 @@ const createService = (slots: unknown[]) => {
     getWhiteboardContent: vi.fn().mockResolvedValue('snapshot'),
     listAssetFileIDs: vi.fn().mockResolvedValue([FOREIGN]),
     copyForeignAssetsIntoOwnBucket: vi.fn().mockResolvedValue(1),
+    materializeContentIntoBucket: vi.fn().mockResolvedValue({
+      content: 'rehomed-snapshot',
+      createdDocumentIDs: ['copy-1'],
+    }),
+    deleteMaterializedContentDocuments: vi.fn(),
   };
   const service = new AdminTemplateFileRepairService(
     entityManager as any,
@@ -117,6 +123,42 @@ describe('AdminTemplateFileRepairService', () => {
     );
     expect(result.copiedReferences).toBe(2);
     expect(result.failed).toEqual([]);
+  });
+
+  it('reads and writes a default whiteboard in the compressed form its column stores', async () => {
+    const ctx = createService([
+      slot({
+        kind: 'defaultWhiteboardContent',
+        entityID: 'defaults-1',
+        text: await compressText('stored-snapshot'),
+      }),
+    ]);
+
+    const result = await ctx.service.repair(['template-1'], false, actor);
+
+    expect(ctx.whiteboards.listAssetFileIDs).toHaveBeenCalledWith(
+      'stored-snapshot'
+    );
+    const update = ctx.query.mock.calls.find(([sql]) =>
+      sql.startsWith('update "callout_contribution_defaults"')
+    );
+    expect(await decompressText(update?.[1]?.[0] as string)).toBe(
+      'rehomed-snapshot'
+    );
+    expect(result.copiedReferences).toBe(1);
+  });
+
+  it('does not report a copy when nothing was rewritten', async () => {
+    const ctx = createService([slot({})]);
+    ctx.profileDocuments.reuploadDocumentsInMarkdownToStorageBucket.mockImplementation(
+      async (text: string) => text
+    );
+
+    const result = await ctx.service.repair(['template-1'], false, actor);
+
+    expect(result.copiedReferences).toBe(0);
+    expect(result.references[0].copied).toBe(false);
+    expect(result.failed).toHaveLength(1);
   });
 
   it('reports memo references instead of rewriting the memo', async () => {

@@ -8,6 +8,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -58,7 +59,8 @@ export class InnovationPackService {
 
   async createInnovationPack(
     innovationPackData: CreateInnovationPackInput,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    actorContext?: ActorContext
   ): Promise<IInnovationPack> {
     if (innovationPackData.nameID) {
       // Convert nameID to lower case
@@ -106,7 +108,8 @@ export class InnovationPackService {
         saved.profile,
         innovationPackData.profileData,
         [VisualType.AVATAR, VisualType.CARD],
-        () => this.deleteInnovationPack({ ID: saved.id })
+        () => this.deleteInnovationPack({ ID: saved.id }),
+        actorContext
       );
     return saved;
   }

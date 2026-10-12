@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
+import { compressText, decompressText } from '@common/utils/compression.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -204,6 +205,10 @@ export class AdminTemplateFileRepairService {
     for (const slot of slots) {
       let foreign: ForeignFile[];
       try {
+        if (slot.kind === 'defaultWhiteboardContent' && slot.text) {
+          // The entity stores this column compressed; raw SQL reads it as is.
+          slot.text = await decompressText(slot.text);
+        }
         foreign = await this.findForeignFiles(slot);
       } catch (error) {
         failed.push(this.issue(slot, error));
@@ -215,9 +220,17 @@ export class AdminTemplateFileRepairService {
       let copied = false;
       if (!dryRun) {
         try {
-          await this.repairSlot(slot, actorContext);
-          copied = true;
-          copiedReferences += foreign.length;
+          copied = await this.repairSlot(slot, actorContext);
+          if (copied) {
+            copiedReferences += foreign.length;
+          } else {
+            failed.push(
+              this.issue(
+                slot,
+                "Nothing was rewritten: the reference does not use this server's document URL"
+              )
+            );
+          }
         } catch (error) {
           failed.push(this.issue(slot, error));
         }
@@ -289,20 +302,22 @@ export class AdminTemplateFileRepairService {
     ];
   }
 
+  /** Copies the slot's foreign files; true when the stored reference changed. */
   private async repairSlot(
     slot: Slot,
     actorContext: ActorContext
-  ): Promise<void> {
+  ): Promise<boolean> {
     // The operator reviewed this template's references and chose to publish
     // them with the template.
     const copyAuthority: DocumentCopyAuthority = { copyAnyFile: true };
     switch (slot.kind) {
       case 'whiteboard':
-        await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
-          slot.entityID,
-          actorContext
+        return (
+          (await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
+            slot.entityID,
+            actorContext
+          )) > 0
         );
-        return;
       case 'memo':
         // A memo's text lives in a collaborative document; rewriting it through
         // Markdown would drop formatting Markdown cannot express. Reported only.
@@ -315,18 +330,20 @@ export class AdminTemplateFileRepairService {
           await this.whiteboardService.materializeContentIntoBucket(
             slot.text ?? '',
             slot.bucketID,
-            undefined,
-            true
+            { copyAnyFile: true }
           );
+        if (materialized.createdDocumentIDs.length === 0) {
+          return false;
+        }
         try {
-          await this.updateText(slot, materialized.content);
+          await this.updateText(slot, await compressText(materialized.content));
         } catch (error) {
           await this.whiteboardService.deleteMaterializedContentDocuments(
             materialized.createdDocumentIDs
           );
           throw error;
         }
-        return;
+        return true;
       }
     }
 
@@ -347,9 +364,11 @@ export class AdminTemplateFileRepairService {
           storageBucket,
           copyAuthority
         );
-    if (repaired && repaired !== text) {
-      await this.updateText(slot, repaired);
+    if (!repaired || repaired === text) {
+      return false;
     }
+    await this.updateText(slot, repaired);
+    return true;
   }
 
   private async updateText(slot: Slot, value: string): Promise<void> {

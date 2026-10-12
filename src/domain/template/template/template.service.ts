@@ -229,8 +229,8 @@ export class TemplateService {
             // Seed the template's whiteboard from the source whiteboard's stored snapshot
             // (duplicate / import-from-library). `content` and `sourceWhiteboardID` are now
             // mutually exclusive; createWhiteboard authorizes READ on the dereferenced source
-            // (and per-document-authorizes any re-homed media) under this actorContext, so the
-            // authorization is centralized in the service, not left to each resolver.
+            // (and decides which embedded images may be copied) under this actorContext, so
+            // the authorization is centralized in the service, not left to each resolver.
             sourceWhiteboardID: templateData.whiteboard.sourceWhiteboardID,
             sourceStorageBucketID:
               templateData.whiteboard.sourceStorageBucketID,
@@ -681,8 +681,10 @@ export class TemplateService {
       for (const subspace of sourceSpaceSubspaces) {
         const subspaceContent =
           await this.templateContentSpaceService.createTemplateContentSpace(
-            await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
-              subspace.id
+            this.inputCreatorService.withoutSourceBuckets(
+              await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
+                subspace.id
+              )
             ),
             storageAggregator,
             actorContext
@@ -728,9 +730,12 @@ export class TemplateService {
         templateContentSpace.collaboration.id
       );
     if (addCallouts) {
+      // Built from a live space: its callouts' buckets are not trusted.
       const calloutsFromSourceCollaboration =
-        await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
-          space.collaboration.calloutsSet.callouts ?? []
+        this.inputCreatorService.withoutSourceBuckets(
+          await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
+            space.collaboration.calloutsSet.callouts ?? []
+          )
         );
       // The target is a template's content space, so its callouts are template
       // callouts — the same flag createCollaboration stamps when a template is
@@ -760,8 +765,10 @@ export class TemplateService {
 
     await this.templateContentSpaceService.updateAboutFromExistingSpace(
       templateContentSpace,
-      this.inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout(
-        space.about
+      this.inputCreatorService.withoutSourceBuckets(
+        this.inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout(
+          space.about
+        )
       ),
       storageAggregator
     );

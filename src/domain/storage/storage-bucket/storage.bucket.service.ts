@@ -582,8 +582,10 @@ export class StorageBucketService {
         LogContext.DOCUMENT
       );
 
-    const documentForReference =
-      await this.documentService.getDocumentFromURL(uri);
+    const documentForReference = await this.documentService.getDocumentFromURL(
+      uri,
+      { relations: { storageBucket: true } }
+    );
 
     try {
       const newDocument = await this.uploadFileAsDocument(
@@ -593,9 +595,12 @@ export class StorageBucketService {
         mimetype,
         userID
       );
-      // Delete the old document, if any. Do not delete the same doc.
+      // Delete the old document, if any and only if this bucket owns it: the
+      // uri may name a file stored elsewhere, which is never ours to delete.
+      // Do not delete the same doc.
       if (
         documentForReference &&
+        documentForReference.storageBucket?.id === storageBucket.id &&
         newDocument.externalID != documentForReference.externalID
       ) {
         await this.documentService.deleteDocument({

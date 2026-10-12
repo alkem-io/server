@@ -142,11 +142,10 @@ describe('CalloutContributionDefaultsService', () => {
 
       expect(
         whiteboardService.materializeContentIntoBucket
-      ).toHaveBeenCalledWith(
-        'source-canonical',
-        storageBucket.id,
-        'source-bucket'
-      );
+      ).toHaveBeenCalledWith('source-canonical', storageBucket.id, {
+        sourceBucketId: 'source-bucket',
+        actorContext: undefined,
+      });
       expect(defaults.whiteboardContent).toBe('target-owned-canonical');
       expect(repository.save).toHaveBeenCalledWith(defaults);
     });
