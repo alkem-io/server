@@ -864,8 +864,7 @@ describe('CalloutService', () => {
       // cascade-removed with the callout row, so it is deleted explicitly
       // (releasing the FK) before the template.
       expect(classificationService.deleteClassification).toHaveBeenCalledWith(
-        'cls-1',
-        mockManager
+        'cls-1'
       );
       expect(tagsetTemplateService.removeTagsetTemplate).toHaveBeenCalledWith(
         boardTemplate
@@ -896,7 +895,7 @@ describe('CalloutService', () => {
       vi.mocked(repository.findOne).mockResolvedValue(callout);
 
       // Record whether the classification delete runs while the callout-row
-      // transaction is still open.
+      // transaction is still open (it must not).
       let inTransaction = false;
       mockEntityManager.transaction.mockImplementation(
         async (cb: (m: typeof mockManager) => unknown) => {
@@ -921,14 +920,13 @@ describe('CalloutService', () => {
       expect(tagsetTemplateService.removeTagsetTemplate).not.toHaveBeenCalled();
       // Every callout owns its classification, and removing the callout row
       // does not take it along (the FK sits on the callout), so a plain callout
-      // must delete it explicitly too (alkem-io/server#6614) — inside the
-      // row's transaction, so a failed delete rolls the row back with it
-      // instead of orphaning the classification.
+      // must delete it explicitly too (alkem-io/server#6614) — after the row
+      // has committed: the framing, contributions and defaults are already
+      // gone, so a rollback of the row would strand an undeletable callout.
       expect(classificationService.deleteClassification).toHaveBeenCalledWith(
-        'cls-1',
-        mockManager
+        'cls-1'
       );
-      expect(deletedInTransaction).toBe(true);
+      expect(deletedInTransaction).toBe(false);
     });
   });
 

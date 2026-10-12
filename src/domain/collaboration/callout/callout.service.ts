@@ -810,30 +810,34 @@ export class CalloutService {
 
     // The reaction table has no database-level FK back to the callout (the
     // polymorphic target reference is intentionally FK-free), so its rows must
-    // be removed explicitly. Likewise the callout's classification is NOT
-    // cascade-removed with the callout row (the FK sits on the callout), so it
-    // is deleted explicitly, after the row. Both run in the row's transaction
-    // so they commit or roll back together: a failure leaves the callout in
-    // place, and the delete retryable, instead of orphaning what it owns. The
-    // external side effects above (notably the Matrix room deletion) run
-    // BEFORE this transaction and are deliberately kept outside it: they are
-    // not database work and cannot participate in a DB rollback.
+    // be removed explicitly. Delete the reactions and remove the callout row in
+    // a single transaction so they commit or roll back together — leaving no
+    // orphaned reactions if the row removal fails, and no lost reactions if it
+    // succeeds. The external side effects above (notably the Matrix room
+    // deletion) run BEFORE this transaction and are deliberately kept outside
+    // it: they are not database work and cannot participate in a DB rollback.
     const result = await this.entityManager.transaction(async manager => {
       await this.reactionService.deleteAllForEntity(
         ReactionType.POST,
         calloutID,
         manager
       );
-      const removed = await manager.remove(callout as Callout);
-      if (callout.classification) {
-        await this.classificationService.deleteClassification(
-          callout.classification.id,
-          manager
-        );
-      }
-      return removed;
+      return manager.remove(callout as Callout);
     });
     result.id = calloutID;
+
+    // The callout's classification is NOT cascade-removed with the callout row
+    // (the FK sits on the callout), so it is deleted explicitly — for every
+    // callout (alkem-io/server#6614). It runs after the row has committed, not
+    // inside its transaction: the framing, contributions and defaults above are
+    // already gone, so rolling the row back would strand a callout that can no
+    // longer be loaded for deletion. A failure here leaves an unowned
+    // classification instead, which an orphan sweep can collect.
+    if (callout.classification) {
+      await this.classificationService.deleteClassification(
+        callout.classification.id
+      );
+    }
 
     // On a Tasks board the column template goes last: the classification's
     // marker tagset, deleted above, holds an FK to it that would otherwise

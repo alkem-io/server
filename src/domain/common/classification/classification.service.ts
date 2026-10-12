@@ -71,8 +71,7 @@ export class ClassificationService {
   }
 
   async deleteClassification(
-    classificationID: string,
-    em?: EntityManager
+    classificationID: string
   ): Promise<IClassification> {
     // Note need to load it in with all contained entities so can remove fully
     const classification = await this.getClassificationOrFail(
@@ -93,19 +92,14 @@ export class ClassificationService {
     }
 
     for (const tagset of classification.tagsets) {
-      await this.tagsetService.removeTagset(tagset.id, em);
+      await this.tagsetService.removeTagset(tagset.id);
     }
 
-    await this.authorizationPolicyService.delete(
-      classification.authorization,
-      em
-    );
+    await this.authorizationPolicyService.delete(classification.authorization);
 
-    return em
-      ? await em.remove(classification as Classification)
-      : await this.classificationRepository.remove(
-          classification as Classification
-        );
+    return await this.classificationRepository.remove(
+      classification as Classification
+    );
   }
 
   public async save(classification: IClassification): Promise<IClassification> {

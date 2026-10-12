@@ -79,7 +79,9 @@ export class CleanUpOrphanedRecordsAndPolicies1790800000000
     const profiles: DeletedProfile[] = await this.delete(
       queryRunner,
       'profile',
-      [unnamedProfile, `NOT ${PROFILE_BUCKET_HOLDS_FILES}`]
+      [unnamedProfile, `NOT ${PROFILE_BUCKET_HOLDS_FILES}`],
+      [],
+      't."locationId", t."storageBucketId"'
     );
 
     const ownedBy = (key: keyof DeletedProfile) =>
@@ -113,18 +115,23 @@ export class CleanUpOrphanedRecordsAndPolicies1790800000000
     );
   }
 
-  /** Deletes the rows of `table` (aliased `t`) older than the cutoff that match every condition. */
+  /**
+   * Deletes the rows of `table` (aliased `t`) older than the cutoff that match
+   * every condition, returning only the `returning` columns — not whole rows,
+   * which for policies would pull kilobytes of rule JSON each into memory.
+   */
   private async delete(
     queryRunner: QueryRunner,
     table: string,
     conditions: string[],
-    parameters: unknown[] = []
+    parameters: unknown[] = [],
+    returning = 't.id'
   ): Promise<any[]> {
     const deleted = await queryRunner.query(
       `WITH deleted AS (
          DELETE FROM ${quote(table)} t
          WHERE t."createdDate" < ${CUTOFF} AND ${conditions.join(' AND ')}
-         RETURNING t.*
+         RETURNING ${returning}
        ) SELECT * FROM deleted`,
       parameters
     );
