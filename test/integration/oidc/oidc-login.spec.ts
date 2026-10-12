@@ -80,6 +80,11 @@ describe('GET /api/auth/oidc/login (FR-017 + FR-017a + FR-017b)', () => {
     expect(args.nonce.length).toBeGreaterThan(0);
     expect(typeof args.code_challenge).toBe('string');
     expect(args.code_challenge.length).toBeGreaterThan(0);
+    // workspace#082 FR-003 — `prompt: 'login'` is what stops Hydra substituting its own
+    // remembered login (1 h) for the Kratos session /login clears. Measured at the pinned
+    // Hydra tag in specs/082-app-handoff-scheme-squat/spec.md §2. Removing this parameter
+    // re-opens a zero-interaction window that the cookie clear cannot reach.
+    expect(args.prompt).toBe('login');
   });
 
   it('the same correlation-id appears on the response header', async () => {

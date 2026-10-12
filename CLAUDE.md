@@ -177,6 +177,10 @@ Winston logger signatures:
 - **verbose/warning**: `(message: string | object, context: string)`
 - **error**: `(message: string | object, stacktrace: string, context: string)`
 
+### Platform Audit
+
+Any action executed under a platform role (any `platform-*` role in `RoleName` — e.g. `platform-*-admin`, `platform-support`, `platform-content-full-access`, `platform-license-manager` — plus legacy `global-admin`) MUST record a platform audit row via the matching service in `src/platform-admin/platform-*-audit/` (operations, configuration, resource, role-assignment, user-record), using the right `PlatformAuditCategory`. Record it in the resolver/service path alongside the action — never skip it for "small" mutations.
+
 ### TypeORM Entity Guidelines
 
 - Declare `nullable: false` explicitly on all NOT NULL columns (TypeORM default varies by context)
