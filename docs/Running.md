@@ -182,11 +182,11 @@ Note: You may need multiple repositories cloned in order for this command to run
 
 ## Schema baseline automation prerequisites
 
-- The post-merge workflow `.github/workflows/schema-baseline.yml` regenerates `schema-baseline.graphql` on every push to `develop`, commits the snapshot, and opens a pull request from a temporary branch using the automation service account.
+- The post-merge workflow `.github/workflows/schema-baseline.yml` regenerates `schema-baseline.graphql` on every push to `develop`, commits the snapshot on the long-lived branch `schema-baseline/develop` (rebuilt from the `develop` tip and force-pushed whenever the baseline changes), and opens or refreshes a single pull request from it using the automation service account.
 - Configure the following GitHub Action secrets (repository or environment scoped) before enabling the workflow:
   - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PRIVATE_KEY`: ASCII-armored private key for the automation identity.
   - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_PASSPHRASE`: Passphrase for the key (set to an empty string when the key is unprotected).
 - - `ALKEMIO_INFRASTRUCTURE_BOT_GPG_KEY_ID`: Fingerprint uploaded to GitHub so commits appear as verified.
 - - `ALKEMIO_INFRASTRUCTURE_BOT_PUSH_TOKEN`: Classic PAT with at least `repo` scope issued for the automation account; used to push the baseline branch and create the PR (also satisfies CLA requirements).
 - Grant the automation key push access via the PAT and verify the public key is registered with the bot account that owns the commits.
-- After updating secrets, trigger the workflow manually (`workflow_dispatch`) to confirm the baseline branch/PR path succeeds before relying on automatic runs.
+- After updating secrets, trigger the workflow manually (`workflow_dispatch` on `develop` — runs on any other ref are skipped) to confirm the baseline branch/PR path succeeds before relying on automatic runs.
