@@ -56,7 +56,7 @@
   3. `pnpm run schema:diff` (requires `tmp/prev.schema.graphql`; fetch from base branch if absent).
   4. Inspect `change-report.json` (`BREAKING` entries need CODEOWNER review comment with `BREAKING-APPROVED`).
   5. Optional validation: `pnpm run schema:validate`.
-- Baseline automation: merges to `develop` trigger `schema-baseline.yml` to regenerate `schema-baseline.graphql`, publish a diff summary, and open a signed PR (branch `schema-baseline/<run-id>`) from the automation account when changes exist. To preview the summary locally, run `pnpm exec ts-node scripts/schema/publish-baseline.ts --report change-report.json` after generating a diff.
+- Baseline automation: merges to `develop` trigger `schema-baseline.yml` to regenerate `schema-baseline.graphql`, publish a diff summary, and open (or refresh) a single signed PR from the long-lived branch `schema-baseline/develop`, owned by the automation account, when changes exist. To preview the summary locally, run `pnpm exec ts-node scripts/schema/publish-baseline.ts --report change-report.json` after generating a diff.
 - Database migrations: `pnpm run migration:generate -n <Name>` (requires DSN env vars), `pnpm run migration:run`, `pnpm run migration:revert`. Validation harness `.scripts/migrations/run_validate_migration.sh` snapshots DB, applies migration, exports CSVs, compares to reference, then restores backup.
 - Other tooling: `pnpm run migration:validate` (shell script), `pnpm run circular-dependencies` (requires built `dist`), `pnpm format` for Prettier.
 
