@@ -541,6 +541,15 @@ export class SpaceService {
       );
     }
 
+    // The Space actor's own profile: `actor.profileId` is ON DELETE SET NULL,
+    // so deleting the actor row below would leave it and its subtree behind.
+    // Deleted first: its bucket delete can refuse (a document mid-signing) or
+    // fail in file-service, and failing here leaves the space whole and the
+    // delete retryable, where failing later would strand a half-deleted space.
+    if (space.profile) {
+      await this.profileService.deleteProfile(space.profile.id);
+    }
+
     await this.spaceAboutService.removeSpaceAbout(space.about.id);
     await this.collaborationService.deleteCollaborationOrFail(
       space.collaboration.id
@@ -560,12 +569,6 @@ export class SpaceService {
       await this.templatesManagerService.deleteTemplatesManager(
         space.templatesManager.id
       );
-    }
-
-    // The Space actor's own profile: `actor.profileId` is ON DELETE SET NULL,
-    // so deleting the actor row below would leave it and its subtree behind.
-    if (space.profile) {
-      await this.profileService.deleteProfile(space.profile.id);
     }
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);

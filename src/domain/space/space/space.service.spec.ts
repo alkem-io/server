@@ -1181,6 +1181,40 @@ describe('SpaceService', () => {
       );
       expect(callOrder).toEqual(['deleteProfile', 'deleteActorById']);
     });
+
+    it('leaves the space whole when its profile delete fails (server#6614)', async () => {
+      const deps = service as any;
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue({
+        id: 'space-1',
+        level: SpaceLevel.L1,
+        subspaces: [],
+        profile: { id: 'profile-1' },
+        collaboration: { id: 'collaboration-1' },
+        community: { id: 'community-1' },
+        about: { id: 'about-1' },
+        storageAggregator: { id: 'aggregator-1' },
+        authorization: { id: 'auth-1' },
+        license: { id: 'license-1' },
+      } as unknown as Space);
+      deps.profileService.deleteProfile.mockRejectedValue(
+        new Error('document is being signed')
+      );
+
+      await expect(
+        service.deleteSpaceOrFail({ ID: 'space-1' })
+      ).rejects.toThrow('document is being signed');
+
+      // Nothing irreversible ran, so the delete can simply be retried.
+      expect(deps.spaceAboutService.removeSpaceAbout).not.toHaveBeenCalled();
+      expect(
+        deps.collaborationService.deleteCollaborationOrFail
+      ).not.toHaveBeenCalled();
+      expect(
+        deps.communityService.removeCommunityOrFail
+      ).not.toHaveBeenCalled();
+      expect(deps.licenseService.removeLicenseOrFail).not.toHaveBeenCalled();
+      expect(deps.actorService.deleteActorById).not.toHaveBeenCalled();
+    });
   });
 
   describe('updateSubspacesSortOrder', () => {
