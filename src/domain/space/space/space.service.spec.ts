@@ -1205,6 +1205,7 @@ describe('SpaceService', () => {
       ).rejects.toThrow('document is being signed');
 
       // Nothing irreversible ran, so the delete can simply be retried.
+      expect(deps.communicationAdapter.deleteSpace).not.toHaveBeenCalled();
       expect(deps.spaceAboutService.removeSpaceAbout).not.toHaveBeenCalled();
       expect(
         deps.collaborationService.deleteCollaborationOrFail

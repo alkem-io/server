@@ -531,6 +531,15 @@ export class SpaceService {
       );
     }
 
+    // The Space actor's own profile: `actor.profileId` is ON DELETE SET NULL,
+    // so deleting the actor row below would leave it and its subtree behind.
+    // Deleted first: its bucket delete can refuse (a document mid-signing) or
+    // fail in file-service, and failing here leaves the space whole and the
+    // delete retryable, where failing later would strand a half-deleted space.
+    if (space.profile) {
+      await this.profileService.deleteProfile(space.profile.id);
+    }
+
     // Delete the corresponding Matrix space BEFORE cascade deletion of child entities.
     try {
       await this.communicationAdapter.deleteSpace(space.id);
@@ -539,15 +548,6 @@ export class SpaceService {
         `Failed to delete Matrix space for ${space.id} — continuing with Alkemio deletion`,
         LogContext.SPACES
       );
-    }
-
-    // The Space actor's own profile: `actor.profileId` is ON DELETE SET NULL,
-    // so deleting the actor row below would leave it and its subtree behind.
-    // Deleted first: its bucket delete can refuse (a document mid-signing) or
-    // fail in file-service, and failing here leaves the space whole and the
-    // delete retryable, where failing later would strand a half-deleted space.
-    if (space.profile) {
-      await this.profileService.deleteProfile(space.profile.id);
     }
 
     await this.spaceAboutService.removeSpaceAbout(space.about.id);
