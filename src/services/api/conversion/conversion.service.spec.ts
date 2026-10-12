@@ -208,10 +208,11 @@ describe('ConversionService', () => {
       ).toMatchObject({ relations: { license: true } });
       expect(result.license).toBe(freshLicense);
       expect(result.license?.id).not.toBe(parentLicenseId);
+      expect(callOrder).toContain('save:space-l1');
+      expect(callOrder).toContain('removeLicense:l1-license-id');
       expect(callOrder.indexOf('save:space-l1')).toBeLessThan(
         callOrder.indexOf('removeLicense:l1-license-id')
       );
-      expect(callOrder).toContain('removeLicense:l1-license-id');
       // Save and delete share one transaction: a failed delete rolls the
       // save back instead of committing it with the old license orphaned.
       expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith(
