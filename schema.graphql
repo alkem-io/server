@@ -1779,6 +1779,7 @@ type AdminTemplateFileRepairResult {
   copiedReferences: Int!
   dryRun: Boolean!
   failed: [AdminTemplateFileRepairIssue!]!
+  missingFiles: [AdminTemplateMissingFileReference!]!
   references: [AdminTemplateForeignFileReference!]!
   templatesScanned: Int!
   templatesWithForeignFiles: Int!
@@ -1803,6 +1804,18 @@ type AdminTemplateForeignFileReference {
   ownerCanRead: Boolean!
   """The bucket the file is stored in today."""
   storageBucketID: String!
+  templateID: String!
+  templateName: String!
+}
+
+"""
+A reference in a template to a file that no longer exists. It cannot be repaired.
+"""
+type AdminTemplateMissingFileReference {
+  """The entity holding the reference."""
+  entityID: String!
+  fileID: String!
+  location: String!
   templateID: String!
   templateName: String!
 }

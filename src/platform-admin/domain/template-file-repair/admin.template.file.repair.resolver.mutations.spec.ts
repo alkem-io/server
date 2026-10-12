@@ -10,6 +10,7 @@ const result = {
   templatesWithForeignFiles: 1,
   references: [],
   copiedReferences: 0,
+  missingFiles: [],
   failed: [],
 };
 

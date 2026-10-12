@@ -147,6 +147,38 @@ export class ProfileService {
   }
 
   /**
+   * Re-homes the file URLs in markdown that belongs with `profile` but is
+   * stored on its owning entity (a space's who/why, a flow state's
+   * description), into the profile's bucket, under the same copy rule as the
+   * profile's own description.
+   */
+  public async materializeMarkdownIntoProfileBucket(
+    markdown: string,
+    profile: IProfile,
+    profileData: CreateProfileInput | undefined,
+    actorContext?: ActorContext
+  ): Promise<string> {
+    if (!markdown) {
+      return markdown;
+    }
+    if (!profile.storageBucket?.id) {
+      throw new EntityNotInitializedException(
+        'Profile storage bucket must be persisted before materializing content',
+        LogContext.PROFILE,
+        { profileId: profile.id }
+      );
+    }
+    return await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+      markdown,
+      profile.storageBucket,
+      {
+        sourceStorageBucketID: profileData?.sourceStorageBucketID,
+        actorContext,
+      }
+    );
+  }
+
+  /**
    * Convenience for the standard post-save materialization: re-home internal
    * Alkemio URLs in description/references AND attach visuals. Idempotent and
    * safe to call when there's nothing to materialize. Persists the result so

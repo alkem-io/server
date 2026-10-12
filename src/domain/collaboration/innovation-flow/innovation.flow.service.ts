@@ -128,7 +128,54 @@ export class InnovationFlowService {
         () => this.deleteInnovationFlow(saved.id),
         actorContext
       );
+    await this.materializeStateDescriptions(
+      saved,
+      innovationFlowData,
+      actorContext
+    );
     return saved;
+  }
+
+  /**
+   * Re-homes the file URLs in each state's description into the flow
+   * profile's bucket; states have no profile of their own.
+   */
+  private async materializeStateDescriptions(
+    innovationFlow: IInnovationFlow,
+    innovationFlowData: CreateInnovationFlowInput,
+    actorContext?: ActorContext
+  ): Promise<void> {
+    try {
+      for (const state of innovationFlow.states ?? []) {
+        const description =
+          await this.profileService.materializeMarkdownIntoProfileBucket(
+            state.description ?? '',
+            innovationFlow.profile,
+            innovationFlowData.profile,
+            actorContext
+          );
+        if (description !== (state.description ?? '')) {
+          state.description = description;
+          await this.innovationFlowStateService.save(state);
+        }
+      }
+    } catch (error) {
+      await this.deleteInnovationFlow(innovationFlow.id).catch(
+        rollbackError => {
+          this.logger.error?.(
+            {
+              message:
+                'Rollback after InnovationFlow state materialization failure also failed',
+              innovationFlowId: innovationFlow.id,
+              rollbackError: String(rollbackError),
+            },
+            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '',
+            LogContext.INNOVATION_FLOW
+          );
+        }
+      );
+      throw error;
+    }
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {

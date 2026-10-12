@@ -19,6 +19,7 @@ import {
   AdminTemplateFileRepairIssue,
   AdminTemplateFileRepairResult,
   AdminTemplateForeignFileReference,
+  AdminTemplateMissingFileReference,
 } from './dto/admin.template.file.repair.result';
 
 /** Where in a template a file reference sits, and how it is rewritten. */
@@ -30,8 +31,12 @@ type SlotKind =
   | 'defaultPostDescription'
   | 'postTemplateDescription'
   | 'defaultWhiteboardContent'
+  | 'spaceAboutWho'
+  | 'spaceAboutWhy'
+  | 'flowStateDescription'
   | 'whiteboard'
-  | 'memo';
+  | 'memo'
+  | 'collaboraDocument';
 
 /** Column each text slot is stored in. Fixed here, never taken from input. */
 const TEXT_COLUMNS: Partial<Record<SlotKind, [table: string, column: string]>> =
@@ -45,6 +50,9 @@ const TEXT_COLUMNS: Partial<Record<SlotKind, [table: string, column: string]>> =
       'postDescription',
     ],
     postTemplateDescription: ['template', 'postDefaultDescription'],
+    spaceAboutWho: ['space_about', 'who'],
+    spaceAboutWhy: ['space_about', 'why'],
+    flowStateDescription: ['innovation_flow_state', 'description'],
     defaultWhiteboardContent: [
       'callout_contribution_defaults',
       'whiteboardContent',
@@ -158,12 +166,29 @@ with recursive tcs_tree as (
     where d."whiteboardContent" is not null and d."whiteboardContent" <> ''
   union all select t.id, 'postTemplateDescription', t.id, pr."storageBucketId", t."postDefaultDescription"
     from template t join profile pr on pr.id = t."profileId"
+  union all select tr.tid, 'spaceAboutWho', sa.id, pr."storageBucketId", sa.who
+    from tcs_tree tr join template_content_space tcs on tcs.id = tr.cid
+    join space_about sa on sa.id = tcs."aboutId" join profile pr on pr.id = sa."profileId"
+  union all select tr.tid, 'spaceAboutWhy', sa.id, pr."storageBucketId", sa.why
+    from tcs_tree tr join template_content_space tcs on tcs.id = tr.cid
+    join space_about sa on sa.id = tcs."aboutId" join profile pr on pr.id = sa."profileId"
+  union all select tr.tid, 'flowStateDescription', st.id, pr."storageBucketId", st.description
+    from tcs_tree tr join template_content_space tcs on tcs.id = tr.cid
+    join collaboration co on co.id = tcs."collaborationId"
+    join innovation_flow f on f.id = co."innovationFlowId" join profile pr on pr.id = f."profileId"
+    join innovation_flow_state st on st."innovationFlowId" = f.id
   union all select f.tid, 'whiteboard', w.id, pr."storageBucketId", null
     from framings f join whiteboard w on w.id = f."whiteboardId" join profile pr on pr.id = w."profileId"
   union all select t.id, 'whiteboard', w.id, pr."storageBucketId", null
     from template t join whiteboard w on w.id = t."whiteboardId" join profile pr on pr.id = w."profileId"
   union all select f.tid, 'memo', m.id, pr."storageBucketId", null
     from framings f join memo m on m.id = f."memoId" join profile pr on pr.id = m."profileId"
+  -- An office document's file lives in its storage aggregator's direct bucket.
+  union all select f.tid, 'collaboraDocument', cd.id, sa."directStorageId", null
+    from framings f join collabora_document cd on cd.id = f."collaboraDocumentId"
+    join profile pr on pr.id = f."profileId"
+    join storage_bucket sb on sb.id = pr."storageBucketId"
+    join storage_aggregator sa on sa.id = sb."storageAggregatorId"
 )
 select s.tid "templateID", tp."displayName" "templateName", s.kind, s.entity_id "entityID",
        s.bucket_id "bucketID", s.txt "text"
@@ -218,6 +243,7 @@ export class AdminTemplateFileRepairService {
     const owners = await this.templateOwners(slots, actorContext);
 
     const references: AdminTemplateForeignFileReference[] = [];
+    const missingFiles: AdminTemplateMissingFileReference[] = [];
     const failed: AdminTemplateFileRepairIssue[] = [];
     let copiedReferences = 0;
 
@@ -227,15 +253,25 @@ export class AdminTemplateFileRepairService {
         continue;
       }
       let foreign: ForeignFile[];
+      let missing: string[];
       try {
         if (slot.kind === 'defaultWhiteboardContent' && slot.text) {
           // The entity stores this column compressed; raw SQL reads it as is.
           slot.text = await decompressText(slot.text);
         }
-        foreign = await this.findForeignFiles(slot, owner);
+        ({ foreign, missing } = await this.findForeignFiles(slot, owner));
       } catch (error) {
         failed.push(this.issue(slot, error));
         continue;
+      }
+      for (const fileID of missing) {
+        missingFiles.push({
+          templateID: slot.templateID,
+          templateName: slot.templateName,
+          location: slot.kind,
+          entityID: slot.entityID,
+          fileID,
+        });
       }
       if (foreign.length === 0) {
         continue;
@@ -280,6 +316,7 @@ export class AdminTemplateFileRepairService {
         .size,
       references,
       copiedReferences,
+      missingFiles,
       failed,
     };
   }
@@ -323,14 +360,17 @@ export class AdminTemplateFileRepairService {
     );
   }
 
-  /** The files a slot references that live in some other, existing bucket. */
+  /**
+   * The files a slot references that live in some other bucket, and the IDs of
+   * referenced files that no longer exist.
+   */
   private async findForeignFiles(
     slot: Slot,
     owner: ActorContext
-  ): Promise<ForeignFile[]> {
+  ): Promise<{ foreign: ForeignFile[]; missing: string[] }> {
     const fileIDs = await this.referencedFileIDs(slot);
     if (fileIDs.length === 0) {
-      return [];
+      return { foreign: [], missing: [] };
     }
     const rows: {
       id: string;
@@ -346,7 +386,9 @@ export class AdminTemplateFileRepairService {
         where f.id = any($1::uuid[])`,
       [fileIDs]
     );
-    return rows
+    const found = new Set(rows.map(row => row.id));
+    const missing = fileIDs.filter(fileID => !found.has(fileID));
+    const foreign = rows
       .filter(
         row => row.storageBucketId && row.storageBucketId !== slot.bucketID
       )
@@ -361,6 +403,7 @@ export class AdminTemplateFileRepairService {
             AuthorizationPrivilege.READ
           ),
       }));
+    return { foreign, missing };
   }
 
   private async referencedFileIDs(slot: Slot): Promise<string[]> {
@@ -373,6 +416,14 @@ export class AdminTemplateFileRepairService {
         return this.whiteboardService.listAssetFileIDs(slot.text ?? '');
       case 'memo':
         return this.fileIDsInText(await this.memoMarkdown(slot.entityID));
+      case 'collaboraDocument': {
+        const [document]: { documentId: string | null }[] =
+          await this.entityManager.query(
+            'select "documentId" from collabora_document where id = $1',
+            [slot.entityID]
+          );
+        return document?.documentId ? [document.documentId] : [];
+      }
       default:
         return this.fileIDsInText(slot.text ?? '');
     }
@@ -396,11 +447,14 @@ export class AdminTemplateFileRepairService {
     const copyAuthority: DocumentCopyAuthority = { actorContext: owner };
     switch (slot.kind) {
       case 'whiteboard':
-        return (
-          (await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
-            slot.entityID,
-            owner
-          )) > 0
+        return await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
+          slot.entityID,
+          owner
+        );
+      case 'collaboraDocument':
+        throw new ValidationException(
+          "Office document files are reported, not repaired: re-attach the document in the template's callout",
+          LogContext.TEMPLATES
         );
       case 'memo':
         // A memo's text lives in a collaborative document; rewriting it through
@@ -416,7 +470,12 @@ export class AdminTemplateFileRepairService {
             slot.bucketID,
             { actorContext: owner }
           );
-        if (materialized.createdDocumentIDs.length === 0) {
+        if (
+          !(await this.whiteboardService.assetFilesChanged(
+            slot.text ?? '',
+            materialized.content
+          ))
+        ) {
           return false;
         }
         try {

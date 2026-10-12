@@ -56,6 +56,7 @@ export class AdminTemplateFileRepairResolverMutations {
           templatesWithForeignFiles: result.templatesWithForeignFiles,
           references: result.references.length,
           copiedReferences: result.copiedReferences,
+          missingFiles: result.missingFiles.length,
           failed: result.failed.length,
         },
       });

@@ -501,16 +501,28 @@ export class WhiteboardService {
     }
   }
 
+  /** Whether two snapshots point at different asset files. */
+  public async assetFilesChanged(
+    before: string,
+    after: string
+  ): Promise<boolean> {
+    const [a, b] = await Promise.all([
+      this.listAssetFileIDs(before),
+      this.listAssetFileIDs(after),
+    ]);
+    return a.length !== b.length || a.some(fileID => !b.includes(fileID));
+  }
+
   /**
    * Copies the images a whiteboard references from another bucket into its own
    * bucket, for those `actorContext` can read, and points the whiteboard at the
    * copies. Used by the admin template repair, which passes the template
-   * owner's credentials. Returns how many images were copied.
+   * owner's credentials. Returns whether the whiteboard now points elsewhere.
    */
   public async copyForeignAssetsIntoOwnBucket(
     whiteboardID: string,
     actorContext: ActorContext
-  ): Promise<number> {
+  ): Promise<boolean> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
       loadEagerRelations: false,
       relations: { profile: { storageBucket: true } },
@@ -525,22 +537,22 @@ export class WhiteboardService {
     }
     const content = await this.getWhiteboardContent(whiteboardID);
     if (!content) {
-      return 0;
+      return false;
     }
     const materialized = await this.materializeContentIntoBucket(
       content,
       storageBucketID,
       { actorContext }
     );
-    if (materialized.createdDocumentIDs.length === 0) {
-      return 0;
+    if (!(await this.assetFilesChanged(content, materialized.content))) {
+      return false;
     }
     await this.applyMaterializedContent(
       whiteboardID,
       materialized,
       actorContext.actorID
     );
-    return materialized.createdDocumentIDs.length;
+    return true;
   }
 
   /**

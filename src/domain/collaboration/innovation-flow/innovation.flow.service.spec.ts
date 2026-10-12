@@ -204,6 +204,39 @@ describe('InnovationFlowService', () => {
     });
   });
 
+  describe('state description materialization', () => {
+    it('re-homes each state description into the flow profile bucket and saves changed states', async () => {
+      const profile = {
+        id: 'flow-profile',
+        storageBucket: { id: 'flow-bucket' },
+      };
+      const changed = { id: 's1', description: '![a](old)' };
+      const unchanged = { id: 's2', description: 'plain' };
+      const flow = { id: 'flow-1', profile, states: [changed, unchanged] };
+      const flowData = {
+        profile: { displayName: 'Flow', sourceStorageBucketID: 'tpl-bucket' },
+      };
+      const profileService = (service as any).profileService;
+      profileService.materializeMarkdownIntoProfileBucket = vi.fn(
+        async (markdown: string) => markdown.replace('old', 'new')
+      );
+      const actor = { actorID: 'creator' };
+
+      await (service as any).materializeStateDescriptions(
+        flow,
+        flowData,
+        actor
+      );
+
+      expect(
+        profileService.materializeMarkdownIntoProfileBucket
+      ).toHaveBeenCalledWith('![a](old)', profile, flowData.profile, actor);
+      expect(changed.description).toBe('![a](new)');
+      expect(innovationFlowStateService.save).toHaveBeenCalledTimes(1);
+      expect(innovationFlowStateService.save).toHaveBeenCalledWith(changed);
+    });
+  });
+
   describe('save', () => {
     it('should save and return the innovation flow', async () => {
       const flow = { id: 'flow-1' } as any;

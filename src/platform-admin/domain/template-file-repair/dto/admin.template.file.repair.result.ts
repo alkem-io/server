@@ -36,6 +36,27 @@ export class AdminTemplateForeignFileReference {
   copied!: boolean;
 }
 
+@ObjectType('AdminTemplateMissingFileReference', {
+  description:
+    'A reference in a template to a file that no longer exists. It cannot be repaired.',
+})
+export class AdminTemplateMissingFileReference {
+  @Field()
+  templateID!: string;
+
+  @Field()
+  templateName!: string;
+
+  @Field()
+  location!: string;
+
+  @Field({ description: 'The entity holding the reference.' })
+  entityID!: string;
+
+  @Field()
+  fileID!: string;
+}
+
 @ObjectType('AdminTemplateFileRepairIssue')
 export class AdminTemplateFileRepairIssue {
   @Field()
@@ -67,6 +88,9 @@ export class AdminTemplateFileRepairResult {
 
   @Field(() => Int)
   copiedReferences!: number;
+
+  @Field(() => [AdminTemplateMissingFileReference])
+  missingFiles!: AdminTemplateMissingFileReference[];
 
   @Field(() => [AdminTemplateFileRepairIssue])
   failed!: AdminTemplateFileRepairIssue[];

@@ -65,7 +65,8 @@ const createService = (
   const whiteboards = {
     getWhiteboardContent: vi.fn().mockResolvedValue('snapshot'),
     listAssetFileIDs: vi.fn().mockResolvedValue([FOREIGN]),
-    copyForeignAssetsIntoOwnBucket: vi.fn().mockResolvedValue(1),
+    copyForeignAssetsIntoOwnBucket: vi.fn().mockResolvedValue(true),
+    assetFilesChanged: vi.fn().mockResolvedValue(true),
     materializeContentIntoBucket: vi.fn().mockResolvedValue({
       content: 'rehomed-snapshot',
       createdDocumentIDs: ['copy-1'],
@@ -233,6 +234,75 @@ describe('AdminTemplateFileRepairService', () => {
     expect(result.copiedReferences).toBe(0);
     expect(result.references[0].copied).toBe(false);
     expect(result.failed).toHaveLength(1);
+  });
+
+  it("repairs a space template's who and why into the about profile's bucket", async () => {
+    const ctx = createService([
+      slot({ kind: 'spaceAboutWho', entityID: 'about-1' }),
+      slot({ kind: 'flowStateDescription', entityID: 'state-1' }),
+    ]);
+
+    const result = await ctx.service.repair(undefined, false, actor);
+
+    expect(ctx.query).toHaveBeenCalledWith(
+      'update "space_about" set "who" = $1 where id = $2',
+      ['repaired markdown', 'about-1']
+    );
+    expect(ctx.query).toHaveBeenCalledWith(
+      'update "innovation_flow_state" set "description" = $1 where id = $2',
+      ['repaired markdown', 'state-1']
+    );
+    expect(result.copiedReferences).toBe(2);
+  });
+
+  it('reports references to files that no longer exist', async () => {
+    const GONE = '33333333-3333-3333-3333-333333333333';
+    const ctx = createService([slot({ text: `![x](${URL_BASE}/${GONE})` })]);
+
+    const result = await ctx.service.repair(undefined, true, actor);
+
+    expect(result.missingFiles).toEqual([
+      expect.objectContaining({ fileID: GONE, location: 'profileDescription' }),
+    ]);
+  });
+
+  it('reports an office document stored outside the template instead of moving it', async () => {
+    const ctx = createService([
+      slot({ kind: 'collaboraDocument', entityID: 'doc-1', text: null }),
+    ]);
+    ctx.query.mockImplementation(async (sql: string) => {
+      if (sql.includes('with recursive')) {
+        return [
+          slot({ kind: 'collaboraDocument', entityID: 'doc-1', text: null }),
+        ];
+      }
+      if (sql.includes('from template t')) {
+        return [
+          { templateID: 'template-1', spaceID: 'space-1', accountID: null },
+        ];
+      }
+      if (sql.includes('from collabora_document'))
+        return [{ documentId: FOREIGN }];
+      if (sql.includes('from file f')) {
+        return [
+          {
+            id: FOREIGN,
+            storageBucketId: 'private-subspace-bucket',
+            authorization: readableBy(AuthorizationCredential.SPACE_ADMIN),
+          },
+        ];
+      }
+      return [];
+    });
+
+    const result = await ctx.service.repair(undefined, false, actor);
+
+    expect(result.references).toEqual([
+      expect.objectContaining({ location: 'collaboraDocument', copied: false }),
+    ]);
+    expect(result.failed).toEqual([
+      expect.objectContaining({ location: 'collaboraDocument' }),
+    ]);
   });
 
   it('reports memo references instead of rewriting the memo', async () => {
