@@ -52,6 +52,8 @@ const SCHEMA_DDL = [
      "licenseId" uuid REFERENCES license(id) ON DELETE CASCADE)`,
   `CREATE TABLE space (id uuid PRIMARY KEY,
      "licenseId" uuid UNIQUE REFERENCES license(id) ON DELETE SET NULL)`,
+  // A reference onto a cascading child that Postgres nulls, not deletes.
+  'ALTER TABLE file ADD COLUMN "tagsetId" uuid REFERENCES tagset(id) ON DELETE SET NULL',
   // Migration backup tables: name a policy or a profile without a foreign key.
   'CREATE TABLE _auth_profile_backup_space (id uuid PRIMARY KEY, "authorizationId" uuid)',
   'CREATE TABLE _auth_profile_backup_user (id uuid PRIMARY KEY, "profileId" uuid)',
@@ -332,6 +334,74 @@ describeMigrationPostgres(
 
       expect(await exists('classification', recent.id)).toBe(true);
       expect(await exists('tagset', recent.tagset)).toBe(true);
+    });
+
+    it('backs up every deleted row and down() restores them exactly', async () => {
+      const tables = [
+        'authorization_policy',
+        'location',
+        'storage_bucket',
+        'file',
+        'profile',
+        'classification',
+        'tagset',
+        'license',
+        'license_entitlement',
+      ];
+      const snapshot = async () => {
+        const rows: Record<string, unknown[]> = {};
+        for (const table of tables) {
+          rows[table] = await queryRunner.query(
+            `SELECT to_jsonb(t) AS row FROM "${table}" t ORDER BY id`
+          );
+        }
+        return rows;
+      };
+      await classification();
+      await license();
+      const orphan = await profile();
+      const profileTagset = randomUUID();
+      await queryRunner.query(
+        'INSERT INTO tagset (id, "authorizationId", "profileId") VALUES ($1, $2, $3)',
+        [profileTagset, await policy(), orphan.id]
+      );
+      // A file elsewhere tagged with the orphan profile's tagset.
+      const kept = await profile({ withFile: true });
+      await queryRunner.query(
+        'UPDATE file SET "tagsetId" = $1 WHERE "storageBucketId" = $2',
+        [profileTagset, kept.bucket]
+      );
+      await policy();
+      const before = await snapshot();
+
+      await runMigration();
+
+      expect(await exists('profile', orphan.id)).toBe(false);
+      expect(
+        await count(
+          'SELECT count(*)::int AS count FROM _orphan_cleanup_backup_profile WHERE id = $1',
+          [orphan.id]
+        )
+      ).toBe(1);
+      expect(
+        await count(
+          'SELECT count(*)::int AS count FROM file WHERE "tagsetId" IS NOT NULL',
+          []
+        )
+      ).toBe(0);
+
+      await new CleanUpOrphanedRecordsAndPolicies1790800000000().down(
+        queryRunner
+      );
+
+      expect(await snapshot()).toEqual(before);
+      expect(
+        await count(
+          `SELECT count(*)::int AS count FROM pg_tables
+           WHERE schemaname = current_schema() AND starts_with(tablename, '_orphan_cleanup_backup_')`,
+          []
+        )
+      ).toBe(0);
     });
 
     it('is idempotent', async () => {
