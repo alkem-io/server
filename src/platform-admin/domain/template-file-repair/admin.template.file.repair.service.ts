@@ -246,7 +246,7 @@ export class AdminTemplateFileRepairService {
     const slots: Slot[] = await this.entityManager.query(TEMPLATE_SLOTS_SQL, [
       templateIDs?.length ? templateIDs : null,
     ]);
-    const owners = await this.templateOwners(slots, actorContext);
+    const owners = await this.templateOwners(slots);
 
     const references: AdminTemplateForeignFileReference[] = [];
     const missingFiles: AdminTemplateMissingFileReference[] = [];
@@ -329,11 +329,10 @@ export class AdminTemplateFileRepairService {
 
   /**
    * The credentials each template's owner holds, as a registered user, keyed
-   * by template. Copies made with them are attributed to the operator.
+   * by template.
    */
   private async templateOwners(
-    slots: Slot[],
-    operator: ActorContext
+    slots: Slot[]
   ): Promise<Map<string, ActorContext>> {
     const templateIDs = [...new Set(slots.map(slot => slot.templateID))];
     if (templateIDs.length === 0) {
@@ -345,8 +344,9 @@ export class AdminTemplateFileRepairService {
     );
     return new Map(
       rows.map(row => {
+        // No actor ID: a copy keeps its original uploader as creator, and the
+        // operator gains no creator rights on template files.
         const owner = new ActorContext();
-        owner.actorID = operator.actorID;
         owner.credentials = [
           { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
         ];
@@ -462,7 +462,8 @@ export class AdminTemplateFileRepairService {
         await this.assertOperatorCanEditWhiteboard(slot.entityID, operator);
         return await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
           slot.entityID,
-          owner
+          owner,
+          operator.actorID
         );
       case 'collaboraDocument':
         throw new ValidationException(

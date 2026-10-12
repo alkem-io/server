@@ -197,7 +197,7 @@ describe('AdminTemplateFileRepairService', () => {
     const result = await ctx.service.repair(undefined, false, actor);
 
     const owner = expect.objectContaining({
-      actorID: 'ops-1',
+      actorID: '',
       credentials: [
         { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
         { type: AuthorizationCredential.SPACE_ADMIN, resourceID: 'space-1' },
@@ -214,7 +214,8 @@ describe('AdminTemplateFileRepairService', () => {
     );
     expect(ctx.whiteboards.copyForeignAssetsIntoOwnBucket).toHaveBeenCalledWith(
       'wb-1',
-      owner
+      owner,
+      'ops-1'
     );
     expect(result.copiedReferences).toBe(2);
     expect(result.failed).toEqual([]);

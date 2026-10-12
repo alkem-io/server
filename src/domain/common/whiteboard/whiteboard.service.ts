@@ -515,13 +515,15 @@ export class WhiteboardService {
 
   /**
    * Copies the images a whiteboard references from another bucket into its own
-   * bucket, for those `actorContext` can read, and points the whiteboard at the
-   * copies. Used by the admin template repair, which passes the template
-   * owner's credentials. Returns whether the whiteboard now points elsewhere.
+   * bucket, for those `copyAs` can read, and points the whiteboard at the
+   * copies through its live room as `writerID`. Used by the admin template
+   * repair, which copies as the template's owner and writes as the operator.
+   * Returns whether the whiteboard now points elsewhere.
    */
   public async copyForeignAssetsIntoOwnBucket(
     whiteboardID: string,
-    actorContext: ActorContext
+    copyAs: ActorContext,
+    writerID: string
   ): Promise<boolean> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
       loadEagerRelations: false,
@@ -542,16 +544,12 @@ export class WhiteboardService {
     const materialized = await this.materializeContentIntoBucket(
       content,
       storageBucketID,
-      { actorContext }
+      { actorContext: copyAs }
     );
     if (!(await this.assetFilesChanged(content, materialized.content))) {
       return false;
     }
-    await this.applyMaterializedContent(
-      whiteboardID,
-      materialized,
-      actorContext.actorID
-    );
+    await this.applyMaterializedContent(whiteboardID, materialized, writerID);
     return true;
   }
 
