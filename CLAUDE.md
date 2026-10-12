@@ -179,7 +179,7 @@ Winston logger signatures:
 
 ### Platform Audit
 
-Any action executed under a platform role (`platform-*-admin`, `platform-support`, `platform-content-full-access`, `global-admin`) MUST record a platform audit row via the matching service in `src/platform-admin/platform-*-audit/` (operations, configuration, resource, role-assignment, user-record), using the right `PlatformAuditCategory`. Record it in the resolver/service path alongside the action — never skip it for "small" mutations.
+Any action executed under a platform role (any `platform-*` role in `RoleName` — e.g. `platform-*-admin`, `platform-support`, `platform-content-full-access`, `platform-license-manager` — plus legacy `global-admin`) MUST record a platform audit row via the matching service in `src/platform-admin/platform-*-audit/` (operations, configuration, resource, role-assignment, user-record), using the right `PlatformAuditCategory`. Record it in the resolver/service path alongside the action — never skip it for "small" mutations.
 
 ### TypeORM Entity Guidelines
 
