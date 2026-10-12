@@ -177,7 +177,6 @@ export class CalloutResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [],
         {
           resourceKind: 'callout',
           resourceId: deleteData.ID,
@@ -533,7 +532,6 @@ export class CalloutResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       getCalloutPublisherPlatformCredentialTypes(),
-      [],
       {
         resourceKind: 'callout-publisher',
         resourceId: callout.id,

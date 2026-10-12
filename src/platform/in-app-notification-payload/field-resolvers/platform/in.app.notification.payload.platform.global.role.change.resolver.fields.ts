@@ -1,3 +1,4 @@
+import { RoleChangeType } from '@alkemio/notifications-lib';
 import { UserLoaderCreator } from '@core/dataloader/creators/loader.creators/user.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -31,5 +32,17 @@ export class InAppNotificationPayloadPlatformGlobalRoleChangeResolverFields {
     payload: InAppNotificationPayloadPlatformGlobalRoleChange
   ): string {
     return payload.roleName;
+  }
+
+  @ResolveField(() => RoleChangeType, {
+    nullable: true,
+    description:
+      'Whether the role was added or removed; absent on records written before this field existed.',
+  })
+  public changeType(
+    @Parent()
+    payload: InAppNotificationPayloadPlatformGlobalRoleChange
+  ): RoleChangeType | undefined {
+    return payload.changeType;
   }
 }

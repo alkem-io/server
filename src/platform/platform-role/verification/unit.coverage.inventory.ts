@@ -169,8 +169,7 @@ export const AUDIT_WRITER_COVERAGE: Record<
 
 export type ARowGateCoverageEntry =
   | { readonly gateSpecs: readonly string[] }
-  | { readonly retired: true }
-  | { readonly deferred: 'B' };
+  | { readonly retired: true };
 
 export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
   A1: {
@@ -247,8 +246,7 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
     gateSpecs: ['src/platform/platform/platform.resolver.mutations.spec.ts'],
   },
   A11: {
-    // Pre-existing (032) family; Slice A does not touch its grant set. The
-    // four resolver specs that already exist are listed; not every one of
+    // Pre-existing family. The four resolver specs that already exist are listed; not every one of
     // A11's ~13 surfaces has a dedicated spec yet — a gap that predates
     // this feature and is not one it introduces.
     gateSpecs: [
@@ -345,14 +343,15 @@ export const PRIVILEGE_KEY_BY_VALUE: Record<string, string> = Object.entries(
 //    re-scoped, not new, and would otherwise have no key to hang on — the
 //    fourteenth/fifteenth-pass finding). `UPDATE_NAMEID` is added as an
 //    EXPLICIT extra key alongside — it is deliberately excluded from
-//    `ManagedPrivilege` (Slice A adds only its enum value; T078 adds its
-//    rule and surface) — never by hand-patching `ManagedPrivilege` itself
+//    `ManagedPrivilege` (it is granted only on each entity's own policy, to
+//    non-platform credentials) — never by hand-patching `ManagedPrivilege` itself
 //    (that would be the same hand-appended-union defect at smaller scale).
 // ---------------------------------------------------------------------------
 
-export type PrivilegeCoverageEntry =
-  | { readonly ruleSpec: string; readonly grantSetSpec: string }
-  | { readonly deferred: 'B' };
+export type PrivilegeCoverageEntry = {
+  readonly ruleSpec: string;
+  readonly grantSetSpec: string;
+};
 
 const ROOT_POLICY_SPEC =
   'src/platform/authorization/platform.authorization.policy.service.spec.ts';
@@ -388,7 +387,7 @@ export const PRIVILEGE_COVERAGE: Record<
   readonly [AuthorizationPrivilege.UPDATE_NAMEID]: PrivilegeCoverageEntry;
   // corr-server-9 fix: TRANSFER_RESOURCE_OFFER/_ACCEPT moved out of
   // `ManagedPrivilege` into per-tree `TREE_SCOPED_PRIVILEGE_GRANTS`
-  // (`account` and `callouts-set` carry different legacy reachers) —
+  // (`account` and `callouts-set` are different credential rules) —
   // tracked here explicitly, same idiom as UPDATE_NAMEID, so they keep a
   // coverage entry despite no longer being a flat managed privilege.
   readonly [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER]: PrivilegeCoverageEntry;

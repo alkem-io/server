@@ -45,25 +45,20 @@ import {
 } from './platform.role.assignment.rules.service';
 
 /**
- * A1/A2's declared attribution facts (T040b's eventual census entries,
- * inlined here until that file exists — FR-025).
+ * A1/A2's declared attribution facts (mirroring their census entries in
+ * `verification/a.row.surfaces.ts`).
  *  - A1 (`platform-*` role assign/revoke, `PLATFORM_ROLES_ASSIGN`): owned by
- *    Platform Roles Admin alone, reachable in Slice A ONLY by the legacy
- *    `global-admin` credential — PLATFORM_ROLES_ASSIGN' pre-existing sole
- *    holder, NOT global-support/global-license-manager, which never held it.
+ *    Platform Roles Admin alone.
  *  - A2 (`feature-*` role assign/revoke, `FEATURE_ROLE_ASSIGN`): owned by
- *    BOTH Platform Users Admin and Platform Roles Admin; no legacy reacher
- *    (`FEATURE_ROLE_ASSIGN` is a wholly new privilege, T007).
+ *    BOTH Platform Users Admin and Platform Roles Admin.
  */
 const A1_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_ROLES_ADMIN,
 ];
-const A1_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 const A2_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
   AuthorizationCredential.PLATFORM_ROLES_ADMIN,
 ];
-const A2_LEGACY_REACHERS: readonly AuthorizationCredential[] = [];
 
 /** 027-platform-role-redesign (QA C1-note fix): both roles carry the SAME
  * beta/trial `ACCOUNT_LICENSE_PLUS` entitlement (T040a parity — see the
@@ -79,11 +74,8 @@ const LICENSE_PLUS_ROLES: readonly RoleName[] = [
   RoleName.FEATURE_VC_CAMPAIGN,
 ];
 
-/** Roles the new 027-platform-role-redesign assignment rule engine governs
- * (T030-T032a). Every other RoleName (legacy `global-*` / the pre-existing
- * `platform-beta-tester` / `platform-vc-campaign` / `platform-assistant-access`)
- * keeps its EXACT pre-existing gating below, unmodified — Slice A is
- * additive-only and must not narrow who can assign a legacy role. */
+/** Roles the assignment rule engine governs: all 13 target
+ * roles. Any other RoleName is rejected by `rejectNonPlatformRoleOrFail`. */
 const RULE_ENGINE_GOVERNED_ROLES: ReadonlySet<RoleName> = new Set([
   ...PLATFORM_FAMILY_ROLES,
   ...FEATURE_FAMILY_ROLES,
@@ -92,20 +84,6 @@ const RULE_ENGINE_GOVERNED_ROLES: ReadonlySet<RoleName> = new Set([
 @InstrumentResolver()
 @Resolver()
 export class PlatformRoleResolverMutations {
-  /** 027-platform-role-redesign (T077, Slice B): the resolver-local
-   * `[GLOBAL_ADMIN]` pin that used to live here is GONE, together with the
-   * legacy roles it protected.
-   *
-   * It existed for one reason (sec-server-2/corr-server-1): T034 widened
-   * `roleSet.authorization`'s `PLATFORM_ROLES_ASSIGN` rule to admit
-   * `platform-roles-admin`, and the legacy `global-*` roles had to stay
-   * assignable by `global-admin` ALONE for the length of the additive slice.
-   * With the legacy roles removed from `RoleName` there is nothing left for
-   * the pin to protect: every role this resolver can now be asked about is
-   * either rule-engine-governed (the 13 target roles, six-rule engine +
-   * fail-closed audit) or `platform-operations-admin`, which spec 032 made an
-   * ordinary Roles-Admin-assignable role. Re-introducing a hardcoded
-   * credential policy here would re-introduce a legacy grant path. */
   constructor(
     private accountService: AccountService,
     private accountLookupService: AccountLookupService,
@@ -127,24 +105,13 @@ export class PlatformRoleResolverMutations {
   ) {}
 
   /**
-   * 027-platform-role-redesign (T077, Slice B) — the `else` branch of both
-   * user-target mutations is now UNREACHABLE for every platform role, and this
-   * is what stands in its place.
-   *
    * `RULE_ENGINE_GOVERNED_ROLES` is `PLATFORM_FAMILY_ROLES ∪
-   * FEATURE_FAMILY_ROLES` = all 13 target roles, and `platform-operations-admin`
-   * is one of the ten `Platform …` members. Once T077 removed the legacy
-   * vocabulary, nothing assignable to the platform role-set fell outside the
-   * rule engine — so the branch's old job (an ordinary `PLATFORM_ROLES_ASSIGN`
-   * check, or the legacy `[GLOBAL_ADMIN]` pin before it) applies to no role.
-   *
-   * Reaching here therefore means the caller passed a role name belonging to a
-   * DIFFERENT role-set type (`member`, `admin`, `lead`, `associate`, `owner`) or
-   * a baseline identity tier. Rejecting explicitly is what keeps that from
-   * degrading into an unaudited assignment attempt: the old branch would have
-   * run an authorization check and then failed deep inside
-   * `assignActorToRole`, past the point where the six assignment rules and the
-   * fail-closed audit write live.
+   * FEATURE_FAMILY_ROLES` — every role assignable on the platform role-set —
+   * so a role outside it belongs to a DIFFERENT role-set type (`member`,
+   * `admin`, `lead`, `associate`, `owner`) or is a baseline identity tier.
+   * Rejecting it up front keeps it from degrading into an unaudited
+   * assignment attempt that fails deep inside `assignActorToRole`, past the
+   * point where the six assignment rules and the fail-closed audit write live.
    */
   private rejectNonPlatformRoleOrFail(
     role: RoleName,
@@ -165,41 +132,32 @@ export class PlatformRoleResolverMutations {
     @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
-    const isRuleEngineGoverned = RULE_ENGINE_GOVERNED_ROLES.has(roleData.role);
-
-    if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (T030-T032): the target role model routes
-      // through the shared five-rule engine + fail-closed audit write.
-      // Every OTHER role (legacy `global-*`, `platform-beta-tester`,
-      // `platform-vc-campaign`, `platform-assistant-access`) keeps its
-      // EXACT pre-existing gating below — Slice A is additive-only.
-      const targetUser = await this.userLookupService.getUserByIdOrFail(
-        roleData.actorID
-      );
-      await this.evaluateGrantOrFail(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID,
-        targetUser.serviceProfile
-      );
-    } else {
+    if (!RULE_ENGINE_GOVERNED_ROLES.has(roleData.role)) {
       this.rejectNonPlatformRoleOrFail(roleData.role, 'assign');
     }
 
-    // corr-server-14 fix: captured BEFORE assignActorToRole so a failed
-    // success-audit write's compensation logic (recordGrantSuccess) knows
-    // whether the grant actually changed state or was an idempotent no-op
-    // (target already held the role) — compensating a no-op would strip a
-    // pre-existing grant the target legitimately held before this call.
-    const heldRoleBeforeGrant = isRuleEngineGoverned
-      ? await this.roleSetService.isInRole(
-          roleData.actorID,
-          roleSet,
-          roleData.role
-        )
-      : false;
+    const targetUser = await this.userLookupService.getUserByIdOrFail(
+      roleData.actorID
+    );
+    await this.evaluateGrantOrFail(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID,
+      targetUser.serviceProfile
+    );
+
+    // Captured BEFORE assignActorToRole so a failed success-audit write's
+    // compensation logic (recordGrantSuccess) knows whether the grant
+    // actually changed state or was an idempotent no-op (target already held
+    // the role) — compensating a no-op would strip a pre-existing grant the
+    // target legitimately held before this call.
+    const heldRoleBeforeGrant = await this.roleSetService.isInRole(
+      roleData.actorID,
+      roleSet,
+      roleData.role
+    );
 
     await this.roleSetService.assignActorToRole(
       roleSet,
@@ -209,21 +167,18 @@ export class PlatformRoleResolverMutations {
       true
     );
 
-    if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (corr-server-5 fix): the SUCCESS audit
-      // row is written only AFTER assignActorToRole has actually completed —
-      // writing it beforehand (the pre-fix ordering) left a permanent audit
-      // record of a grant that never happened whenever assignActorToRole
-      // subsequently threw (e.g. a role-set policy limit).
-      await this.recordGrantSuccess(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID,
-        heldRoleBeforeGrant
-      );
-    }
+    // The SUCCESS audit row is written only AFTER assignActorToRole has
+    // actually completed — writing it beforehand would leave a permanent
+    // audit record of a grant that never happened whenever assignActorToRole
+    // throws (e.g. a role-set policy limit).
+    await this.recordGrantSuccess(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID,
+      heldRoleBeforeGrant
+    );
 
     const user = await this.userLookupService.getUserByIdOrFail(
       roleData.actorID
@@ -259,47 +214,35 @@ export class PlatformRoleResolverMutations {
     @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
-    const isRuleEngineGoverned = RULE_ENGINE_GOVERNED_ROLES.has(roleData.role);
-
-    if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (sec-server-20 fix, 2026-07-31): resolve
-      // the target as a USER before anything else, exactly as the grant
-      // surface already does (`assignPlatformRoleToUser` calls
-      // `getUserByIdOrFail` ahead of `evaluateGrantOrFail`). This surface
-      // asserted `targetActorType: 'user'` to the rule engine without ever
-      // checking it, and the first thing that actually verified the claim
-      // was the `getUserByIdOrFail` at the END of the method — by which
-      // point `removeActorFromRole` had already revoked the credential and
-      // `recordRevokeSuccess` had filed the row under `subjectUserId`.
-      //
-      // An organization id therefore produced: a real credential revocation,
-      // an audit row attributed to the wrong subject KIND, and an
-      // EntityNotFound thrown back to the caller — i.e. the caller is told
-      // the operation did not happen while the state change stands, and the
-      // trail disagrees with both. Verifying up front makes the mutation
-      // atomic again and costs one lookup the method already performs.
-      await this.userLookupService.getUserByIdOrFail(roleData.actorID);
-      await this.evaluateRevokeOrFail(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID
-      );
-    } else {
+    if (!RULE_ENGINE_GOVERNED_ROLES.has(roleData.role)) {
       this.rejectNonPlatformRoleOrFail(roleData.role, 'remove');
     }
 
-    // corr-server-14 fix: captured BEFORE removeActorFromRole — see the
-    // grant side's identical comment. `wasNoOp` for a revoke means the
-    // target did NOT hold the role beforehand.
-    const heldRoleBeforeRevoke = isRuleEngineGoverned
-      ? await this.roleSetService.isInRole(
-          roleData.actorID,
-          roleSet,
-          roleData.role
-        )
-      : false;
+    // Resolve the target as a USER before anything else, exactly as the
+    // grant surface does. The rule engine is told `targetActorType: 'user'`;
+    // without this check an organization id would only fail at the
+    // `getUserByIdOrFail` at the END of the method — after
+    // `removeActorFromRole` had revoked the credential and
+    // `recordRevokeSuccess` had filed the row under `subjectUserId`, so the
+    // caller would be told the operation failed while the state change stood
+    // and the audit trail named the wrong subject kind.
+    await this.userLookupService.getUserByIdOrFail(roleData.actorID);
+    await this.evaluateRevokeOrFail(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID
+    );
+
+    // Captured BEFORE removeActorFromRole — see the grant side's identical
+    // comment. `wasNoOp` for a revoke means the target did NOT hold the role
+    // beforehand.
+    const heldRoleBeforeRevoke = await this.roleSetService.isInRole(
+      roleData.actorID,
+      roleSet,
+      roleData.role
+    );
 
     await this.roleSetService.removeActorFromRole(
       roleSet,
@@ -307,18 +250,16 @@ export class PlatformRoleResolverMutations {
       roleData.actorID
     );
 
-    if (isRuleEngineGoverned) {
-      // 027-platform-role-redesign (corr-server-5 fix): success audit only
-      // after removeActorFromRole actually completes — see the assign side.
-      await this.recordRevokeSuccess(
-        actorContext,
-        roleSet,
-        roleData.role,
-        'user',
-        roleData.actorID,
-        !heldRoleBeforeRevoke
-      );
-    }
+    // Success audit only after removeActorFromRole actually completes — see
+    // the assign side.
+    await this.recordRevokeSuccess(
+      actorContext,
+      roleSet,
+      roleData.role,
+      'user',
+      roleData.actorID,
+      !heldRoleBeforeRevoke
+    );
 
     const user = await this.userLookupService.getUserByIdOrFail(
       roleData.actorID
@@ -464,15 +405,12 @@ export class PlatformRoleResolverMutations {
   /** 027-platform-role-redesign (sec-server-6 fix): the organization-target
    * surface (`assignPlatformRoleToOrganization` /
    * `removePlatformRoleFromOrganization`, T032a) has a use case ONLY for
-   * `Feature …` roles (FR-002) — `Platform …` roles are already rejected by
-   * rule 2 (`checkHolderKind`), but LEGACY `global-*` roles are members of
-   * NEITHER `PLATFORM_FAMILY_ROLES` nor `FEATURE_FAMILY_ROLES`, so rule 2
-   * never sees them and rule 1 (`checkAssignerCapability`) falls through to
-   * the shared, Slice-A-widened `PLATFORM_ROLES_ASSIGN` check on
-   * `roleSet.authorization` — the same widened policy the legacy-role
-   * branch of the USER mutations deliberately avoids via
-   * `legacyGlobalAdminPolicy`. Without this guard a `platform-roles-admin`
-   * holder could mint `global-admin` (or any other legacy role) on an
+   * `Feature …` roles — `Platform …` roles are already rejected by rule 2
+   * (`checkHolderKind`), but a role in NEITHER `PLATFORM_FAMILY_ROLES` nor
+   * `FEATURE_FAMILY_ROLES` is never seen by rule 2, and rule 1
+   * (`checkAssignerCapability`) falls through to the shared
+   * `PLATFORM_ROLES_ASSIGN` check on `roleSet.authorization`. Without this
+   * guard a `platform-roles-admin` holder could assign such a role on an
    * account they control by routing it through the organization surface.
    * Reject anything outside `FEATURE_FAMILY_ROLES` here, before any rule
    * evaluation, credential write or audit call.
@@ -490,7 +428,7 @@ export class PlatformRoleResolverMutations {
    * gets audited (via the shared rule engine's rule 2), so the SAME logical
    * rejection was landing in the trail when the engine caught it but NOT
    * when this guard did — the most security-relevant rejection this
-   * feature has (the org-surface legacy-role-escalation block, sec-server-6)
+   * feature has (the org-surface role-escalation block)
    * was the one leaving no trace. */
   private async assertOrganizationSurfaceOrFail(
     actorContext: ActorContext,
@@ -650,8 +588,8 @@ export class PlatformRoleResolverMutations {
       await this.roleAssignmentAuditService.recordGrantRejected({
         initiatorUserId: actorContext.actorID,
         // A rejection means the actor failed at least one rule — often rule 1
-        // (assigner capability), in which case it holds neither the owning
-        // role nor a legacy credential and resolveInitiatorRole's throw path
+        // (assigner capability), in which case it holds no owning role and
+        // resolveInitiatorRole's throw path
         // would fire on an ALREADY-legitimate empty intersection. Best-effort
         // attribution here rather than a second throw inside error handling.
         initiatorRole: this.resolveA1A2InitiatorRoleBestEffort(
@@ -782,8 +720,8 @@ export class PlatformRoleResolverMutations {
       await this.roleAssignmentAuditService.recordGrantRejected({
         initiatorUserId: actorContext.actorID,
         // A rejection means the actor failed at least one rule — often rule 1
-        // (assigner capability), in which case it holds neither the owning
-        // role nor a legacy credential and resolveInitiatorRole's throw path
+        // (assigner capability), in which case it holds no owning role and
+        // resolveInitiatorRole's throw path
         // would fire on an ALREADY-legitimate empty intersection. Best-effort
         // attribution here rather than a second throw inside error handling.
         initiatorRole: this.resolveA1A2InitiatorRoleBestEffort(
@@ -862,7 +800,7 @@ export class PlatformRoleResolverMutations {
     }
   }
 
-  /** FR-025 attribution for the A1/A2 assignment mutations (T058a). */
+  /** Initiator-role attribution for the A1/A2 assignment mutations. */
   private resolveA1A2InitiatorRole(
     role: RoleName,
     actorContext: ActorContext
@@ -873,17 +811,15 @@ export class PlatformRoleResolverMutations {
         c => c.type as AuthorizationCredential
       ),
       intendedOwners: isFeatureRole ? A2_INTENDED_OWNERS : A1_INTENDED_OWNERS,
-      legacyReachers: isFeatureRole ? A2_LEGACY_REACHERS : A1_LEGACY_REACHERS,
     });
   }
 
   /** Same attribution, but for a REJECTED attempt: the actor may legitimately
-   * hold neither the owning role nor a legacy credential (that is often
-   * exactly WHY the rule engine rejected it), so the strict throw path is
-   * not a defect here — fall back to `self` rather than raise a second
-   * exception while already handling a rejection.
+   * hold no owning role (that is often exactly WHY the rule engine rejected
+   * it), so the strict throw path is not a defect here — fall back to `self`
+   * rather than raise a second exception while already handling a rejection.
    *
-   * corr-server-3/qual-server-1 fix: delegates to the SHARED
+   * Delegates to the SHARED
    * `resolveInitiatorRoleBestEffort` (extracted to
    * `resolve.initiator.role.ts` so `user.service.ts`'s A21 rejection path
    * uses the identical wrapper, rather than calling the strict
@@ -903,7 +839,6 @@ export class PlatformRoleResolverMutations {
         c => c.type as AuthorizationCredential
       ),
       intendedOwners: isFeatureRole ? A2_INTENDED_OWNERS : A1_INTENDED_OWNERS,
-      legacyReachers: isFeatureRole ? A2_LEGACY_REACHERS : A1_LEGACY_REACHERS,
     });
   }
 

@@ -199,8 +199,6 @@ export class CalloutFormResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [moderatedAs],
-        // Slice B (T076): no legacy reachers remain.
-        [],
         {
           resourceKind: 'callout-form-response',
           resourceId: deleteData.responseID,

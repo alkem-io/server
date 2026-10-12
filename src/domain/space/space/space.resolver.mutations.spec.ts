@@ -523,7 +523,6 @@ describe('SpaceResolverMutations', () => {
         expect.arrayContaining([
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ]),
-        expect.any(Array),
         expect.objectContaining({
           resourceKind: 'space',
           resourceId: 'space-1',

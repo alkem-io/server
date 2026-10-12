@@ -1048,4 +1048,21 @@ describe('UserService', () => {
       expect((repository as any).manager.transaction).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('065 — new user platform-admin notification defaults', () => {
+    it('defaults all five platform-admin rows to email on, in-app and push off', () => {
+      const defaults = (service as any).getDefaultUserSettings();
+      const admin = defaults.notification.platform.admin;
+
+      for (const row of [
+        admin.userProfileCreated,
+        admin.userProfileRemoved,
+        admin.spaceCreated,
+        admin.userGlobalRoleChanged,
+        admin.userEmailChanged,
+      ]) {
+        expect(row).toEqual({ email: true, inApp: false, push: false });
+      }
+    });
+  });
 });

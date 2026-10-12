@@ -101,7 +101,6 @@ describe('CalloutTransferResolverMutations', () => {
     ).toHaveBeenCalledWith(
       actorContext,
       expect.any(Array),
-      expect.any(Array),
       expect.objectContaining({ resourceId: 'callout-1', outcome: 'moved' })
     );
   });

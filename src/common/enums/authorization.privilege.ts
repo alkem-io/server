@@ -32,8 +32,8 @@ export enum AuthorizationPrivilege {
   ROLESET_ENTRY_ROLE_APPLY = 'roleset-entry-role-apply',
   ROLESET_ENTRY_ROLE_INVITE = 'roleset-entry-role-invite',
   ROLESET_ENTRY_ROLE_INVITE_ACCEPT = 'roleset-entry-role-invite-accept',
-  ROLESET_ENTRY_ROLE_ASSIGN = 'roleset-entry-role-assign', // only for global admins
-  ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION = 'roleset-entry-role-assign-organization', // only for global admins
+  ROLESET_ENTRY_ROLE_ASSIGN = 'roleset-entry-role-assign', // direct Space user add: L1/L2 admins + flag-on Platform Support; nobody on L0 (server#6623)
+  ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION = 'roleset-entry-role-assign-organization', // held by nobody: organizations enter by invitation only (server#6623)
   COMMUNITY_ASSIGN_VC_FROM_ACCOUNT = 'community-assign-vc-from-account', // allow adding a VC as member to a community from an account
   UPDATE_CALLOUT_PUBLISHER = 'update-callout-publisher',
   READ_ABOUT = 'read-about', // access the external about information for an entity

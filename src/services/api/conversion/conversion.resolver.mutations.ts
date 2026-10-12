@@ -60,20 +60,15 @@ export class ConversionResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    // 027-platform-role-redesign (T044, A9): this resolver's whole space/VC
-    // move & convert family — convertSpaceL1ToSpaceL0/L2ToL1/L1ToL2,
-    // moveSpaceL1ToSpaceL0/L1ToL2/L2ToL1 (spec 030's cross-L0 moves) and
+    // A9: this resolver's whole space/VC move & convert family —
+    // convertSpaceL1ToSpaceL0/L2ToL1/L1ToL2, the cross-L0
+    // moveSpaceL1ToSpaceL0/L1ToL2/L2ToL1 moves and
     // convertVirtualContributorToUseKnowledgeBase — shares this ONE
-    // resolver-local policy.
-    //
-    // T074/T076 (Slice B): `global-admin` is gone from the credential list and
-    // the synthetic privilege moved off the retiring `PLATFORM_ADMIN`
-    // catch-all onto `TRANSFER_RESOURCE_OFFER` — A9's own privilege, owned by
-    // Platform Resource Admin (spec §Target global role model row 3). The
-    // token is only ever compared against THIS in-memory policy, so the
-    // choice is about naming the family correctly, not about widening: the
-    // credential list is the sole reacher set and it is now exactly
-    // `platform-resource-admin`.
+    // resolver-local policy. Its privilege is `TRANSFER_RESOURCE_OFFER`, A9's
+    // own, owned by Platform Resource Admin. The token is only ever compared
+    // against THIS in-memory policy, so the choice is about naming the family
+    // correctly, not about widening: the credential list is the sole reacher
+    // set and it is exactly `platform-resource-admin`.
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.PLATFORM_RESOURCE_ADMIN],
@@ -521,14 +516,12 @@ export class ConversionResolverMutations {
   }
 
   /**
-   * T058, widened by corr-server-18: ALL SEVEN mutations on this file share
-   * ONE resolver-local synthetic policy (constructor comment above) rather
-   * than the platform-wide PLATFORM_ADMIN grant set — the census
-   * (a.row.surfaces.ts, A9) declares every one of them, not just the three
-   * cross-L0 moves this helper originally covered, as a `platform-resource-
-   * admin`-owned surface. `intendedOwners`/`legacyReachers` are the
-   * census's declared source of truth for this row. Single-path surface —
-   * no ordinary-owner branch — so every successful call is audited.
+   * ALL SEVEN mutations on this file share ONE resolver-local synthetic
+   * policy (constructor comment above), and the census (a.row.surfaces.ts,
+   * A9) declares every one of them as a `platform-resource-admin`-owned
+   * surface. `intendedOwners` is the census's declared source of truth for
+   * this row. Single-path surface — no ordinary-owner branch — so every
+   * successful call is audited.
    */
   private async recordResourceMoveAudit(
     actorContext: ActorContext,
@@ -537,11 +530,9 @@ export class ConversionResolverMutations {
   ): Promise<void> {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
+      // `platform-resource-admin` is the sole credential on this resolver's
+      // policy, so every audited move is attributable to the owning role.
       [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
-      // T076: no legacy reachers remain — `platform-resource-admin` is the sole
-      // credential on this resolver's policy, so every audited move is
-      // attributable to the owning role.
-      [],
       {
         resourceKind,
         resourceId,
