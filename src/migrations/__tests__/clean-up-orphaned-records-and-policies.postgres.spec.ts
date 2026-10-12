@@ -46,6 +46,12 @@ const SCHEMA_DDL = [
      "authorizationId" uuid UNIQUE REFERENCES authorization_policy(id) ON DELETE SET NULL,
      "classificationId" uuid REFERENCES classification(id) ON DELETE CASCADE,
      "profileId" uuid REFERENCES profile(id) ON DELETE CASCADE)`,
+  `CREATE TABLE reference (id uuid PRIMARY KEY,
+     "authorizationId" uuid UNIQUE REFERENCES authorization_policy(id) ON DELETE SET NULL,
+     "profileId" uuid REFERENCES profile(id) ON DELETE CASCADE)`,
+  `CREATE TABLE visual (id uuid PRIMARY KEY,
+     "authorizationId" uuid UNIQUE REFERENCES authorization_policy(id) ON DELETE SET NULL,
+     "profileId" uuid REFERENCES profile(id) ON DELETE CASCADE)`,
   `CREATE TABLE license (id uuid PRIMARY KEY, "createdDate" timestamptz NOT NULL,
      "authorizationId" uuid UNIQUE REFERENCES authorization_policy(id) ON DELETE SET NULL)`,
   `CREATE TABLE license_entitlement (id uuid PRIMARY KEY,
@@ -345,6 +351,8 @@ describeMigrationPostgres(
         'profile',
         'classification',
         'tagset',
+        'reference',
+        'visual',
         'license',
         'license_entitlement',
       ];
@@ -365,6 +373,12 @@ describeMigrationPostgres(
         'INSERT INTO tagset (id, "authorizationId", "profileId") VALUES ($1, $2, $3)',
         [profileTagset, await policy(), orphan.id]
       );
+      for (const child of ['reference', 'visual']) {
+        await queryRunner.query(
+          `INSERT INTO ${child} (id, "authorizationId", "profileId") VALUES ($1, $2, $3)`,
+          [randomUUID(), await policy(), orphan.id]
+        );
+      }
       // A file elsewhere tagged with the orphan profile's tagset.
       const kept = await profile({ withFile: true });
       await queryRunner.query(

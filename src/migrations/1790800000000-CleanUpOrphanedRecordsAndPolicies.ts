@@ -64,7 +64,7 @@ const PROFILE_BUCKET_HOLDS_FILES =
   'EXISTS (SELECT 1 FROM "file" f WHERE f."storageBucketId" = t."storageBucketId")';
 
 type Reference = { table: string; column: string };
-type Dependent = Reference & { name: string };
+type Dependent = Reference & { name: string; local: boolean };
 type DeletedProfile = {
   locationId: string | null;
   storageBucketId: string | null;
@@ -72,6 +72,11 @@ type DeletedProfile = {
 
 const quote = (identifier: string) => `"${identifier.replaceAll('"', '""')}"`;
 const literal = (value: string) => `'${value.replaceAll("'", "''")}'`;
+const isChild = (table: string, { local, name, column }: Dependent) =>
+  local && (CHILDREN[table]?.includes(`${name}.${column}`) ?? false);
+
+// pg_constraint.confdeltype: no action, restrict, cascade, set null, set default.
+const ANY_DELETE_RULE = ['a', 'r', 'c', 'n', 'd'];
 
 export class CleanUpOrphanedRecordsAndPolicies1790800000000
   implements MigrationInterface
@@ -197,7 +202,7 @@ export class CleanUpOrphanedRecordsAndPolicies1790800000000
     returning = 'id'
   ): Promise<any[]> {
     const children = (await this.dependents(queryRunner, table, ['c'])).filter(
-      ({ name, column }) => CHILDREN[table]?.includes(`${name}.${column}`)
+      dependent => isChild(table, dependent)
     );
     const parts = [
       `deleted AS (
@@ -236,6 +241,10 @@ export class CleanUpOrphanedRecordsAndPolicies1790800000000
 
   /** Creates the backup table of `table` if missing; returns its quoted name. */
   private async backup(queryRunner: QueryRunner, table: string): Promise<string> {
+    // down() restores and drops only what RESTORE_ORDER lists.
+    if (!RESTORE_ORDER.includes(table)) {
+      throw new Error(`${table} is backed up but missing from RESTORE_ORDER`);
+    }
     const backup = quote(`${BACKUP_PREFIX}${table}`);
     await queryRunner.query(
       `CREATE TABLE IF NOT EXISTS ${backup} AS SELECT * FROM ${quote(table)} WITH NO DATA`
@@ -268,7 +277,7 @@ export class CleanUpOrphanedRecordsAndPolicies1790800000000
   ): Promise<Dependent[]> {
     return queryRunner.query(
       `SELECT format('%I.%I', n.nspname, c.relname) AS "table", c.relname AS name,
-              a.attname AS "column"
+              a.attname AS "column", n.nspname = current_schema() AS local
        FROM pg_constraint con
        JOIN pg_class c ON c.oid = con.conrelid
        JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -293,21 +302,24 @@ export class CleanUpOrphanedRecordsAndPolicies1790800000000
     table: string,
     idColumn: string
   ): Promise<string> {
-    const references: Reference[] = await queryRunner.query(
-      `SELECT format('%I.%I', n.nspname, c.relname) AS "table", a.attname AS "column"
-       FROM pg_constraint con
-       JOIN pg_class c ON c.oid = con.conrelid
-       JOIN pg_namespace n ON n.oid = c.relnamespace
-       JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = con.conkey[1]
-       WHERE con.contype = 'f' AND con.confrelid = $1::regclass
-         AND NOT (n.nspname = current_schema() AND c.relname || '.' || a.attname = ANY($3))
-       UNION
-       SELECT format('%I.%I', table_schema, table_name), column_name
+    const foreignKeys = (
+      await this.dependents(queryRunner, table, ANY_DELETE_RULE)
+    ).filter(dependent => !isChild(table, dependent));
+    const conventional: Reference[] = await queryRunner.query(
+      `SELECT format('%I.%I', table_schema, table_name) AS "table", column_name AS "column"
        FROM information_schema.columns
-       WHERE table_schema = current_schema() AND column_name = $2
-         AND NOT (table_name || '.' || column_name = ANY($3))
-         AND NOT starts_with(table_name, $4)`,
-      [table, idColumn, CHILDREN[table] ?? [], BACKUP_PREFIX]
+       WHERE table_schema = current_schema() AND column_name = $1
+         AND NOT (table_name || '.' || column_name = ANY($2))
+         AND NOT starts_with(table_name, $3)`,
+      [idColumn, CHILDREN[table] ?? [], BACKUP_PREFIX]
+    );
+    // A column that is both a foreign key and conventionally named is listed once.
+    const references = [...foreignKeys, ...conventional].filter(
+      (reference, index, all) =>
+        all.findIndex(
+          other =>
+            other.table === reference.table && other.column === reference.column
+        ) === index
     );
     // Nothing naming the table at all would make every row "unowned"; that is
     // a catalog misread, never a reason to empty it.
