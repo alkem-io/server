@@ -1797,6 +1797,10 @@ type AdminTemplateForeignFileReference {
   Where in the template the reference sits, e.g. profileDescription, visualUri, linkUri, whiteboard.
   """
   location: String!
+  """
+  Whether the template's owner can read the file. Only such files are copied; any other stays referenced as written.
+  """
+  ownerCanRead: Boolean!
   """The bucket the file is stored in today."""
   storageBucketID: String!
   templateID: String!
@@ -4822,7 +4826,7 @@ type Mutation {
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """
-  Lists, and on request copies, the files templates reference but do not store. A dry run by default; applying it needs the template IDs to repair.
+  Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. A dry run by default.
   """
   adminRepairTemplateFiles(repairData: AdminTemplateFileRepairInput!): AdminTemplateFileRepairResult!
   """Platform Users Admin: revoke a named user's MCP API key. Idempotent."""
@@ -8457,12 +8461,10 @@ input AdminRevokeMcpApiKeyInput {
 
 input AdminTemplateFileRepairInput {
   """
-  List the references without copying anything. Set to false to copy them.
+  List the references without copying anything. Set to false to copy the files the template's owner can read.
   """
   dryRun: Boolean! = true
-  """
-  The templates to process. Required to apply the repair; omitted on a dry run, every template is audited.
-  """
+  """The templates to process. When omitted, every template is processed."""
   templateIDs: [UUID!]
 }
 

@@ -206,11 +206,8 @@ export class ProfileDocumentsService {
 
   private isCopyAllowed(
     document: IDocument,
-    { sourceStorageBucketID, actorContext, copyAnyFile }: DocumentCopyAuthority
+    { sourceStorageBucketID, actorContext }: DocumentCopyAuthority
   ): boolean {
-    if (copyAnyFile) {
-      return true;
-    }
     if (
       sourceStorageBucketID &&
       document.storageBucket?.id === sourceStorageBucketID

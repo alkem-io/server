@@ -1,4 +1,4 @@
-import { ValidationException } from '@common/exceptions';
+import { AuthorizationCredential } from '@common/enums';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -19,13 +19,32 @@ const slot = (overrides: Record<string, unknown>) => ({
   ...overrides,
 });
 
-const createService = (slots: unknown[]) => {
+// Read rules keyed by credential type; the owner below is a space's admins.
+const readableBy = (...types: string[]) => ({
+  id: 'auth',
+  type: 'file',
+  credentialRules: types,
+  privilegeRules: [],
+});
+
+const createService = (
+  slots: unknown[],
+  foreignReadableBy: string[] = [AuthorizationCredential.SPACE_ADMIN],
+  owner: Record<string, unknown> = { spaceID: 'space-1', accountID: null }
+) => {
   const query = vi.fn(async (sql: string, _params?: unknown[]) => {
     if (sql.includes('with recursive')) return slots;
-    if (sql.startsWith('select id, "storageBucketId" from file')) {
+    if (sql.includes('from template t')) {
+      return [{ templateID: 'template-1', ...owner }];
+    }
+    if (sql.includes('from file f')) {
       return [
-        { id: FOREIGN, storageBucketId: 'private-subspace-bucket' },
-        { id: OWN, storageBucketId: 'own-bucket' },
+        {
+          id: FOREIGN,
+          storageBucketId: 'private-subspace-bucket',
+          authorization: readableBy(...foreignReadableBy),
+        },
+        { id: OWN, storageBucketId: 'own-bucket', authorization: null },
       ];
     }
     if (sql.includes('from memo')) return [{ contentPointer: null }];
@@ -53,12 +72,19 @@ const createService = (slots: unknown[]) => {
     }),
     deleteMaterializedContentDocuments: vi.fn(),
   };
+  const authorization = {
+    isAccessGranted: vi.fn(
+      (actor: ActorContext, policy: { credentialRules: string[] }) =>
+        actor.credentials.some(c => policy.credentialRules.includes(c.type))
+    ),
+  };
   const service = new AdminTemplateFileRepairService(
     entityManager as any,
     profileDocuments as any,
     storageBuckets as any,
     whiteboards as any,
     {} as any,
+    authorization as any,
     MockWinstonProvider.useValue as any
   );
   return { service, query, profileDocuments, whiteboards };
@@ -78,6 +104,7 @@ describe('AdminTemplateFileRepairService', () => {
         location: 'profileDescription',
         fileID: FOREIGN,
         storageBucketID: 'private-subspace-bucket',
+        ownerCanRead: true,
         copied: false,
       }),
     ]);
@@ -91,27 +118,74 @@ describe('AdminTemplateFileRepairService', () => {
     );
   });
 
-  it('refuses to apply without the reviewed template IDs', async () => {
-    const ctx = createService([slot({})]);
-
-    await expect(ctx.service.repair(undefined, false, actor)).rejects.toThrow(
-      ValidationException
+  it('leaves a file the owner cannot read referenced as written', async () => {
+    const ctx = createService(
+      [slot({})],
+      [AuthorizationCredential.SPACE_MEMBER]
     );
-    expect(ctx.query).not.toHaveBeenCalled();
+
+    const result = await ctx.service.repair(undefined, false, actor);
+
+    expect(result.references).toEqual([
+      expect.objectContaining({
+        fileID: FOREIGN,
+        ownerCanRead: false,
+        copied: false,
+      }),
+    ]);
+    expect(
+      ctx.profileDocuments.reuploadDocumentsInMarkdownToStorageBucket
+    ).not.toHaveBeenCalled();
+    expect(result.copiedReferences).toBe(0);
+    expect(result.failed).toEqual([]);
   });
 
-  it('copies the files of the named templates and stores the rewritten text', async () => {
+  it("checks a pack template against its account's admins", async () => {
+    const ctx = createService(
+      [slot({})],
+      [AuthorizationCredential.ACCOUNT_ADMIN],
+      { spaceID: null, accountID: 'account-1' }
+    );
+
+    const result = await ctx.service.repair(undefined, true, actor);
+
+    expect(result.references[0].ownerCanRead).toBe(true);
+  });
+
+  it('gives a platform template only the credentials of a registered user', async () => {
+    const ctx = createService(
+      [slot({})],
+      [AuthorizationCredential.SPACE_ADMIN],
+      {
+        spaceID: null,
+        accountID: null,
+      }
+    );
+
+    const result = await ctx.service.repair(undefined, true, actor);
+
+    expect(result.references[0].ownerCanRead).toBe(false);
+  });
+
+  it('copies the files the owner can read, with the owner as the copy authority', async () => {
     const ctx = createService([
       slot({}),
       slot({ kind: 'whiteboard', entityID: 'wb-1', text: null }),
     ]);
 
-    const result = await ctx.service.repair(['template-1'], false, actor);
+    const result = await ctx.service.repair(undefined, false, actor);
 
+    const owner = expect.objectContaining({
+      actorID: 'ops-1',
+      credentials: [
+        { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
+        { type: AuthorizationCredential.SPACE_ADMIN, resourceID: 'space-1' },
+      ],
+    });
     expect(
       ctx.profileDocuments.reuploadDocumentsInMarkdownToStorageBucket
     ).toHaveBeenCalledWith(expect.any(String), expect.anything(), {
-      copyAnyFile: true,
+      actorContext: owner,
     });
     expect(ctx.query).toHaveBeenCalledWith(
       'update "profile" set "description" = $1 where id = $2',
@@ -119,7 +193,7 @@ describe('AdminTemplateFileRepairService', () => {
     );
     expect(ctx.whiteboards.copyForeignAssetsIntoOwnBucket).toHaveBeenCalledWith(
       'wb-1',
-      actor
+      owner
     );
     expect(result.copiedReferences).toBe(2);
     expect(result.failed).toEqual([]);

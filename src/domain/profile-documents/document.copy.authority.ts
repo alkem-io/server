@@ -11,9 +11,4 @@ import { ActorContext } from '@core/actor-context/actor.context';
 export interface DocumentCopyAuthority {
   sourceStorageBucketID?: string;
   actorContext?: ActorContext;
-  /**
-   * Copy every file, wherever it is stored. Set only by the one-off admin
-   * template repair, for templates an operator reviewed and chose to repair.
-   */
-  copyAnyFile?: boolean;
 }

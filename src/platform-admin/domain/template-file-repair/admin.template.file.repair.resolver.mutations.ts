@@ -22,7 +22,7 @@ export class AdminTemplateFileRepairResolverMutations {
 
   @Mutation(() => AdminTemplateFileRepairResult, {
     description:
-      'Lists, and on request copies, the files templates reference but do not store. A dry run by default; applying it needs the template IDs to repair.',
+      "Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. A dry run by default.",
   })
   async adminRepairTemplateFiles(
     @CurrentActor() actorContext: ActorContext,

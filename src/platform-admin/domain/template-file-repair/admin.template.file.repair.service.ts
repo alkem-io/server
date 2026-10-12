@@ -1,7 +1,10 @@
-import { LogContext } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ValidationException } from '@common/exceptions';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { DocumentCopyAuthority } from '@domain/profile-documents/document.copy.authority';
@@ -66,7 +69,24 @@ interface Slot {
 interface ForeignFile {
   fileID: string;
   storageBucketID: string;
+  ownerCanRead: boolean;
 }
+
+interface TemplateOwnerRow {
+  templateID: string;
+  spaceID: string | null;
+  accountID: string | null;
+}
+
+/** Who holds each template: a space's library, an innovation pack, or the platform. */
+const TEMPLATE_OWNERS_SQL = `
+select t.id "templateID", s.id "spaceID", ip."accountId" "accountID"
+  from template t
+  left join templates_manager tm on tm."templatesSetId" = t."templatesSetId"
+  left join space s on s."templatesManagerId" = tm.id
+  left join innovation_pack ip on ip."templatesSetId" = t."templatesSetId"
+ where t.id = any($1::uuid[])
+`;
 
 const DOCUMENT_URL_PATTERN =
   /\/api\/private\/rest\/storage\/document\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
@@ -165,10 +185,13 @@ select s.tid "templateID", tp."displayName" "templateName", s.kind, s.entity_id 
  * broken images and links for everyone else. The repair copies each of those
  * files into the bucket of the template entity that references it.
  *
- * The audit (dry run) lists every such reference; applying the repair copies
- * them for the templates an operator names after reviewing that list. Copying
- * publishes the file to everyone who can read the template, which is why the
- * choice of templates stays with a person.
+ * Copying publishes the file to everyone who can read the template, so a file
+ * is copied only when the template's owner can read it: the admins of the space
+ * whose library holds the template, or of the account that holds its
+ * innovation pack. Templates do not record who saved them; the owner is the
+ * closest stand-in for that person. A platform template's owner is any
+ * registered user, since the platform roles that manage those templates can
+ * read every space. Any other file stays referenced as written.
  */
 @Injectable()
 export class AdminTemplateFileRepairService {
@@ -179,6 +202,7 @@ export class AdminTemplateFileRepairService {
     private readonly storageBucketService: StorageBucketService,
     private readonly whiteboardService: WhiteboardService,
     private readonly fileServiceAdapter: FileServiceAdapter,
+    private readonly authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -188,28 +212,27 @@ export class AdminTemplateFileRepairService {
     dryRun: boolean,
     actorContext: ActorContext
   ): Promise<AdminTemplateFileRepairResult> {
-    if (!dryRun && !templateIDs?.length) {
-      throw new ValidationException(
-        'Applying the template file repair requires the IDs of the templates to repair; run it as a dry run first to list them',
-        LogContext.TEMPLATES
-      );
-    }
     const slots: Slot[] = await this.entityManager.query(TEMPLATE_SLOTS_SQL, [
       templateIDs?.length ? templateIDs : null,
     ]);
+    const owners = await this.templateOwners(slots, actorContext);
 
     const references: AdminTemplateForeignFileReference[] = [];
     const failed: AdminTemplateFileRepairIssue[] = [];
     let copiedReferences = 0;
 
     for (const slot of slots) {
+      const owner = owners.get(slot.templateID);
+      if (!owner) {
+        continue;
+      }
       let foreign: ForeignFile[];
       try {
         if (slot.kind === 'defaultWhiteboardContent' && slot.text) {
           // The entity stores this column compressed; raw SQL reads it as is.
           slot.text = await decompressText(slot.text);
         }
-        foreign = await this.findForeignFiles(slot);
+        foreign = await this.findForeignFiles(slot, owner);
       } catch (error) {
         failed.push(this.issue(slot, error));
         continue;
@@ -217,12 +240,13 @@ export class AdminTemplateFileRepairService {
       if (foreign.length === 0) {
         continue;
       }
+      const copyable = foreign.filter(file => file.ownerCanRead).length;
       let copied = false;
-      if (!dryRun) {
+      if (!dryRun && copyable > 0) {
         try {
-          copied = await this.repairSlot(slot, actorContext);
+          copied = await this.repairSlot(slot, owner);
           if (copied) {
-            copiedReferences += foreign.length;
+            copiedReferences += copyable;
           } else {
             failed.push(
               this.issue(
@@ -243,7 +267,8 @@ export class AdminTemplateFileRepairService {
           entityID: slot.entityID,
           fileID: file.fileID,
           storageBucketID: file.storageBucketID,
-          copied,
+          ownerCanRead: file.ownerCanRead,
+          copied: copied && file.ownerCanRead,
         });
       }
     }
@@ -259,22 +284,83 @@ export class AdminTemplateFileRepairService {
     };
   }
 
+  /**
+   * The credentials each template's owner holds, as a registered user, keyed
+   * by template. Copies made with them are attributed to the operator.
+   */
+  private async templateOwners(
+    slots: Slot[],
+    operator: ActorContext
+  ): Promise<Map<string, ActorContext>> {
+    const templateIDs = [...new Set(slots.map(slot => slot.templateID))];
+    if (templateIDs.length === 0) {
+      return new Map();
+    }
+    const rows: TemplateOwnerRow[] = await this.entityManager.query(
+      TEMPLATE_OWNERS_SQL,
+      [templateIDs]
+    );
+    return new Map(
+      rows.map(row => {
+        const owner = new ActorContext();
+        owner.actorID = operator.actorID;
+        owner.credentials = [
+          { type: AuthorizationCredential.GLOBAL_REGISTERED, resourceID: '' },
+        ];
+        if (row.spaceID) {
+          owner.credentials.push({
+            type: AuthorizationCredential.SPACE_ADMIN,
+            resourceID: row.spaceID,
+          });
+        } else if (row.accountID) {
+          owner.credentials.push({
+            type: AuthorizationCredential.ACCOUNT_ADMIN,
+            resourceID: row.accountID,
+          });
+        }
+        return [row.templateID, owner];
+      })
+    );
+  }
+
   /** The files a slot references that live in some other, existing bucket. */
-  private async findForeignFiles(slot: Slot): Promise<ForeignFile[]> {
+  private async findForeignFiles(
+    slot: Slot,
+    owner: ActorContext
+  ): Promise<ForeignFile[]> {
     const fileIDs = await this.referencedFileIDs(slot);
     if (fileIDs.length === 0) {
       return [];
     }
-    const rows: { id: string; storageBucketId: string }[] =
-      await this.entityManager.query(
-        'select id, "storageBucketId" from file where id = any($1::uuid[])',
-        [fileIDs]
-      );
+    const rows: {
+      id: string;
+      storageBucketId: string;
+      authorization: IAuthorizationPolicy | null;
+    }[] = await this.entityManager.query(
+      `select f.id, f."storageBucketId",
+              case when ap.id is null then null else json_build_object(
+                'id', ap.id, 'type', ap.type,
+                'credentialRules', ap."credentialRules",
+                'privilegeRules', ap."privilegeRules") end authorization
+         from file f left join authorization_policy ap on ap.id = f."authorizationId"
+        where f.id = any($1::uuid[])`,
+      [fileIDs]
+    );
     return rows
       .filter(
         row => row.storageBucketId && row.storageBucketId !== slot.bucketID
       )
-      .map(row => ({ fileID: row.id, storageBucketID: row.storageBucketId }));
+      .map(row => ({
+        fileID: row.id,
+        storageBucketID: row.storageBucketId,
+        ownerCanRead:
+          row.authorization !== null &&
+          this.authorizationService.isAccessGranted(
+            owner,
+            row.authorization,
+            AuthorizationPrivilege.READ
+          ),
+      }));
   }
 
   private async referencedFileIDs(slot: Slot): Promise<string[]> {
@@ -302,20 +388,18 @@ export class AdminTemplateFileRepairService {
     ];
   }
 
-  /** Copies the slot's foreign files; true when the stored reference changed. */
-  private async repairSlot(
-    slot: Slot,
-    actorContext: ActorContext
-  ): Promise<boolean> {
-    // The operator reviewed this template's references and chose to publish
-    // them with the template.
-    const copyAuthority: DocumentCopyAuthority = { copyAnyFile: true };
+  /**
+   * Copies the slot's foreign files the owner can read; true when the stored
+   * reference changed.
+   */
+  private async repairSlot(slot: Slot, owner: ActorContext): Promise<boolean> {
+    const copyAuthority: DocumentCopyAuthority = { actorContext: owner };
     switch (slot.kind) {
       case 'whiteboard':
         return (
           (await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
             slot.entityID,
-            actorContext
+            owner
           )) > 0
         );
       case 'memo':
@@ -330,7 +414,7 @@ export class AdminTemplateFileRepairService {
           await this.whiteboardService.materializeContentIntoBucket(
             slot.text ?? '',
             slot.bucketID,
-            { copyAnyFile: true }
+            { actorContext: owner }
           );
         if (materialized.createdDocumentIDs.length === 0) {
           return false;

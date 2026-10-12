@@ -7,7 +7,7 @@ export class AdminTemplateFileRepairInput {
   @Field(() => [UUID], {
     nullable: true,
     description:
-      'The templates to process. Required to apply the repair; omitted on a dry run, every template is audited.',
+      'The templates to process. When omitted, every template is processed.',
   })
   @IsOptional()
   templateIDs?: string[];
@@ -15,7 +15,7 @@ export class AdminTemplateFileRepairInput {
   @Field(() => Boolean, {
     defaultValue: true,
     description:
-      'List the references without copying anything. Set to false to copy them.',
+      "List the references without copying anything. Set to false to copy the files the template's owner can read.",
   })
   dryRun!: boolean;
 }

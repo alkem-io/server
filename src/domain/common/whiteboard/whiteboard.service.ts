@@ -333,7 +333,6 @@ export class WhiteboardService {
     authz: {
       sourceBucketId?: string;
       actorContext?: ActorContext;
-      copyAnyFile?: boolean;
     } = {}
   ): Promise<MaterializedWhiteboardContent> {
     const snapshot = content
@@ -503,10 +502,10 @@ export class WhiteboardService {
   }
 
   /**
-   * Copies every image a whiteboard references from another bucket into its own
-   * bucket and points the whiteboard at the copies. Only for the admin template
-   * repair, after an operator chose to publish those images with the template.
-   * Returns how many images were copied.
+   * Copies the images a whiteboard references from another bucket into its own
+   * bucket, for those `actorContext` can read, and points the whiteboard at the
+   * copies. Used by the admin template repair, which passes the template
+   * owner's credentials. Returns how many images were copied.
    */
   public async copyForeignAssetsIntoOwnBucket(
     whiteboardID: string,
@@ -531,7 +530,7 @@ export class WhiteboardService {
     const materialized = await this.materializeContentIntoBucket(
       content,
       storageBucketID,
-      { copyAnyFile: true }
+      { actorContext }
     );
     if (materialized.createdDocumentIDs.length === 0) {
       return 0;
@@ -572,7 +571,6 @@ export class WhiteboardService {
     authz: {
       actorContext?: ActorContext;
       sourceBucketId?: string;
-      copyAnyFile?: boolean;
     }
   ): Promise<{ snapshot: Buffer; createdTargetLocators: string[] }> {
     // Returns the re-homed snapshot AND the file-service ids of any media copied into
@@ -624,7 +622,6 @@ export class WhiteboardService {
           continue;
         }
         const copyAllowed =
-          authz.copyAnyFile === true ||
           (authz.sourceBucketId != null &&
             sourceDocumentBucketId === authz.sourceBucketId) ||
           (authz.actorContext != null &&
