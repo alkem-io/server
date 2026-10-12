@@ -18,6 +18,13 @@ export class ActivityFeedQueryArgs {
   })
   myActivity?: boolean;
 
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Excludes events that the current user triggered; Includes all by default. Combined with myActivity both filters apply, composing to an empty result; that is not an error.',
+  })
+  excludeMyActivity?: boolean;
+
   @Field(() => [UUID], {
     nullable: true,
     description:

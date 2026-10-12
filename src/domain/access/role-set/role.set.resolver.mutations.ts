@@ -269,23 +269,25 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
-    this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
-
-    this.authorizationService.grantAccessOrFail(
+    await this.authorizeRemoveOrganization(
       actorContext,
-      roleSet.authorization,
-      AuthorizationPrivilege.GRANT,
-      `remove community role organization: ${roleSet.id}`
+      roleSet,
+      roleData.role,
+      roleData.actorID
     );
+
+    // Resolved before the removal so a non-organization ID never loses a role.
+    const organization =
+      await this.organizationLookupService.getOrganizationByIdOrFail(
+        roleData.actorID
+      );
 
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
       roleData.actorID
     );
-    return await this.organizationLookupService.getOrganizationByIdOrFail(
-      roleData.actorID
-    );
+    return organization;
   }
 
   @Mutation(() => IVirtualContributor, {
@@ -431,7 +433,12 @@ export class RoleSetResolverMutations {
         );
         break;
       case ActorType.ORGANIZATION:
-        await this.authorizeRemoveOrganization(actorContext, roleSet);
+        await this.authorizeRemoveOrganization(
+          actorContext,
+          roleSet,
+          roleData.role,
+          roleData.actorID
+        );
         break;
       case ActorType.VIRTUAL_CONTRIBUTOR:
         await this.authorizeRemoveVirtualContributor(
@@ -661,15 +668,37 @@ export class RoleSetResolverMutations {
     );
   }
 
+  // Space admins pass through the role set's own GRANT rules for any role. The
+  // organization's own admins and owners (ACCOUNT_ADMIN on its account) may only
+  // remove MEMBER: leaving drops every role (see removeActorFromRole), while
+  // Lead alone stays the Space admins' decision.
   private async authorizeRemoveOrganization(
     actorContext: ActorContext,
-    roleSet: IRoleSet
+    roleSet: IRoleSet,
+    role: RoleName,
+    organizationID: string
   ): Promise<void> {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
+    let authorization = roleSet.authorization;
+    if (
+      role === RoleName.MEMBER &&
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        roleSet.authorization,
+        AuthorizationPrivilege.GRANT
+      )
+    ) {
+      authorization =
+        await this.roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval(
+          roleSet,
+          organizationID
+        );
+    }
+
     this.authorizationService.grantAccessOrFail(
       actorContext,
-      roleSet.authorization,
+      authorization,
       AuthorizationPrivilege.GRANT,
       `remove community role organization: ${roleSet.id}`
     );

@@ -1171,6 +1171,31 @@ export class RoleSetService {
     return false;
   }
 
+  // Like the descendant-space cascade, this skips the role policy limits: a
+  // departure must not be blocked by a minimum on a role riding on membership.
+  private async revokeOtherRoles(
+    roleSet: IRoleSet,
+    removedRole: RoleName,
+    actorID: string,
+    actorType: ActorType
+  ): Promise<void> {
+    const roleNames = await this.getRoleNames(roleSet);
+    for (const roleName of roleNames) {
+      if (
+        roleName !== removedRole &&
+        (await this.isInRole(actorID, roleSet, roleName))
+      ) {
+        await this.revokeRoleCredential(
+          roleSet,
+          roleName,
+          actorID,
+          actorType,
+          false
+        );
+      }
+    }
+  }
+
   private async grantRoleCredential(
     roleSet: IRoleSet,
     roleType: RoleName,
@@ -1256,6 +1281,12 @@ export class RoleSetService {
           );
         }
         if (roleType === RoleName.MEMBER) {
+          // An organization's other roles in a Space (Lead) only exist on top
+          // of its membership: leaving as a member leaves the Space entirely.
+          if (actorType === ActorType.ORGANIZATION) {
+            await this.revokeOtherRoles(roleSet, roleType, actorID, actorType);
+          }
+
           const communication =
             await this.communityResolverService.getCommunicationForRoleSet(
               roleSet.id
