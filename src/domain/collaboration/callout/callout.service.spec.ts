@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -24,6 +25,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
@@ -927,6 +929,37 @@ describe('CalloutService', () => {
         'cls-1'
       );
       expect(deletedInTransaction).toBe(false);
+    });
+
+    it('resolves and logs when the classification delete fails after the callout is deleted', async () => {
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        authorization: { id: 'auth-1' },
+        classification: { id: 'cls-1', tagsets: [] },
+      } as any);
+      vi.mocked(classificationService.deleteClassification).mockRejectedValue(
+        new Error('boom')
+      );
+      const logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
+
+      // The callout row has already committed as deleted, so the caller must
+      // not read a cleanup failure as a failed delete — but it is not silent.
+      await expect(service.deleteCallout('callout-1')).resolves.toMatchObject({
+        id: 'callout-1',
+      });
+      expect(mockManager.remove).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calloutId: 'callout-1',
+          classificationId: 'cls-1',
+        }),
+        expect.any(String),
+        LogContext.COLLABORATION
+      );
     });
   });
 

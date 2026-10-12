@@ -39,11 +39,12 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { cloneDeep, keyBy } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   DeepPartial,
   EntityManager,
@@ -93,7 +94,9 @@ export class CalloutService {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @InjectRepository(Callout)
-    private calloutRepository: Repository<Callout>
+    private calloutRepository: Repository<Callout>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public async createCallout(
@@ -832,11 +835,26 @@ export class CalloutService {
     // inside its transaction: the framing, contributions and defaults above are
     // already gone, so rolling the row back would strand a callout that can no
     // longer be loaded for deletion. A failure here leaves an unowned
-    // classification instead, which an orphan sweep can collect.
+    // classification behind — the leak this delete exists to stop, which only
+    // the one-off cleanup migration (alkem-io/server#6655) has swept. It is
+    // logged, not thrown: the callout is already deleted, and a rejection
+    // would read to the caller as a failed delete.
     if (callout.classification) {
-      await this.classificationService.deleteClassification(
-        callout.classification.id
-      );
+      try {
+        await this.classificationService.deleteClassification(
+          callout.classification.id
+        );
+      } catch (error: any) {
+        this.logger.error(
+          {
+            message: 'Failed to delete the classification of a deleted callout',
+            calloutId: calloutID,
+            classificationId: callout.classification.id,
+          },
+          error?.stack,
+          LogContext.COLLABORATION
+        );
+      }
     }
 
     // On a Tasks board the column template goes last: the classification's

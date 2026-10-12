@@ -1144,9 +1144,9 @@ describe('SpaceService', () => {
       ).rejects.toThrow(RelationshipNotFoundException);
     });
 
-    it("deletes the space actor's profile before the actor row (server#6614)", async () => {
-      const deps = service as any;
-      const mockSpace = {
+    // A level-1 space with every relation deleteSpaceOrFail requires.
+    const deletableSpace = () =>
+      ({
         id: 'space-1',
         level: SpaceLevel.L1,
         subspaces: [],
@@ -1157,7 +1157,11 @@ describe('SpaceService', () => {
         storageAggregator: { id: 'aggregator-1' },
         authorization: { id: 'auth-1' },
         license: { id: 'license-1' },
-      } as unknown as Space;
+      }) as unknown as Space;
+
+    it("deletes the space actor's profile before the actor row (server#6614)", async () => {
+      const deps = service as any;
+      const mockSpace = deletableSpace();
       const findOne = vi
         .spyOn(spaceRepository, 'findOne')
         .mockResolvedValue(mockSpace);
@@ -1184,18 +1188,7 @@ describe('SpaceService', () => {
 
     it('leaves the space whole when its profile delete fails (server#6614)', async () => {
       const deps = service as any;
-      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue({
-        id: 'space-1',
-        level: SpaceLevel.L1,
-        subspaces: [],
-        profile: { id: 'profile-1' },
-        collaboration: { id: 'collaboration-1' },
-        community: { id: 'community-1' },
-        about: { id: 'about-1' },
-        storageAggregator: { id: 'aggregator-1' },
-        authorization: { id: 'auth-1' },
-        license: { id: 'license-1' },
-      } as unknown as Space);
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(deletableSpace());
       deps.profileService.deleteProfile.mockRejectedValue(
         new Error('document is being signed')
       );
