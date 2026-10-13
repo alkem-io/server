@@ -8,6 +8,7 @@ import { DataSource } from 'typeorm';
 import { applyNormalization } from './normalization.apply';
 import type { NormalizationCommand } from './normalization.command';
 import {
+  MAX_NORMALIZATION_PLAN_BYTES,
   parseCoverage,
   parseNormalizationCommand,
   parseNormalizationPlan,
@@ -42,7 +43,9 @@ export async function executeNormalization(
       await output.write(plan);
       return 0;
     }
-    const plan = parseNormalizationPlan(await readPrivateJson(command.plan));
+    const plan = parseNormalizationPlan(
+      await readPrivateJson(command.plan, MAX_NORMALIZATION_PLAN_BYTES)
+    );
     const result = await applyNormalization(port, plan);
     await output.write(result);
     return result.ok ? 0 : 1;

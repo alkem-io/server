@@ -7,6 +7,7 @@ import type {
 } from './normalization.types';
 
 export const MAX_NORMALIZATION_BYTES = 64 * 1024 * 1024;
+export const MAX_NORMALIZATION_PLAN_BYTES = 256 * 1024 * 1024;
 export const MAX_NORMALIZATION_EVENTS = 100_000;
 export type NormalizationCommand =
   | { mode: 'inventory'; report: string }
@@ -188,6 +189,12 @@ export function parseNormalizationPlan(value: unknown): NormalizationPlan {
   )
     throw new Error('invalid_plan');
   const references = new Set<string>();
+  const eventsByReference = new Map<string, MediaEvent[]>();
+  for (const event of events) {
+    const group = eventsByReference.get(event.mediaId) ?? [];
+    group.push(event);
+    eventsByReference.set(event.mediaId, group);
+  }
   for (const group of value.groups) {
     if (!record(group)) throw new Error('invalid_group');
     keys(group, ['mediaId', 'eligible', 'reason', 'events', 'targets']);
@@ -201,9 +208,7 @@ export function parseNormalizationPlan(value: unknown): NormalizationPlan {
       throw new Error('invalid_group');
     references.add(group.mediaId);
     const occurrences = parseMediaEvents(group.events);
-    const expectedEvents = events.filter(
-      event => event.mediaId === group.mediaId
-    );
+    const expectedEvents = eventsByReference.get(group.mediaId as string) ?? [];
     const eventKey = (event: MediaEvent) => JSON.stringify(event);
     if (
       JSON.stringify(occurrences.map(eventKey).sort()) !==
@@ -240,14 +245,17 @@ export function parseNormalizationPlan(value: unknown): NormalizationPlan {
     throw new Error('invalid_reference_groups');
   return value as unknown as NormalizationPlan;
 }
-export async function readPrivateJson(path: string): Promise<unknown> {
+export async function readPrivateJson(
+  path: string,
+  maxBytes = MAX_NORMALIZATION_BYTES
+): Promise<unknown> {
   const handle = await open(path, 'r');
   try {
     const file = await handle.stat();
     if (
       !file.isFile() ||
       (file.mode & 0o077) !== 0 ||
-      file.size > MAX_NORMALIZATION_BYTES
+      file.size > maxBytes
     )
       throw new Error('evidence_not_private_or_bounded');
     return JSON.parse(await handle.readFile('utf8'));
@@ -286,7 +294,7 @@ export async function reservePrivateReport(
   return {
     async write(value: unknown) {
       const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
-      if (bytes.length > MAX_NORMALIZATION_BYTES)
+      if (bytes.length > MAX_NORMALIZATION_PLAN_BYTES)
         throw new Error('report_too_large');
       await output.writeFile(bytes);
       await output.sync();

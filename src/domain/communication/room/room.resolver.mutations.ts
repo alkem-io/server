@@ -72,7 +72,7 @@ export class RoomResolverMutations {
   private validateMessageContent(input: RoomSendMessageInput): void {
     if (input.attachmentUpload != null && input.message.trim()) {
       throw new ValidationException(
-        'Send one attachment per message',
+        'An attachment message cannot also contain text',
         LogContext.COMMUNICATION
       );
     }
