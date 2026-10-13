@@ -29,6 +29,7 @@ export interface Coverage {
   startedAt: string;
   completedAt: string;
   complete: boolean;
+  failure?: string;
   rooms: RoomCoverage[];
 }
 export interface NormalizationFile {

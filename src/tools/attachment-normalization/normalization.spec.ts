@@ -132,6 +132,18 @@ const approve = (plan: Awaited<ReturnType<typeof inventoryNormalization>>) => {
 };
 
 describe('explicitly reviewed reference normalization', () => {
+  it('performs no normalization when the exported event file failed to sync', async () => {
+    const f = fixture();
+    f.coverage.failure = 'event_output_sync_failed';
+    const plan = approve(
+      await inventoryNormalization(f.port, f.events, f.coverage)
+    );
+    expect(plan.groups[0].reason).toBe('incomplete_coverage');
+    const result = await applyNormalization(f.port, plan);
+    expect(result.records[0].reason).toBe('incomplete_coverage');
+    expect(f.writes).toEqual([]);
+    expect(f.rows.has(p)).toBe(true);
+  });
   it('defaults every missing tuple to unapproved and performs no writes on unchanged dry-run input', async () => {
     const f = fixture();
     const plan = await inventoryNormalization(f.port, f.events, f.coverage);

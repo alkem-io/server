@@ -24,6 +24,7 @@ export function coverageIsComplete(
 ): boolean {
   if (
     !coverage.complete ||
+    coverage.failure ||
     !sameSet(coverage.requestedRoomIds, supportedRooms) ||
     !sameSet(coverage.resolvedRoomIds, supportedRooms) ||
     !sameSet(

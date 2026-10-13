@@ -111,6 +111,7 @@ export function parseCoverage(value: unknown): Coverage {
     'startedAt',
     'completedAt',
     'complete',
+    'failure',
     'rooms',
   ]);
   if (
@@ -118,6 +119,7 @@ export function parseCoverage(value: unknown): Coverage {
     !['fixture', 'supported-room-inventory'].includes(value.scope as string) ||
     !bounded(value.homeserver, 255) ||
     typeof value.complete !== 'boolean' ||
+    (value.failure !== undefined && !bounded(value.failure, 64)) ||
     ![value.startedAt, value.completedAt].every(
       v => typeof v === 'string' && Number.isFinite(Date.parse(v))
     ) ||

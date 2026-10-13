@@ -13,6 +13,7 @@ import tempfile
 from urllib.parse import quote
 
 import treq
+from twisted.internet.protocol import Protocol
 from synapse.api.errors import HttpResponseException
 from synapse.http.client import read_body_with_max_size
 from synapse.logging.context import make_deferred_yieldable
@@ -86,29 +87,20 @@ class FileServiceStorageProvider(StorageProvider):
     async def fetch(self, path: str, file_info):
         if not self._is_original(file_info):
             return None
-        try:
-            document = await self.http.get_json(
-                self.base_url + "/internal/file/by-reference",
-                args={"ref": file_info.file_id},
-            )
-        except HttpResponseException as error:
-            if error.code == 404:
-                return None
-            raise
-
         # Download to disk; the stock responder owns the file after success.
         spool = tempfile.TemporaryFile()
         try:
-            document_id = quote(document["id"], safe="")
-            # get_file maps every upstream HTTP failure to 502, hiding a
-            # deletion between reference lookup and this content request.
+            reference = quote(file_info.file_id, safe="")
             response = await self.http.request(
-                "GET", f"{self.base_url}/internal/file/{document_id}/content"
+                "GET", f"{self.base_url}/internal/file/by-reference/content?ref={reference}"
             )
-            if response.code == 404:
-                spool.close()
-                return None
             if response.code > 299:
+                discarded = Protocol()
+                response.deliverBody(discarded)
+                discarded.transport.abortConnection()
+                if response.code == 404:
+                    spool.close()
+                    return None
                 raise HttpResponseException(response.code, "Content download failed", b"")
             await make_deferred_yieldable(timeout_deferred(
                 read_body_with_max_size(response, spool, self.max_size),
