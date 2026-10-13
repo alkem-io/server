@@ -392,6 +392,31 @@ export class TemplateContentSpaceService {
     return templateContentSpace;
   }
 
+  /**
+   * Phase 2 for an about replaced by {@link updateAboutFromExistingSpace}:
+   * called once the content space is saved.
+   */
+  public async materializeAboutContent(
+    templateContentSpace: ITemplateContentSpace,
+    spaceAbout: CreateSpaceAboutInput,
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
+  ): Promise<void> {
+    if (!templateContentSpace.about) {
+      throw new EntityNotInitializedException(
+        'TemplateContentSpace about not initialized',
+        LogContext.TEMPLATES,
+        { templateContentSpaceId: templateContentSpace.id }
+      );
+    }
+    await this.spaceAboutService.materializeSpaceAboutContent(
+      templateContentSpace.about,
+      spaceAbout,
+      rollback,
+      actorContext
+    );
+  }
+
   public createLicenseTemplateContentSpace(): ILicense {
     return this.licenseService.createLicense({
       type: LicenseType.TEMPLATE_CONTENT_SPACE,

@@ -866,6 +866,105 @@ describe('TemplateService', () => {
       expect(inputs).toHaveLength(2);
       expect(inputs.every(input => input.isTemplate === true)).toBe(true);
     });
+
+    const updateFromSpace = async () => {
+      const innovationFlowService = (service as any)
+        .innovationFlowService as Mocked<InnovationFlowService>;
+      const inputCreatorService = (service as any)
+        .inputCreatorService as Mocked<InputCreatorService>;
+      innovationFlowService.updateInnovationFlowStates.mockResolvedValue({
+        states: [],
+      } as any);
+      inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
+        [{ nameID: 'first' }, { nameID: 'second' }] as any
+      );
+      inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout.mockReturnValue(
+        { profileData: { displayName: 'About' } } as any
+      );
+      inputCreatorService.withoutSourceBuckets.mockImplementation(
+        input => input
+      );
+      calloutsSetService.addCallouts.mockResolvedValue([
+        { id: 'c-2', nameID: 'second' },
+        { id: 'c-1', nameID: 'first' },
+      ] as any);
+
+      return (service as any).updateTemplateContentSpaceFromSpace(
+        {
+          id: 'space-1',
+          about: { id: 'about-src' },
+          collaboration: {
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [{ id: 'c' }] },
+          },
+        },
+        {
+          id: 'tcs-1',
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [] },
+          },
+        },
+        true,
+        actorContextData.actorContext,
+        'user-1'
+      );
+    };
+
+    it('copies the files of the new about and callouts as the saver, after the save', async () => {
+      const order: string[] = [];
+      templateContentSpaceService.save.mockImplementation(async (e: any) => {
+        order.push('save');
+        return e;
+      });
+      templateContentSpaceService.materializeAboutContent.mockImplementation(
+        async () => {
+          order.push('about');
+        }
+      );
+
+      await updateFromSpace();
+
+      expect(
+        templateContentSpaceService.materializeAboutContent
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'tcs-1' }),
+        { profileData: { displayName: 'About' } },
+        expect.any(Function),
+        actorContextData.actorContext
+      );
+      // Each callout is paired with its own input, whatever the order.
+      expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
+        { id: 'c-1', nameID: 'first' },
+        expect.objectContaining({ nameID: 'first' }),
+        expect.any(Function),
+        actorContextData.actorContext
+      );
+      expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
+        { id: 'c-2', nameID: 'second' },
+        expect.objectContaining({ nameID: 'second' }),
+        expect.any(Function),
+        actorContextData.actorContext
+      );
+      expect(order[0]).toBe('save');
+    });
+
+    it('keeps the update when a copy fails, leaving those references as written', async () => {
+      templateContentSpaceService.materializeAboutContent.mockRejectedValue(
+        new Error('file-service down')
+      );
+      templateContentSpaceService.save.mockImplementation(
+        async (entity: any) => entity
+      );
+
+      const result = await updateFromSpace();
+
+      expect(result).toEqual(expect.objectContaining({ id: 'tcs-1' }));
+      expect(
+        templateContentSpaceService.deleteTemplateContentSpaceOrFail
+      ).not.toHaveBeenCalled();
+    });
   });
 
   describe('ensureCalloutsInValidGroupsAndStates', () => {

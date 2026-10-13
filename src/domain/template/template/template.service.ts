@@ -679,16 +679,25 @@ export class TemplateService {
     // Create new subspaces from the source space
     if (sourceSpaceSubspaces && sourceSpaceSubspaces.length > 0) {
       for (const subspace of sourceSpaceSubspaces) {
+        const subspaceData = this.inputCreatorService.withoutSourceBuckets(
+          await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
+            subspace.id
+          )
+        );
         const subspaceContent =
           await this.templateContentSpaceService.createTemplateContentSpace(
-            this.inputCreatorService.withoutSourceBuckets(
-              await this.inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace(
-                subspace.id
-              )
-            ),
+            subspaceData,
             storageAggregator,
             actorContext
           );
+        await this.copyFilesIntoUpdatedTemplate(subspaceContent.id, rollback =>
+          this.templateContentSpaceService.materializeTemplateContentSpaceContent(
+            subspaceContent,
+            subspaceData,
+            rollback,
+            actorContext
+          )
+        );
         templateInput.contentSpace?.subspaces?.push(subspaceContent);
       }
     }
@@ -729,9 +738,11 @@ export class TemplateService {
       await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
         templateContentSpace.collaboration.id
       );
+    let calloutsFromSourceCollaboration: CreateCalloutInput[] = [];
+    let newCallouts: ICallout[] = [];
     if (addCallouts) {
       // Built from a live space: its callouts' buckets are not trusted.
-      const calloutsFromSourceCollaboration =
+      calloutsFromSourceCollaboration =
         this.inputCreatorService.withoutSourceBuckets(
           await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
             space.collaboration.calloutsSet.callouts ?? []
@@ -745,7 +756,7 @@ export class TemplateService {
         callout => (callout.isTemplate = true)
       );
 
-      const newCallouts = await this.calloutsSetService.addCallouts(
+      newCallouts = await this.calloutsSetService.addCallouts(
         templateContentSpace.collaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
@@ -763,13 +774,14 @@ export class TemplateService {
       templateContentSpace.collaboration
     );
 
+    const aboutData = this.inputCreatorService.withoutSourceBuckets(
+      this.inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout(
+        space.about
+      )
+    );
     await this.templateContentSpaceService.updateAboutFromExistingSpace(
       templateContentSpace,
-      this.inputCreatorService.withoutSourceBuckets(
-        this.inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout(
-          space.about
-        )
-      ),
+      aboutData,
       storageAggregator
     );
 
@@ -793,7 +805,56 @@ export class TemplateService {
     );
 
     // Need to save before applying authorization policy to get the callout ids
-    return await this.templateContentSpaceService.save(templateContentSpace);
+    const saved =
+      await this.templateContentSpaceService.save(templateContentSpace);
+
+    // Phase 2, as when a template is created: copies the files the saver can
+    // read into the template, and creates the profiles' visuals.
+    await this.copyFilesIntoUpdatedTemplate(saved.id, async rollback => {
+      await this.templateContentSpaceService.materializeAboutContent(
+        saved,
+        aboutData,
+        rollback,
+        actorContext
+      );
+      for (const callout of newCallouts) {
+        // addCallouts stamps each input with its callout's final nameID.
+        await this.calloutService.materializeCalloutContent(
+          callout,
+          calloutsFromSourceCollaboration.find(
+            data => data.nameID === callout.nameID
+          ),
+          rollback,
+          actorContext
+        );
+      }
+    });
+    return saved;
+  }
+
+  /**
+   * Runs the copy step for content rebuilt from a live space. The template's
+   * previous content is already replaced, so there is nothing to roll back to:
+   * a failed copy is logged and leaves those references as written, and the
+   * update goes on so its authorization reset still runs.
+   */
+  private async copyFilesIntoUpdatedTemplate(
+    templateContentSpaceID: string,
+    copy: (rollback: () => Promise<void>) => Promise<unknown>
+  ): Promise<void> {
+    try {
+      await copy(async () => undefined);
+    } catch (error) {
+      this.logger.error?.(
+        {
+          message:
+            'Copying files into a template updated from a space failed; its references stay as written',
+          templateContentSpaceId: templateContentSpaceID,
+        },
+        error instanceof Error ? (error.stack ?? '') : '',
+        LogContext.TEMPLATES
+      );
+    }
   }
 
   public ensureCalloutsInValidGroupsAndStates(
