@@ -248,46 +248,15 @@ export class OidcController {
     const client = this.oidcService.getClient();
     const rpId = client.metadata.client_id ?? null;
 
-    // FR-002/FR-003 — app mode is decided HERE and nowhere else, then carried
-    // in the signed pre-auth cookie. Both gating inputs are process-static
-    // (`appRedirectScheme` is constructor-computed, `redis` is an @Optional()
-    // constructor injection), so deciding once at the start of the flow loses
-    // nothing and leaves `/callback` with no availability branch at all.
+    // workspace#082 E — app mode is a property of ONE flow: decided on the QUERY
+    // leg, read by `/callback` from the signed pre-auth cookie, and
+    // revived by nothing (SEC-082-01). Why the query-less carry-forward this
+    // replaces was unnecessary as well as unsafe — Kratos v26.2.0 preserves
+    // `return_to` and the Hydra login challenge, so the bare `/login` it existed
+    // for is never reached inside the Hydra chain:
+    // specs/082-app-handoff-scheme-squat/spec.md §2 (owner).
     let appChallenge: string | undefined;
-    let carriedReturnTo: string | undefined;
-    if (Object.keys(req.query).length === 0) {
-      // FR-003 — the Kratos `registration.after.oidc` re-entry is a BARE
-      // `/login` with no query string, which is exactly why a query-only flag
-      // is provably lost on the social sign-up leg. Carry the challenge AND
-      // the returnTo: `login()` otherwise rebuilds returnTo from the query
-      // alone, silently replacing the user's destination with `/`.
-      //
-      // RESIDUAL (ENG-079-SRV-02): this leg carries no state, nonce or query,
-      // so it is indistinguishable from the re-entry of any OTHER flow live in
-      // the same jar. A web sign-in parked at the IdP while an app sign-in is
-      // started in the same (Android, Chrome-shared) jar therefore CAN come
-      // back through here and inherit the app flow's mode and returnTo. No
-      // discriminator exists at this point to separate them — a second cookie
-      // slot would not help, because the re-entry cannot say which slot it
-      // belongs to either — so the collision is accepted, not guarded. Owed to
-      // spec §4 Q3 as a named residual.
-      const cookieRaw = req.cookies?.[PRE_AUTH_COOKIE_NAME];
-      if (typeof cookieRaw === 'string' && cookieRaw.length > 0) {
-        try {
-          const carried = await verifyPreAuthCookie(
-            cookieRaw,
-            this.oidcService.getPreAuthSigningKey()
-          );
-          if (carried.app_challenge) {
-            appChallenge = carried.app_challenge;
-            carriedReturnTo = carried.returnTo;
-          }
-        } catch {
-          // An expired or tampered cookie simply does not carry a flow
-          // forward; this is an ordinary web sign-in.
-        }
-      }
-    } else if (
+    if (
       typeof appChallengeRaw === 'string' &&
       APP_CHALLENGE_PATTERN.test(appChallengeRaw) &&
       this.appRedirectScheme !== undefined &&
@@ -315,19 +284,20 @@ export class OidcController {
       //
       // RESIDUAL, owed to alkem-io/server#6545: `rel="noreferrer"` or a
       // `Referrer-Policy: no-referrer` on the attacker's own page strips it, so
-      // this raises the cost of the attack rather than closing it. It is a
-      // stopgap for a flow whose real fix is app attestation or a verified
-      // callback — the latter ruled out by operator decision, because a
-      // device-wide App Links claim is not acceptable with this many alkem.io
-      // links. Do NOT tighten this by guessing at another header: measure it on
-      // a device first, which is the step whose absence caused the original bug.
+      // this raises the cost of the attack rather than closing it; the
+      // zero-interaction form is closed by the Kratos session clear below.
+      // What remains, and the path-scoped-App-Link option, are recorded once at
+      // the `/callback` exit. Do NOT tighten this by guessing at another
+      // header: measure it on a device first, which is the step whose absence
+      // caused the original bug.
       (typeof req.headers.referer !== 'string' ||
         req.headers.referer.length === 0)
     ) {
-      // Any `/login` carrying a query string starts a FRESH mode decision, so
-      // an abandoned app flow in the same jar cannot bleed into it. The
-      // query-less branch above is the leg where that guarantee does not hold.
       appChallenge = appChallengeRaw;
+
+      // FR-001 (server#6545) — an app-initiated authorize must not be able to
+      // spend an ambient Kratos session.
+      this.clearKratosSessionCookie(res);
     }
 
     // App mode is the one decision in this flow with no observable trace: both
@@ -386,7 +356,7 @@ export class OidcController {
         state,
         nonce,
         code_verifier: codeVerifier,
-        returnTo: carriedReturnTo ?? validation.value,
+        returnTo: validation.value,
         issued_at: issuedAt,
         app_challenge: appChallenge,
       },
@@ -493,6 +463,26 @@ export class OidcController {
       LogContext.AUTH
     );
 
+    if (appMode) {
+      // FR-005 — establish NOTHING in this jar. The session belongs to the
+      // app's WebView, which cannot see the auth browser's cookies.
+      //
+      // FR-007 — clear the Kratos session cookie with the full
+      // {name, domain, path} triple. server#6315: a Set-Cookie that mismatches
+      // any one of the three does not fail, it stores a SECOND cookie and
+      // leaves the original alive — which is how a session survived sign-out
+      // in every environment that configures a domain.
+      //
+      // SEC-082-SRV-07 — placed HERE, at the app-mode decision, not at the
+      // success exit. Every `rejectCallback` below 302s to the app scheme
+      // without touching cookies, so a clear at the success exit alone left
+      // the jar holding a live 720 h Kratos session whenever the flow failed
+      // after the user had authenticated — e.g. a transient Redis outage on
+      // `handoff_store_failed`. One owner, one placement, every exit equal.
+      this.clearKratosSessionCookie(res);
+      this.clearPreAuthCookie(res);
+    }
+
     if (typeof queryState !== 'string' || queryState !== preAuth.state) {
       return rejectCallback(
         res,
@@ -556,21 +546,8 @@ export class OidcController {
     };
 
     if (appMode) {
-      // FR-005 — establish NOTHING in this jar. The session belongs to the
-      // app's WebView, which cannot see the auth browser's cookies.
-      //
-      // FR-007 — clear the Kratos session cookie with the full
-      // {name, domain, path} triple. server#6315: a Set-Cookie that mismatches
-      // any one of the three does not fail, it stores a SECOND cookie and
-      // leaves the original alive — which is how a session survived sign-out
-      // in every environment that configures a domain.
-      res.cookie(this.kratosSessionCookieName, '', {
-        domain: this.sessionCookieDomain,
-        path: '/',
-        maxAge: 0,
-      });
-      this.clearPreAuthCookie(res);
-
+      // The jar was already emptied where app mode was decided, so that every
+      // exit below leaves it in the same state. Nothing to clear here.
       let code: string;
       try {
         code = await storeAppHandoff(appMode.redis, {
@@ -597,10 +574,14 @@ export class OidcController {
       // by whoever started the flow. So the verifier binding defeats
       // INTERCEPTION of a legitimate flow, but not a flow an attacker-installed
       // app initiates itself against a live Kratos session in the shared Chrome
-      // jar. Owed to spec §9 as a named residual under the existing operator /
-      // security-owner gate — NOT yet recorded there. The narrowing, if it is
-      // ever taken, is an Android-only verified App Link; the iOS 15 target
-      // cannot use one, which is why the scheme stays.
+      // jar. workspace#082 closes the zero-interaction form by clearing the
+      // Kratos session on the app-mode query leg of `/login`; what remains is
+      // recorded in spec §6 and ADR 0020's 2026-10-07 amendment. The closure,
+      // if taken, is app attestation or a PATH-SCOPED verified callback — a
+      // wholesale `/*` App Links claim is the part the operator ruled out
+      // (client-appstore/docs/decisions.md §6, spec §7 OG-8). The scheme stays
+      // today because ASWebAuthenticationSession accepts https callbacks only
+      // from iOS 17.4 and the app targets iOS 15.0 (079 D3).
       res.redirect(302, `${appMode.scheme}:/auth/callback?code=${code}`);
       return;
     }
@@ -796,6 +777,19 @@ export class OidcController {
       request_id: ctx.correlationId,
       granted_scope: bundle.scope,
       rp_id: ctx.rpId,
+    });
+  }
+
+  /**
+   * workspace#082 FR-001 (server#6545) — ONE owner of the Kratos SSO clear, shared by the
+   * app-mode `/login` query leg and the app-mode `/callback` exit. Two shapes would not fail:
+   * see the `{name, domain, path}` note at the `/callback` call site (server#6315).
+   */
+  private clearKratosSessionCookie(res: Response): void {
+    res.cookie(this.kratosSessionCookieName, '', {
+      domain: this.sessionCookieDomain,
+      path: '/',
+      maxAge: 0,
     });
   }
 

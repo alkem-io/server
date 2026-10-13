@@ -384,8 +384,13 @@ describe('RoleSetResolverMutations', () => {
         authorization: { id: 'auth-1' },
       } as any;
       const mockOrg = { id: 'org-1' } as any;
+      const extendedAuth = { id: 'extended-auth' } as any;
 
       (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+      (
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval as Mock
+      ).mockResolvedValue(extendedAuth);
       (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
         undefined
       );
@@ -401,6 +406,169 @@ describe('RoleSetResolverMutations', () => {
       } as any);
 
       expect(result).toBe(mockOrg);
+      expect(
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval
+      ).toHaveBeenCalledWith(mockRoleSet, 'org-1');
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        extendedAuth,
+        AuthorizationPrivilege.GRANT,
+        expect.any(String)
+      );
+      expect(roleSetService.removeActorFromRole).toHaveBeenCalledWith(
+        mockRoleSet,
+        RoleName.MEMBER,
+        'org-1'
+      );
+    });
+
+    it('should not remove the organization when the extended policy denies GRANT', async () => {
+      const actorContext = { actorID: 'outsider-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+      (
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval as Mock
+      ).mockResolvedValue({ id: 'extended-auth' });
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        () => {
+          throw new Error('Authorization: unable to grant');
+        }
+      );
+
+      await expect(
+        resolver.removeRoleFromOrganization(actorContext, {
+          roleSetID: 'rs-1',
+          actorID: 'org-1',
+          role: RoleName.MEMBER,
+        } as any)
+      ).rejects.toThrow('Authorization: unable to grant');
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+    });
+
+    it('should not extend the policy for an organization admin removing only Lead', async () => {
+      const actorContext = { actorID: 'org-admin-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        () => {
+          throw new Error('Authorization: unable to grant');
+        }
+      );
+
+      await expect(
+        resolver.removeRoleFromOrganization(actorContext, {
+          roleSetID: 'rs-1',
+          actorID: 'org-1',
+          role: RoleName.LEAD,
+        } as any)
+      ).rejects.toThrow('Authorization: unable to grant');
+      expect(
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval
+      ).not.toHaveBeenCalled();
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        mockRoleSet.authorization,
+        AuthorizationPrivilege.GRANT,
+        expect.any(String)
+      );
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+    });
+
+    it('should not remove anything when a GRANT holder targets an actor that is not an organization', async () => {
+      const actorContext = { actorID: 'space-admin-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockRejectedValue(new Error('Organization not found'));
+
+      await expect(
+        resolver.removeRoleFromOrganization(actorContext, {
+          roleSetID: 'rs-1',
+          actorID: 'user-1',
+          role: RoleName.MEMBER,
+        } as any)
+      ).rejects.toThrow('Organization not found');
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
+    });
+
+    it('should skip the organization lookup when the actor already holds GRANT on the role set', async () => {
+      const actorContext = { actorID: 'space-admin-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (roleSetService.removeActorFromRole as Mock).mockResolvedValue(undefined);
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockResolvedValue({ id: 'org-1' });
+
+      await resolver.removeRoleFromOrganization(actorContext, {
+        roleSetID: 'rs-1',
+        actorID: 'org-1',
+        role: RoleName.MEMBER,
+      } as any);
+
+      expect(
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval
+      ).not.toHaveBeenCalled();
+      expect(roleSetService.removeActorFromRole).toHaveBeenCalledWith(
+        mockRoleSet,
+        RoleName.MEMBER,
+        'org-1'
+      );
+    });
+
+    it('should not remove anything when the actor is not an organization', async () => {
+      const actorContext = { actorID: 'admin-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+      (
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval as Mock
+      ).mockRejectedValue(new Error('Organization not found'));
+
+      await expect(
+        resolver.removeRoleFromOrganization(actorContext, {
+          roleSetID: 'rs-1',
+          actorID: 'user-1',
+          role: RoleName.MEMBER,
+        } as any)
+      ).rejects.toThrow('Organization not found');
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
     });
   });
 
@@ -702,6 +870,89 @@ describe('RoleSetResolverMutations', () => {
       } as any);
 
       expect(result).toBe(mockActor);
+    });
+
+    it('should remove role from organization actor through the extended policy', async () => {
+      const actorContext = { actorID: 'org-admin-1' } as any;
+      const mockActor = { id: 'org-1', type: ActorType.ORGANIZATION } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+      const extendedAuth = { id: 'extended-auth' } as any;
+
+      (actorLookupService.getActorByIdOrFail as Mock).mockResolvedValue(
+        mockActor
+      );
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+      (
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval as Mock
+      ).mockResolvedValue(extendedAuth);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (roleSetService.removeActorFromRole as Mock).mockResolvedValue('org-1');
+
+      const result = await resolver.removeRole(actorContext, {
+        roleSetID: 'rs-1',
+        actorID: 'org-1',
+        role: RoleName.MEMBER,
+      } as any);
+
+      expect(result).toBe(mockActor);
+      expect(
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval
+      ).toHaveBeenCalledWith(mockRoleSet, 'org-1');
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        extendedAuth,
+        AuthorizationPrivilege.GRANT,
+        expect.any(String)
+      );
+      expect(roleSetService.removeActorFromRole).toHaveBeenCalledWith(
+        mockRoleSet,
+        RoleName.MEMBER,
+        'org-1',
+        true
+      );
+      expect(
+        userAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should not remove an organization actor when the extended policy denies GRANT', async () => {
+      const actorContext = { actorID: 'outsider-1' } as any;
+      const mockActor = { id: 'org-1', type: ActorType.ORGANIZATION } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+      } as any;
+
+      (actorLookupService.getActorByIdOrFail as Mock).mockResolvedValue(
+        mockActor
+      );
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
+      (
+        roleSetAuthorizationService.extendAuthorizationPolicyForOrganizationRemoval as Mock
+      ).mockResolvedValue({ id: 'extended-auth' });
+      (authorizationService.grantAccessOrFail as Mock).mockImplementation(
+        () => {
+          throw new Error('Authorization: unable to grant');
+        }
+      );
+
+      await expect(
+        resolver.removeRole(actorContext, {
+          roleSetID: 'rs-1',
+          actorID: 'org-1',
+          role: RoleName.LEAD,
+        } as any)
+      ).rejects.toThrow('Authorization: unable to grant');
+      expect(roleSetService.removeActorFromRole).not.toHaveBeenCalled();
     });
 
     it('should throw for unsupported actor type', async () => {
