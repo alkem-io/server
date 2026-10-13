@@ -498,6 +498,7 @@ export class SpaceService {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {
         subspaces: true,
+        profile: true,
         collaboration: true,
         community: true,
         about: true,
@@ -528,6 +529,17 @@ export class SpaceService {
         `Unable to remove Space (${space.id}), with level ${space.level}, as it contains ${space.subspaces.length} subspaces`,
         LogContext.SPACES
       );
+    }
+
+    // The Space actor's own profile: `actor.profileId` is ON DELETE SET NULL,
+    // so deleting the actor row below would leave it and its subtree behind.
+    // Deleted before any other step, the Matrix space included: its bucket
+    // delete can refuse (a document mid-signing) or fail in file-service, and
+    // failing here leaves the rest of the space untouched and the delete
+    // retryable. deleteProfile is not itself atomic — children it removed
+    // before a failure stay removed — but a retry finishes the job.
+    if (space.profile) {
+      await this.profileService.deleteProfile(space.profile.id);
     }
 
     // Delete the corresponding Matrix space BEFORE cascade deletion of child entities.
