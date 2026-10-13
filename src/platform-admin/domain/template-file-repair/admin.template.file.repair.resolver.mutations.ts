@@ -22,7 +22,7 @@ export class AdminTemplateFileRepairResolverMutations {
 
   @Mutation(() => AdminTemplateFileRepairResult, {
     description:
-      "Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. Rewriting a whiteboard also needs the operator to be able to edit it, e.g. through Platform Content Full Access. A dry run by default.",
+      "Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. A dry run by default.",
   })
   async adminRepairTemplateFiles(
     @CurrentActor() actorContext: ActorContext,
@@ -44,8 +44,7 @@ export class AdminTemplateFileRepairResolverMutations {
     try {
       const result = await this.templateFileRepairService.repair(
         repairData.templateIDs,
-        repairData.dryRun,
-        actorContext
+        repairData.dryRun
       );
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,

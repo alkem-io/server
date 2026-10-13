@@ -2119,4 +2119,60 @@ describe('WhiteboardService', () => {
       );
     });
   });
+
+  describe('copyForeignAssetsIntoOwnBucket', () => {
+    const owner = { actorID: '', credentials: [] } as unknown as ActorContext;
+
+    const arrange = (rehomed: string) => {
+      vi.spyOn(service, 'getWhiteboardOrFail').mockResolvedValue({
+        id: 'wb-1',
+        profile: { storageBucket: { id: 'own-bucket' } },
+      } as any);
+      vi.spyOn(service, 'getWhiteboardContent').mockResolvedValue('stored');
+      vi.spyOn(service, 'materializeContentIntoBucket').mockResolvedValue({
+        content: rehomed,
+        createdDocumentIDs: ['copy-1'],
+      });
+      vi.spyOn(service, 'assetFilesChanged').mockImplementation(
+        async (before, after) => before !== after
+      );
+      return vi
+        .spyOn(service, 'updateWhiteboardContent')
+        .mockResolvedValue({} as any);
+    };
+
+    it('stores the rehomed snapshot directly, never through a live room', async () => {
+      const update = arrange('rehomed');
+
+      await expect(
+        service.copyForeignAssetsIntoOwnBucket('wb-1', owner)
+      ).resolves.toBe(true);
+
+      expect(update).toHaveBeenCalledWith('wb-1', 'rehomed', owner);
+      expect(collaborationDocumentService.mutate).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing when no image moved', async () => {
+      const update = arrange('stored');
+
+      await expect(
+        service.copyForeignAssetsIntoOwnBucket('wb-1', owner)
+      ).resolves.toBe(false);
+
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('deletes the copies it made when the write fails', async () => {
+      arrange('rehomed').mockRejectedValue(new Error('write failed'));
+      const cleanup = vi
+        .spyOn(service, 'deleteMaterializedContentDocuments')
+        .mockResolvedValue(undefined);
+
+      await expect(
+        service.copyForeignAssetsIntoOwnBucket('wb-1', owner)
+      ).rejects.toThrow('write failed');
+
+      expect(cleanup).toHaveBeenCalledWith(['copy-1']);
+    });
+  });
 });

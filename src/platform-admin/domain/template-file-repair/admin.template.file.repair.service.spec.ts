@@ -66,15 +66,6 @@ const createService = (
       ];
     }
     if (sql.includes('from memo')) return [{ contentPointer: null }];
-    if (sql.includes('from whiteboard w')) {
-      return [
-        {
-          authorization: readableBy(
-            AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
-          ),
-        },
-      ];
-    }
     if (sql.startsWith('select id from file')) return [{ id: FOREIGN }];
     return [];
   });
@@ -120,22 +111,11 @@ const createService = (
   return { service, query, profileDocuments, whiteboards };
 };
 
-const actor = {
-  actorID: 'ops-1',
-  credentials: [
-    { type: AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN, resourceID: '' },
-    {
-      type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-      resourceID: '',
-    },
-  ],
-} as ActorContext;
-
 describe('AdminTemplateFileRepairService', () => {
   it('lists only references stored outside their own bucket on a dry run, and copies nothing', async () => {
     const ctx = createService([slot({})]);
 
-    const result = await ctx.service.repair(undefined, true, actor);
+    const result = await ctx.service.repair(undefined, true);
 
     expect(result.references).toEqual([
       expect.objectContaining({
@@ -163,7 +143,7 @@ describe('AdminTemplateFileRepairService', () => {
       [AuthorizationCredential.SPACE_MEMBER]
     );
 
-    const result = await ctx.service.repair(undefined, false, actor);
+    const result = await ctx.service.repair(undefined, false);
 
     expect(result.references).toEqual([
       expect.objectContaining({
@@ -186,7 +166,7 @@ describe('AdminTemplateFileRepairService', () => {
       { spaceID: null, accountID: 'account-1' }
     );
 
-    const result = await ctx.service.repair(undefined, true, actor);
+    const result = await ctx.service.repair(undefined, true);
 
     expect(result.references[0].ownerCanRead).toBe(true);
   });
@@ -201,7 +181,7 @@ describe('AdminTemplateFileRepairService', () => {
       }
     );
 
-    const result = await ctx.service.repair(undefined, true, actor);
+    const result = await ctx.service.repair(undefined, true);
 
     expect(result.references[0].ownerCanRead).toBe(false);
   });
@@ -212,7 +192,7 @@ describe('AdminTemplateFileRepairService', () => {
       slot({ kind: 'whiteboard', entityID: 'wb-1', text: null }),
     ]);
 
-    const result = await ctx.service.repair(undefined, false, actor);
+    const result = await ctx.service.repair(undefined, false);
 
     const owner = expect.objectContaining({
       actorID: '',
@@ -232,8 +212,7 @@ describe('AdminTemplateFileRepairService', () => {
     );
     expect(ctx.whiteboards.copyForeignAssetsIntoOwnBucket).toHaveBeenCalledWith(
       'wb-1',
-      owner,
-      'ops-1'
+      owner
     );
     expect(result.copiedReferences).toBe(2);
     expect(result.failed).toEqual([]);
@@ -248,7 +227,7 @@ describe('AdminTemplateFileRepairService', () => {
       }),
     ]);
 
-    const result = await ctx.service.repair(['template-1'], false, actor);
+    const result = await ctx.service.repair(['template-1'], false);
 
     expect(ctx.whiteboards.listAssetFileIDs).toHaveBeenCalledWith(
       'stored-snapshot'
@@ -270,7 +249,7 @@ describe('AdminTemplateFileRepairService', () => {
       async (text: string) => text
     );
 
-    const result = await ctx.service.repair(['template-1'], false, actor);
+    const result = await ctx.service.repair(['template-1'], false);
 
     expect(result.copiedReferences).toBe(0);
     expect(result.references[0].copied).toBe(false);
@@ -283,7 +262,7 @@ describe('AdminTemplateFileRepairService', () => {
       slot({ kind: 'flowStateDescription', entityID: 'state-1' }),
     ]);
 
-    const result = await ctx.service.repair(undefined, false, actor);
+    const result = await ctx.service.repair(undefined, false);
 
     expect(ctx.query).toHaveBeenCalledWith(UPDATE_SQL('space_about', 'who'), [
       'repaired markdown',
@@ -304,7 +283,7 @@ describe('AdminTemplateFileRepairService', () => {
       }),
     ]);
 
-    await ctx.service.repair(undefined, false, actor);
+    await ctx.service.repair(undefined, false);
 
     expect(
       ctx.profileDocuments.reuploadDocumentsInMarkdownToStorageBucket
@@ -315,38 +294,23 @@ describe('AdminTemplateFileRepairService', () => {
     );
   });
 
-  it('refuses to rewrite a whiteboard the operator cannot edit, copying nothing', async () => {
+  it('repairs a whiteboard whatever the operator may edit: no user writes it', async () => {
     const ctx = createService([
       slot({ kind: 'whiteboard', entityID: 'wb-1', text: null }),
     ]);
-    const opsOnly = {
-      actorID: 'ops-1',
-      credentials: [
-        {
-          type: AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-          resourceID: '',
-        },
-      ],
-    } as ActorContext;
 
-    const result = await ctx.service.repair(undefined, false, opsOnly);
+    const result = await ctx.service.repair(undefined, false);
 
-    expect(
-      ctx.whiteboards.copyForeignAssetsIntoOwnBucket
-    ).not.toHaveBeenCalled();
-    expect(result.failed).toEqual([
-      expect.objectContaining({
-        location: 'whiteboard',
-        reason: expect.stringContaining('Platform Content Full Access'),
-      }),
-    ]);
+    expect(ctx.whiteboards.copyForeignAssetsIntoOwnBucket).toHaveBeenCalled();
+    expect(result.copiedReferences).toBe(1);
+    expect(result.failed).toEqual([]);
   });
 
   it('reports references to files that no longer exist', async () => {
     const GONE = '33333333-3333-3333-3333-333333333333';
     const ctx = createService([slot({ text: `![x](${URL_BASE}/${GONE})` })]);
 
-    const result = await ctx.service.repair(undefined, true, actor);
+    const result = await ctx.service.repair(undefined, true);
 
     expect(result.missingFiles).toEqual([
       expect.objectContaining({ fileID: GONE, location: 'profileDescription' }),
@@ -384,7 +348,7 @@ describe('AdminTemplateFileRepairService', () => {
       return [];
     });
 
-    const result = await ctx.service.repair(undefined, false, actor);
+    const result = await ctx.service.repair(undefined, false);
 
     expect(result.references).toEqual([
       expect.objectContaining({ location: 'collaboraDocument', copied: false }),
@@ -401,7 +365,7 @@ describe('AdminTemplateFileRepairService', () => {
       sql.includes('with u as (update') ? [{ updated: 0 }] : answer(sql, params)
     );
 
-    const result = await ctx.service.repair(undefined, false, actor);
+    const result = await ctx.service.repair(undefined, false);
 
     expect(result.copiedReferences).toBe(0);
     expect(result.references[0].copied).toBe(false);
@@ -416,8 +380,8 @@ describe('AdminTemplateFileRepairService', () => {
   it('processes no template for an empty list, and every template when the list is omitted', async () => {
     const ctx = createService([]);
 
-    await ctx.service.repair([], true, actor);
-    await ctx.service.repair(undefined, true, actor);
+    await ctx.service.repair([], true);
+    await ctx.service.repair(undefined, true);
 
     const filters = ctx.query.mock.calls
       .filter(([sql]) => sql.includes('with recursive'))
@@ -428,7 +392,7 @@ describe('AdminTemplateFileRepairService', () => {
   it('counts the templates scanned, including those with nothing to report', async () => {
     const ctx = createService([]);
 
-    const result = await ctx.service.repair(['template-1'], true, actor);
+    const result = await ctx.service.repair(['template-1'], true);
 
     expect(result.templatesScanned).toBe(1);
     expect(result.references).toEqual([]);
@@ -448,7 +412,7 @@ describe('AdminTemplateFileRepairService', () => {
       getContentBatch: vi.fn().mockResolvedValue([{ found: false }]),
     };
 
-    const result = await ctx.service.repair(undefined, true, actor);
+    const result = await ctx.service.repair(undefined, true);
 
     expect(result.failed).toEqual([
       expect.objectContaining({
@@ -466,7 +430,7 @@ describe('AdminTemplateFileRepairService', () => {
       `![a](${URL_BASE}/${FOREIGN})`
     );
 
-    const result = await ctx.service.repair(['template-1'], false, actor);
+    const result = await ctx.service.repair(['template-1'], false);
 
     expect(result.references).toEqual([
       expect.objectContaining({ location: 'memo', copied: false }),

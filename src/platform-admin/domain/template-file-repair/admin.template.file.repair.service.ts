@@ -242,8 +242,7 @@ export class AdminTemplateFileRepairService {
 
   public async repair(
     templateIDs: string[] | undefined,
-    dryRun: boolean,
-    actorContext: ActorContext
+    dryRun: boolean
   ): Promise<AdminTemplateFileRepairResult> {
     // An omitted list means every template; an empty one means none.
     const templateFilter = templateIDs ?? null;
@@ -296,7 +295,7 @@ export class AdminTemplateFileRepairService {
       let copied = false;
       if (!dryRun && copyable > 0) {
         try {
-          copied = await this.repairSlot(slot, owner, actorContext);
+          copied = await this.repairSlot(slot, owner);
           if (copied) {
             copiedReferences += copyable;
           } else {
@@ -459,21 +458,13 @@ export class AdminTemplateFileRepairService {
    * Copies the slot's foreign files the owner can read; true when the stored
    * reference changed.
    */
-  private async repairSlot(
-    slot: Slot,
-    owner: ActorContext,
-    operator: ActorContext
-  ): Promise<boolean> {
+  private async repairSlot(slot: Slot, owner: ActorContext): Promise<boolean> {
     const copyAuthority: DocumentCopyAuthority = { actorContext: owner };
     switch (slot.kind) {
       case 'whiteboard':
-        // The rewrite goes through the whiteboard's live room as the operator,
-        // so the operator needs the same right to edit it as any other editor.
-        await this.assertOperatorCanEditWhiteboard(slot.entityID, operator);
         return await this.whiteboardService.copyForeignAssetsIntoOwnBucket(
           slot.entityID,
-          owner,
-          operator.actorID
+          owner
         );
       case 'collaboraDocument':
         throw new ValidationException(
@@ -561,34 +552,6 @@ export class AdminTemplateFileRepairService {
         ? `${base}/${fileID}`
         : url
     );
-  }
-
-  private async assertOperatorCanEditWhiteboard(
-    whiteboardID: string,
-    operator: ActorContext
-  ): Promise<void> {
-    const [row]: { authorization: IAuthorizationPolicy | null }[] =
-      await this.entityManager.query(
-        `select json_build_object('id', ap.id, 'type', ap.type,
-                  'credentialRules', ap."credentialRules",
-                  'privilegeRules', ap."privilegeRules") authorization
-           from whiteboard w join authorization_policy ap on ap.id = w."authorizationId"
-          where w.id = $1`,
-        [whiteboardID]
-      );
-    if (
-      !row?.authorization ||
-      !this.authorizationService.isAccessGranted(
-        operator,
-        row.authorization,
-        AuthorizationPrivilege.UPDATE_CONTENT
-      )
-    ) {
-      throw new ValidationException(
-        'The operator cannot edit this whiteboard: run the repair as a user who also holds Platform Content Full Access',
-        LogContext.TEMPLATES
-      );
-    }
   }
 
   private async updateText(slot: Slot, value: string): Promise<void> {

@@ -515,15 +515,19 @@ export class WhiteboardService {
 
   /**
    * Copies the images a whiteboard references from another bucket into its own
-   * bucket, for those `copyAs` can read, and points the whiteboard at the
-   * copies through its live room as `writerID`. Used by the admin template
-   * repair, which copies as the template's owner and writes as the operator.
+   * bucket, for those `copyAs` can read, and stores the whiteboard pointing at
+   * the copies. Used by the admin template repair, which copies as the
+   * template's owner.
+   *
+   * Written to the stored snapshot directly, as a template edit is, not through
+   * a live room: no user's right to edit the whiteboard is involved. A room
+   * open on the whiteboard at that moment saves its own copy over it later;
+   * running the repair again then re-applies the change.
    * Returns whether the whiteboard now points elsewhere.
    */
   public async copyForeignAssetsIntoOwnBucket(
     whiteboardID: string,
-    copyAs: ActorContext,
-    writerID: string
+    copyAs: ActorContext
   ): Promise<boolean> {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardID, {
       loadEagerRelations: false,
@@ -549,7 +553,20 @@ export class WhiteboardService {
     if (!(await this.assetFilesChanged(content, materialized.content))) {
       return false;
     }
-    await this.applyMaterializedContent(whiteboardID, materialized, writerID);
+    try {
+      // Every locator now lives in this bucket or stays as written, so this
+      // second pass copies nothing; it writes the snapshot.
+      await this.updateWhiteboardContent(
+        whiteboardID,
+        materialized.content,
+        copyAs
+      );
+    } catch (error) {
+      await this.deleteMaterializedContentDocuments(
+        materialized.createdDocumentIDs
+      );
+      throw error;
+    }
     return true;
   }
 

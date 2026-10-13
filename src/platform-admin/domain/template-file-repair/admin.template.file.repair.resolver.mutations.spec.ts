@@ -46,7 +46,7 @@ describe('AdminTemplateFileRepairResolverMutations', () => {
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'adminRepairTemplateFiles'
     );
-    expect(ctx.repair.repair).toHaveBeenCalledWith(undefined, true, ctx.actor);
+    expect(ctx.repair.repair).toHaveBeenCalledWith(undefined, true);
     expect(ctx.audit.recordOperation).toHaveBeenCalledWith(
       expect.objectContaining({
         actorID: 'actor-1',
