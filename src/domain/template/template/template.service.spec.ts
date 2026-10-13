@@ -873,6 +873,7 @@ describe('TemplateService', () => {
       const inputCreatorService = (service as any)
         .inputCreatorService as Mocked<InputCreatorService>;
       innovationFlowService.updateInnovationFlowStates.mockResolvedValue({
+        id: 'flow-1',
         states: [],
       } as any);
       inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
@@ -947,6 +948,9 @@ describe('TemplateService', () => {
         expect.any(Function),
         actorContextData.actorContext
       );
+      expect(
+        (service as any).innovationFlowService.copyStateDescriptionFiles
+      ).toHaveBeenCalledWith('flow-1', actorContextData.actorContext);
       expect(order[0]).toBe('save');
     });
 
@@ -961,6 +965,11 @@ describe('TemplateService', () => {
       const result = await updateFromSpace();
 
       expect(result).toEqual(expect.objectContaining({ id: 'tcs-1' }));
+      // The other parts are still copied.
+      expect(calloutService.materializeCalloutContent).toHaveBeenCalledTimes(2);
+      expect(
+        (service as any).innovationFlowService.copyStateDescriptionFiles
+      ).toHaveBeenCalledWith('flow-1', actorContextData.actorContext);
       expect(
         templateContentSpaceService.deleteTemplateContentSpaceOrFail
       ).not.toHaveBeenCalled();

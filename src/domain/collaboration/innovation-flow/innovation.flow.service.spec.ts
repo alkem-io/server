@@ -235,6 +235,32 @@ describe('InnovationFlowService', () => {
       expect(innovationFlowStateService.save).toHaveBeenCalledTimes(1);
       expect(innovationFlowStateService.save).toHaveBeenCalledWith(changed);
     });
+
+    it('re-homes the states of an existing flow as the given actor, trusting no source bucket', async () => {
+      const profile = {
+        id: 'flow-profile',
+        storageBucket: { id: 'flow-bucket', documents: [] },
+      };
+      const state = { id: 's1', description: '![a](old)' };
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'flow-1',
+        profile,
+        states: [state],
+      } as any);
+      const profileService = (service as any).profileService;
+      profileService.materializeMarkdownIntoProfileBucket = vi.fn(
+        async (markdown: string) => markdown.replace('old', 'new')
+      );
+      const actor = { actorID: 'saver' } as any;
+
+      await service.copyStateDescriptionFiles('flow-1', actor);
+
+      expect(
+        profileService.materializeMarkdownIntoProfileBucket
+      ).toHaveBeenCalledWith('![a](old)', profile, undefined, actor);
+      expect(innovationFlowStateService.save).toHaveBeenCalledWith(state);
+      expect(state.description).toBe('![a](new)');
+    });
   });
 
   describe('save', () => {

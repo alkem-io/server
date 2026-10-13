@@ -809,26 +809,35 @@ export class TemplateService {
       await this.templateContentSpaceService.save(templateContentSpace);
 
     // Phase 2, as when a template is created: copies the files the saver can
-    // read into the template, and creates the profiles' visuals.
-    await this.copyFilesIntoUpdatedTemplate(saved.id, async rollback => {
-      await this.templateContentSpaceService.materializeAboutContent(
+    // read into the template, and creates the profiles' visuals. Each part is
+    // copied on its own, so one failure leaves only that part as written.
+    await this.copyFilesIntoUpdatedTemplate(saved.id, rollback =>
+      this.templateContentSpaceService.materializeAboutContent(
         saved,
         aboutData,
         rollback,
         actorContext
-      );
-      for (const callout of newCallouts) {
-        // addCallouts stamps each input with its callout's final nameID.
-        await this.calloutService.materializeCalloutContent(
+      )
+    );
+    await this.copyFilesIntoUpdatedTemplate(saved.id, () =>
+      this.innovationFlowService.copyStateDescriptionFiles(
+        saved.collaboration!.innovationFlow!.id, // Ensured on entry
+        actorContext
+      )
+    );
+    for (const callout of newCallouts) {
+      // addCallouts stamps each input with its callout's final nameID.
+      await this.copyFilesIntoUpdatedTemplate(saved.id, rollback =>
+        this.calloutService.materializeCalloutContent(
           callout,
           calloutsFromSourceCollaboration.find(
             data => data.nameID === callout.nameID
           ),
           rollback,
           actorContext
-        );
-      }
-    });
+        )
+      );
+    }
     return saved;
   }
 

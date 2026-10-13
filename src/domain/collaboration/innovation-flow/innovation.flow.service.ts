@@ -11,6 +11,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { CreateProfileInput } from '@domain/common/profile/dto';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -146,19 +147,11 @@ export class InnovationFlowService {
     actorContext?: ActorContext
   ): Promise<void> {
     try {
-      for (const state of innovationFlow.states ?? []) {
-        const description =
-          await this.profileService.materializeMarkdownIntoProfileBucket(
-            state.description ?? '',
-            innovationFlow.profile,
-            innovationFlowData.profile,
-            actorContext
-          );
-        if (description !== (state.description ?? '')) {
-          state.description = description;
-          await this.innovationFlowStateService.save(state);
-        }
-      }
+      await this.rehomeStateDescriptions(
+        innovationFlow,
+        innovationFlowData.profile,
+        actorContext
+      );
     } catch (error) {
       await this.deleteInnovationFlow(innovationFlow.id).catch(
         rollbackError => {
@@ -175,6 +168,47 @@ export class InnovationFlowService {
         }
       );
       throw error;
+    }
+  }
+
+  /**
+   * The same re-homing for states replaced on an existing flow, as when a
+   * template is updated from a space. No rollback: the caller decides what a
+   * failure means.
+   */
+  public async copyStateDescriptionFiles(
+    innovationFlowID: string,
+    actorContext: ActorContext
+  ): Promise<void> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowID,
+      {
+        relations: {
+          states: true,
+          profile: { storageBucket: { documents: true } },
+        },
+      }
+    );
+    await this.rehomeStateDescriptions(innovationFlow, undefined, actorContext);
+  }
+
+  private async rehomeStateDescriptions(
+    innovationFlow: IInnovationFlow,
+    profileData: CreateProfileInput | undefined,
+    actorContext?: ActorContext
+  ): Promise<void> {
+    for (const state of innovationFlow.states ?? []) {
+      const description =
+        await this.profileService.materializeMarkdownIntoProfileBucket(
+          state.description ?? '',
+          innovationFlow.profile,
+          profileData,
+          actorContext
+        );
+      if (description !== (state.description ?? '')) {
+        state.description = description;
+        await this.innovationFlowStateService.save(state);
+      }
     }
   }
 
