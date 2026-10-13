@@ -473,7 +473,7 @@ services:
     hostname: matrix-adapter
     # The 082 upload capability requires a reviewed published image; the default
     # remains the actual released baseline until artifact gate A is satisfied.
-    image: ${MATRIX_ADAPTER_IMAGE:-alkemio/matrix-adapter:v0.8.21}
+    image: ${MATRIX_ADAPTER_IMAGE:-alkemio/matrix-adapter:v0.8.22}
     depends_on:
       - rabbitmq
     environment:
@@ -629,7 +629,7 @@ services:
     hostname: file-service
     # Select the published 082 reference-serving/conditional-storage capability only
     # after review; do not infer a future release tag from this feature branch.
-    image: ${FILE_SERVICE_IMAGE:-alkemio/file-service:v0.3.2}
+    image: ${FILE_SERVICE_IMAGE:-alkemio/file-service:v0.3.3}
     depends_on:
       postgres:
         condition: service_healthy
