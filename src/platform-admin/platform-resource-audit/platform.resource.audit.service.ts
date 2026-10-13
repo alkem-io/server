@@ -24,6 +24,10 @@ export interface RecordResourceEventInput {
   toAccountId?: string;
   visibility?: string;
   licensePlan?: string;
+  /** Form-response deletes only — ids, never answer content. */
+  calloutId?: string;
+  formId?: string;
+  respondentUserId?: string;
   outcome:
     | 'moved'
     | 'deleted'
@@ -57,18 +61,17 @@ export class PlatformResourceAuditService {
   ) {}
 
   /**
-   * T058 convenience wrapper — resolves FR-025 attribution (T058a) from the
-   * calling actor's OWN credentials and this surface's declared owners/
-   * legacy reachers, then writes exactly as `recordEvent` would. Callers on
-   * a DUAL-PATH surface (A8) MUST only invoke this from the branch where
-   * the authorization result shows the PLATFORM privilege authorized the
-   * call (FR-018a) — never on the ordinary-owner branch; this method
+   * Convenience wrapper — resolves the initiator role from the calling
+   * actor's OWN credentials and this surface's declared owners, then writes
+   * exactly as `recordEvent` would. Callers on a DUAL-PATH surface (A8) MUST
+   * only invoke this from the branch where the authorization result shows
+   * the PLATFORM privilege authorized the call — never on the
+   * ordinary-owner branch; this method
    * cannot see which branch fired, it trusts its caller like every writer.
    */
   public async recordEventForActor(
     actorContext: ActorContext,
     intendedOwners: readonly AuthorizationCredential[],
-    legacyReachers: readonly AuthorizationCredential[],
     input: Omit<RecordResourceEventInput, 'initiatorUserId' | 'initiatorRole'>
   ): Promise<void> {
     let initiatorRole: PlatformAuditInitiatorRole;
@@ -78,7 +81,6 @@ export class PlatformResourceAuditService {
           c => c.type as AuthorizationCredential
         ),
         intendedOwners,
-        legacyReachers,
       });
     } catch (error) {
       // FR-027 fail-open: an attribution defect must not fail an
@@ -113,6 +115,9 @@ export class PlatformResourceAuditService {
         toAccountId: input.toAccountId,
         visibility: input.visibility,
         licensePlan: input.licensePlan,
+        calloutId: input.calloutId,
+        formId: input.formId,
+        respondentUserId: input.respondentUserId,
       };
       const outcome = this.mapOutcome(input.outcome);
       const entry = this.auditRepository.create({

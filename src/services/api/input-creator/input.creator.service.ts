@@ -11,6 +11,8 @@ import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dt
 import { TaskBoardService } from '@domain/collaboration/callout/task-board/task.board.service';
 import { ICalloutContributionDefaults } from '@domain/collaboration/callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CreateCalloutContributionDefaultsInput } from '@domain/collaboration/callout-contribution-defaults/dto/callout.contribution.defaults.dto.create';
+import { ICalloutForm } from '@domain/collaboration/callout-form/callout.form.interface';
+import { CreateCalloutFormInput } from '@domain/collaboration/callout-form/dto/callout.form.dto.create';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { CreateCalloutFramingInput } from '@domain/collaboration/callout-framing/dto/callout.framing.dto.create';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
@@ -21,6 +23,8 @@ import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
+import { CreatePollInput } from '@domain/collaboration/poll/dto/poll.dto.create';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { CreateClassificationInput } from '@domain/common/classification/dto/classification.dto.create';
 import { CreateLocationInput } from '@domain/common/location/dto/location.dto.create';
@@ -131,6 +135,10 @@ export class InputCreatorService {
           mediaGallery: {
             visuals: true,
           },
+          poll: {
+            options: true,
+          },
+          form: true,
         },
       },
     });
@@ -150,18 +158,6 @@ export class InputCreatorService {
           calloutId: calloutID,
         }
       );
-    }
-
-    if (callout.framing.type === CalloutFramingType.POLL) {
-      this.logger.debug?.(
-        {
-          message:
-            'Skipping POLL callout during template serialization — poll framing is not templatable',
-          calloutId: calloutID,
-        },
-        LogContext.INPUT_CREATOR
-      );
-      return null;
     }
 
     if (callout.framing.type === CalloutFramingType.COLLABORA_DOCUMENT) {
@@ -549,6 +545,68 @@ export class InputCreatorService {
             })),
           }
         : undefined,
+      poll: calloutFraming.poll
+        ? this.buildCreatePollInputFromPoll(calloutFraming.poll)
+        : undefined,
+      form: calloutFraming.form
+        ? this.buildCreateCalloutFormInputFromCalloutForm(calloutFraming.form)
+        : undefined,
+    };
+  }
+
+  /**
+   * The definition of a Poll only: title, options in display order and
+   * settings. Votes, status and deadline are never copied, so a Poll created
+   * from it starts open with no votes.
+   */
+  private buildCreatePollInputFromPoll(poll: IPoll): CreatePollInput {
+    if (!poll.options) {
+      throw new EntityNotInitializedException(
+        'Poll options not loaded',
+        LogContext.INPUT_CREATOR,
+        { pollId: poll.id }
+      );
+    }
+    const { settings } = poll;
+    return {
+      title: poll.title,
+      options: [...poll.options]
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map(option => option.text),
+      settings: {
+        minResponses: settings.minResponses,
+        maxResponses: settings.maxResponses,
+        resultsVisibility: settings.resultsVisibility,
+        resultsDetail: settings.resultsDetail,
+        allowContributorsAddOptions: settings.allowContributorsAddOptions,
+      },
+    };
+  }
+
+  /**
+   * The definition of a Form only. Question and option ids are dropped: the
+   * new Form mints its own (the definition validator rejects ids it does not
+   * already hold). Settings are copied as they are; responses never are.
+   */
+  private buildCreateCalloutFormInputFromCalloutForm(
+    form: ICalloutForm
+  ): CreateCalloutFormInput {
+    return {
+      title: form.title ?? undefined,
+      description: form.description ?? undefined,
+      questions: form.questions.map(question => ({
+        prompt: question.prompt,
+        explanation: question.explanation ?? undefined,
+        type: question.type,
+        required: question.required,
+        options: question.options?.map(option => ({ label: option.label })),
+      })),
+      settings: {
+        visibility: form.visibility,
+        responseMode: form.responseMode,
+        state: form.state,
+        defaultCollapsed: form.defaultCollapsed ?? false,
+      },
     };
   }
 

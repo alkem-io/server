@@ -17,3 +17,16 @@ export const ANONYMOUS_ACTOR_ID = NIL_UUID;
  * this value; authorization-evaluation-service maps it to global-guest.
  */
 export const GUEST_ACTOR_ID = '00000000-0000-0000-0000-000000000001';
+
+/**
+ * workspace#079-app-sso-handoff FR-008 — the verifier for a native sign-in
+ * handoff travels in this REQUEST HEADER, never in a URL: a query parameter is
+ * already in the access log, the reverse-proxy log and every APM span by the
+ * time a handler runs.
+ *
+ * Node lowercases incoming header names, so the handler reads
+ * `req.headers[APP_VERIFIER_HEADER.toLowerCase()]` — which is what makes the
+ * canonical mixed-case spelling the shell sends load-bearing here rather than
+ * a literal that only a cross-repo grep ever reads.
+ */
+export const APP_VERIFIER_HEADER = 'X-Alkemio-App-Verifier';

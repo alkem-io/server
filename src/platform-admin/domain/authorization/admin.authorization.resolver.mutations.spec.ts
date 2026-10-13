@@ -1,20 +1,15 @@
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { SpaceService } from '@domain/space/space/space.service';
-import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
 import { AdminAuthorizationResolverMutations } from './admin.authorization.resolver.mutations';
 import { AdminAuthorizationService } from './admin.authorization.service';
@@ -26,7 +21,6 @@ describe('AdminAuthorizationResolverMutations', () => {
   let adminAuthorizationService: Record<string, Mock>;
   let platformAuthorizationPolicyService: Record<string, Mock>;
   let authResetService: Record<string, Mock>;
-  let notificationPlatformAdapter: Record<string, Mock>;
   let virtualContributorService: Record<string, Mock>;
   let spaceService: Record<string, Mock>;
   let entityManager: Record<string, Mock>;
@@ -60,9 +54,6 @@ describe('AdminAuthorizationResolverMutations', () => {
       PlatformAuthorizationPolicyService
     ) as any;
     authResetService = module.get(AuthResetService) as any;
-    notificationPlatformAdapter = module.get(
-      NotificationPlatformAdapter
-    ) as any;
     virtualContributorService = module.get(VirtualContributorService) as any;
     spaceService = module.get(SpaceService) as any;
     entityManager = mockEntityManager as any;
@@ -72,97 +63,13 @@ describe('AdminAuthorizationResolverMutations', () => {
     expect(resolver).toBeDefined();
   });
 
-  describe('grantCredentialToUser', () => {
-    it('should check authorization, grant credential, and notify', async () => {
-      const user = { id: 'user-1' };
-      const grantData = { type: 'global-admin', userID: 'user-1' } as any;
-      adminAuthorizationService.grantCredentialToUser.mockResolvedValue(user);
-      notificationPlatformAdapter.platformGlobalRoleChanged.mockResolvedValue(
-        undefined
-      );
-
-      const result = await resolver.grantCredentialToUser(
-        grantData,
-        actorContext
-      );
-
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
-      expect(
-        adminAuthorizationService.grantCredentialToUser
-      ).toHaveBeenCalledWith(grantData);
-      expect(result).toEqual(user);
-    });
-  });
-
-  describe('revokeCredentialFromUser', () => {
-    it('should check authorization, revoke credential, and notify', async () => {
-      const user = { id: 'user-1' };
-      const revokeData = { type: 'global-admin', userID: 'user-1' } as any;
-      adminAuthorizationService.revokeCredentialFromUser.mockResolvedValue(
-        user
-      );
-      notificationPlatformAdapter.platformGlobalRoleChanged.mockResolvedValue(
-        undefined
-      );
-
-      const result = await resolver.revokeCredentialFromUser(
-        revokeData,
-        actorContext
-      );
-
-      expect(
-        adminAuthorizationService.revokeCredentialFromUser
-      ).toHaveBeenCalledWith(revokeData);
-      expect(result).toEqual(user);
-    });
-  });
-
-  describe('grantCredentialToOrganization', () => {
-    it('should check authorization and grant credential', async () => {
-      const org = { id: 'org-1' };
-      const grantData = {
-        type: 'global-admin',
-        organizationID: 'org-1',
-      } as any;
-      adminAuthorizationService.grantCredentialToOrganization.mockResolvedValue(
-        org
-      );
-
-      const result = await resolver.grantCredentialToOrganization(
-        grantData,
-        actorContext
-      );
-
-      expect(
-        adminAuthorizationService.grantCredentialToOrganization
-      ).toHaveBeenCalledWith(grantData);
-      expect(result).toEqual(org);
-    });
-  });
-
-  describe('revokeCredentialFromOrganization', () => {
-    it('should check authorization and revoke credential', async () => {
-      const org = { id: 'org-1' };
-      const revokeData = {
-        type: 'global-admin',
-        organizationID: 'org-1',
-      } as any;
-      adminAuthorizationService.revokeCredentialFromOrganization.mockResolvedValue(
-        org
-      );
-
-      const result = await resolver.revokeCredentialFromOrganization(
-        revokeData,
-        actorContext
-      );
-
-      expect(
-        adminAuthorizationService.revokeCredentialFromOrganization
-      ).toHaveBeenCalledWith(revokeData);
-      expect(result).toEqual(org);
-    });
-  });
-
+  // 027-platform-role-redesign (T080, Slice B, FR-022): the suites for the
+  // four credential mutations — and the `FR-022 pin` suite that proved
+  // platform-roles-admin could not reach them — are deleted with the
+  // mutations themselves. There is no Slice B assertion to leave behind
+  // here: a resolver cannot be tested for denying a method it no longer has,
+  // and the surface's absence is asserted where absence is checkable — the
+  // GraphQL schema diff (T083) and the `test-suites` denial cells.
   describe('authorizationPolicyResetAll', () => {
     it('should check platform authorization and publish reset', async () => {
       const platformPolicy = { id: 'platform-auth' };
@@ -259,124 +166,6 @@ describe('AdminAuthorizationResolverMutations', () => {
         virtualContributorService.refreshAllBodiesOfKnowledge
       ).toHaveBeenCalledWith(actorContext);
       expect(result).toBe(true);
-    });
-  });
-
-  // 027-platform-role-redesign (T034a, research C10/D24, thirteenth analyze
-  // pass): the four FR-022 credential mutations ride a resolver-local,
-  // hardcoded IN_MEMORY authorization policy (`authorizationGlobalAdminPolicy`,
-  // built once in the constructor from a fixed one-element
-  // `[AuthorizationRoleGlobal.GLOBAL_ADMIN]` array) — entirely decoupled
-  // from the platform authorization policy's GRANT_GLOBAL_ADMINS credential
-  // rule that T034 widens to platform-roles-admin. This suite proves that
-  // decoupling holds with REAL AuthorizationPolicyService/AuthorizationService
-  // instances (no mocked grant check): platform-roles-admin alone MUST be
-  // denied all four, and legacy global-admin MUST still be granted.
-  describe('FR-022 pin: grant/revokeCredentialTo{User,Organization} stay global-admin-only in Slice A', () => {
-    let realResolver: AdminAuthorizationResolverMutations;
-    let realAdminAuthorizationService: Record<string, Mock>;
-
-    const buildActorContext = (
-      credentialType: AuthorizationCredential
-    ): ActorContext =>
-      ({
-        actorID: 'actor-1',
-        credentials: [{ type: credentialType, resourceID: '' }],
-      }) as any as ActorContext;
-
-    beforeEach(async () => {
-      const mockEntityManager = { find: vi.fn() };
-      const module: TestingModule = await Test.createTestingModule({
-        providers: [
-          AdminAuthorizationResolverMutations,
-          AuthorizationPolicyService,
-          AuthorizationService,
-          MockWinstonProvider,
-          repositoryProviderMockFactory(AuthorizationPolicy),
-          {
-            provide: getEntityManagerToken('default'),
-            useValue: mockEntityManager,
-          },
-        ],
-      })
-        .useMocker(token => {
-          if (token === ConfigService) {
-            return { get: vi.fn().mockReturnValue(500) };
-          }
-          return defaultMockerFactory(token);
-        })
-        .compile();
-
-      realResolver = module.get(AdminAuthorizationResolverMutations);
-      realAdminAuthorizationService = module.get(
-        AdminAuthorizationService
-      ) as any;
-    });
-
-    it('denies grantCredentialToUser to a platform-roles-admin-only actor', async () => {
-      const actor = buildActorContext(
-        AuthorizationCredential.PLATFORM_ROLES_ADMIN
-      );
-      await expect(
-        realResolver.grantCredentialToUser(
-          { type: 'global-admin', userID: 'user-1' } as any,
-          actor
-        )
-      ).rejects.toThrow();
-      expect(
-        realAdminAuthorizationService.grantCredentialToUser
-      ).not.toHaveBeenCalled();
-    });
-
-    it('denies revokeCredentialFromUser to a platform-roles-admin-only actor', async () => {
-      const actor = buildActorContext(
-        AuthorizationCredential.PLATFORM_ROLES_ADMIN
-      );
-      await expect(
-        realResolver.revokeCredentialFromUser(
-          { type: 'global-admin', userID: 'user-1' } as any,
-          actor
-        )
-      ).rejects.toThrow();
-    });
-
-    it('denies grantCredentialToOrganization to a platform-roles-admin-only actor', async () => {
-      const actor = buildActorContext(
-        AuthorizationCredential.PLATFORM_ROLES_ADMIN
-      );
-      await expect(
-        realResolver.grantCredentialToOrganization(
-          { type: 'global-admin', organizationID: 'org-1' } as any,
-          actor
-        )
-      ).rejects.toThrow();
-    });
-
-    it('denies revokeCredentialFromOrganization to a platform-roles-admin-only actor', async () => {
-      const actor = buildActorContext(
-        AuthorizationCredential.PLATFORM_ROLES_ADMIN
-      );
-      await expect(
-        realResolver.revokeCredentialFromOrganization(
-          { type: 'global-admin', organizationID: 'org-1' } as any,
-          actor
-        )
-      ).rejects.toThrow();
-    });
-
-    it('still grants grantCredentialToUser to a legacy global-admin actor', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
-      const user = { id: 'user-1' };
-      realAdminAuthorizationService.grantCredentialToUser.mockResolvedValue(
-        user
-      );
-
-      const result = await realResolver.grantCredentialToUser(
-        { type: 'global-admin', userID: 'user-1' } as any,
-        actor
-      );
-
-      expect(result).toEqual(user);
     });
   });
   // ===================================================================

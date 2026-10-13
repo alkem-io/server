@@ -215,6 +215,52 @@ describe('CollaborationService', () => {
       expect(timelineService.createTimeline).not.toHaveBeenCalled();
     });
 
+    it('forwards the FORM capability to addCallouts only when the caller grants it', async () => {
+      const calloutsSet = {
+        id: 'cs-1',
+        callouts: [],
+        tagsetTemplateSet: { id: 'tts-1', tagsetTemplates: [] },
+      } as any;
+      vi.mocked(calloutsSetService.createCalloutsSet).mockReturnValue(
+        calloutsSet
+      );
+      vi.mocked(calloutsSetService.addTagsetTemplate).mockReturnValue({
+        id: 'tts-1',
+        tagsetTemplates: [],
+      } as any);
+      vi.mocked(calloutsSetService.save).mockResolvedValue(calloutsSet);
+      vi.mocked(calloutsSetService.getTagsetTemplate).mockReturnValue({
+        name: 'flow-state',
+        allowedValues: ['State A'],
+      } as any);
+      vi.mocked(calloutsSetService.addCallouts).mockResolvedValue([]);
+      const collaborationData = () =>
+        ({
+          calloutsSetData: { calloutsData: [{ framing: { type: 'form' } }] },
+          innovationFlowData: { states: [{ displayName: 'State A' }] },
+          isTemplate: true,
+        }) as any;
+
+      await service.createCollaboration(
+        collaborationData(),
+        storageAggregator,
+        actorContextData.actorContext,
+        { allowFormFraming: true }
+      );
+      expect(
+        vi.mocked(calloutsSetService.addCallouts).mock.lastCall?.[6]
+      ).toEqual({ allowFormFraming: true });
+
+      await service.createCollaboration(
+        collaborationData(),
+        storageAggregator,
+        actorContextData.actorContext
+      );
+      expect(
+        vi.mocked(calloutsSetService.addCallouts).mock.lastCall?.[6]
+      ).toBeUndefined();
+    });
+
     it('should throw RelationshipNotFoundException when flow states tagset template is not found', async () => {
       const collaborationData = {
         calloutsSetData: { calloutsData: [] },

@@ -71,6 +71,35 @@ describe('TemplateContentSpaceService', () => {
     licenseService = module.get(LicenseService) as Mocked<LicenseService>;
   });
 
+  describe('createTemplateContentSpace', () => {
+    it('grants the FORM capability when building the template collaboration', async () => {
+      spaceAboutService.createSpaceAbout.mockResolvedValue({
+        id: 'about-1',
+      } as any);
+      collaborationService.createCollaboration.mockResolvedValue({
+        id: 'collab-1',
+      } as any);
+      repository.save.mockImplementation(async (entity: any) => entity);
+
+      await service.createTemplateContentSpace(
+        {
+          about: {},
+          collaborationData: { calloutsSetData: {} },
+          subspaces: [],
+        } as any,
+        {} as any,
+        {} as any
+      );
+
+      expect(collaborationService.createCollaboration).toHaveBeenCalledWith(
+        expect.objectContaining({ isTemplate: true }),
+        {},
+        {},
+        { allowFormFraming: true }
+      );
+    });
+  });
+
   describe('getTemplateContentSpaceOrFail', () => {
     it('should return the template content space when found', async () => {
       const expected = { id: 'tcs-1' } as TemplateContentSpace;

@@ -1,3 +1,4 @@
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
 import { SpaceLevel } from '@common/enums/space.level';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -7,6 +8,7 @@ import {
 } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CreateRoleInput } from '@domain/access/role/dto/role.dto.create';
+import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { CreateFormInput } from '@domain/common/form/dto/form.dto.create';
@@ -40,6 +42,21 @@ export class SpaceDefaultsService {
     collaborationData: CreateCollaborationOnSpaceInput,
     templateSpaceContent: ITemplateContentSpace
   ): Promise<CreateCollaborationOnSpaceInput> {
+    // Space creation may create Forms only from the template's callouts: a Form
+    // sent with the create request itself is refused, as before templates
+    // carried Forms.
+    if (
+      collaborationData.calloutsSetData?.calloutsData?.some(
+        callout => callout.framing?.type === CalloutFramingType.FORM
+      )
+    ) {
+      throw new ValidationException(
+        'FORM framing can only be created through createCalloutOnCalloutsSet by a space admin',
+        LogContext.COLLABORATION,
+        { code: CalloutFormErrorCode.FORM_FRAMING_NOT_ALLOWED }
+      );
+    }
+
     const collaborationDataFromTemplate =
       await this.getCreateCollaborationInputFromContentSpace(
         templateSpaceContent

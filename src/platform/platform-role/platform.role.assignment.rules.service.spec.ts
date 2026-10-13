@@ -51,11 +51,11 @@ describe('PlatformRoleAssignmentRulesService', () => {
       expect(violation).toEqual({
         ruleId: 'assigner-capability',
         message:
-          'Forbidden: grant-global-admins required to assign role platform-support',
+          'Forbidden: platform-roles-assign required to assign role platform-support',
       });
     });
 
-    it('checks FEATURE_ROLE_ASSIGN (not GRANT_GLOBAL_ADMINS) for a feature-* role', () => {
+    it('checks FEATURE_ROLE_ASSIGN (not PLATFORM_ROLES_ASSIGN) for a feature-* role', () => {
       authorizationService.isAccessGranted.mockReturnValue(false);
       const violation = service.evaluate(
         baseInput({ role: RoleName.FEATURE_BETA_TESTER })
@@ -325,7 +325,7 @@ describe('PlatformRoleAssignmentRulesService', () => {
     it('throws a ForbiddenException carrying the violated ruleId in details', () => {
       authorizationService.isAccessGranted.mockReturnValue(false);
       expect(() => service.evaluateOrFail(baseInput())).toThrow(
-        /grant-global-admins required to assign role platform-support/
+        /platform-roles-assign required to assign role platform-support/
       );
     });
 
@@ -362,7 +362,7 @@ describe('PlatformRoleAssignmentRulesService', () => {
       expect(violation).toEqual({
         ruleId: 'assigner-capability',
         message:
-          'Forbidden: grant-global-admins required to assign role platform-roles-admin',
+          'Forbidden: platform-roles-assign required to assign role platform-roles-admin',
       });
     });
   });

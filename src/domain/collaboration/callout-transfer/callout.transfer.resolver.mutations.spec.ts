@@ -101,9 +101,49 @@ describe('CalloutTransferResolverMutations', () => {
     ).toHaveBeenCalledWith(
       actorContext,
       expect.any(Array),
-      expect.any(Array),
       expect.objectContaining({ resourceId: 'callout-1', outcome: 'moved' })
     );
+  });
+
+  it('a callout with a Form is rejected before any write, with the reason code', async () => {
+    authorizationService.grantAccessOrFail.mockReturnValue(true);
+    calloutService.getCalloutOrFail.mockResolvedValue({
+      ...callout,
+      framing: { type: 'form' },
+    });
+
+    await expect(
+      resolver.transferCallout(actorContext, {
+        calloutID: 'callout-1',
+        targetCalloutsSetID: 'target-set-1',
+      } as any)
+    ).rejects.toMatchObject({
+      details: { code: 'FORM_TRANSFER_NOT_ALLOWED' },
+    });
+
+    expect(calloutTransferService.transferCallout).not.toHaveBeenCalled();
+    expect(
+      calloutAuthorizationService.applyAuthorizationPolicy
+    ).not.toHaveBeenCalled();
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).not.toHaveBeenCalled();
+  });
+
+  it('a callout with any other framing is still transferred (positive control)', async () => {
+    authorizationService.grantAccessOrFail.mockReturnValue(true);
+    calloutService.getCalloutOrFail.mockResolvedValue({
+      ...callout,
+      framing: { type: 'poll' },
+    });
+    calloutTransferService.transferCallout.mockResolvedValue(undefined);
+
+    await resolver.transferCallout(actorContext, {
+      calloutID: 'callout-1',
+      targetCalloutsSetID: 'target-set-1',
+    } as any);
+
+    expect(calloutTransferService.transferCallout).toHaveBeenCalled();
   });
 
   it('denied on the OFFER side: propagates the failure without transferring or auditing', async () => {

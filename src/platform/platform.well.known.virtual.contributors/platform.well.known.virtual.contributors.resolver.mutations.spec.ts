@@ -14,24 +14,15 @@ import { PlatformWellKnownVirtualContributorsResolverMutations } from './platfor
 import { PlatformWellKnownVirtualContributorsService } from './platform.well.known.virtual.contributors.service';
 
 /**
- * 027-platform-role-redesign (sec-server-23 fix, 2026-07-31).
- *
- * A10 consolidated a family of platform-settings mutations onto ONE
- * `PLATFORM_SETTINGS_ADMIN` privilege — but the family did not share a
- * pre-feature gate. Most members were already on PLATFORM_SETTINGS_ADMIN
- * (pre-feature reachers {GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER});
- * `setPlatformWellKnownVirtualContributor` was on the PLATFORM_ADMIN
- * catch-all (pre-feature reachers {GLOBAL_ADMIN, GLOBAL_SUPPORT,
- * GLOBAL_LICENSE_MANAGER}). Consolidation therefore grants each member the
- * UNION, and GLOBAL_PLATFORM_MANAGER gains a mutation it never held.
- *
- * The resolver pins its own check to this surface's own pre-feature set plus
- * the owning role. These tests wire the REAL AuthorizationPolicyService +
+ * `setPlatformWellKnownVirtualContributor` belongs to A10, the
+ * platform-settings family, and the resolver pins its own check to the
+ * owning role (`platform-settings-admin`) alone rather than the shared
+ * platform policy. These tests wire the REAL AuthorizationPolicyService +
  * AuthorizationService so the constructor builds a genuine policy — a mocked
  * `grantAccessOrFail` would assert nothing about who the pin actually admits.
  *
  * Same shape as `emailChangePolicy — real-engine integration`
- * (admin.user.email.change.resolver.mutations.spec.ts, sec-server-7).
+ * (admin.user.email.change.resolver.mutations.spec.ts).
  */
 describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
   let resolver: PlatformWellKnownVirtualContributorsResolverMutations;
@@ -81,33 +72,17 @@ describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
   });
 
   describe('wellKnownVirtualContributorSetPolicy — real-engine integration', () => {
-    it('DENIES a global-platform-manager-only actor — it never held this surface pre-feature (sec-server-23)', async () => {
+    // `platform-settings-admin` is the OWNING role (spec row 4 owns the
+    // well-known VC); an actor holding no platform role is denied.
+    it('DENIES an actor holding no platform role at all', async () => {
       const actor = buildActorContext(
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER
+        AuthorizationCredential.GLOBAL_REGISTERED
       );
 
       await expect(
         resolver.setPlatformWellKnownVirtualContributor(actor, mappingData)
       ).rejects.toBeDefined();
       expect(wellKnownService.setMapping).not.toHaveBeenCalled();
-    });
-
-    // The three credentials that DID reach this mutation through its
-    // pre-feature PLATFORM_ADMIN gate. Slice A is additive: none of them may
-    // lose access as a side effect of pinning GLOBAL_PLATFORM_MANAGER out.
-    it.each([
-      AuthorizationCredential.GLOBAL_ADMIN,
-      AuthorizationCredential.GLOBAL_SUPPORT,
-      AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-    ])('ALLOWS %s — pre-existing legacy reach preserved', async credential => {
-      const actor = buildActorContext(credential);
-
-      await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
-
-      expect(wellKnownService.setMapping).toHaveBeenCalledWith(
-        mappingData.wellKnown,
-        mappingData.virtualContributorID
-      );
     });
 
     it('ALLOWS the owning platform-settings-admin role', async () => {
@@ -118,27 +93,17 @@ describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
       await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
 
       expect(wellKnownService.setMapping).toHaveBeenCalled();
-    });
-
-    it('records the configuration change with a legacy-reacher list that MATCHES the pin', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
-
-      await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
-
-      // Declaring GLOBAL_PLATFORM_MANAGER here would let
-      // `resolveInitiatorRole` attribute an actor the gate above rejects —
-      // an audit trail describing a caller that cannot exist.
-      const [, , legacyReachers] =
-        configurationAuditService.recordChangeForActor.mock.calls[0];
-      expect(legacyReachers).not.toContain(
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER
-      );
-      expect(legacyReachers).toEqual(
-        expect.arrayContaining([
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        ])
+      // The configuration audit row is attributed to the owning role.
+      expect(
+        configurationAuditService.recordChangeForActor
+      ).toHaveBeenCalledWith(
+        actor,
+        [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+        expect.objectContaining({
+          setting: `wellKnownVirtualContributor:${mappingData.wellKnown}`,
+          newValue: mappingData.virtualContributorID,
+          outcome: 'success',
+        })
       );
     });
   });

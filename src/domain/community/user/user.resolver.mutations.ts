@@ -12,7 +12,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UserSettingsHomeSpaceValidationService } from '../user-settings/user.settings.home.space.validation.service';
 import { UpdateUserInput } from './dto';
 import { UserAuthorizationResetInput } from './dto/user.dto.reset.authorization';
-import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UpdateUserSettingsInput } from './dto/user.dto.update.settings';
 import { UserService } from './user.service';
 import { UserAuthorizationService } from './user.service.authorization';
@@ -163,22 +162,11 @@ export class UserResolverMutations {
     return await this.userService.getUserByIdOrFail(user.id);
   }
 
-  @Mutation(() => IUser, {
-    description:
-      'Update the platform settings, such as nameID, email, for the specified User.',
-  })
-  async updateUserPlatformSettings(
-    @CurrentActor() actorContext: ActorContext,
-    @Args('updateData') updateData: UpdateUserPlatformSettingsInput
-  ): Promise<IUser> {
-    const user = await this.userService.getUserByIdOrFail(updateData.userID);
-    await this.authorizationService.grantAccessOrFail(
-      actorContext,
-      user.authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `update platform settings on User: ${user.id}`
-    );
-
-    return await this.userService.updateUserPlatformSettings(updateData);
-  }
+  // 027-platform-role-redesign (T078, FR-020): `updateUserPlatformSettings`
+  // is GONE. Its two fields left by different doors — `nameID` to the generic
+  // `updateActorNameID` (A17), and `email` deleted outright as the bug it was:
+  // it wrote `user.email` directly, bypassing the Kratos identity, so a user
+  // edited this way could no longer log in with the address the platform
+  // showed. A login email changes only through `adminUserEmailChange` (A4),
+  // which writes both sides and audits the change.
 }

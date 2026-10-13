@@ -365,7 +365,6 @@ describe('CommunicationAdapter', () => {
         content: 'pic.png',
         attachments: [
           {
-            document_id: 'doc-1',
             media_id: 'actual-media',
             display_name: 'pic.png',
             mime_type: 'image/png',
@@ -382,23 +381,20 @@ describe('CommunicationAdapter', () => {
         roomID: 'room-uuid-123',
         actorID: 'actor-uuid-456',
         message: '',
-        attachments: [
-          {
-            documentId: 'doc-1',
-            displayName: 'pic.png',
-            mimeType: 'image/png',
-            size: 1000,
-            width: 10,
-            height: 20,
-          },
-        ],
+        existingMedia: {
+          media_id: 'requested-media',
+          display_name: 'pic.png',
+          mime_type: 'image/png',
+          size: 1000,
+          width: 10,
+          height: 20,
+        },
       });
 
       expect(result.roomID).toBe('room-uuid-123');
       expect(result.message).toBe('pic.png');
       expect(result.rawAttachments).toEqual([
         {
-          document_id: 'doc-1',
           media_id: 'actual-media',
           display_name: 'pic.png',
           mime_type: 'image/png',

@@ -5,6 +5,7 @@ import { PlatformInvitationModule } from '@domain/access/invitation.platform/pla
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutContributionModule } from '@domain/collaboration/callout-contribution/callout.contribution.module';
+import { CalloutFormModule } from '@domain/collaboration/callout-form/callout.form.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
@@ -62,6 +63,7 @@ import { LookupService } from './lookup.service';
     PostModule,
     ProfileModule,
     CalloutModule,
+    CalloutFormModule,
     CalloutContributionModule,
     CalendarModule,
     CalendarEventModule,

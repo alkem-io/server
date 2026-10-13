@@ -33,27 +33,16 @@ export class AdminIdentityResolverFields {
     })
     filter?: IdentityVerificationStatusFilter
   ): Promise<KratosIdentityDto[]> {
-    // 027-platform-role-redesign (live finding F6) — the read half of A5.
-    // `platform-users-admin` owns identity reset and account deletion but was
-    // denied the list those act on, because this field rode the retiring
-    // `PLATFORM_ADMIN` catch-all. Additive: the catch-all is still checked
-    // first, so no legacy holder loses the list.
-    const policy =
-      await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
-    if (
-      !this.authorizationService.isAccessGranted(
-        actorContext,
-        policy,
-        AuthorizationPrivilege.PLATFORM_USERS_ADMIN
-      )
-    ) {
-      this.authorizationService.grantAccessOrFail(
-        actorContext,
-        policy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
-        'adminIdentities'
-      );
-    }
+    // 027-platform-role-redesign (live finding F6, closed by T074 in Slice B)
+    // — the read half of A5. `platform-users-admin` owns identity reset and
+    // account deletion, so it owns the list those act on; the retired
+    // `PLATFORM_ADMIN` catch-all this field rode is gone.
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
+      'adminIdentities'
+    );
 
     return this.adminIdentityService.getIdentitiesByVerificationStatus(filter);
   }

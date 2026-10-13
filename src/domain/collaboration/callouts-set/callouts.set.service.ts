@@ -219,7 +219,12 @@ export class CalloutsSetService {
     storageAggregator: IStorageAggregator,
     actorContext: ActorContext,
     userID: string | undefined,
-    parentSpaceId?: string
+    parentSpaceId?: string,
+    // Forwarded to createCallout: only the template carriers (template
+    // content spaces, space creation from a template, applying a space
+    // template) grant FORM framings; every other caller leaves it unset so a
+    // FORM callout is rejected.
+    options?: { allowFormFraming?: boolean }
   ): Promise<ICallout[]> {
     if (!calloutsSet.tagsetTemplateSet || !calloutsSet.callouts) {
       throw new EntityNotInitializedException(
@@ -251,7 +256,8 @@ export class CalloutsSetService {
         storageAggregator,
         actorContext,
         userID,
-        parentSpaceId
+        parentSpaceId,
+        options
       );
       callouts.push(callout);
     }
@@ -300,7 +306,8 @@ export class CalloutsSetService {
   public async createCalloutOnCalloutsSet(
     calloutData: CreateCalloutOnCalloutsSetInput,
     actorContext: ActorContext,
-    userID: string
+    userID: string,
+    options?: { allowFormFraming?: boolean }
   ): Promise<ICallout> {
     const collaborationID = calloutData.calloutsSetID;
     const calloutsSet = await this.getCalloutsSetOrFail(collaborationID, {
@@ -350,7 +357,8 @@ export class CalloutsSetService {
       storageAggregator,
       actorContext,
       userID,
-      parentSpaceId
+      parentSpaceId,
+      options
     );
     // this has the effect of adding the callout to the collaboration
     callout.calloutsSet = calloutsSet;

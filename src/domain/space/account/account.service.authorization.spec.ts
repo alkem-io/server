@@ -531,7 +531,6 @@ describe('AccountAuthorizationService', () => {
       const granted = privilegesGrantedToRole();
       for (const excluded of [
         AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.CREATE,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
@@ -605,8 +604,6 @@ describe('AccountAuthorizationService', () => {
         (c: any) => typeof c === 'string'
       );
       expect(bareCredentials).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
       ]);
       expect(
@@ -629,8 +626,6 @@ describe('AccountAuthorizationService', () => {
         (c: any) => typeof c === 'string'
       );
       expect(bareCredentials).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
       ]);
       expect(rules[0].cascade).toBe(false);
@@ -662,18 +657,17 @@ describe('AccountAuthorizationService', () => {
       );
       expect(spacesReader).toHaveLength(1);
       expect(spacesReader[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_SPACES_READER,
         AuthorizationCredential.PLATFORM_SPACES_READER,
       ]);
       expect(spacesReader[0].cascade).toBe(true);
     });
 
     // QA server-C1-12 (ruling (a)): CREATE_INNOVATION_HUB was held ONLY by the
-    // legacy GA/GLM/GS manageGlobalRoles rule, so Slice B would have left no
-    // role able to create a hub. Platform License Manager (GLM's successor
-    // for "create space/hub/pack/VC", spec.md row 8) gets it on its own
-    // non-cascading rule; the legacy rule is untouched (Slice A additive).
-    it('CREATE_INNOVATION_HUB (QA server-C1-12, A12): platform-license-manager on its OWN non-cascading rule, legacy GA/GLM/GS rule unchanged', async () => {
+    // legacy GA/GLM/GS manageGlobalRoles rule. Platform License Manager (GLM's
+    // successor for "create space/hub/pack/VC", spec.md row 8) gets it on its
+    // own non-cascading rule; Slice B (T074/T076) re-anchored the
+    // manageGlobalRoles rule onto Platform Content Full Access.
+    it('CREATE_INNOVATION_HUB (QA server-C1-12, A12): platform-license-manager on its OWN non-cascading rule, beside the content-full-access rule', async () => {
       const mockAccount = arrange();
       await service.applyAuthorizationPolicy(mockAccount);
 
@@ -692,17 +686,15 @@ describe('AccountAuthorizationService', () => {
       ]);
       expect(licenseManagerRules[0].cascade).toBe(false);
 
-      const legacy = rules.filter(
+      const others = rules.filter(
         (rule: any) =>
           !rule.criterias.includes(
             AuthorizationCredential.PLATFORM_LICENSE_MANAGER
           )
       );
-      expect(legacy).toHaveLength(1);
-      expect(legacy[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        AuthorizationCredential.GLOBAL_SUPPORT,
+      expect(others).toHaveLength(1);
+      expect(others[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
       ]);
     });
 
@@ -715,8 +707,6 @@ describe('AccountAuthorizationService', () => {
       );
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
         AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);

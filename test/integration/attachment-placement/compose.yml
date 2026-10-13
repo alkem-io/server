@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:17.5
+    environment:
+      POSTGRES_DB: attachment_placement
+      POSTGRES_USER: attachment_placement
+      POSTGRES_PASSWORD: attachment_placement
+    ports:
+      - "127.0.0.1:${ATTACHMENT_PLACEMENT_DB_PORT:-0}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attachment_placement -d attachment_placement"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  file-service:
+    image: ${ATTACHMENT_PLACEMENT_FILE_SERVICE_IMAGE:?set the reviewed capability-bearing file-service image}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AUTH_SERVICE_URL: http://127.0.0.1:9
+      ALKEMIO_DATABASE_HOST: postgres
+      ALKEMIO_DATABASE_PORT: 5432
+      ALKEMIO_DATABASE_USERNAME: attachment_placement
+      ALKEMIO_DATABASE_PASSWORD: attachment_placement
+      ALKEMIO_DATABASE_NAME: attachment_placement
+      PORT: 4003
+      STORAGE_TYPE: local
+      LOCAL_STORAGE_PATH: /storage
+      FILE_BACKUP_OUTBOX_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${ATTACHMENT_PLACEMENT_FILE_SERVICE_PORT:-0}:4003"
+    volumes:
+      - attachment_storage:/storage
+
+volumes:
+  postgres_data:
+  attachment_storage:

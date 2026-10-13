@@ -4,7 +4,6 @@ import {
   AlkemioContextID,
   // ID type aliases
   AlkemioRoomID,
-  AttachmentRef,
   BatchAddMemberRequest,
   BatchAddSpaceMemberRequest,
   BatchGetLastMessagesRequest,
@@ -72,7 +71,6 @@ import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
-import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdapterException } from './communication.adapter.exception';
@@ -943,8 +941,6 @@ export class CommunicationAdapter {
       });
     }
 
-    const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
-
     const response = await this.sendCommand({
       operation: 'sendMessage',
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
@@ -953,7 +949,7 @@ export class CommunicationAdapter {
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
         timeout_ms: Math.max(1, this.rpcTimeout - 1000),
-        attachments: attachmentRefs,
+        existing_media: sendMessageData.existingMedia,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -983,8 +979,6 @@ export class CommunicationAdapter {
   async sendMessageReply(
     sendMessageData: CommunicationSendMessageReplyInput
   ): Promise<IMessage> {
-    const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
-
     const response = await this.sendCommand({
       operation: 'sendMessageReply',
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
@@ -994,7 +988,7 @@ export class CommunicationAdapter {
         content: sendMessageData.message,
         timeout_ms: Math.max(1, this.rpcTimeout - 1000),
         parent_message_id: sendMessageData.threadID,
-        attachments: attachmentRefs,
+        existing_media: sendMessageData.existingMedia,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -1566,43 +1560,10 @@ export class CommunicationAdapter {
         sender: r.sender_actor_id,
         timestamp: r.timestamp,
       })),
-      // feature 013: surface raw attachment refs; the message resolver resolves
-      // them to MessageAttachment (READ-gated). storageBucketId is set later by
-      // producers that have room context; roomID lets the resolver resolve the
-      // bucket from the room on history reads (H1).
+      // Raw Matrix event metadata; attachment reads do not resolve storage IDs.
       rawAttachments: msg.attachments,
       roomID: alkemioRoomId,
     };
-  }
-
-  /**
-   * Map resolved server-side attachments (feature 013) to the matrix-adapter-lib
-   * `AttachmentRef` wire shape. Returns undefined when there are none so the
-   * payload stays identical to the pre-feature shape.
-   *
-   * FIX 7: single shared mapper. Outbound attachments are keyed by `document_id`
-   * and produce exactly the `AttachmentRef` shape. `AttachmentRef` is structurally
-   * assignable to `ReceivedAttachment` (its `document_id` is required, the others
-   * optional/matching), so the same result also feeds the `rawAttachments`
-   * carrier on the send-response IMessage — so the send response carries its own
-   * attachments (consistent with the read path), not just the Matrix echo.
-   */
-  private toAttachmentRefs(
-    attachments?: CommunicationMessageAttachment[]
-  ): AttachmentRef[] | undefined {
-    if (!attachments || attachments.length === 0) {
-      return undefined;
-    }
-    return attachments.map(a => ({
-      document_id: a.documentId,
-      display_name: a.displayName,
-      mime_type: a.mimeType,
-      size: a.size,
-      // Images only, and best-effort: these become the outbound `m.image`
-      // event's `info.w`/`info.h`. Undefined simply omits them.
-      width: a.width,
-      height: a.height,
-    }));
   }
 
   private logInputPayload(topic: string, payload: unknown): number {

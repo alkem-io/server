@@ -25,6 +25,9 @@ import {
   CreateCalloutContributionDefaultsInput,
   UpdateCalloutContributionDefaultsInput,
 } from '@domain/collaboration/callout-contribution-defaults/dto';
+import { UpdateCalloutFormInput } from '@domain/collaboration/callout-form/dto/callout.form.dto.update';
+import { DeleteCalloutFormResponseInput } from '@domain/collaboration/callout-form-response/dto/callout.form.response.dto.delete';
+import { SubmitCalloutFormResponseInput } from '@domain/collaboration/callout-form-response/dto/callout.form.response.dto.submit';
 import {
   CreateCalloutFramingInput,
   UpdateCalloutFramingInput,
@@ -151,13 +154,8 @@ export class BaseHandler extends AbstractHandler {
       InviteForEntryRoleOnRoleSetInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
-      // The match below is `types.includes(metatype)` — REFERENCE equality on
-      // the constructor, so a SUBCLASS is not covered by its parent's entry.
-      // RoomSendMessageReplyInput extends RoomSendMessageInput, so without its
-      // own entry NONE of the inherited validators ran on the reply mutation:
-      // `attachments` had no <=1 cap (@ArrayMaxSize), no uniqueness
-      // (@ArrayUnique) and no UUID check (@IsUUID), and `message` no
-      // @MaxLength. Any new subclass of a listed input needs its own entry too.
+      // Matching uses constructor identity; inherited input validators require
+      // registering each concrete mutation input.
       RoomSendMessageReplyInput,
       CreateCalloutFramingInput,
       CreateCalloutContributionDefaultsInput,
@@ -250,6 +248,9 @@ export class BaseHandler extends AbstractHandler {
       UpdateClassificationEntrySelectionInput,
       UpdateClassificationEntryDisplayInput,
       DeleteClassificationEntryInput,
+      UpdateCalloutFormInput,
+      SubmitCalloutFormResponseInput,
+      DeleteCalloutFormResponseInput,
     ];
 
     if (types.includes(metatype)) {

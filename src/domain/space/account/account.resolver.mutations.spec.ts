@@ -880,7 +880,6 @@ describe('AccountResolverMutations', () => {
         expect.arrayContaining([
           AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
         ]),
-        expect.any(Array),
         expect.objectContaining({
           resourceKind: 'innovation-hub',
           resourceId: 'hub-1',
@@ -921,7 +920,6 @@ describe('AccountResolverMutations', () => {
 
       expect(resourceAudit().recordEventForActor).toHaveBeenCalledWith(
         platformActor,
-        expect.any(Array),
         expect.any(Array),
         expect.objectContaining({
           resourceKind: 'account-baseline-license-plan',

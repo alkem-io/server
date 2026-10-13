@@ -391,7 +391,6 @@ describe('UserAuthorizationService', () => {
       const granted = privilegesGrantedToRole();
       for (const excluded of [
         AuthorizationPrivilege.GRANT,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
         AuthorizationPrivilege.READ_USER_PII,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
@@ -401,10 +400,9 @@ describe('UserAuthorizationService', () => {
     });
   });
 
-  // 027-platform-role-redesign (T060, A4/A5, T070f): PLATFORM_USERS_ADMIN on
-  // the per-USER authorization tree — the union of A4's legacy reachers
-  // (today's PLATFORM_ADMIN) and A5's (today's PLATFORM_SETTINGS_ADMIN).
-  describe('027-platform-role-redesign — PLATFORM_USERS_ADMIN grant-set widening (T060, T070f)', () => {
+  // PLATFORM_USERS_ADMIN on the per-USER authorization tree (A4/A5) is held
+  // by the owning `platform-users-admin` role alone.
+  describe('PLATFORM_USERS_ADMIN grant set on the per-user tree', () => {
     const arrange = () => {
       const authorization = { credentialRules: [] };
       const user = {
@@ -462,7 +460,7 @@ describe('UserAuthorizationService', () => {
       );
     };
 
-    it('grants PLATFORM_USERS_ADMIN EXACTLY {platform-users-admin} plus the union of A4 and A5 legacy reachers, non-cascading', async () => {
+    it('grants PLATFORM_USERS_ADMIN EXACTLY {platform-users-admin}, non-cascading', async () => {
       arrange();
       await service.applyAuthorizationPolicy('user-1');
 
@@ -477,15 +475,11 @@ describe('UserAuthorizationService', () => {
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_SUPPORT,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
       ]);
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('extends READ_USER_SETTINGS additively to platform-users-admin, keeping the pre-existing legacy reach (cascading)', async () => {
+    it('grants READ_USER_SETTINGS EXACTLY {platform-users-admin}, cascading', async () => {
       arrange();
       await service.applyAuthorizationPolicy('user-1');
 
@@ -499,14 +493,18 @@ describe('UserAuthorizationService', () => {
           );
       expect(rules).toHaveLength(1);
       expect(rules[0].criterias).toEqual([
-        AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-        AuthorizationCredential.GLOBAL_SUPPORT,
         AuthorizationCredential.PLATFORM_USERS_ADMIN,
       ]);
       expect(rules[0].cascade).toBe(true);
     });
 
-    it('extends READ_USER_PII additively to platform-users-admin (the dynamic per-user credential list), keeping self/global-admin/global-support/global-community-read', async () => {
+    // 027-platform-role-redesign (T076, Slice B): the "keeping
+    // self/global-admin/global-support/global-community-read" half is the part
+    // T060 recorded as deferred, and T076 executed. The three legacy PII readers
+    // are gone; `user-self` and `platform-users-admin` remain. That IS spec
+    // §Privilege model's `READ_USER_PII` row — "no standalone broad-PII reader;
+    // PII read rides only on Users Admin actions".
+    it('narrows READ_USER_PII to self + platform-users-admin — no standalone broad-PII reader survives (T060 deferral, closed by T076)', async () => {
       arrange();
       await service.applyAuthorizationPolicy('user-1');
 
@@ -525,14 +523,17 @@ describe('UserAuthorizationService', () => {
         AuthorizationCredential.PLATFORM_USERS_ADMIN
       );
       expect(piiCredentialTypes).toContain(
-        AuthorizationCredential.GLOBAL_ADMIN
+        AuthorizationCredential.USER_SELF_MANAGEMENT
       );
-      expect(piiCredentialTypes).toContain(
-        AuthorizationCredential.GLOBAL_SUPPORT
-      );
-      expect(piiCredentialTypes).toContain(
-        AuthorizationCredential.GLOBAL_COMMUNITY_READ
-      );
+      // The three retired legacy readers, and every other global role, must be
+      // absent — Content Full Access included, despite FR-004's cascade.
+      for (const denied of [
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.PLATFORM_SPACES_READER,
+      ]) {
+        expect(piiCredentialTypes).not.toContain(denied);
+      }
     });
   });
 });

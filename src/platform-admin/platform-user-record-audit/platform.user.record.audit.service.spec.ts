@@ -64,7 +64,6 @@ describe('PlatformUserRecordAuditService', () => {
           credentials: [{ type: 'platform-users-admin', resourceID: '' }],
         } as any,
         ['platform-users-admin' as any],
-        [],
         {
           targetUserId: 'user-target-1',
           action: 'deleteUser',
@@ -82,7 +81,6 @@ describe('PlatformUserRecordAuditService', () => {
           credentials: [{ type: 'space-member', resourceID: '' }],
         } as any,
         ['platform-users-admin' as any],
-        [],
         {
           targetUserId: 'user-target-1',
           action: 'deleteUser',

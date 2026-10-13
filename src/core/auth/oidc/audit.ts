@@ -56,7 +56,11 @@ export type AuditEventType =
   // the distinction an auditor is looking for.
   | 'session.revocation.initiated'
   | 'session.revoked'
-  | 'session.revocation.completed';
+  | 'session.revocation.completed'
+  // workspace#079-app-sso-handoff FR-014 — native sign-in handoff refused.
+  // Success needs no member: it goes through establishSession() like a web
+  // login and already emits session.regenerated + auth.login.completed.
+  | 'auth.app_handoff.rejected';
 
 export type AuditInput = Omit<AuditEvent, 'timestamp'> & { timestamp?: string };
 

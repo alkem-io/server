@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
@@ -75,6 +76,16 @@ export class PlatformTemplatesService {
       await this.inputCreatorService.buildCreateCollaborationInputFromCollaboration(
         contentSpaceFromTemplate.collaboration.id
       );
-    return collaborationTemplateInput.calloutsSetData.calloutsData || [];
+    // These inputs seed a virtual contributor's knowledge base, which accepts
+    // neither Form nor Poll callouts (a rejected FORM would fail every VC
+    // creation). A space template may carry them; they are dropped here, on
+    // this path only.
+    return (
+      collaborationTemplateInput.calloutsSetData.calloutsData || []
+    ).filter(
+      callout =>
+        callout.framing.type !== CalloutFramingType.FORM &&
+        callout.framing.type !== CalloutFramingType.POLL
+    );
   }
 }

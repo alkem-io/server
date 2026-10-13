@@ -1,10 +1,7 @@
 import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
-import {
-  GLOBAL_POLICY_REGISTRATION_LEGACY_ADMIN_DELETE_USER,
-  GLOBAL_POLICY_REGISTRATION_PLATFORM_USERS_ADMIN_DELETE_USER,
-} from '@common/constants/authorization/global.policy.constants';
+import { A5_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
+import { GLOBAL_POLICY_REGISTRATION_PLATFORM_USERS_ADMIN_DELETE_USER } from '@common/constants/authorization/global.policy.constants';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationRoleGlobal } from '@common/enums/authorization.credential.global';
 import { LogContext } from '@common/enums/logging.context';
 import { SessionRefreshRequiredException } from '@common/exceptions';
@@ -39,39 +36,12 @@ import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-use
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RegistrationService } from './registration.service';
 
-/** T063 — A5's declared owner/legacy-reachers (T062's grant). */
-const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_USERS_ADMIN,
-];
-const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-];
-
 @InstrumentResolver()
 @Resolver()
 export class RegistrationResolverMutations {
-  /** spec-server-1 follow-through fix: `deleteUser`'s legacy-admin branch of
-   * its A5 dual-path gate checks DELETE against THIS resolver-local,
-   * hardcoded [GLOBAL_ADMIN] policy — NOT `user.authorization` — because
-   * the root content rule (FR-004, ninth analyze pass) now cascades DELETE
-   * platform-wide to `platform-content-full-access` too, and A5 is outside
-   * SC-004's single named exception (closed at A6/A7 only). Checking the
-   * merged, cascaded `user.authorization` for plain DELETE would let a
-   * Content Full Access holder delete any user account. Self-deletion is
-   * handled separately, by actor-identity comparison, never through this
-   * policy. */
-  private legacyGlobalAdminDeleteUserPolicy: IAuthorizationPolicy;
-
-  /** sec-server-4 fix: `deleteUser`'s admin branch checks PLATFORM_USERS_ADMIN
-   * against THIS resolver-local policy — scoped to `PLATFORM_USERS_ADMIN`
-   * ALONE, no legacy credentials — rather than `user.authorization`, whose
-   * PLATFORM_USERS_ADMIN grant set is additively widened (A4's email-change
-   * legacy reachers) to also admit global-support/global-license-manager/
-   * global-platform-manager. None of the three ever held deleteUser
-   * pre-feature (only GLOBAL_ADMIN, via the separate legacy-admin branch
-   * above, and self). */
+  /** `deleteUser`'s admin branch checks PLATFORM_USERS_ADMIN against THIS
+   * resolver-local policy, scoped to the `PLATFORM_USERS_ADMIN` credential
+   * alone, rather than against `user.authorization`. */
   private platformUsersAdminDeleteUserPolicy: IAuthorizationPolicy;
 
   constructor(
@@ -89,12 +59,6 @@ export class RegistrationResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
-    this.legacyGlobalAdminDeleteUserPolicy =
-      this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.DELETE],
-        GLOBAL_POLICY_REGISTRATION_LEGACY_ADMIN_DELETE_USER
-      );
     this.platformUsersAdminDeleteUserPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
         [AuthorizationRoleGlobal.PLATFORM_USERS_ADMIN],
@@ -211,44 +175,28 @@ export class RegistrationResolverMutations {
     const user = await this.userService.getUserByIdOrFail(deleteData.ID, {
       relations: { profile: true },
     });
-    // 027-platform-role-redesign (T062, A5, research D5): dual-path — off
-    // the DELETE-cascade (today's sole admin path is GLOBAL_ADMIN via the
-    // root policy's cascade), onto PLATFORM_USERS_ADMIN (T060's per-user
-    // grant, user.service.authorization.ts) additively. Plain DELETE is
-    // NOT dropped: it is also how a user deletes their OWN account
-    // (USER_SELF_MANAGEMENT, resource-scoped to that user's own ID) — that
-    // self-service path must keep working, so this is additive, not a
-    // replacement.
+    // A5 — dual path: SELF-deletion, by actor-identity comparison (`isSelf`
+    // above — equivalent to holding USER_SELF_MANAGEMENT resource-scoped to
+    // one's own id), and PLATFORM_USERS_ADMIN, checked against the
+    // resolver-local policy scoped to that credential ALONE.
     //
-    // spec-server-1 follow-through fix: self-deletion is now checked by
-    // actor-identity comparison (equivalent to holding USER_SELF_MANAGEMENT,
-    // which every user is granted resource-scoped to their own id), and the
-    // legacy-admin path checks DELETE against `legacyGlobalAdminDeleteUserPolicy`
-    // — NOT `user.authorization` — so that Content Full Access's now-cascaded
-    // (FR-004) DELETE on the user tree cannot satisfy this branch. A5 is
-    // outside SC-004's single named exception (closed at A6/A7 only).
-    const canDeleteAsLegacyAdmin = this.authorizationService.isAccessGranted(
-      actorContext,
-      this.legacyGlobalAdminDeleteUserPolicy,
-      AuthorizationPrivilege.DELETE
-    );
-    const canDeleteAsSelfOrLegacyAdmin = isSelf || canDeleteAsLegacyAdmin;
-    // sec-server-4 fix: checked against `platformUsersAdminDeleteUserPolicy`
-    // (PLATFORM_USERS_ADMIN alone) — NOT `user.authorization`, whose
-    // PLATFORM_USERS_ADMIN grant set additively admits global-support/
-    // global-license-manager/global-platform-manager too (A4's legacy
-    // reachers), none of which ever held deleteUser pre-feature.
+    // There is deliberately no plain-DELETE branch against
+    // `user.authorization`: the root rule cascades DELETE to
+    // `platform-content-full-access`, and A5 is outside that role's single
+    // accepted exception (closed at A6/A7). Platform Users Admin owns A5
+    // outright, so any second admin path here would hand user deletion to a
+    // role that must not hold it.
     const canDeleteAsPlatformUsersAdmin =
       this.authorizationService.isAccessGranted(
         actorContext,
         this.platformUsersAdminDeleteUserPolicy,
         AuthorizationPrivilege.PLATFORM_USERS_ADMIN
       );
-    if (!canDeleteAsSelfOrLegacyAdmin && !canDeleteAsPlatformUsersAdmin) {
+    if (!isSelf && !canDeleteAsPlatformUsersAdmin) {
       await this.authorizationService.grantAccessOrFail(
         actorContext,
-        this.legacyGlobalAdminDeleteUserPolicy,
-        AuthorizationPrivilege.DELETE,
+        this.platformUsersAdminDeleteUserPolicy,
+        AuthorizationPrivilege.PLATFORM_USERS_ADMIN,
         `user delete: ${user.id}`
       );
     }
@@ -278,31 +226,15 @@ export class RegistrationResolverMutations {
     // T063/FR-018a: a self-service deletion is not an administrative action
     // and is not audited. Every OTHER deletion is.
     //
-    // spec-server-27 fix (2026-07-31): this used to read
-    // `if (canDeleteAsPlatformUsersAdmin)`, which silently excluded the
-    // legacy `global-admin` branch — **the normal path for the whole of
-    // Slice A**, since no human holds `platform-users-admin` until they are
-    // granted it by hand (FR-012 does not migrate assignments). The result
-    // was that the single most destructive administrative action on the
-    // platform was recorded nowhere for the entire additive window, directly
-    // contradicting FR-018.
-    //
-    // The writer was always able to attribute this: `A5_LEGACY_REACHERS`
-    // exists for exactly this case and `resolveInitiatorRole` maps it to
-    // `PlatformAuditInitiatorRole.PLATFORM_ADMIN` (the FR-025 legacy
-    // carve-out). Only the resolver's condition was wrong.
-    //
-    // The condition names both branches rather than negating `isSelf`
-    // alone: `resolveInitiatorRole` THROWS when the actor holds neither an
-    // owning role nor a legacy credential, so the writer must never be
-    // invoked on a call no admin branch authorized.
-    const isAdministrativeDeletion =
-      !isSelf && (canDeleteAsPlatformUsersAdmin || canDeleteAsLegacyAdmin);
+    // `platform-users-admin` is the only administrative deletion path. The
+    // condition names that branch rather than merely negating `isSelf` —
+    // `resolveInitiatorRole` THROWS when the actor holds no owning role, so
+    // the writer must never be invoked on a call no admin branch authorized.
+    const isAdministrativeDeletion = !isSelf && canDeleteAsPlatformUsersAdmin;
     if (isAdministrativeDeletion) {
       await this.platformUserRecordAuditService.recordActionForActor(
         actorContext,
         A5_INTENDED_OWNERS,
-        A5_LEGACY_REACHERS,
         {
           action: 'deleteUser',
           targetUserId: user.id,

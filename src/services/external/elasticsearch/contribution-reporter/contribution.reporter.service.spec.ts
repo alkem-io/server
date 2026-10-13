@@ -829,6 +829,72 @@ describe('ContributionReporterService', () => {
     });
   });
 
+  describe('calloutFormCreated', () => {
+    it('should index a CALLOUT_FORM_CREATED document', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.calloutFormCreated(
+        { id: 'callout-1', name: 'Q4 planning', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'CALLOUT_FORM_CREATED',
+            id: 'callout-1',
+            name: 'Q4 planning',
+            space: 'space-root',
+            author: 'user-1',
+          }),
+        })
+      );
+    });
+  });
+
+  describe('formResponseSubmitted', () => {
+    it('should index a FORM_RESPONSE_SUBMITTED document', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.formResponseSubmitted(
+        { id: 'response-1', name: 'Q4 planning', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'FORM_RESPONSE_SUBMITTED',
+            id: 'response-1',
+            name: 'Q4 planning',
+            space: 'space-root',
+            author: 'user-1',
+          }),
+        })
+      );
+    });
+  });
+
   describe('calloutPollCreated', () => {
     it('should index a CALLOUT_POLL_CREATED document', async () => {
       mockActorService.getActorOrNull.mockResolvedValue({

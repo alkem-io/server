@@ -43,4 +43,11 @@ export abstract class IUserSettingsNotificationSpaceAdmin {
       'Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)',
   })
   userEmailChanged!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when a Form response is submitted (admin)',
+  })
+  collaborationCalloutFormResponseReceived!: IUserSettingsNotificationChannels;
 }
