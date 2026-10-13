@@ -73,6 +73,8 @@ interface Slot {
   entityID: string;
   bucketID: string;
   text: string | null;
+  /** The column as read, before decompression; a write requires it unchanged. */
+  storedText?: string | null;
 }
 
 interface ForeignFile {
@@ -243,9 +245,16 @@ export class AdminTemplateFileRepairService {
     dryRun: boolean,
     actorContext: ActorContext
   ): Promise<AdminTemplateFileRepairResult> {
+    // An omitted list means every template; an empty one means none.
+    const templateFilter = templateIDs ?? null;
     const slots: Slot[] = await this.entityManager.query(TEMPLATE_SLOTS_SQL, [
-      templateIDs?.length ? templateIDs : null,
+      templateFilter,
     ]);
+    const [{ templatesScanned }]: { templatesScanned: number }[] =
+      await this.entityManager.query(
+        'select count(*)::int as "templatesScanned" from template where $1::uuid[] is null or id = any($1::uuid[])',
+        [templateFilter]
+      );
     const owners = await this.templateOwners(slots);
 
     const references: AdminTemplateForeignFileReference[] = [];
@@ -260,6 +269,7 @@ export class AdminTemplateFileRepairService {
       }
       let foreign: ForeignFile[];
       let missing: string[];
+      slot.storedText = slot.text;
       try {
         if (slot.kind === 'defaultWhiteboardContent' && slot.text) {
           // The entity stores this column compressed; raw SQL reads it as is.
@@ -317,7 +327,7 @@ export class AdminTemplateFileRepairService {
 
     return {
       dryRun,
-      templatesScanned: new Set(slots.map(slot => slot.templateID)).size,
+      templatesScanned,
       templatesWithForeignFiles: new Set(references.map(r => r.templateID))
         .size,
       references,
@@ -590,10 +600,20 @@ export class AdminTemplateFileRepairService {
       );
     }
     const [table, field] = column;
-    await this.entityManager.query(
-      `update "${table}" set "${field}" = $1 where id = $2`,
-      [value, slot.entityID]
+    // Written only if nobody changed the column since the run read it, so an
+    // edit made during a long run is never overwritten with the old text.
+    const [{ updated }]: { updated: number }[] = await this.entityManager.query(
+      `with u as (update "${table}" set "${field}" = $1
+                   where id = $2 and "${field}" is not distinct from $3 returning 1)
+       select count(*)::int as updated from u`,
+      [value, slot.entityID, slot.storedText ?? null]
     );
+    if (updated === 0) {
+      throw new ValidationException(
+        'The reference changed while the repair ran: run it again for this template',
+        LogContext.TEMPLATES
+      );
+    }
   }
 
   private async memoMarkdown(memoID: string): Promise<string> {
@@ -608,7 +628,15 @@ export class AdminTemplateFileRepairService {
     const [item] = await this.fileServiceAdapter.getContentBatch([
       memo.contentPointer,
     ]);
-    if (!item?.found || !item.contentBase64) {
+    if (!item?.found) {
+      // Reported as a failure, so a dry run never looks complete for a memo
+      // whose content it could not read.
+      throw new ValidationException(
+        'The memo content could not be read, so its references were not checked',
+        LogContext.TEMPLATES
+      );
+    }
+    if (!item.contentBase64) {
       return '';
     }
     return yjsStateToMarkdown(Buffer.from(item.contentBase64, 'base64'));

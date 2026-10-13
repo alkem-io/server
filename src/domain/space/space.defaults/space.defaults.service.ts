@@ -181,7 +181,7 @@ export class SpaceDefaultsService {
         actorContext,
         templateWithSpaceContent.authorization,
         AuthorizationPrivilege.READ,
-        `create space from template: ${spaceTemplateID}`
+        'create space from template'
       );
     } else {
       switch (spaceLevel) {

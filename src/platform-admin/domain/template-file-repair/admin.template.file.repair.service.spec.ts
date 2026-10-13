@@ -27,12 +27,30 @@ const readableBy = (...types: string[]) => ({
   privilegeRules: [],
 });
 
+// The conditional write: matches the rows it would update and returns how many.
+const UPDATE_SQL = (table: string, field: string) =>
+  expect.stringContaining(`update "${table}" set "${field}" = $1`);
+
+const updateCall = (
+  query: { mock: { calls: [string, unknown[]?][] } },
+  table: string
+) => query.mock.calls.find(([sql]) => sql.includes(`update "${table}"`));
+
+// Answers shared by every query mock: the scanned count and the conditional write.
+const commonAnswer = (sql: string) => {
+  if (sql.includes('"templatesScanned"')) return [{ templatesScanned: 1 }];
+  if (sql.includes('with u as (update')) return [{ updated: 1 }];
+  return undefined;
+};
+
 const createService = (
   slots: unknown[],
   foreignReadableBy: string[] = [AuthorizationCredential.SPACE_ADMIN],
   owner: Record<string, unknown> = { spaceID: 'space-1', accountID: null }
 ) => {
   const query = vi.fn(async (sql: string, _params?: unknown[]) => {
+    const common = commonAnswer(sql);
+    if (common) return common;
     if (sql.includes('with recursive')) return slots;
     if (sql.includes('from template t')) {
       return [{ templateID: 'template-1', ...owner }];
@@ -209,8 +227,8 @@ describe('AdminTemplateFileRepairService', () => {
       actorContext: owner,
     });
     expect(ctx.query).toHaveBeenCalledWith(
-      'update "profile" set "description" = $1 where id = $2',
-      ['repaired markdown', 'profile-1']
+      UPDATE_SQL('profile', 'description'),
+      ['repaired markdown', 'profile-1', slot({}).text]
     );
     expect(ctx.whiteboards.copyForeignAssetsIntoOwnBucket).toHaveBeenCalledWith(
       'wb-1',
@@ -235,11 +253,13 @@ describe('AdminTemplateFileRepairService', () => {
     expect(ctx.whiteboards.listAssetFileIDs).toHaveBeenCalledWith(
       'stored-snapshot'
     );
-    const update = ctx.query.mock.calls.find(([sql]) =>
-      sql.startsWith('update "callout_contribution_defaults"')
-    );
+    const update = updateCall(ctx.query, 'callout_contribution_defaults');
     expect(await decompressText(update?.[1]?.[0] as string)).toBe(
       'rehomed-snapshot'
+    );
+    // Compared against the stored, still compressed value.
+    expect(await decompressText(update?.[1]?.[2] as string)).toBe(
+      'stored-snapshot'
     );
     expect(result.copiedReferences).toBe(1);
   });
@@ -265,13 +285,14 @@ describe('AdminTemplateFileRepairService', () => {
 
     const result = await ctx.service.repair(undefined, false, actor);
 
+    expect(ctx.query).toHaveBeenCalledWith(UPDATE_SQL('space_about', 'who'), [
+      'repaired markdown',
+      'about-1',
+      slot({}).text,
+    ]);
     expect(ctx.query).toHaveBeenCalledWith(
-      'update "space_about" set "who" = $1 where id = $2',
-      ['repaired markdown', 'about-1']
-    );
-    expect(ctx.query).toHaveBeenCalledWith(
-      'update "innovation_flow_state" set "description" = $1 where id = $2',
-      ['repaired markdown', 'state-1']
+      UPDATE_SQL('innovation_flow_state', 'description'),
+      ['repaired markdown', 'state-1', slot({}).text]
     );
     expect(result.copiedReferences).toBe(2);
   });
@@ -337,6 +358,8 @@ describe('AdminTemplateFileRepairService', () => {
       slot({ kind: 'collaboraDocument', entityID: 'doc-1', text: null }),
     ]);
     ctx.query.mockImplementation(async (sql: string) => {
+      const common = commonAnswer(sql);
+      if (common) return common;
       if (sql.includes('with recursive')) {
         return [
           slot({ kind: 'collaboraDocument', entityID: 'doc-1', text: null }),
@@ -368,6 +391,70 @@ describe('AdminTemplateFileRepairService', () => {
     ]);
     expect(result.failed).toEqual([
       expect.objectContaining({ location: 'collaboraDocument' }),
+    ]);
+  });
+
+  it('does not overwrite a reference edited while the run was in progress', async () => {
+    const ctx = createService([slot({})]);
+    const answer = ctx.query.getMockImplementation()!;
+    ctx.query.mockImplementation(async (sql: string, params?: unknown[]) =>
+      sql.includes('with u as (update') ? [{ updated: 0 }] : answer(sql, params)
+    );
+
+    const result = await ctx.service.repair(undefined, false, actor);
+
+    expect(result.copiedReferences).toBe(0);
+    expect(result.references[0].copied).toBe(false);
+    expect(result.failed).toEqual([
+      expect.objectContaining({
+        location: 'profileDescription',
+        reason: expect.stringContaining('changed while the repair ran'),
+      }),
+    ]);
+  });
+
+  it('processes no template for an empty list, and every template when the list is omitted', async () => {
+    const ctx = createService([]);
+
+    await ctx.service.repair([], true, actor);
+    await ctx.service.repair(undefined, true, actor);
+
+    const filters = ctx.query.mock.calls
+      .filter(([sql]) => sql.includes('with recursive'))
+      .map(([, params]) => params?.[0]);
+    expect(filters).toEqual([[], null]);
+  });
+
+  it('counts the templates scanned, including those with nothing to report', async () => {
+    const ctx = createService([]);
+
+    const result = await ctx.service.repair(['template-1'], true, actor);
+
+    expect(result.templatesScanned).toBe(1);
+    expect(result.references).toEqual([]);
+  });
+
+  it('reports a memo whose content cannot be read as a failure', async () => {
+    const ctx = createService([
+      slot({ kind: 'memo', entityID: 'memo-1', text: null }),
+    ]);
+    const answer = ctx.query.getMockImplementation()!;
+    ctx.query.mockImplementation(async (sql: string, params?: unknown[]) =>
+      sql.includes('from memo')
+        ? [{ contentPointer: 'pointer-1' }]
+        : answer(sql, params)
+    );
+    (ctx.service as any).fileServiceAdapter = {
+      getContentBatch: vi.fn().mockResolvedValue([{ found: false }]),
+    };
+
+    const result = await ctx.service.repair(undefined, true, actor);
+
+    expect(result.failed).toEqual([
+      expect.objectContaining({
+        location: 'memo',
+        reason: expect.stringContaining('could not be read'),
+      }),
     ]);
   });
 
