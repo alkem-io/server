@@ -617,13 +617,31 @@ export class WhiteboardService {
       const desired: Record<string, string> = {};
       for (const fileId of fileIds) {
         const sourceLocator = current[fileId];
-        const sourceDocument = await this.documentService.getDocumentOrFail(
-          sourceLocator,
-          {
+        const sourceDocument = await this.documentService
+          .getDocumentOrFail(sourceLocator, {
             loadEagerRelations: false,
             relations: { authorization: true, storageBucket: true },
-          }
-        );
+          })
+          .catch(error => {
+            if (error instanceof EntityNotFoundException) return undefined;
+            throw error;
+          });
+        if (!sourceDocument) {
+          // The file no longer exists, e.g. its space was deleted. Kept as it
+          // is, like a dead link in text, references or visuals, instead of
+          // failing the whole create or copy over one missing image.
+          this.logger.warn?.(
+            {
+              message: 'Whiteboard image kept as is: its file no longer exists',
+              fileId,
+              locator: sourceLocator,
+              targetBucketId,
+            },
+            LogContext.WHITEBOARDS
+          );
+          desired[fileId] = sourceLocator;
+          continue;
+        }
         const sourceDocumentBucketId = sourceDocument.storageBucket?.id;
 
         if (sourceDocumentBucketId === targetBucketId) {

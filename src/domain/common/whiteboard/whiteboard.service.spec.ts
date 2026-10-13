@@ -1658,6 +1658,59 @@ describe('WhiteboardService', () => {
       ).toEqual({ 'image-a': 'foreign-image-a' });
     });
 
+    it('keeps an image whose file no longer exists as it is, and still copies the others', async () => {
+      const sourceContent = await buildImageAssetsSnapshotBase64({
+        'image-gone': 'deleted-file',
+        'image-a': 'template-image-a',
+      });
+      vi.mocked(documentService.getDocumentOrFail).mockImplementation(
+        async documentID => {
+          if (documentID === 'deleted-file') {
+            throw new EntityNotFoundException(
+              'Not able to locate document with the specified ID',
+              LogContext.STORAGE_BUCKET
+            );
+          }
+          return {
+            id: documentID,
+            authorization: { id: 'doc-auth' },
+            storageBucket: { id: 'template-bucket' },
+          } as any;
+        }
+      );
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+        id: 'copied-image-a',
+      } as any);
+
+      const result = await service.materializeContentIntoBucket(
+        sourceContent,
+        'callout-bucket',
+        { sourceBucketId: 'template-bucket' }
+      );
+
+      expect(
+        await readSnapshotAssetLocators(Buffer.from(result.content, 'base64'))
+      ).toEqual({
+        'image-gone': 'deleted-file',
+        'image-a': 'copied-image-a',
+      });
+    });
+
+    it('still fails when looking up an image file fails for another reason', async () => {
+      const sourceContent = await buildImageAssetsSnapshotBase64({
+        'image-a': 'template-image-a',
+      });
+      vi.mocked(documentService.getDocumentOrFail).mockRejectedValue(
+        new Error('database unavailable')
+      );
+
+      await expect(
+        service.materializeContentIntoBucket(sourceContent, 'callout-bucket', {
+          sourceBucketId: 'template-bucket',
+        })
+      ).rejects.toThrow('database unavailable');
+    });
+
     // --- Asset re-home authorization (the exfiltration boundary) ---
     it('a source-clone locator outside the source bucket that the actor cannot READ is kept as it is, never copied', async () => {
       mockSource({ contentPointer: 'source-ptr' });
