@@ -7,6 +7,5 @@ import { MessageReceivedPayload } from '@alkemio/matrix-adapter-lib';
  * and consumed by MessageInboxService (domain orchestration).
  */
 export class MessageReceivedEvent {
-  storageBucketId?: string;
   constructor(public readonly payload: MessageReceivedPayload) {}
 }

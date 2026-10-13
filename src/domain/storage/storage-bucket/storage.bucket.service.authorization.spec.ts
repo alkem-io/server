@@ -4,6 +4,7 @@ import {
   POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
 } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -195,6 +196,69 @@ describe('StorageBucketAuthorizationService', () => {
       expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
         bucketAuth,
       ]);
+    });
+
+    it.each([
+      {
+        label: 'conversation direct owner',
+        owner: StorageAggregatorType.CONVERSATION,
+        parent: undefined,
+        appendCreator: false,
+      },
+      {
+        label: 'user direct owner',
+        owner: StorageAggregatorType.USER,
+        parent: undefined,
+        appendCreator: true,
+      },
+      {
+        label: 'space direct owner',
+        owner: StorageAggregatorType.SPACE,
+        parent: undefined,
+        appendCreator: true,
+      },
+      {
+        label: 'generic child with conversation parent',
+        owner: undefined,
+        parent: StorageAggregatorType.CONVERSATION,
+        appendCreator: true,
+      },
+    ])('preserves creator-rule classification for $label and skips policy-less snapshots', async ({
+      owner,
+      parent,
+      appendCreator,
+    }) => {
+      const bucketAuth = { id: 'classification-bucket-auth' };
+      const document = {
+        id: 'placed-file',
+        authorization: { id: 'placed-auth' },
+        tagset: {
+          id: 'placed-tags',
+          authorization: { id: 'placed-tags-auth' },
+        },
+      };
+      const snapshot = { id: 'snapshot', authorization: null, tagset: null };
+      const bucket = {
+        id: 'classification-bucket',
+        authorization: bucketAuth,
+        directStorageOwner: owner ? { type: owner } : undefined,
+        storageAggregator: parent ? { type: parent } : undefined,
+        documents: [document, snapshot],
+      } as unknown as IStorageBucket;
+      (authorizationPolicyService.reset as Mock).mockReturnValue(bucketAuth);
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockReturnValue(bucketAuth);
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mockReturnValue(bucketAuth);
+      (
+        documentAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockResolvedValue([]);
+      await service.applyAuthorizationPolicy(bucket, undefined);
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledExactlyOnceWith(document, bucketAuth, appendCreator);
     });
 
     it('should throw RelationshipNotFoundException when documents is undefined', async () => {

@@ -1,4 +1,4 @@
-import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
+import { ExistingMediaRef } from '@alkemio/matrix-adapter-lib';
 
 export class CommunicationSendMessageReplyInput {
   actorID!: string;
@@ -9,7 +9,5 @@ export class CommunicationSendMessageReplyInput {
 
   threadID!: string;
 
-  // Resolved media attachments (feature 013). Threaded to the matrix-adapter as
-  // SendMessageRequest.attachments.
-  attachments?: CommunicationMessageAttachment[];
+  existingMedia?: ExistingMediaRef;
 }
