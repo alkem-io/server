@@ -136,7 +136,8 @@ export class VisualService {
       );
 
       const documentForVisual = await this.documentService.getDocumentFromURL(
-        visual.uri
+        visual.uri,
+        { relations: { storageBucket: true } }
       );
 
       // file-service-go canonicalizes image bytes (physical EXIF
@@ -178,9 +179,12 @@ export class VisualService {
         throw validationError;
       }
 
-      // Delete the old document
+      // Delete the old document — only if this visual's bucket owns it. A uri
+      // may name a file stored elsewhere (kept as written when it could not be
+      // copied); replacing the image must never delete someone else's file.
       if (
         documentForVisual &&
+        documentForVisual.storageBucket?.id === storageBucket.id &&
         newDocument.externalID != documentForVisual?.externalID
       ) {
         await this.documentService.deleteDocument({

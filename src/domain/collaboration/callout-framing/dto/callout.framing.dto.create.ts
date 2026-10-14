@@ -87,5 +87,7 @@ export class CreateCalloutFramingInput {
       name: VisualType;
       uri: string;
     }[];
+    /** The bucket of the gallery these visuals were copied from. */
+    sourceStorageBucketID?: string;
   };
 }

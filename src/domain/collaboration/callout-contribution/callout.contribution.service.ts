@@ -85,7 +85,8 @@ export class CalloutContributionService {
   public async materializeCalloutContributionContent(
     contribution: ICalloutContribution,
     contributionData: CreateCalloutContributionInput | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<void> {
     if (contribution.type === CalloutContributionType.LINK) {
       if (!contribution.link) {
@@ -101,7 +102,8 @@ export class CalloutContributionService {
       await this.linkService.materializeLinkContent(
         contribution.link,
         contributionData?.link,
-        rollback
+        rollback,
+        actorContext
       );
     }
   }
@@ -157,7 +159,8 @@ export class CalloutContributionService {
         post,
         storageAggregator,
         userID,
-        parentSpaceId
+        parentSpaceId,
+        actorContext
       );
     }
 
@@ -172,7 +175,9 @@ export class CalloutContributionService {
       contribution.memo = await this.memoService.createMemo(
         memo,
         storageAggregator,
-        userID
+        userID,
+        undefined,
+        actorContext
       );
     }
 

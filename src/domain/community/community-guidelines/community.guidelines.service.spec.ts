@@ -115,9 +115,12 @@ describe('CommunityGuidelinesService', () => {
 
       expect(
         profileService.materializeProfileContentAndVisuals
-      ).toHaveBeenCalledWith(guidelines.profile, data.profile.visuals, [
-        VisualType.CARD,
-      ]);
+      ).toHaveBeenCalledWith(
+        guidelines.profile,
+        data.profile,
+        [VisualType.CARD],
+        undefined
+      );
     });
   });
 

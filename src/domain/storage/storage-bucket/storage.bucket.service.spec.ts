@@ -2208,4 +2208,44 @@ describe('StorageBucketService', () => {
       );
     });
   });
+
+  describe('uploadFileFromURI', () => {
+    const upload = (oldDocumentBucketID: string) => {
+      (documentService.getDocumentFromURL as Mock).mockResolvedValue({
+        id: 'old-doc',
+        externalID: 'old-ext',
+        storageBucket: { id: oldDocumentBucketID },
+      } as any);
+      vi.spyOn(service, 'uploadFileAsDocument').mockResolvedValue({
+        id: 'new-doc',
+        externalID: 'new-ext',
+      } as any);
+      (documentService.deleteDocument as Mock).mockResolvedValue(undefined);
+      return service.uploadFileFromURI(
+        'https://alkem.io/api/private/rest/storage/document/old-doc',
+        'reference-1',
+        { id: 'own-bucket' } as any,
+        Readable.from(['x']),
+        'file.png',
+        'image/png',
+        'user-1'
+      );
+    };
+
+    it('replaces and deletes the previous file when this bucket owns it', async () => {
+      await upload('own-bucket');
+
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'old-doc',
+      });
+    });
+
+    it('never deletes a previous file stored in another bucket', async () => {
+      // A reference may point at someone else's file; replacing it must not
+      // delete that file.
+      await upload('someone-elses-bucket');
+
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    });
+  });
 });

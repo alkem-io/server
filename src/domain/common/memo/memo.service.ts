@@ -9,6 +9,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import {
   CollaborationLifecycleService,
   CollaborationMetadata,
@@ -63,7 +64,8 @@ export class MemoService {
     { markdown, ...restOfMemoData }: CreateMemoInput,
     storageAggregator: IStorageAggregator,
     userID?: string,
-    visualTypes: VisualType[] = [VisualType.CARD]
+    visualTypes: VisualType[] = [VisualType.CARD],
+    actorContext?: ActorContext
   ): Promise<IMemo> {
     // Phase 1: build entity tree in memory (no file-service-go calls). Content is
     // NO LONGER stored inline — the initial Yjs-V2 snapshot is written to the
@@ -95,9 +97,10 @@ export class MemoService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        restOfMemoData.profile?.visuals,
+        restOfMemoData.profile,
         visualTypes,
-        () => this.deleteMemo(saved.id)
+        () => this.deleteMemo(saved.id),
+        actorContext
       );
 
     // Phase 3: write the creation content as a Yjs-V2 snapshot into the memo's
@@ -137,7 +140,12 @@ export class MemoService {
       ownedMarkdown =
         await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
           ownedMarkdown,
-          storageBucket
+          storageBucket,
+          {
+            sourceStorageBucketID:
+              restOfMemoData.profile?.sourceStorageBucketID,
+            actorContext,
+          }
         );
     } catch (error) {
       await this.deleteMemo(saved.id).catch(rollbackError => {
@@ -429,7 +437,8 @@ export class MemoService {
   async replaceMemoContent(
     memoId: string,
     actorId: string,
-    newContent: string
+    newContent: string,
+    actorContext?: ActorContext
   ): Promise<IMemo> {
     if (!actorId) {
       // Fail closed: a live-room edit joins as the initiating actor and must be
@@ -465,7 +474,8 @@ export class MemoService {
       newMemoContent =
         await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
           newContent,
-          storageBucket
+          storageBucket,
+          { actorContext }
         );
     }
 

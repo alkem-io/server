@@ -1040,6 +1040,14 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           'migrateLegacyMemoContent',
           'platform',
         ],
+        // One-off repair of templates that reference files they do not store;
+        // gated on PLATFORM_OPERATIONS_ADMIN at the platform policy like the
+        // content migrations above.
+        [
+          'src/platform-admin/domain/template-file-repair/admin.template.file.repair.resolver.mutations.ts',
+          'adminRepairTemplateFiles',
+          'platform',
+        ],
         [
           'src/services/collaboration-integration/migration/collaboration-migration.resolver.mutations.ts',
           'migrateLegacyWhiteboardContent',

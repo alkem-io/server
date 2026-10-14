@@ -90,6 +90,29 @@ export class InputCreatorService {
     return Buffer.from(item.contentBase64, 'base64');
   }
 
+  /**
+   * Drops every source bucket from a built input. Used when the input is built
+   * from a live space for a template: the saver's READ was checked on the space
+   * only, not on each nested subspace or callout, so none of their buckets may
+   * be trusted; every file then needs the saver's own READ to be copied.
+   */
+  public withoutSourceBuckets<T>(input: T): T {
+    const strip = (value: unknown): unknown => {
+      if (Array.isArray(value)) {
+        return value.map(strip);
+      }
+      if (value && typeof value === 'object' && !(value instanceof Date)) {
+        return Object.fromEntries(
+          Object.entries(value)
+            .filter(([key]) => key !== 'sourceStorageBucketID')
+            .map(([key, entry]) => [key, strip(entry)])
+        );
+      }
+      return value;
+    };
+    return strip(input) as T;
+  }
+
   public async buildCreateCalloutInputsFromCallouts(
     callouts: ICallout[]
   ): Promise<CreateCalloutInput[]> {
@@ -124,16 +147,18 @@ export class InputCreatorService {
           whiteboard: {
             profile: {
               visuals: true,
+              storageBucket: true,
             },
           },
           link: {
-            profile: true,
+            profile: { storageBucket: true },
           },
           memo: {
-            profile: true,
+            profile: { storageBucket: true },
           },
           mediaGallery: {
             visuals: true,
+            storageBucket: true,
           },
           poll: {
             options: true,
@@ -237,10 +262,12 @@ export class InputCreatorService {
             visuals: true,
             location: true,
             tagsets: true,
+            storageBucket: true,
           },
           guidelines: {
             profile: {
               references: true,
+              storageBucket: true,
             },
           },
         },
@@ -301,10 +328,12 @@ export class InputCreatorService {
               visuals: true,
               location: true,
               tagsets: true,
+              storageBucket: true,
             },
             guidelines: {
               profile: {
                 references: true,
+                storageBucket: true,
               },
             },
           },
@@ -361,7 +390,7 @@ export class InputCreatorService {
             callouts: true,
           },
           innovationFlow: {
-            profile: true,
+            profile: { storageBucket: true },
             states: true,
           },
         },
@@ -416,6 +445,7 @@ export class InputCreatorService {
       profile: {
         displayName: innovationFlow.profile.displayName,
         description: innovationFlow.profile.description,
+        sourceStorageBucketID: innovationFlow.profile.storageBucket?.id,
       },
       states: this.buildCreateInnovationFlowStateInputFromInnovationFlowState(
         innovationFlow.states
@@ -459,10 +489,14 @@ export class InputCreatorService {
     // carries the SAME CRDT bytes (base64) verbatim — no Excalidraw scene/JSON round
     // trip; create re-homes the snapshot's embedded media into the new bucket
     // (006-collab-content-unification).
+    // The source whiteboard's own bucket is the trust boundary for its media:
+    // images stored there are copied into the new whiteboard whoever creates it,
+    // and anything else follows the per-file rule (see DocumentCopyAuthority).
     const snapshot = await this.fetchSnapshot(whiteboard.contentPointer);
     return {
       profile: this.buildCreateProfileInputFromProfile(whiteboard.profile),
       content: snapshot ? Buffer.from(snapshot).toString('base64') : undefined,
+      sourceStorageBucketID: whiteboard.profile?.storageBucket?.id,
       nameID: whiteboard.nameID,
       previewSettings: whiteboard.previewSettings,
     };
@@ -543,6 +577,8 @@ export class InputCreatorService {
               name: validateAndConvertVisualTypeName(visual.name),
               uri: visual.uri,
             })),
+            sourceStorageBucketID:
+              calloutFraming.mediaGallery.storageBucket?.id,
           }
         : undefined,
       poll: calloutFraming.poll
@@ -633,9 +669,9 @@ export class InputCreatorService {
       // A cleared (null) stored default is absent on this create input.
       whiteboardContent:
         calloutContributionDefaults.whiteboardContent ?? undefined,
-      sourceStorageBucketID: calloutContributionDefaults.whiteboardContent
-        ? sourceStorageBucketID
-        : undefined,
+      // The source callout's framing bucket owns both the default whiteboard's
+      // media and any images in the default post description.
+      sourceStorageBucketID,
     };
     return result;
   }
@@ -693,6 +729,7 @@ export class InputCreatorService {
       visuals: this.buildCreateVisualsOnProfileInputFromVisuals(
         profile.visuals
       ),
+      sourceStorageBucketID: profile.storageBucket?.id,
     };
   }
 

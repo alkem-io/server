@@ -135,7 +135,8 @@ describe('CalendarResolverMutations', () => {
       );
       expect(calendarService.createCalendarEvent).toHaveBeenCalledWith(
         eventData,
-        'user-1'
+        'user-1',
+        expect.objectContaining({ actorID: 'user-1' })
       );
       expect(
         calendarService.processActivityCalendarEventCreated

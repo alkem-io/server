@@ -175,7 +175,8 @@ export class AccountResolverMutations {
 
     let innovationHub = await this.innovationHubService.createInnovationHub(
       createData,
-      account
+      account,
+      actorContext
     );
     innovationHub = await this.innovationHubService.save(innovationHub);
     const authorizations =
@@ -270,7 +271,8 @@ export class AccountResolverMutations {
 
     const innovationPack =
       await this.accountService.createInnovationPackOnAccount(
-        innovationPackData
+        innovationPackData,
+        actorContext
       );
 
     const clonedAccountAuth =

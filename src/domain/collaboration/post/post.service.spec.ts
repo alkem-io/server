@@ -94,9 +94,10 @@ describe('PostService', () => {
         profileService.materializeProfileContentAndVisualsOrRollback
       ).toHaveBeenCalledWith(
         createdProfile,
-        postInput.profileData.visuals,
+        postInput.profileData,
         [VisualType.BANNER, VisualType.CARD],
-        expect.any(Function)
+        expect.any(Function),
+        undefined
       );
       expect(profileService.addOrUpdateTagsetOnProfile).toHaveBeenCalledWith(
         createdProfile,

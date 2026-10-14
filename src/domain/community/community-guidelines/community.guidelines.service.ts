@@ -7,6 +7,7 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -72,7 +73,8 @@ export class CommunityGuidelinesService {
    */
   async materializeCommunityGuidelinesContent(
     communityGuidelines: ICommunityGuidelines,
-    communityGuidelinesData?: CreateCommunityGuidelinesInput
+    communityGuidelinesData?: CreateCommunityGuidelinesInput,
+    actorContext?: ActorContext
   ): Promise<ICommunityGuidelines> {
     if (!communityGuidelines.profile) {
       throw new RelationshipNotFoundException(
@@ -89,8 +91,9 @@ export class CommunityGuidelinesService {
     communityGuidelines.profile =
       await this.profileService.materializeProfileContentAndVisuals(
         communityGuidelines.profile,
-        communityGuidelinesData?.profile.visuals,
-        [VisualType.CARD]
+        communityGuidelinesData?.profile,
+        [VisualType.CARD],
+        actorContext
       );
     return communityGuidelines;
   }

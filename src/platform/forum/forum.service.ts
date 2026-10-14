@@ -10,6 +10,7 @@ import {
 } from '@common/exceptions';
 import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/forum.discussion.category.not.empty.exception';
 import { getForumCategoryContextId } from '@constants/forum.constants';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -111,7 +112,8 @@ export class ForumService {
   async createDiscussion(
     discussionData: ForumCreateDiscussionInput,
     userID: string,
-    userForumID: string
+    userForumID: string,
+    actorContext?: ActorContext
   ): Promise<IDiscussion> {
     const displayName = discussionData.profile.displayName;
     const forumID = discussionData.forumID;
@@ -146,7 +148,8 @@ export class ForumService {
       userID,
       'platform-forum',
       RoomType.DISCUSSION_FORUM,
-      storageAggregator
+      storageAggregator,
+      actorContext
     );
     this.logger.verbose?.(
       `[Discussion] Room created (${displayName}) and membership replicated from Updates (${forumID})`,

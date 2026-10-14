@@ -1,6 +1,7 @@
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -18,6 +19,7 @@ describe('LinkService', () => {
   let linkRepository: MockType<Repository<Link>>;
   let profileService: ProfileService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let profileDocumentsService: ProfileDocumentsService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -43,6 +45,96 @@ describe('LinkService', () => {
     linkRepository = module.get(getRepositoryToken(Link));
     profileService = module.get(ProfileService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    profileDocumentsService = module.get(ProfileDocumentsService);
+  });
+
+  describe('materializeLinkContent', () => {
+    const link = () =>
+      ({
+        id: 'link-1',
+        uri: 'https://alkem.io/api/private/rest/storage/document/source-doc',
+        profile: { id: 'profile-1', storageBucket: { id: 'link-bucket' } },
+      }) as any;
+
+    it("copies the link's file into the link's own bucket under the source and actor of this create", async () => {
+      const target = link();
+      const actorContext = { actorID: 'user-1' } as any;
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue(
+        'https://alkem.io/api/private/rest/storage/document/copied-doc'
+      );
+
+      await service.materializeLinkContent(
+        target,
+        {
+          profile: {
+            displayName: 'Link',
+            sourceStorageBucketID: 'template-link-bucket',
+          },
+          uri: target.uri,
+        },
+        vi.fn(),
+        actorContext
+      );
+
+      expect(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).toHaveBeenCalledWith(
+        'https://alkem.io/api/private/rest/storage/document/source-doc',
+        target.profile.storageBucket,
+        false,
+        { sourceStorageBucketID: 'template-link-bucket', actorContext }
+      );
+      expect(linkRepository.update).toHaveBeenCalledWith(
+        { id: 'link-1' },
+        {
+          uri: 'https://alkem.io/api/private/rest/storage/document/copied-doc',
+        }
+      );
+    });
+
+    it("puts a framing link's file in the bucket the framing names, not the link's own", async () => {
+      // A callout framing link is not authorized below the framing: a file in the
+      // link profile's bucket would be readable by no one.
+      const target = link();
+      const framingBucket = { id: 'framing-bucket', documents: [] } as any;
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue(target.uri);
+
+      await service.materializeLinkContent(
+        target,
+        undefined,
+        vi.fn(),
+        undefined,
+        {
+          bucket: framingBucket,
+          sourceStorageBucketID: 'template-framing-bucket',
+        }
+      );
+
+      expect(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).toHaveBeenCalledWith(target.uri, framingBucket, false, {
+        sourceStorageBucketID: 'template-framing-bucket',
+        actorContext: undefined,
+      });
+    });
+
+    it('leaves the link untouched when its file may not be copied', async () => {
+      const target = link();
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue(target.uri);
+
+      await service.materializeLinkContent(target, undefined, vi.fn());
+
+      expect(linkRepository.update).not.toHaveBeenCalled();
+      expect(target.uri).toBe(
+        'https://alkem.io/api/private/rest/storage/document/source-doc'
+      );
+    });
   });
 
   describe('createLink', () => {

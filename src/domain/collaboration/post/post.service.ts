@@ -4,6 +4,7 @@ import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -34,7 +35,8 @@ export class PostService {
     postInput: CreatePostInput,
     storageAggregator: IStorageAggregator,
     userID: string,
-    parentSpaceId?: string
+    parentSpaceId?: string,
+    actorContext?: ActorContext
   ): Promise<IPost> {
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const post: IPost = Post.create(postInput);
@@ -75,9 +77,10 @@ export class PostService {
     // Helper mutates the profile in place; no explicit reassignment needed.
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
-      postInput.profileData.visuals,
+      postInput.profileData,
       [VisualType.BANNER, VisualType.CARD],
-      () => this.deletePost(saved.id)
+      () => this.deletePost(saved.id),
+      actorContext
     );
     return saved;
   }

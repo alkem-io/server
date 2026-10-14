@@ -361,7 +361,8 @@ export class SpaceService {
     await this.spaceAboutService.materializeSpaceAboutContent(
       spaceUpdated.about,
       modifiedAbout,
-      rollbackSpace
+      rollbackSpace,
+      actorContext
     );
     // Collaboration is always created earlier in this method (line 321);
     // missing here would indicate a bad load or a programmer error.
@@ -392,7 +393,8 @@ export class SpaceService {
     await this.collaborationService.materializeCollaborationContent(
       spaceUpdated.collaboration,
       updatedCollaborationData,
-      rollbackSpace
+      rollbackSpace,
+      actorContext
     );
 
     // If template has child spaces, then create child spaces here
@@ -1459,6 +1461,7 @@ export class SpaceService {
     const templateContentSpaceID =
       await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
         spaceData.level,
+        actorContext,
         spaceData.spaceTemplateID
       );
 
@@ -1563,6 +1566,7 @@ export class SpaceService {
       templateContentSubspaceID =
         await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
           subspaceData.level,
+          actorContext,
           subspaceData.spaceTemplateID,
           levelZeroSpace.templatesManager
         );
