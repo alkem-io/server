@@ -175,13 +175,10 @@ export class SpaceCollectionService {
       return { spaces: [], withheld: false };
     }
 
-    // (b) Nothing selected — answered with NO lookup of any kind, BEFORE the
-    // host lookup, so an empty CUSTOM selection (which 025 permits saving)
-    // costs zero queries. This must never be expressed by omitting the shared
-    // predicate's id filter: its absent form means THE WHOLE ACCOUNT, so
-    // normalizing `[]` into `undefined` would render every readable space of
-    // the account for a callout that selects none. Mirrors the write guard's
-    // own empty short-circuit.
+    // (b) Nothing selected — zero queries, and BEFORE the host lookup, so an
+    // empty CUSTOM selection (which 025 permits saving) costs nothing. Never
+    // express this by dropping the shared predicate's id filter: its absent
+    // form means THE WHOLE ACCOUNT (see `account.scope.ts`).
     const selectedIds = callout.settings?.framing?.selection?.selectedIds ?? [];
     if (selectedIds.length === 0) {
       return { spaces: [], withheld: false };
@@ -193,12 +190,9 @@ export class SpaceCollectionService {
     // knowable without asking. Do not replace it with a proxy such as
     // `isTemplate`, which answers correctly for templates and silently takes
     // the query path for a knowledge-base-hosted SPACES callout.
-    //
-    // The id and NOTHING else — deliberately not
+    // The id and NOTHING else — deliberately not AUTO's
     // `getSpaceWithSubspacesFromCollaborationCallout`, which eagerly loads the
-    // host's subspaces AND their About profiles, all of which CUSTOM discards
-    // and which would be paid once per resolve field. AUTO keeps that call
-    // verbatim.
+    // host's subspaces and their About profiles, all of which CUSTOM discards.
     const hostSpace = await this.entityManager.findOne(Space, {
       where: {
         collaboration: { calloutsSet: { callouts: { id: callout.id } } },
@@ -210,25 +204,16 @@ export class SpaceCollectionService {
     }
 
     // ONE query, through the single account-scope predicate — never a
-    // re-written join (FR-004a). WHOLE `space` rows plus the `authorization`
-    // relation and NO other relation: no `about`, no profile, no visuals.
-    //
-    // No column restriction. `ISpace.level`, `.visibility`, `.sortOrder` and
-    // `.pinned` are non-null `@Field` properties read straight off the entity
-    // and the shipped `subspaceCard` fragment selects all four, so a
-    // `.select([...])` here would leave them `undefined`, nullify every element
-    // and then the whole `[ISpace!]!` list — i.e. the collection renders as an
-    // error for EVERY viewer including the admin, which is the exact total
-    // failure FR-017 exists to prevent. The exclusion this design wants is of
-    // RELATIONS, not of COLUMNS.
+    // re-written join (FR-004a). WHOLE `space` rows — NO column restriction,
+    // because one would nullify this `[ISpace!]!` list for every viewer
+    // (FR-017; the rule and its failure mode live in `account.scope.ts`) —
+    // plus `authorization` and NO other relation: no `about`, no profile, no
+    // visuals. The exclusion this design wants is of RELATIONS, not COLUMNS.
     //
     // INNER, not LEFT. `isAccessGranted` THROWS when the policy is undefined,
     // and a left join yields `null` for a row whose `authorizationId` is null —
-    // reachable, because that FK is ON DELETE SET NULL. One policy-less row in
-    // a stored selection would then fail the whole collection for every viewer.
-    // Per the workspace hardening gate's remedy order that is deletion of the
-    // case, not a guard: the inner join drops the row in SQL, which is
-    // shrink-only and needs no null check in the filter below.
+    // reachable, because that FK is ON DELETE SET NULL. Dropping that row in
+    // SQL is shrink-only and needs no null check in the filter below.
     const rows = await accountScopedSpaceQuery(
       this.entityManager,
       hostSpace.id,
@@ -240,7 +225,8 @@ export class SpaceCollectionService {
       )
       .getMany();
 
-    // Per-viewer READ filter, in memory, zero queries. `withheld` counts only
+    // Per-viewer READ filter (never READ_ABOUT — see the class doc), in
+    // memory, zero queries. `withheld` counts only
     // rows that CAME BACK from the query — i.e. are still in the account — and
     // failed READ. Ids ABSENT from the result have LEFT the account: they are
     // stale and must not raise the flag (AC6 vs AC7).

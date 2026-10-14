@@ -1339,10 +1339,9 @@ export class SpaceService {
    * (workspace#084 FR-008, FR-010..FR-013; AC1, AC2).
    *
    * ONE query. The account predicate is the shared `accountScopedSpaceQuery`
-   * (FR-004a) — never a re-written join: `space.accountId` is meaningfully
-   * populated on level-zero rows only, so a copy that filtered it directly
-   * would be wrong for every L1/L2. No per-level fan-out, no per-candidate
-   * authorization round trip and no second statement to resolve the account.
+   * (FR-004a) — never a re-written join (see that file for why). No per-level
+   * fan-out, no per-candidate authorization round trip and no second statement
+   * to resolve the account.
    *
    * The host space itself is included when readable (contract S2) — the picker
    * renders it as a disabled "the callout is here" row without a second query.
@@ -1368,11 +1367,10 @@ export class SpaceService {
       // the picker fails closed for the admin who opened it. No gate but a
       // real database sees that, which is why the spec asserts this ordering.
       //
-      // Restricting columns is correct HERE and only here, because this method
-      // returns a scalar DTO; the CUSTOM read path returns `[ISpace!]!` and
-      // must not (see `account.scope.ts`, FR-017, COMP-084-R5-06).
-      // `visibility` is deliberately absent: its only reader was the
-      // visibility exclusion that spec revision 3 deleted (FR-010a).
+      // Restricting columns is correct here because this method returns a
+      // scalar DTO; the CUSTOM read path returns `[ISpace!]!` and must not
+      // (`account.scope.ts`, FR-017). `visibility` is deliberately absent:
+      // its only reader was the exclusion spec revision 3 deleted (FR-010a).
       .select([
         `${ACCOUNT_SCOPED_SPACE_ALIAS}.id`,
         `${ACCOUNT_SCOPED_SPACE_ALIAS}.level`,
@@ -1393,13 +1391,8 @@ export class SpaceService {
       // `spaceAbout.profile`). The shorter join typechecks and returns a
       // non-null string, so it would offer every space renamed since creation
       // under its OLD name while the card the admin then publishes renders the
-      // current one.
-      //
-      // INNER here too, for the same reason as `authorization`: both FKs are
-      // ON DELETE SET NULL, so a left join can hand back `null` for a
-      // property the entity types as non-optional. Dropping such a row in SQL
-      // is shrink-only and keeps `displayName` honestly non-null — the
-      // alternative, an empty-string placeholder, renders a nameless row.
+      // current one. INNER for the same reason as `authorization` above, which
+      // also keeps `displayName` honestly non-null.
       .innerJoin(`${ACCOUNT_SCOPED_SPACE_ALIAS}.about`, 'about')
       .innerJoin('about.profile', 'aboutProfile')
       .addSelect([
@@ -1417,9 +1410,9 @@ export class SpaceService {
 
     // Per-viewer filter, in memory, zero queries. READ, not READ_ABOUT
     // (ruling D1): for a level-zero space READ_ABOUT is pushed unconditionally
-    // for anonymous, guest and registered actors, so a READ_ABOUT filter would
-    // offer the account's whole L0 set — including PRIVATE siblings — to
-    // anyone holding READ on one space of the account.
+    // even for anonymous, so a READ_ABOUT filter would offer the account's
+    // whole L0 set — PRIVATE siblings included — to anyone holding READ on one
+    // space of the account.
     return rows
       .filter(candidate =>
         this.authorizationService.isAccessGranted(

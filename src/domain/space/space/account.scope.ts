@@ -3,14 +3,10 @@ import { Space } from './space.entity';
 
 /**
  * The main alias of every builder `accountScopedSpaceQuery` hands back.
- *
- * It is exported, and callers MUST spell their own joins and selects against
- * it (`addSelect(`${ACCOUNT_SCOPED_SPACE_ALIAS}.id`)`,
- * `innerJoinAndSelect(`${ACCOUNT_SCOPED_SPACE_ALIAS}.authorization`, ...)`)
- * rather than hard-coding a string. A caller that hard-codes a different
- * alias throws at query-build time only on a real database — every spec in
- * this repo mocks `createQueryBuilder` (`vitest.config.ts`, `environment:
- * 'node'`, no Postgres), so no unit gate can catch the mismatch.
+ * Callers MUST spell their own joins and selects against this constant rather
+ * than hard-coding a string: a mismatched literal throws at query-build time
+ * only on a real database, and every spec in this repo mocks
+ * `createQueryBuilder` (no Postgres), so no unit gate can catch it.
  */
 export const ACCOUNT_SCOPED_SPACE_ALIAS = 'space';
 
@@ -37,9 +33,8 @@ export const ACCOUNT_SCOPED_SPACE_ALIAS = 'space';
  * shipped client fragment selects all four, so a restricted select leaves them
  * `undefined`, nullifies every element and then the whole `[ISpace!]!` list —
  * i.e. the collection renders as an error for every viewer including the admin
- * (workspace#084 FR-017; carried finding COMP-084-R5-06). The one place a
- * column-restricted select is legitimate is `accountScopedSpaceIds` below,
- * which returns ids and no entity at all.
+ * (workspace#084 FR-017; carried finding COMP-084-R5-06). Only a caller that
+ * returns no entity at all may restrict columns inside this builder.
  *
  * `candidateIds` is NEVER `[]`. Its absent form means *the whole account*, so
  * an empty array must never be normalized into it — that would render every
@@ -78,10 +73,9 @@ export const accountScopedSpaceQuery = (
 };
 
 /**
- * Ids-only form of the predicate above, for the write guard — the ONLY caller
- * that wants no entity, and so the only place a column-restricted select is
- * correct. Keeping it here is what lets `accountScopedSpaceQuery` promise
- * whole rows to its entity callers.
+ * Ids-only form of the predicate above, for the write guard — the one caller
+ * that wants no entity. Keeping its restricted select here is what lets
+ * `accountScopedSpaceQuery` promise whole rows to its entity callers.
  *
  * `candidateIds` is required and must be non-empty (see above).
  */
