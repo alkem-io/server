@@ -5,6 +5,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CALLOUT_REACTION_ALLOWED_EMOJIS } from '@domain/collaboration/reaction/reaction.constants';
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
+import { SpaceCollectionService } from '@domain/collaboration/space-collection/space.collection.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -28,6 +29,7 @@ describe('CalloutResolverFields', () => {
   let calloutService: Mocked<CalloutService>;
   let reactionService: Mocked<ReactionService>;
   let myReactionHelper: Mocked<CalloutMyReactionLoaderCreator>;
+  let spaceCollectionService: Mocked<SpaceCollectionService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -48,6 +50,31 @@ describe('CalloutResolverFields', () => {
     myReactionHelper = module.get<CalloutMyReactionLoaderCreator>(
       CalloutMyReactionLoaderCreator
     ) as Mocked<CalloutMyReactionLoaderCreator>;
+    spaceCollectionService = module.get<SpaceCollectionService>(
+      SpaceCollectionService
+    ) as Mocked<SpaceCollectionService>;
+  });
+
+  // workspace#084 FR-018 / AC6. The field lives HERE, on the Callout, and not
+  // on CalloutFraming, because the selection mode is a jsonb column on this
+  // parent object — a framing-level field would have to load the parent
+  // callout before it could answer `false` for AUTO (carried finding
+  // COMP-084-R5-07: the sibling resolve fields all carry cases here).
+  describe('hasHiddenSpaces', () => {
+    const actorContext = { credentials: [] } as any;
+
+    it('delegates to the collection service with the requesting actor', async () => {
+      const callout = makeCallout('c-1', []);
+      spaceCollectionService.hasHiddenSpaces.mockResolvedValue(true);
+
+      const result = await resolver.hasHiddenSpaces(callout, actorContext);
+
+      expect(result).toBe(true);
+      expect(spaceCollectionService.hasHiddenSpaces).toHaveBeenCalledWith(
+        callout,
+        actorContext
+      );
+    });
   });
 
   describe('activity', () => {

@@ -18,6 +18,7 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CALLOUT_REACTION_ALLOWED_EMOJIS } from '@domain/collaboration/reaction/reaction.constants';
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
+import { SpaceCollectionService } from '@domain/collaboration/space-collection/space.collection.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -43,8 +44,30 @@ export class CalloutResolverFields {
     private readonly logger: LoggerService,
     private calloutService: CalloutService,
     private reactionService: ReactionService,
-    private myReactionHelper: CalloutMyReactionLoaderCreator
+    private myReactionHelper: CalloutMyReactionLoaderCreator,
+    private spaceCollectionService: SpaceCollectionService
   ) {}
+
+  /**
+   * workspace#084 FR-018 / AC6. Lives on the CALLOUT, not on CalloutFraming:
+   * the flag is derived from `callout.settings.framing.selection.mode`, a jsonb
+   * column already on this parent object, so AUTO answers `false` with ZERO
+   * queries. A framing-level field would first have to call
+   * `calloutFramingService.getParentCallout()` — an un-dataloadered findOne —
+   * before it could answer at all, adding one round trip to every AUTO SPACES
+   * render (SC-005). Spec A16/A17.
+   */
+  @ResolveField('hasHiddenSpaces', () => Boolean, {
+    nullable: false,
+    description:
+      "Whether this Callout's SPACES collection is hiding at least one manually selected space from the requesting actor because they may not READ it. Always false for a SPACES collection in AUTO mode and for every other callout kind. A selection entry that has left the host space's account is stale, not hidden, and does NOT raise this flag; no count is exposed.",
+  })
+  async hasHiddenSpaces(
+    @Parent() callout: ICallout,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<boolean> {
+    return this.spaceCollectionService.hasHiddenSpaces(callout, actorContext);
+  }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
