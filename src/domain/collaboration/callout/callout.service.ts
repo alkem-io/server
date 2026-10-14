@@ -36,6 +36,7 @@ import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { accountScopedSpaceIds } from '@domain/space/space/account.scope';
 import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -171,12 +172,15 @@ export class CalloutService {
       );
 
     // AC3 host-scope guard: reject any selectedId not in the host's RoleSet
-    // (contributors) or not a direct subspace of the host (spaces). Only runs
+    // (contributors) or outside the host space's account (spaces). Only runs
     // when the normalized selection is CUSTOM + non-empty (FR-006).
-    await this.validateSelectionScopeGuard(
+    // On create there is no stored selection, so every submitted id is "added"
+    // and nothing can be a silent drop.
+    await this.validateAndNormalizeSelectionScope(
       callout.framing.type,
       callout.settings.framing.selection,
-      parentSpaceId
+      parentSpaceId,
+      []
     );
 
     if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
@@ -591,6 +595,19 @@ export class CalloutService {
     }
     const targetStorageBucketID = callout.framing.profile?.storageBucket?.id;
 
+    // THE SNAPSHOT POINT (workspace#084 ruling D3). `mergeCalloutSettings`
+    // below replaces arrays wholesale and `validateAndNormalizeSelectionSettings`
+    // then rewrites `selection.selectedIds` IN PLACE, so by the time the scope
+    // guard runs, `callout.settings.framing.selection.selectedIds` IS the
+    // submitted list and nothing holds the stored one. Captured here —
+    // strictly earlier than any of that — so the guard can tell a newly added
+    // id (reject) from a carried-over one (silent drop). Read it later and
+    // `stored === submitted`, so every out-of-account id a crafted update adds
+    // is accepted and persisted, with every unit test still green.
+    const storedSelectedIds = [
+      ...(callout.settings.framing.selection?.selectedIds ?? []),
+    ];
+
     // Reject an off-kind selection/spaces block against the TARGET framing
     // type before updateCalloutFraming runs: it has side effects (e.g. a type
     // change deletes the whiteboard) and there is no transaction, so a
@@ -684,10 +701,11 @@ export class CalloutService {
       const updateParentSpaceId = callout.calloutsSet
         ? await this.getParentSpaceId(callout.calloutsSet.id)
         : undefined;
-      await this.validateSelectionScopeGuard(
+      await this.validateAndNormalizeSelectionScope(
         callout.framing.type,
         callout.settings.framing.selection,
-        updateParentSpaceId
+        updateParentSpaceId,
+        storedSelectedIds
       );
     }
 
@@ -1392,27 +1410,47 @@ export class CalloutService {
   }
 
   /**
-   * AC3 host-scope guard (workspace#025, FR-006/FR-007).
+   * AC3 host-scope guard (workspace#025, FR-006/FR-007) — widened for SPACES
+   * to the host space's ACCOUNT (workspace#084, FR-001..FR-005).
    * Enforced at WRITE time on CUSTOM selections with at least one id.
    *
    * CONTRIBUTORS: every selectedId must be an accepted community member of the
    *   host space (any role across USER/ORG/VC — uses the same RoleSetService
    *   reads as ContributorCollectionService). Uses three role fetches and union
    *   into a Set for the cheapest single-pass check over the submitted ids.
-   * SPACES: every selectedId must be a direct subspace of the host space.
-   *   Since the host's subspaces are already the only read-time resolution
-   *   surface, this write-time guard is the PRIMARY barrier.
+   *   UNCHANGED by workspace#084.
+   * SPACES: every selectedId must belong to the host space's account, at any
+   *   level. A NEWLY ADDED id outside the account is rejected; a CARRIED-OVER
+   *   id that has since left the account is dropped silently from the list
+   *   that gets persisted (FR-003/FR-003b, spec A11).
    * Template/KB context (no host space): any non-empty selection is rejected.
    *
    * Auto skips when: mode is AUTO, selectedIds is empty, or framing is not a
    * collection kind (normalization already ensures this is consistent).
+   *
+   * THIS METHOD RETURNS NOTHING AND NO CALL SITE MAY ASSIGN A KEPT LIST
+   * (FR-003c). It returns from five places an ordinary update reaches
+   * (`!selection`, non-CUSTOM mode, an empty list, a non-collection kind, and
+   * the whole CONTRIBUTORS branch), and the client submits
+   * `selection { mode, selectedIds }` on EVERY update of a CONTRIBUTORS *or*
+   * SPACES callout. A call site that assigned unconditionally would therefore
+   * write `undefined`/`[]` and (a) destroy 025's non-destructive CUSTOM→AUTO
+   * toggle, (b) wipe the contributor selection on any CONTRIBUTORS update.
+   * The kept list is written in place inside the SPACES/CUSTOM branch only,
+   * which makes both unreachable by construction.
    */
-  private async validateSelectionScopeGuard(
+  private async validateAndNormalizeSelectionScope(
     framingType: CalloutFramingType,
     selection:
       | { mode: CalloutSelectionMode; selectedIds: string[] }
       | undefined,
-    hostSpaceId: string | undefined
+    hostSpaceId: string | undefined,
+    // The selection as the server held it BEFORE this request's settings were
+    // merged in. Captured by the call site, because `mergeCalloutSettings`
+    // replaces arrays wholesale and the selection normalizer then rewrites
+    // `selectedIds` in place — by the time this guard runs, nothing else holds
+    // the stored list. `[]` on the create path. Ruling D3.
+    storedSelectedIds: string[]
   ): Promise<void> {
     if (!selection) return;
     if (selection.mode !== CalloutSelectionMode.CUSTOM) return;
@@ -1437,12 +1475,42 @@ export class CalloutService {
         selection.selectedIds,
         hostSpaceId
       );
-    } else {
-      await this.validateSubspaceSelectionScope(
-        selection.selectedIds,
-        hostSpaceId
+      return;
+    }
+
+    // --- SPACES: the account boundary (workspace#084) ---
+    const submittedIds = selection.selectedIds;
+    // ONE query serves both halves of the decision. `submittedIds` is
+    // non-empty here, which is why the shared predicate may state that its
+    // `candidateIds` is never `[]`.
+    const inAccount = await accountScopedSpaceIds(
+      this.calloutRepository.manager,
+      hostSpaceId,
+      submittedIds
+    );
+    const stored = new Set(storedSelectedIds);
+
+    // Reject the first NEWLY ADDED id outside the account. `added` is computed
+    // against the selection the server already holds, never against anything
+    // the client asserts (FR-003a). On create every id is "added". Name no
+    // space other than the offender (contract S8).
+    const offender = submittedIds.find(
+      id => !inAccount.has(id) && !stored.has(id)
+    );
+    if (offender) {
+      throw new ValidationException(
+        'One or more selected spaces do not belong to the account of this space.',
+        LogContext.COLLABORATION,
+        { offendingId: offender }
       );
     }
+
+    // Everything still out of account at this point is a carried-over entry
+    // that has left the account: omit it. No error, no warning field, no
+    // user-visible log — AC7's "omitted on save", moved server-side.
+    // Written HERE, in place, and nowhere else (FR-003c): `selection` IS
+    // `callout.settings.framing.selection`.
+    selection.selectedIds = submittedIds.filter(id => inAccount.has(id));
   }
 
   private async validateContributorSelectionScope(
@@ -1484,29 +1552,6 @@ export class CalloutService {
     if (offender) {
       throw new ValidationException(
         'One or more selected contributors are not accepted community members of this space.',
-        LogContext.COLLABORATION,
-        { offendingId: offender }
-      );
-    }
-  }
-
-  private async validateSubspaceSelectionScope(
-    selectedIds: string[],
-    hostSpaceId: string
-  ): Promise<void> {
-    // Load the host space's direct subspaces.
-    const hostSpace = await this.calloutRepository.manager.findOne(Space, {
-      where: { id: hostSpaceId },
-      relations: { subspaces: true },
-    });
-    const subspaceIds = new Set(
-      (hostSpace?.subspaces ?? []).map((s: { id: string }) => s.id)
-    );
-
-    const offender = selectedIds.find(id => !subspaceIds.has(id));
-    if (offender) {
-      throw new ValidationException(
-        'One or more selected subspaces are not direct subspaces of this space.',
         LogContext.COLLABORATION,
         { offendingId: offender }
       );
