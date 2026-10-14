@@ -94,11 +94,16 @@ import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
 import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import {
+  ACCOUNT_SCOPED_SPACE_ALIAS,
+  accountScopedSpaceQuery,
+} from './account.scope';
 import { SpacesQueryArgs } from './dto/space.args.query.spaces';
 import { AdminUpdateSpaceVisibilityInput } from './dto/space.dto.admin.update.visibility';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { UpdateSpaceInput } from './dto/space.dto.update';
 import { UpdateSubspacesSortOrderInput } from './dto/space.dto.update.subspaces.sort.order';
+import { ISpaceSelectionCandidate } from './dto/space.selection.candidate';
 import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { ISpaceSubscription } from './space.license.subscription.interface';
@@ -122,6 +127,11 @@ const EXPLORE_SPACES_OVERFETCH_FACTOR = 3;
 // keeps the sweep parallel without fanning the whole set onto the cache backend
 // in one go.
 const SPACE_URL_CACHE_REVOKE_BATCH_SIZE = 50;
+// Unordered resource bound on the Spaces-callout selection picker's candidate
+// pool (workspace#084 FR-011, contract S5). NOT a feature: no order is
+// guaranteed, nothing depends on truncation being stable, reaching it never
+// fails the query and it never affects the write guard (NR-3).
+const SPACE_SELECTION_CANDIDATES_LIMIT = 500;
 
 type SpaceSortingData = {
   id: string;
@@ -1321,6 +1331,109 @@ export class SpaceService {
     }
 
     return orderSubspaces(limitAndShuffled);
+  }
+
+  /**
+   * The spaces of THIS space's account, at any level, that `actorContext` may
+   * READ — the candidate pool for a Spaces callout's manual selection
+   * (workspace#084 FR-008, FR-010..FR-013; AC1, AC2).
+   *
+   * ONE query. The account predicate is the shared `accountScopedSpaceQuery`
+   * (FR-004a) — never a re-written join: `space.accountId` is meaningfully
+   * populated on level-zero rows only, so a copy that filtered it directly
+   * would be wrong for every L1/L2. No per-level fan-out, no per-candidate
+   * authorization round trip and no second statement to resolve the account.
+   *
+   * The host space itself is included when readable (contract S2) — the picker
+   * renders it as a disabled "the callout is here" row without a second query.
+   *
+   * There is NO visibility clause and no separate ARCHIVED exclusion: an
+   * ARCHIVED space skips `extendAuthorizationPolicyLocal` entirely, so it
+   * carries no member, admin or privacy rule and the READ filter below already
+   * denies it to every ordinary host-space admin (spec A19, NR-8).
+   */
+  public async getAccountSelectionCandidates(
+    space: ISpace,
+    actorContext: ActorContext
+  ): Promise<ISpaceSelectionCandidate[]> {
+    const rows = await accountScopedSpaceQuery(
+      this.spaceRepository.manager,
+      space.id
+    )
+      // The column restriction MUST be applied BEFORE any `*AndSelect` /
+      // `addSelect` below. TypeORM's `select()` REPLACES the selection list,
+      // so a `.select([...])` moved after the authorization join silently
+      // drops that join's selection, `space.authorization` comes back
+      // `undefined` and `isAccessGranted` THROWS for every candidate — i.e.
+      // the picker fails closed for the admin who opened it. No gate but a
+      // real database sees that, which is why the spec asserts this ordering.
+      //
+      // Restricting columns is correct HERE and only here, because this method
+      // returns a scalar DTO; the CUSTOM read path returns `[ISpace!]!` and
+      // must not (see `account.scope.ts`, FR-017, COMP-084-R5-06).
+      // `visibility` is deliberately absent: its only reader was the
+      // visibility exclusion that spec revision 3 deleted (FR-010a).
+      .select([
+        `${ACCOUNT_SCOPED_SPACE_ALIAS}.id`,
+        `${ACCOUNT_SCOPED_SPACE_ALIAS}.level`,
+      ])
+      // INNER, not LEFT. `isAccessGranted` throws on an undefined policy, and
+      // a left join yields `null` for a row whose `authorizationId` is null —
+      // reachable, because that FK is ON DELETE SET NULL. Dropping such a row
+      // in SQL is shrink-only and needs no null check in the filter below.
+      .innerJoinAndSelect(
+        `${ACCOUNT_SCOPED_SPACE_ALIAS}.authorization`,
+        'authorization'
+      )
+      .leftJoin(`${ACCOUNT_SCOPED_SPACE_ALIAS}.parentSpace`, 'parentSpace')
+      // The ABOUT profile's display name, NOT `space.profile`. A Space carries
+      // TWO profiles: the actor-level one inherited from `Actor` is set once at
+      // creation from the About display name and is NEVER re-synced on rename
+      // (`SpaceAboutService.updateSpaceAbout` updates only
+      // `spaceAbout.profile`). The shorter join typechecks and returns a
+      // non-null string, so it would offer every space renamed since creation
+      // under its OLD name while the card the admin then publishes renders the
+      // current one.
+      //
+      // INNER here too, for the same reason as `authorization`: both FKs are
+      // ON DELETE SET NULL, so a left join can hand back `null` for a
+      // property the entity types as non-optional. Dropping such a row in SQL
+      // is shrink-only and keeps `displayName` honestly non-null — the
+      // alternative, an empty-string placeholder, renders a nameless row.
+      .innerJoin(`${ACCOUNT_SCOPED_SPACE_ALIAS}.about`, 'about')
+      .innerJoin('about.profile', 'aboutProfile')
+      .addSelect([
+        'parentSpace.id',
+        'about.id',
+        'aboutProfile.id',
+        'aboutProfile.displayName',
+      ])
+      // An UNORDERED resource bound, not a feature: no ORDER BY is added for
+      // it and no truncation order is guaranteed. Reaching the cap must not
+      // fail the query and must not affect the write guard (NR-3). The client
+      // orders for display (FR-024).
+      .limit(SPACE_SELECTION_CANDIDATES_LIMIT)
+      .getMany();
+
+    // Per-viewer filter, in memory, zero queries. READ, not READ_ABOUT
+    // (ruling D1): for a level-zero space READ_ABOUT is pushed unconditionally
+    // for anonymous, guest and registered actors, so a READ_ABOUT filter would
+    // offer the account's whole L0 set — including PRIVATE siblings — to
+    // anyone holding READ on one space of the account.
+    return rows
+      .filter(candidate =>
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          candidate.authorization,
+          AuthorizationPrivilege.READ
+        )
+      )
+      .map(candidate => ({
+        id: candidate.id,
+        displayName: candidate.about.profile.displayName,
+        level: candidate.level,
+        parentSpaceID: candidate.parentSpace?.id,
+      }));
   }
 
   public async updateSubspacesSortOrder(
