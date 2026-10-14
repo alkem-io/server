@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { MigrationInterface, QueryRunner } from 'typeorm';
 import {
-  LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS,
+  BASELINE_PLATFORM_ROLE_SEED_DEFINITIONS,
   NEW_PLATFORM_ROLE_SEED_DEFINITIONS,
 } from './utils/platform.role.seed.definitions';
 
@@ -374,7 +374,7 @@ export class Seed1764590884533 implements MigrationInterface {
     // the same module for existing installs, and `role.credential.map.spec.ts`
     // (T011) asserts every platform-role-set RoleName has a row here.
     const roles = [
-      ...LEGACY_PLATFORM_ROLE_SEED_DEFINITIONS,
+      ...BASELINE_PLATFORM_ROLE_SEED_DEFINITIONS,
       ...NEW_PLATFORM_ROLE_SEED_DEFINITIONS,
     ].map(def => ({
       name: def.name,

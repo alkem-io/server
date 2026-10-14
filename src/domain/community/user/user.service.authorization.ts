@@ -1,8 +1,6 @@
 import {
   CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ,
-  CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN,
   CREDENTIAL_RULE_TYPES_USER_READ_GLOBAL_REGISTERED,
   CREDENTIAL_RULE_USER_READ,
   CREDENTIAL_RULE_USER_READ_PII,
@@ -183,67 +181,31 @@ export class UserAuthorizationService {
     const globalAdminNotInherited =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );
     globalAdminNotInherited.cascade = false;
     newRules.push(globalAdminNotInherited);
 
-    // Allow global admins do platform admin actions
-    const globalAdminPlatformAdminNotInherited =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_ADMIN],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-        ],
-        CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN
-      );
-    globalAdminPlatformAdminNotInherited.cascade = false;
-    newRules.push(globalAdminPlatformAdminNotInherited);
-
     // 027-platform-role-redesign (T060, US2): PLATFORM_USERS_ADMIN — the
     // user-record family (A4/A5): login email change, identity/account
     // deletion & reset, and reading user personal data to support those.
-    // Additive: {owning role} ∪ legacy (FR-007(d)).
     //
-    // ⚠ DEVIATION FROM THE LITERAL TASK TEXT, RECORDED (Slice A invariant):
-    // T060 also asks to "narrow READ_USER_PII / READ_USER_SETTINGS ... no
-    // standalone broad-PII reader survives" — that would REMOVE
-    // GLOBAL_COMMUNITY_READ's existing PII-read grant below, which is a
-    // legacy-grant narrowing forbidden in the additive slice. Only the
-    // ADDITIVE half is done here (PLATFORM_USERS_ADMIN gains PLATFORM_ADMIN
-    // and PII/settings read); the narrowing is Slice B's (T076-adjacent)
-    // work, alongside dropping the other legacy credentials.
+    // T076 (Slice B) closed the recorded Slice A deviation: the rule's grant
+    // set is now the owning role ALONE (FR-007(d)). The four legacy reachers
+    // A4/A5 carried through the additive slice — global-admin, global-support,
+    // global-license-manager, global-platform-manager — are gone, and with
+    // them the "standalone broad-PII reader" T060 asked to narrow: the
+    // `global-community-read` READ rule that used to sit below this one is
+    // deleted too, so PII read now rides only on Users Admin actions.
     const platformUsersAdmin =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.PLATFORM_USERS_ADMIN],
-        [
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-          // A4's legacy reachers (today's PLATFORM_ADMIN):
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-          // A5's legacy reachers (today's PLATFORM_SETTINGS_ADMIN):
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN
       );
     platformUsersAdmin.cascade = false;
     newRules.push(platformUsersAdmin);
-
-    const communityAdmin =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.READ],
-        [AuthorizationCredential.GLOBAL_COMMUNITY_READ],
-        CREDENTIAL_RULE_TYPES_USER_GLOBAL_COMMUNITY_READ
-      );
-    communityAdmin.cascade = true;
-    newRules.push(communityAdmin);
 
     const globalRegistered =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
@@ -288,6 +250,11 @@ export class UserAuthorizationService {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
+        // 027-platform-role-redesign (T078, FR-020, A17): renaming is owned
+        // by the ENTITY admin — for a user, that is the user. Safe to add
+        // here: this rule's criteria list is the user's own self-management
+        // credential and nothing else.
+        AuthorizationPrivilege.UPDATE_NAMEID,
       ],
       [userSelfManagementCredential],
       CREDENTIAL_RULE_USER_SELF_ADMIN
@@ -302,11 +269,7 @@ export class UserAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.READ_USER_SETTINGS,
         ],
-        [
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_USERS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_USERS_ADMIN],
         CREDENTIAL_RULE_USER_READ
       );
     communityReader.cascade = true;
@@ -320,24 +283,13 @@ export class UserAuthorizationService {
       userSelfManagementCredential,
     ];
 
-    // Ensure global admins can see PII
-    readUserPiiCredentials.push({
-      type: AuthorizationCredential.GLOBAL_ADMIN,
-      resourceID: '',
-    });
-    readUserPiiCredentials.push({
-      type: AuthorizationCredential.GLOBAL_SUPPORT,
-      resourceID: '',
-    });
-    readUserPiiCredentials.push({
-      type: AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-      resourceID: '',
-    });
-    // 027-platform-role-redesign (T060): platform-users-admin needs PII read
-    // to support the user-record family (A4/A5). Additive only — narrowing
-    // this list (dropping GLOBAL_COMMUNITY_READ's standalone broad-PII
-    // access) is Slice B work; see the comment on the PLATFORM_USERS_ADMIN
-    // rule above for why it is not done here.
+    // 027-platform-role-redesign (T060 + T076): platform-users-admin needs PII
+    // read to support the user-record family (A4/A5), and after T076 it is the
+    // ONLY global holder. The three legacy pushes that stood here —
+    // global-admin, global-support and global-community-read — are gone, which
+    // is the narrowing T060 deferred: there is no standalone broad-PII reader
+    // any more, PII read rides only on Users Admin actions (spec §Privilege
+    // model, `READ_USER_PII` row).
     readUserPiiCredentials.push({
       type: AuthorizationCredential.PLATFORM_USERS_ADMIN,
       resourceID: '',

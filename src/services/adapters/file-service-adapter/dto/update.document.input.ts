@@ -6,6 +6,10 @@
  * renames never conflict at the DB level.
  */
 export interface UpdateDocumentInput {
+  /** Caller source precondition, checked on the same snapshot as the row CAS. */
+  expectedStorageBucketId?: string;
+  /** Destination tagset for relocation; ordinary replacement remains supported. */
+  tagsetId?: string;
   storageBucketId?: string;
   temporaryLocation?: boolean;
   /**

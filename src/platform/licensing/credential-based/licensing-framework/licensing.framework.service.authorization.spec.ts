@@ -92,8 +92,6 @@ describe('LicensingFrameworkAuthorizationService', () => {
         AuthorizationPrivilege.DELETE,
       ],
       [
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
         // 027-platform-role-redesign (T040, A13): plan/entitlement-mapping
         // definition re-anchored onto platform-settings-admin, additively.
         AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
@@ -112,11 +110,7 @@ describe('LicensingFrameworkAuthorizationService', () => {
       authorizationPolicyService.createCredentialRuleUsingTypesOnly
     ).toHaveBeenCalledWith(
       [AuthorizationPrivilege.GRANT],
-      [
-        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-      ],
+      [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
       CREDENTIAL_RULE_LICENSE_PLAN_USAGE
     );
 
@@ -124,12 +118,7 @@ describe('LicensingFrameworkAuthorizationService', () => {
       authorizationPolicyService.createCredentialRuleUsingTypesOnly
     ).toHaveBeenCalledWith(
       [AuthorizationPrivilege.LICENSE_RESET],
-      [
-        AuthorizationCredential.GLOBAL_ADMIN,
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-        AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-      ],
+      [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
       CREDENTIAL_RULE_LICENSE_RESET
     );
 

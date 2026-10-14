@@ -498,6 +498,42 @@ export class ContributionReporterService {
     );
   }
 
+  /** A Form Post was created (in addition to CALLOUT_CREATED). Metadata only. */
+  public calloutFormCreated(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.CALLOUT_FORM_CREATED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  /**
+   * A Form response was submitted; `id` is the response id, so a MULTIPLE-mode
+   * Form yields one document per response. Metadata only: never answers,
+   * prompts or option labels (a response may be visible to admins only).
+   */
+  public formResponseSubmitted(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.FORM_RESPONSE_SUBMITTED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
   public taskBoardCreated(
     contribution: ContributionDetails,
     actorContext: ContributionActorContext

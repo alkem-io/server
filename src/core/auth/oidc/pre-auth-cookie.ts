@@ -10,6 +10,12 @@ export type PreAuthCookiePayload = {
   code_verifier: string;
   returnTo: string;
   issued_at: number;
+  /**
+   * Set only when the QUERY leg of `/login` entered app mode, and read only by
+   * `/callback`. Never revived from the cookie into a new flow — see the note
+   * at the decision site in `oidc.controller.ts#login` (SEC-082-01).
+   */
+  app_challenge?: string;
 };
 
 export type PreAuthCookieAttributes = {
@@ -46,6 +52,7 @@ export async function verifyPreAuthCookie(
     code_verifier: codeVerifier,
     returnTo,
     issued_at: issuedAt,
+    app_challenge: appChallenge,
   } = payload as Record<string, unknown>;
 
   if (
@@ -53,7 +60,11 @@ export async function verifyPreAuthCookie(
     typeof nonce !== 'string' ||
     typeof codeVerifier !== 'string' ||
     typeof returnTo !== 'string' ||
-    typeof issuedAt !== 'number'
+    typeof issuedAt !== 'number' ||
+    // Absent is the ordinary web flow; present-but-not-a-string is a forgery
+    // attempt or a corrupt payload, and either way must not reach the
+    // app-mode branch in `/callback`.
+    (appChallenge !== undefined && typeof appChallenge !== 'string')
   ) {
     throw new Error('pre-auth cookie payload shape invalid');
   }
@@ -64,6 +75,7 @@ export async function verifyPreAuthCookie(
     code_verifier: codeVerifier,
     returnTo,
     issued_at: issuedAt,
+    app_challenge: appChallenge,
   };
 }
 

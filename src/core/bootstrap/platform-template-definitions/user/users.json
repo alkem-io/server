@@ -16,9 +16,6 @@
         },
         {
           "type": "platform-settings-admin"
-        },
-        {
-          "type": "global-admin"
         }
       ]
     },
@@ -26,11 +23,7 @@
       "email": "notifications@alkem.io",
       "firstName": "notifications",
       "lastName": "admin",
-      "credentials": [
-        {
-          "type": "global-community-read"
-        }
-      ]
+      "credentials": []
     },
     {
       "email": "spaces-reader@alkem.io",

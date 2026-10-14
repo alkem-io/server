@@ -1,7 +1,4 @@
-import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { Room } from '@domain/communication/room/room.entity';
 import { Document } from '@domain/storage/document/document.entity';
-import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,12 +9,10 @@ import { MessageAttachmentService } from './message.attachment.service';
 
 @Module({
   imports: [
-    AuthorizationModule,
-    DocumentModule,
     StorageBucketModule,
     StorageAggregatorResolverModule,
     EntityResolverModule,
-    TypeOrmModule.forFeature([Conversation, Document, Room]),
+    TypeOrmModule.forFeature([Conversation, Document]),
   ],
   providers: [MessageAttachmentService],
   exports: [MessageAttachmentService],

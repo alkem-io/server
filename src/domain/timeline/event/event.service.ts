@@ -4,7 +4,6 @@ import { RoomType } from '@common/enums/room.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
-import { Collaboration } from '@domain/collaboration/collaboration';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -13,12 +12,10 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Calendar } from '@domain/timeline/calendar/calendar.entity';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { FindOneOptions, In, Not, Repository } from 'typeorm';
 import { CreateCalendarEventInput } from './dto/event.dto.create';
 import { DeleteCalendarEventInput } from './dto/event.dto.delete';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
@@ -265,34 +262,20 @@ export class CalendarEventService {
   public async getSubspace(
     calendarEvent: ICalendarEvent
   ): Promise<ISpace | undefined> {
-    const spaceParentOfTheEvent = await this.calendarEventRepository
-      .createQueryBuilder('calendarEvent')
-      .leftJoin(Calendar, 'calendar', 'calendar.id = calendarEvent.calendarId')
-      .leftJoin(Timeline, 'timeline', 'timeline.calendarId = calendar.id')
-      .leftJoin(
-        Collaboration,
-        'collaboration',
-        'collaboration.timelineId = timeline.id'
-      )
-      .leftJoin(
-        Space,
-        'subspace',
-        'subspace.collaborationId = collaboration.id'
-      )
-      .where('calendarEvent.id = :id', { id: calendarEvent.id })
-      .andWhere('subspace.level != :level', { level: SpaceLevel.L0 })
-      .select('subspace.id as spaceId')
-      .getRawOne<{ spaceId: string }>();
-
-    if (!spaceParentOfTheEvent) {
-      return undefined;
-    }
-
-    const space = await this.spaceRepository.findOne({
-      where: { id: spaceParentOfTheEvent.spaceId },
+    // Resolve the owning Space in a single query, walking back up from the
+    // event through calendar -> timeline -> collaboration. Events on a level
+    // zero Space's own calendar have no subspace to attribute, so they resolve
+    // to undefined and carry no label.
+    const subspace = await this.spaceRepository.findOne({
+      where: {
+        level: Not(SpaceLevel.L0),
+        collaboration: {
+          timeline: { calendar: { events: { id: calendarEvent.id } } },
+        },
+      },
     });
 
-    return space ?? undefined;
+    return subspace ?? undefined;
   }
 
   public async getComments(calendarEventID: string) {

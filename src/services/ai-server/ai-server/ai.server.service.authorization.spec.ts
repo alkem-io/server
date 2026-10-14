@@ -148,15 +148,11 @@ describe('AiServerAuthorizationService', () => {
       );
     });
 
-    const privilegesGrantedToRole = () => {
+    const privilegesGrantedTo = (credential: AuthorizationCredential) => {
       const granted = new Set<AuthorizationPrivilege>();
       for (const [privileges, credentialTypes] of authorizationPolicyService
         .createCredentialRuleUsingTypesOnly.mock.calls) {
-        if (
-          credentialTypes.includes(
-            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
-          )
-        ) {
+        if (credentialTypes.includes(credential)) {
           for (const p of privileges) {
             granted.add(p);
           }
@@ -164,6 +160,8 @@ describe('AiServerAuthorizationService', () => {
       }
       return granted;
     };
+    const privilegesGrantedToRole = () =>
+      privilegesGrantedTo(AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN);
 
     it('grants the role exactly AUTHORIZATION_RESET and persona CREATE on the aiServer policy', async () => {
       await service.applyAuthorizationPolicy();
@@ -185,7 +183,6 @@ describe('AiServerAuthorizationService', () => {
         AuthorizationPrivilege.READ,
         AuthorizationPrivilege.UPDATE,
         AuthorizationPrivilege.DELETE,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
       ]) {
         expect(granted).not.toContain(excluded);
       }
@@ -207,6 +204,25 @@ describe('AiServerAuthorizationService', () => {
       for (const rule of roleRules) {
         expect(rule.cascade).toBe(false);
       }
+    });
+
+    // server#6619: the A3 reset belongs to Operations Admin alone, and the
+    // content role holds no GRANT — it keeps only the persona CRUD.
+    it('grants PLATFORM_CONTENT_FULL_ACCESS exactly CRUD, without GRANT or AUTHORIZATION_RESET', async () => {
+      await service.applyAuthorizationPolicy();
+
+      expect(
+        privilegesGrantedTo(
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+        )
+      ).toEqual(
+        new Set([
+          AuthorizationPrivilege.CREATE,
+          AuthorizationPrivilege.READ,
+          AuthorizationPrivilege.UPDATE,
+          AuthorizationPrivilege.DELETE,
+        ])
+      );
     });
   });
 });

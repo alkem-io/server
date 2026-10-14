@@ -92,6 +92,52 @@ jobs:
           path: coverage-ci/content-signing/
           retention-days: 1
 
+  attachment-placement-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      ATTACHMENT_PLACEMENT_FILE_SERVICE_IMAGE: alkemio/file-service:v0.3.3
+      ATTACHMENT_PLACEMENT_FILE_SERVICE_SOURCE: https://github.com/alkem-io/file-service/releases/tag/v0.3.3
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.22.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pull released file-service capability image
+        run: docker pull "$ATTACHMENT_PLACEMENT_FILE_SERVICE_IMAGE"
+
+      - name: Run attachment placement and policy real-service gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export ATTACHMENT_PLACEMENT_REPORT_ROOT="$RUNNER_TEMP/attachment-placement-reports"
+          mkdir -p "$ATTACHMENT_PLACEMENT_REPORT_ROOT"
+          .scripts/attachment-placement/test-real-services.sh 2>&1 | tee "$ATTACHMENT_PLACEMENT_REPORT_ROOT/run.log"
+
+      - name: Upload attachment placement fixture evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: attachment-placement-evidence
+          path: ${{ runner.temp }}/attachment-placement-reports/
+          retention-days: 1
+
   migration-whiteboard-default-tagsets-postgres:
     runs-on: ubuntu-latest
     permissions:
@@ -136,6 +182,11 @@ jobs:
         env:
           CONVERSATION_MEDIA_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
         run: pnpm exec vitest run test/integration/conversation-storage-owner.postgres.spec.ts --maxWorkers=1
+
+      - name: Test CalendarEvent subspace resolution in PostgreSQL
+        env:
+          CALENDAR_SUBSPACE_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
+        run: pnpm exec vitest run test/integration/calendar-event-subspace.postgres.spec.ts --maxWorkers=1
 
   sonarqube:
     needs: test

@@ -32,7 +32,7 @@ describe('PlatformRolesAccessService', () => {
     it('should return credentials for roles that have matching privileges', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [
             AuthorizationPrivilege.READ,
             AuthorizationPrivilege.UPDATE,
@@ -50,22 +50,24 @@ describe('PlatformRolesAccessService', () => {
       );
 
       expect(result).toHaveLength(1);
-      expect(result[0].type).toBe(AuthorizationCredential.GLOBAL_ADMIN);
+      expect(result[0].type).toBe(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
       expect(result[0].resourceID).toBe('');
     });
 
     it('should return credentials for multiple roles matching the privilege', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         },
         {
-          roleName: RoleName.GLOBAL_SUPPORT,
+          roleName: RoleName.PLATFORM_SUPPORT,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         },
         {
-          roleName: RoleName.GLOBAL_LICENSE_MANAGER,
+          roleName: RoleName.PLATFORM_LICENSE_MANAGER,
           grantedPrivileges: [AuthorizationPrivilege.UPDATE],
         },
       ];
@@ -77,14 +79,18 @@ describe('PlatformRolesAccessService', () => {
 
       expect(result).toHaveLength(2);
       const credentialTypes = result.map(c => c.type);
-      expect(credentialTypes).toContain(AuthorizationCredential.GLOBAL_ADMIN);
-      expect(credentialTypes).toContain(AuthorizationCredential.GLOBAL_SUPPORT);
+      expect(credentialTypes).toContain(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
+      expect(credentialTypes).toContain(
+        AuthorizationCredential.PLATFORM_SUPPORT
+      );
     });
 
     it('should return empty array when no roles match the allowed privileges', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         },
       ];
@@ -108,33 +114,18 @@ describe('PlatformRolesAccessService', () => {
 
     it('should map all supported role names to their correct credentials', () => {
       const roleMappings: [RoleName, AuthorizationCredential][] = [
-        [RoleName.GLOBAL_ADMIN, AuthorizationCredential.GLOBAL_ADMIN],
-        [RoleName.GLOBAL_SUPPORT, AuthorizationCredential.GLOBAL_SUPPORT],
         [
-          RoleName.GLOBAL_LICENSE_MANAGER,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          RoleName.PLATFORM_CONTENT_FULL_ACCESS,
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        ],
+        [RoleName.PLATFORM_SUPPORT, AuthorizationCredential.PLATFORM_SUPPORT],
+        [
+          RoleName.FEATURE_BETA_TESTER,
+          AuthorizationCredential.FEATURE_BETA_TESTER,
         ],
         [
-          RoleName.GLOBAL_PLATFORM_MANAGER,
-          AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-        ],
-        [
-          RoleName.GLOBAL_SUPPORT_MANAGER,
-          AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
-        ],
-        [
-          RoleName.GLOBAL_COMMUNITY_READER,
-          AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-        ],
-        [
-          RoleName.GLOBAL_SPACES_READER,
-          AuthorizationCredential.GLOBAL_SPACES_READER,
-        ],
-        [RoleName.PLATFORM_BETA_TESTER, AuthorizationCredential.BETA_TESTER],
-        [RoleName.PLATFORM_VC_CAMPAIGN, AuthorizationCredential.VC_CAMPAIGN],
-        [
-          RoleName.PLATFORM_ASSISTANT_ACCESS,
-          AuthorizationCredential.ASSISTANT_ACCESS,
+          RoleName.FEATURE_ORGANIZATION_CREATOR,
+          AuthorizationCredential.FEATURE_ORGANIZATION_CREATOR,
         ],
         [RoleName.REGISTERED, AuthorizationCredential.GLOBAL_REGISTERED],
         [RoleName.GUEST, AuthorizationCredential.GLOBAL_GUEST],
@@ -191,7 +182,7 @@ describe('PlatformRolesAccessService', () => {
     it('should return privileges for an existing role', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [
             AuthorizationPrivilege.READ,
             AuthorizationPrivilege.UPDATE,
@@ -202,7 +193,7 @@ describe('PlatformRolesAccessService', () => {
 
       const result = service.getPrivilegesForRole(
         platformAccessRoles,
-        RoleName.GLOBAL_ADMIN
+        RoleName.PLATFORM_CONTENT_FULL_ACCESS
       );
 
       expect(result).toEqual([
@@ -215,21 +206,24 @@ describe('PlatformRolesAccessService', () => {
     it('should return empty array when the role is not found', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         },
       ];
 
       const result = service.getPrivilegesForRole(
         platformAccessRoles,
-        RoleName.GLOBAL_SUPPORT
+        RoleName.PLATFORM_SUPPORT
       );
 
       expect(result).toEqual([]);
     });
 
     it('should return empty array when no roles are provided', () => {
-      const result = service.getPrivilegesForRole([], RoleName.GLOBAL_ADMIN);
+      const result = service.getPrivilegesForRole(
+        [],
+        RoleName.PLATFORM_CONTENT_FULL_ACCESS
+      );
 
       expect(result).toEqual([]);
     });
@@ -239,7 +233,7 @@ describe('PlatformRolesAccessService', () => {
     it('should return true when the role has the requested privilege', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [
             AuthorizationPrivilege.READ,
             AuthorizationPrivilege.UPDATE,
@@ -249,7 +243,7 @@ describe('PlatformRolesAccessService', () => {
 
       const result = service.hasRolePrivilege(
         platformAccessRoles,
-        RoleName.GLOBAL_ADMIN,
+        RoleName.PLATFORM_CONTENT_FULL_ACCESS,
         AuthorizationPrivilege.READ
       );
 
@@ -259,14 +253,14 @@ describe('PlatformRolesAccessService', () => {
     it('should return false when the role does not have the requested privilege', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         },
       ];
 
       const result = service.hasRolePrivilege(
         platformAccessRoles,
-        RoleName.GLOBAL_ADMIN,
+        RoleName.PLATFORM_CONTENT_FULL_ACCESS,
         AuthorizationPrivilege.DELETE
       );
 
@@ -276,14 +270,17 @@ describe('PlatformRolesAccessService', () => {
     it('should return false when the role is not found in the access roles', () => {
       const platformAccessRoles: IPlatformAccessRole[] = [
         {
-          roleName: RoleName.GLOBAL_ADMIN,
+          roleName: RoleName.PLATFORM_CONTENT_FULL_ACCESS,
           grantedPrivileges: [AuthorizationPrivilege.READ],
         },
       ];
 
+      // The role asked about is NOT the one in the fixture — that is the
+      // point of this case, so it must stay a different member of the target
+      // role model now that the legacy names are gone.
       const result = service.hasRolePrivilege(
         platformAccessRoles,
-        RoleName.GLOBAL_SUPPORT,
+        RoleName.PLATFORM_SUPPORT,
         AuthorizationPrivilege.READ
       );
 
@@ -293,7 +290,7 @@ describe('PlatformRolesAccessService', () => {
     it('should return false when the access roles array is empty', () => {
       const result = service.hasRolePrivilege(
         [],
-        RoleName.GLOBAL_ADMIN,
+        RoleName.PLATFORM_CONTENT_FULL_ACCESS,
         AuthorizationPrivilege.READ
       );
 

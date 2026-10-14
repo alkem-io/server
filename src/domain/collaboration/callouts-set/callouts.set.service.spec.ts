@@ -238,6 +238,53 @@ describe('CalloutsSetService', () => {
       ).toHaveBeenCalled();
     });
 
+    it('forwards the FORM capability to createCallout only when the caller grants it', async () => {
+      const calloutsSet = {
+        id: 'cs-1',
+        tagsetTemplateSet: { tagsetTemplates: [] },
+        callouts: [],
+      } as any;
+      const formCallout = () =>
+        ({
+          nameID: 'form-post',
+          framing: { type: 'form', profile: { displayName: 'Form Post' } },
+        }) as any;
+      vi.mocked(calloutService.createCallout).mockResolvedValue({
+        id: 'new-callout',
+      } as any);
+
+      await service.addCallouts(
+        calloutsSet,
+        [formCallout()],
+        {} as any,
+        actorContextData.actorContext,
+        'user-1',
+        'space-1',
+        { allowFormFraming: true }
+      );
+      expect(calloutService.createCallout).toHaveBeenLastCalledWith(
+        expect.anything(),
+        [],
+        {},
+        actorContextData.actorContext,
+        'user-1',
+        'space-1',
+        { allowFormFraming: true }
+      );
+
+      // Default call (every non-template carrier): no capability is passed,
+      // so createCalloutFraming rejects the FORM framing.
+      await service.addCallouts(
+        { ...calloutsSet, callouts: [] },
+        [formCallout()],
+        {} as any,
+        actorContextData.actorContext,
+        'user-1'
+      );
+      const lastCall = vi.mocked(calloutService.createCallout).mock.lastCall;
+      expect(lastCall?.[6]).toBeUndefined();
+    });
+
     it('should throw EntityNotInitializedException when tagsetTemplateSet is missing', async () => {
       const calloutsSet = {
         id: 'cs-1',

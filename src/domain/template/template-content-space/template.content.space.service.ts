@@ -61,11 +61,15 @@ export class TemplateContentSpaceService {
 
     //// Collaboration
     templateContentSpaceData.collaborationData.isTemplate = true;
+    // A template content space is only ever built under a templates set, whose
+    // CREATE privilege is held by its administrators, so its Form Posts are
+    // definitions for a future space rather than live forms.
     templateContentSpace.collaboration =
       await this.collaborationService.createCollaboration(
         templateContentSpaceData.collaborationData,
         storageAggregator,
-        actorContext
+        actorContext,
+        { allowFormFraming: true }
       );
 
     for (const subspace of templateContentSpaceData.subspaces) {

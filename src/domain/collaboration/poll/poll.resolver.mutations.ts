@@ -344,15 +344,26 @@ export class PollMutationsResolver {
     }
   }
 
-  /** Resolve callout context and space for a poll (shared by notification + reporting helpers). */
-  private async resolvePollSpaceContext(pollId: string): Promise<{
-    calloutID: string;
-    createdBy: string;
-    spaceID: string;
-    levelZeroSpaceID: string;
-  }> {
-    const { calloutID, createdBy } =
+  /**
+   * Resolve callout context and space for a poll (shared by notification +
+   * reporting helpers). Undefined for a poll on a template: a template has no
+   * space, no audience and no votes, so there is nobody to notify and nothing
+   * to report.
+   */
+  private async resolvePollSpaceContext(pollId: string): Promise<
+    | {
+        calloutID: string;
+        createdBy: string;
+        spaceID: string;
+        levelZeroSpaceID: string;
+      }
+    | undefined
+  > {
+    const { calloutID, createdBy, isTemplate } =
       await this.pollService.getCalloutContextForPoll(pollId);
+    if (isTemplate) {
+      return undefined;
+    }
     const community =
       await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
         calloutID
@@ -376,12 +387,14 @@ export class PollMutationsResolver {
     priorVoterIds: string[]
   ): Promise<void> {
     try {
+      const context = await this.resolvePollSpaceContext(poll.id);
+      if (!context) return;
       const {
         calloutID,
         createdBy: creatorId,
         spaceID,
         levelZeroSpaceID,
-      } = await this.resolvePollSpaceContext(poll.id);
+      } = context;
 
       const baseDto = { triggeredBy: voterId, calloutID, pollID: poll.id };
 
@@ -432,8 +445,9 @@ export class PollMutationsResolver {
     voterIds: string[]
   ): Promise<void> {
     try {
-      const { calloutID, spaceID, levelZeroSpaceID } =
-        await this.resolvePollSpaceContext(poll.id);
+      const context = await this.resolvePollSpaceContext(poll.id);
+      if (!context) return;
+      const { calloutID, spaceID, levelZeroSpaceID } = context;
 
       if (voterIds.length > 0) {
         const baseDto = { triggeredBy: actorId, calloutID, pollID: poll.id };
@@ -474,7 +488,9 @@ export class PollMutationsResolver {
     try {
       if (voterIds.length === 0) return;
 
-      const { calloutID, spaceID } = await this.resolvePollSpaceContext(pollId);
+      const context = await this.resolvePollSpaceContext(pollId);
+      if (!context) return;
+      const { calloutID, spaceID } = context;
       const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
       await Promise.allSettled(
@@ -512,7 +528,9 @@ export class PollMutationsResolver {
         deletedVoterIds.length > 0 || remainingVoterIds.length > 0;
       if (!hasWork) return;
 
-      const { calloutID, spaceID } = await this.resolvePollSpaceContext(pollId);
+      const context = await this.resolvePollSpaceContext(pollId);
+      if (!context) return;
+      const { calloutID, spaceID } = context;
       const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
       await Promise.allSettled([

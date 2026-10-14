@@ -60,7 +60,6 @@ describe('PlatformResourceAuditService', () => {
         credentials: [{ type: 'platform-content-full-access', resourceID: '' }],
       } as any,
       ['platform-content-full-access' as any],
-      [],
       { resourceKind: 'callout', resourceId: 'callout-1', outcome: 'deleted' }
     );
 
@@ -74,7 +73,6 @@ describe('PlatformResourceAuditService', () => {
         credentials: [{ type: 'space-member', resourceID: '' }],
       } as any,
       ['platform-content-full-access' as any],
-      [],
       { resourceKind: 'callout', resourceId: 'callout-1', outcome: 'deleted' }
     );
 

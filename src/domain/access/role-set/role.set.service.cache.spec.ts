@@ -192,6 +192,51 @@ describe('RoleSetCacheService', () => {
     });
   });
 
+  /* ─── Cached roles the API no longer has ─── */
+
+  // A migration that deletes a role (027 Slice B dropped `global-admin`) does
+  // not touch Redis, so entries written before the deploy outlive it by up to
+  // the TTL. Served as-is, the unknown name fails RoleName serialization and
+  // nulls the whole response — `myRoles` on the platform role set, after the
+  // Slice B deploy on dev. Such an entry must read as a miss, so the loader
+  // recomputes it from credentials and overwrites it.
+  describe('cached roles naming a role that no longer exists', () => {
+    const stale = ['global-admin', RoleName.MEMBER];
+
+    it('reads as a miss through mget', async () => {
+      (cacheManager.store.mget as Mock).mockResolvedValue([
+        stale,
+        [RoleName.MEMBER],
+      ]);
+
+      const results = await service.getActorRolesBatchFromCache([
+        { actorID: 'a1', roleSetId: 'rs-1' },
+        { actorID: 'a2', roleSetId: 'rs-2' },
+      ]);
+
+      expect(results).toEqual([undefined, [RoleName.MEMBER]]);
+    });
+
+    it('reads as a miss through the sequential fallback', async () => {
+      await createService(false);
+      cacheManager.get.mockResolvedValueOnce(stale as any);
+
+      const results = await service.getActorRolesBatchFromCache([
+        { actorID: 'a1', roleSetId: 'rs-1' },
+      ]);
+
+      expect(results).toEqual([undefined]);
+    });
+
+    it('reads as a miss through a single get', async () => {
+      cacheManager.get.mockResolvedValue(stale as any);
+
+      await expect(
+        service.getActorRolesFromCache('a1', 'rs-1')
+      ).resolves.toBeUndefined();
+    });
+  });
+
   /* ─── appendActorRoleCache ─── */
 
   describe('appendActorRoleCache', () => {

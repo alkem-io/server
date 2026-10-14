@@ -167,13 +167,22 @@ export class TemplateApplierService {
         await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
           sourceCollaboration.calloutsSet.callouts ?? []
         );
+      // Follow the target: callouts added to a template's collaboration are
+      // template callouts, exactly as createCollaboration stamps them.
+      calloutsFromSourceCollaboration.forEach(
+        callout => (callout.isTemplate = !!targetCollaboration.isTemplate)
+      );
 
       const newCallouts = await this.calloutsSetService.addCallouts(
         targetCollaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
         actorContext,
-        actorContext.actorID
+        actorContext.actorID,
+        undefined,
+        // Applying a template requires UPDATE on the target collaboration
+        // (its administrators), so the template's Form Posts may be copied.
+        { allowFormFraming: true }
       );
       targetCollaboration.calloutsSet.callouts?.push(...newCallouts);
     }

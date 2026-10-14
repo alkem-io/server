@@ -31,24 +31,15 @@ export const ROLE_CREDENTIAL_MAP: Record<RoleName, AuthorizationCredential> = {
   [RoleName.ADMIN]: AuthorizationCredential.SPACE_ADMIN,
   [RoleName.ASSOCIATE]: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
   [RoleName.OWNER]: AuthorizationCredential.ORGANIZATION_OWNER,
-  [RoleName.GLOBAL_ADMIN]: AuthorizationCredential.GLOBAL_ADMIN,
-  [RoleName.GLOBAL_SUPPORT]: AuthorizationCredential.GLOBAL_SUPPORT,
-  [RoleName.GLOBAL_LICENSE_MANAGER]:
-    AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
-  [RoleName.GLOBAL_COMMUNITY_READER]:
-    AuthorizationCredential.GLOBAL_COMMUNITY_READ,
-  [RoleName.GLOBAL_SPACES_READER]: AuthorizationCredential.GLOBAL_SPACES_READER,
-  [RoleName.GLOBAL_PLATFORM_MANAGER]:
-    AuthorizationCredential.GLOBAL_PLATFORM_MANAGER,
-  [RoleName.GLOBAL_SUPPORT_MANAGER]:
-    AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
   [RoleName.PLATFORM_OPERATIONS_ADMIN]:
     AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-  [RoleName.PLATFORM_BETA_TESTER]: AuthorizationCredential.BETA_TESTER,
-  [RoleName.PLATFORM_VC_CAMPAIGN]: AuthorizationCredential.VC_CAMPAIGN,
-  [RoleName.PLATFORM_ASSISTANT_ACCESS]:
-    AuthorizationCredential.ASSISTANT_ACCESS,
   // --- 027-platform-role-redesign: target role model (identical strings, D2) ---
+  // T077 (Slice B): the ten legacy rows are gone with their enum members. The
+  // two C1 defect rows went with them — `global-spaces-reader` and
+  // `global-community-reader` mapped to credential strings the seed never
+  // stored, which is the silent void this feature exists to close. Nothing maps
+  // to a retired credential any more, so `role.credential.map.spec.ts`'s
+  // FR-011 anti-drift assertion is satisfied by construction.
   [RoleName.PLATFORM_ROLES_ADMIN]: AuthorizationCredential.PLATFORM_ROLES_ADMIN,
   [RoleName.PLATFORM_CONTENT_FULL_ACCESS]:
     AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,

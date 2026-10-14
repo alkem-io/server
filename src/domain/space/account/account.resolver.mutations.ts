@@ -1,3 +1,4 @@
+import { A12_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
@@ -48,21 +49,9 @@ import { TransferAccountSpaceInput } from './dto/account.dto.transfer.space';
 import { TransferAccountVirtualContributorInput } from './dto/account.dto.transfer.virtual.contributor';
 import { UpdateBaselineLicensePlanOnAccount } from './dto/account.dto.update.baseline.license.plan';
 
-/** T058 — A9's declared owner/legacy-reachers (T037's TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
+/** A9's declared owner (the TRANSFER_RESOURCE_OFFER/_ACCEPT grant). */
 const A9_TRANSFER_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
-];
-const A9_TRANSFER_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_SUPPORT,
-];
-/** T058 — A12's declared owner/legacy-reachers (ACCOUNT_LICENSE_MANAGE grant). */
-const A12_BASELINE_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
-];
-const A12_BASELINE_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
-  AuthorizationCredential.GLOBAL_ADMIN,
-  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
 ];
 
 @InstrumentResolver()
@@ -384,8 +373,7 @@ export class AccountResolverMutations {
     // T058 — A12, single-path surface: ACCOUNT_LICENSE_MANAGE.
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
-      A12_BASELINE_INTENDED_OWNERS,
-      A12_BASELINE_LEGACY_REACHERS,
+      A12_INTENDED_OWNERS,
       {
         resourceKind: 'account-baseline-license-plan',
         resourceId: account.id,
@@ -446,7 +434,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'innovation-hub',
           resourceId: innovationHub.id,
@@ -502,7 +489,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'space',
           resourceId: space.id,
@@ -564,7 +550,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'innovation-pack',
           resourceId: innovationPack.id,
@@ -627,7 +612,6 @@ export class AccountResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         A9_TRANSFER_INTENDED_OWNERS,
-        A9_TRANSFER_LEGACY_REACHERS,
         {
           resourceKind: 'virtual-contributor',
           resourceId: virtualContributor.id,
@@ -647,17 +631,13 @@ export class AccountResolverMutations {
    * ACCOUNT_ADMIN (every user on their own account), not only by A9's own
    * platform-level credentials — TRANSFER_RESOURCE_OFFER/_ACCEPT is granted
    * to both. Determine the audit branch from the actor's OWN held
-   * credentials (A9_TRANSFER_INTENDED_OWNERS ∪ A9_TRANSFER_LEGACY_REACHERS),
-   * never from the shared privilege grant an ordinary account owner also
-   * satisfies (FR-018a). */
+   * credentials (A9_TRANSFER_INTENDED_OWNERS), never from the shared
+   * privilege grant an ordinary account owner also satisfies. */
   private isA9TransferPlatformAuthorized(actorContext: ActorContext): boolean {
     const held = new Set(
       (actorContext.credentials ?? []).map(credential => credential.type)
     );
-    return [
-      ...A9_TRANSFER_INTENDED_OWNERS,
-      ...A9_TRANSFER_LEGACY_REACHERS,
-    ].some(credential => held.has(credential));
+    return A9_TRANSFER_INTENDED_OWNERS.some(credential => held.has(credential));
   }
 
   private async validateTransferOfAccountResource(
@@ -718,12 +698,19 @@ export class AccountResolverMutations {
     );
     const isEntitlementEnabled =
       await this.licenseService.isEntitlementAvailable(license, licenseType);
-    const isPlatformAdmin = this.authorizationService.isAccessGranted(
-      actorContext,
-      authorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN
-    );
-    if (!isPlatformAdmin && !isEntitlementEnabled) {
+    // 027-platform-role-redesign (T074, A12): the soft-limit BYPASS is a
+    // licensing decision, so it moves off the retiring PLATFORM_ADMIN
+    // catch-all onto the License Manager's own account privilege — spec
+    // §Target global role model row 8 owns "licensing (usage)". This is a
+    // narrowing: Support and Content Full Access no longer bypass entitlement
+    // limits they never owned.
+    const canOverrideEntitlementLimit =
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+    if (!canOverrideEntitlementLimit && !isEntitlementEnabled) {
       const entitlementLimit = this.licenseService.getEntitlementLimit(
         license,
         licenseType

@@ -190,9 +190,9 @@ export class AuditLogAnalyzeTool implements McpTool {
     // 027-platform-role-redesign (A19 site 1 of 3, T050): re-anchored off the
     // retiring PLATFORM_ADMIN catch-all onto the dedicated PLATFORM_AUDIT_READ
     // privilege (FR-028) — a role that performs audited actions may never
-    // review its own trail. Additive in Slice A: the credential rule grants
-    // this privilege to platform-audit-reader UNION every legacy credential
-    // that reaches PLATFORM_ADMIN today, so nothing loses access yet.
+    // review its own trail. Slice B (T076): the legacy credentials Slice A
+    // added to this privilege's grant set for additivity are gone, so
+    // platform-audit-reader is its only holder.
     return this.authorizationService.isAccessGranted(
       actorContext,
       platformPolicy,

@@ -50,6 +50,41 @@ describe('KnowledgeBaseService', () => {
     calloutsSetService = module.get(CalloutsSetService);
   });
 
+  describe('createKnowledgeBase', () => {
+    it('never grants the FORM capability to knowledge-base callouts', async () => {
+      const calloutsSet = { id: 'cs-1', callouts: [] } as any;
+      vi.mocked(calloutsSetService.createCalloutsSet).mockReturnValue(
+        calloutsSet
+      );
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'p-1',
+      } as any);
+      knowledgeBaseRepository.save?.mockImplementation(
+        async (entity: any) => entity
+      );
+      vi.mocked(calloutsSetService.addCallouts).mockResolvedValue([]);
+
+      await service.createKnowledgeBase(
+        {
+          profile: { displayName: 'KB', tagsets: [] },
+          calloutsSetData: {
+            calloutsData: [{ framing: { type: 'form' } }],
+          },
+        } as any,
+        {} as any,
+        {} as any,
+        'user-1'
+      );
+
+      expect(calloutsSetService.addCallouts).toHaveBeenCalledTimes(1);
+      // No options argument: createCalloutFraming rejects the FORM framing
+      // with FORM_FRAMING_NOT_ALLOWED.
+      expect(vi.mocked(calloutsSetService.addCallouts).mock.lastCall?.[6]).toBe(
+        undefined
+      );
+    });
+  });
+
   describe('getKnowledgeBaseOrFail', () => {
     it('should return knowledge base when found', async () => {
       const kb = { id: 'kb-1' } as KnowledgeBase;

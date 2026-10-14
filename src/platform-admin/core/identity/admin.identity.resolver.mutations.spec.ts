@@ -69,7 +69,6 @@ describe('AdminIdentityResolverMutations', () => {
     ).toHaveBeenCalledWith(
       actorContext,
       expect.any(Array),
-      expect.any(Array),
       expect.objectContaining({
         action: 'adminIdentityDeleteKratosIdentity',
         targetUserId: 'user-1',
@@ -111,15 +110,11 @@ describe('AdminIdentityResolverMutations', () => {
     ).not.toHaveBeenCalled();
   });
 
-  // 027-platform-role-redesign (sec-server-4 fix): wires the REAL
-  // AuthorizationPolicyService + AuthorizationService so the constructor's
-  // `identityDeletePolicy` is a genuine, hardcoded
-  // [PLATFORM_USERS_ADMIN, GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER] policy —
-  // NOT the shared platform policy, whose PLATFORM_USERS_ADMIN grant set
-  // additively widens to also admit global-support/global-license-manager
-  // (A4's legacy reachers). Asserts those two are denied THIS surface,
-  // which they never held pre-feature (PLATFORM_SETTINGS_ADMIN's reach was
-  // {GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER} only).
+  // Wires the REAL AuthorizationPolicyService + AuthorizationService so the
+  // constructor's `identityDeletePolicy` is a genuine, hardcoded
+  // [PLATFORM_USERS_ADMIN] policy — NOT the shared platform policy. Asserts
+  // that non-owning platform roles are denied THIS surface and the owning
+  // role is allowed.
   describe('identityDeletePolicy — real-engine integration', () => {
     let realResolver: AdminIdentityResolverMutations;
     let realAdminIdentityService: Record<string, Mock>;
@@ -150,30 +145,36 @@ describe('AdminIdentityResolverMutations', () => {
       realAdminIdentityService.deleteIdentity.mockResolvedValue(true);
     });
 
-    it('denies a global-support-only actor (never held this surface pre-feature)', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_SUPPORT);
+    it('DENIES a platform-support actor — support is not the user-record family', async () => {
+      const actor = buildActorContext(AuthorizationCredential.PLATFORM_SUPPORT);
       await expect(
         realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
       ).rejects.toThrow();
     });
 
-    it('denies a global-license-manager-only actor (never held this surface pre-feature)', async () => {
+    it('DENIES a platform-license-manager actor — licensing is not the user-record family', async () => {
       const actor = buildActorContext(
-        AuthorizationCredential.GLOBAL_LICENSE_MANAGER
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER
       );
       await expect(
         realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
       ).rejects.toThrow();
     });
 
-    it('allows a global-admin actor (pre-existing legacy reach preserved)', async () => {
-      const actor = buildActorContext(AuthorizationCredential.GLOBAL_ADMIN);
+    // The user-record family is held by Platform Users Admin ALONE. Content
+    // Full Access is the sharpest case: the root rule cascades it full CRUD
+    // platform-wide, and A5 is outside its single accepted exception (closed
+    // at A6/A7), so it must still be refused here.
+    it('DENIES a platform-content-full-access actor — identity deletion is the user-record family', async () => {
+      const actor = buildActorContext(
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+      );
       await expect(
         realResolver.adminIdentityDeleteKratosIdentity(actor, 'kratos-1')
-      ).resolves.toBeDefined();
+      ).rejects.toThrow();
     });
 
-    it('allows a platform-users-admin actor (the new owning role)', async () => {
+    it('allows a platform-users-admin actor (the owning role)', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.PLATFORM_USERS_ADMIN
       );

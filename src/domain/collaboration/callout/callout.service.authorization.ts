@@ -12,6 +12,7 @@ import {
   LogContext,
 } from '@common/enums';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { RoleName } from '@common/enums/role.name';
 import { EntityNotInitializedException } from '@common/exceptions';
@@ -30,6 +31,10 @@ import { ISpaceSettings } from '@domain/space/space.settings/space.settings.inte
 import { Injectable } from '@nestjs/common';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
+import {
+  getCalloutPublisherPlatformCredentialTypes,
+  getDraftCalloutPlatformReadCredentials,
+} from './callout.platform.read.credentials';
 import { CalloutService } from './callout.service';
 import { TaskBoardService } from './task-board/task.board.service';
 
@@ -226,8 +231,7 @@ export class CalloutAuthorizationService {
 
     // Add in who should READ
     const criteriasWithReadAccess: ICredentialDefinition[] = [
-      { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-      { type: AuthorizationCredential.GLOBAL_SUPPORT, resourceID: '' },
+      ...getDraftCalloutPlatformReadCredentials(),
     ];
 
     if (callout.calloutsSet?.collaboration?.space) {
@@ -276,7 +280,14 @@ export class CalloutAuthorizationService {
       );
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    if (callout.createdBy) {
+    // A Form's creator has no standing of their own (FR-016a): only admins can
+    // create one, so this rule adds nothing while the creator is an admin, and
+    // after a demotion it would still let them delete the Post — and with it every
+    // member's response. Post-level rights on a Form follow current credentials.
+    if (
+      callout.createdBy &&
+      callout.framing?.type !== CalloutFramingType.FORM
+    ) {
       const manageCreatedCalloutPolicy =
         this.authorizationPolicyService.createCredentialRule(
           [
@@ -301,11 +312,7 @@ export class CalloutAuthorizationService {
     const calloutPublishUpdate =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-        ],
+        getCalloutPublisherPlatformCredentialTypes(),
         CREDENTIAL_RULE_TYPES_CALLOUT_UPDATE_PUBLISHER_ADMINS
       );
     calloutPublishUpdate.cascade = false;

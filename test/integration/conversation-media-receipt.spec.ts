@@ -90,7 +90,7 @@ describe('conversation media receipt boundary', () => {
       finish('conversation-bucket');
       expect(await operation).toBeUndefined();
       expect(received).toHaveBeenCalledWith(
-        expect.objectContaining({ storageBucketId: 'conversation-bucket' })
+        expect.objectContaining({ payload })
       );
     } finally {
       await module.close();
@@ -132,7 +132,7 @@ describe('conversation media receipt boundary', () => {
         .onMessageReceived(payload);
       expect(result).toBeUndefined();
       expect(received).toHaveBeenCalledWith(
-        expect.objectContaining({ payload, storageBucketId: undefined })
+        expect.objectContaining({ payload })
       );
     } finally {
       await module.close();

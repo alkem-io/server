@@ -26,12 +26,16 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
     expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_USERS_ADMIN);
   });
 
-  it('falls back to platform_admin for a LEGACY BROAD credential (Slice A additive union, guaranteed from day one)', () => {
-    const result = resolveInitiatorRole({
-      actorCredentialTypes: [AuthorizationCredential.GLOBAL_SUPPORT],
-      intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
-    });
-    expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
+  // Role attribution never produces `platform_admin`: an actor holding a real
+  // role that is not this surface's owner gets a throw, not a silent
+  // attribution to the coarse tier.
+  it('throws for a non-owning platform role rather than attributing it to platform_admin', () => {
+    expect(() =>
+      resolveInitiatorRole({
+        actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
+        intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
+      })
+    ).toThrow(/empty intersection/);
   });
 
   it('falls back to system when there is no actor at all (bootstrap-seeded)', () => {
@@ -41,7 +45,7 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
     expect(result).toBe(PlatformAuditInitiatorRole.SYSTEM);
   });
 
-  it('throws on a genuine empty intersection (neither owning role nor legacy credential)', () => {
+  it('throws when the actor holds no owning role', () => {
     expect(() =>
       resolveInitiatorRole({
         actorCredentialTypes: [AuthorizationCredential.SPACE_MEMBER],
@@ -50,21 +54,17 @@ describe('resolveInitiatorRole (FR-025, T058a)', () => {
     ).toThrow(/empty intersection/);
   });
 
-  it('respects a narrowed per-surface legacyReachers set (e.g. A1: only global-admin, not global-support/license-manager)', () => {
+  it('throws when the actor holds several platform roles, none of them owning this surface', () => {
     expect(() =>
       resolveInitiatorRole({
-        actorCredentialTypes: [AuthorizationCredential.GLOBAL_SUPPORT],
+        actorCredentialTypes: [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ],
         intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-        legacyReachers: [AuthorizationCredential.GLOBAL_ADMIN],
       })
     ).toThrow(/empty intersection/);
-
-    const result = resolveInitiatorRole({
-      actorCredentialTypes: [AuthorizationCredential.GLOBAL_ADMIN],
-      intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
-      legacyReachers: [AuthorizationCredential.GLOBAL_ADMIN],
-    });
-    expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
   });
 });
 
@@ -92,11 +92,15 @@ describe('resolveInitiatorRoleBestEffort (corr-server-3/qual-server-1 fix)', () 
     expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_USERS_ADMIN);
   });
 
-  it('still resolves the legacy-broad fallback normally (unchanged from the strict function)', () => {
+  // The best-effort twin of the throw above: it degrades instead of throwing.
+  // `self` is its documented last-resort attribution, and the point of this
+  // function existing at all is that an audit write must never take down the
+  // operation it is recording.
+  it('degrades to self rather than throwing for a non-owning platform role', () => {
     const result = resolveInitiatorRoleBestEffort({
-      actorCredentialTypes: [AuthorizationCredential.GLOBAL_SUPPORT],
+      actorCredentialTypes: [AuthorizationCredential.PLATFORM_SUPPORT],
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     });
-    expect(result).toBe(PlatformAuditInitiatorRole.PLATFORM_ADMIN);
+    expect(result).toBe(PlatformAuditInitiatorRole.SELF);
   });
 });

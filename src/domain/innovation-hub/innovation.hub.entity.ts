@@ -25,7 +25,16 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
   })
   subdomain!: string;
 
-  @Column()
+  // Explicit column type: the reflected design:type of an enum-typed property
+  // is the enum object, not String, under compilers that emit the identifier —
+  // which TypeORM cannot map. 'varchar' with no length matches the live column
+  // (character varying) exactly.
+  //
+  // Deliberately NOT varchar(ENUM_LENGTH), despite the usual convention for
+  // enum columns: the live column is unbounded, so adding a length would be a
+  // real schema change needing its own migration and schema-contract update.
+  // This declaration only makes the existing mapping explicit.
+  @Column('varchar')
   type!: InnovationHubType;
 
   @Column('varchar', {

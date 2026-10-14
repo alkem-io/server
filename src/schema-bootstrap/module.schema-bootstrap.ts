@@ -33,7 +33,6 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { GraphQLModule } from '@nestjs/graphql';
-import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingback-subscription/licensing.wingback.subscription.module';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
@@ -53,14 +52,11 @@ import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-
 import { CollaborationMigrationModule } from '@services/collaboration-integration/migration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
-import { WingbackManagerModule } from '@services/external/wingback';
-import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { PlatformAdminModule } from '@src/platform-admin/admin/platform.admin.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
 import { AdminMcpApiKeyModule } from '@src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.module';
-import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
 import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/email-change/admin.user.email.change.module';
 import { InAppNotificationAdminModule } from '@src/platform-admin/in-app-notification/in.app.notification.admin.module';
@@ -215,8 +211,6 @@ class SchemaBootstrapStubModule {}
     CollaborationMigrationModule,
     AdminLicensingModule,
     AdminGeoLocationModule,
-    LicensingWingbackSubscriptionModule,
-    WingbackManagerModule,
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
@@ -235,10 +229,8 @@ class SchemaBootstrapStubModule {}
     MeModule,
     TaskGraphqlModule,
     ActivityFeedModule,
-    DomainPlatformSettingsModule,
     PlatformRoleModule,
     TemplateApplierModule,
-    WingbackWebhookModule,
     AuthResetSubscriberModule,
     SearchModule,
   ],

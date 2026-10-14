@@ -1,7 +1,4 @@
-import {
-  CREDENTIAL_RULE_TYPES_PLATFORM_CONTENT_FULL_ACCESS,
-  CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS,
-} from '@common/constants';
+import { CREDENTIAL_RULE_TYPES_PLATFORM_CONTENT_FULL_ACCESS } from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -71,25 +68,26 @@ export class PlatformAuthorizationPolicyService {
 
   private createRootCredentialRules(): IAuthorizationPolicyRuleCredential[] {
     const credentialRules: IAuthorizationPolicyRuleCredential[] = [];
-    const globalAdmins =
-      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.CREATE,
-          AuthorizationPrivilege.READ,
-          AuthorizationPrivilege.UPDATE,
-          AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.GRANT,
-        ],
-        [AuthorizationCredential.GLOBAL_ADMIN],
-        CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS
-      );
-    credentialRules.push(globalAdmins);
 
     // 027-platform-role-redesign (T036, research D5/D6, FR-007(e), eleventh
     // analyze pass; REVERSED at the ninth `/speckit-analyze` pass — see
     // FR-004/SC-004, spec-server-1 fix): the replacement for the root
-    // god-mode grant, added ALONGSIDE it (removal is Slice B, T072 — never
-    // narrow before the replacement grant exists).
+    // god-mode grant.
+    //
+    // SLICE B (T072): the `global-admin` CRUD+GRANT god-mode rule that stood
+    // beside this one is GONE, and `global-admin` is gone from this rule's
+    // own credential list. This is now the root policy's ONLY credential
+    // rule, and `GRANT` has left the inheritance root entirely (research
+    // D6) — no credential can grant anything by cascade; every assignment
+    // capability is an explicit, per-family privilege from here on.
+    //
+    // Do not restore CREATE / UPDATE / DELETE onto any other credential
+    // here: a blanket write cascade satisfies the OWNER branch of A6's and
+    // A7's dual-path gates indistinguishably from the owner's own privilege
+    // (FR-007(e)), which is exactly how the god mode reconstitutes itself.
+    // `UPDATE_NAMEID` must likewise never join this list — A17 is owned by
+    // NO global role. Both regressions now fail `reachability.spec.ts`
+    // rather than surviving to a review pass.
     //
     // Content Full Access holds full CREATE/READ/UPDATE/DELETE cascaded from
     // the inheritance root, plus its own privilege. This is a DELIBERATE,
@@ -100,24 +98,15 @@ export class PlatformAuthorizationPolicyService {
     // Support's A6 (delete organization) and A7 (edit an organization's
     // packs/hubs) — accepted as SC-004's single named exception rather than
     // designed out (see `a.row.surfaces.ts`'s A6/A7 `acceptedExtraReachers`
-    // entries, which keep the derivation honest about this). UPDATE_NAMEID
-    // remains excluded: A17 is owned by NO global role (spec row 2,
-    // FR-020), so cascading it would hand Content Full Access entity
-    // renames the spec explicitly denies it.
+    // entries, which keep the derivation honest about this).
     //
-    // GLOBAL_SUPPORT is deliberately NOT a member of this credential list
-    // (sec-server-3/corr-server-2 fix): unlike GLOBAL_ADMIN, global-support
-    // never held blanket CRUD across the seven root-inheriting trees before
-    // this feature — its pre-existing reach was (a) the platform-SUBTREE
-    // cascade (`platform.service.authorization.ts`'s
-    // `globalSupportPlatformAdmin`, which does not cover space / account /
-    // user / organization / VC / assistant), and (b) per-space, FLAG-GATED
-    // privileges via `settings.privacy.allowPlatformSupportAsAdmin`
-    // (`space.service.platform.roles.access.ts`). Adding it here would grant
-    // every global-support holder cascading READ + PLATFORM_CONTENT_FULL_ACCESS
-    // over every space on the platform — including private ones — bypassing
-    // that per-space opt-out for both reads and A8 deletions. Global-support
-    // keeps everything it legitimately had through those two existing paths.
+    // This is now the widest grant on the platform, and it is deliberately
+    // NOT minimised — a scoped re-creation of part of the god mode, held by
+    // one named role instead of by everyone who needed to do support work.
+    // It holds NO role-assignment capability, which is the half that keeps
+    // it from being the old god mode: Platform Roles Admin administers who
+    // holds power and never what that power acts on; this role is the exact
+    // mirror. Neither may drift toward the other.
     const contentFullAccess =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
@@ -127,10 +116,7 @@ export class PlatformAuthorizationPolicyService {
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
         ],
-        [
-          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
-          AuthorizationCredential.GLOBAL_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
         CREDENTIAL_RULE_TYPES_PLATFORM_CONTENT_FULL_ACCESS
       );
     credentialRules.push(contentFullAccess);

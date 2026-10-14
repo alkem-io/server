@@ -1,53 +1,34 @@
-import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 
-/**
- * A media attachment resolved for a chat message (feature 013). The `url` is the
- * Alkemio document URL, authorized via the conversation bucket policy — non-
- * members are denied on the file-service serving path (FR-007).
- */
 @ObjectType('MessageAttachment')
 export class IMessageAttachment {
-  @Field(() => UUID, {
-    nullable: true,
-    description: 'The file-service document id of the attachment.',
-  })
-  id?: string;
-
   @Field(() => String, {
     nullable: true,
-    description:
-      'The Alkemio document URL (authorized via conversation policy).',
+    description: 'The local Matrix media reference.',
   })
-  url?: string;
-
-  @Field(() => String, {
-    nullable: false,
-    description: 'The filename / display name of the attachment.',
-  })
+  externalReference?: string;
+  @Field(() => String)
   displayName!: string;
-
-  @Field(() => String, {
-    nullable: true,
-    description: 'The MIME type of the attachment.',
-  })
+  @Field(() => String, { nullable: true })
   mimeType?: string;
-
-  @Field(() => Int, {
-    nullable: true,
-    description: 'The size of the attachment in bytes.',
-  })
+  @Field(() => Int, { nullable: true })
   size?: number;
-
-  @Field(() => Int, {
-    nullable: true,
-    description: 'The pixel width of the attachment (images only).',
-  })
+  @Field(() => Int, { nullable: true })
   width?: number;
-
-  @Field(() => Int, {
-    nullable: true,
-    description: 'The pixel height of the attachment (images only).',
-  })
+  @Field(() => Int, { nullable: true })
   height?: number;
+}
+
+export function projectMessageAttachments(
+  raw: ReceivedAttachment[] = []
+): IMessageAttachment[] {
+  return raw.map(item => ({
+    externalReference: item.media_id,
+    displayName: item.display_name || 'attachment',
+    mimeType: item.mime_type || undefined,
+    size: item.size,
+    width: item.width,
+    height: item.height,
+  }));
 }

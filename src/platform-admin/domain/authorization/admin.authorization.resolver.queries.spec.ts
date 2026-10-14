@@ -64,8 +64,11 @@ describe('AdminAuthorizationResolverQueries (sec-server-10 fix)', () => {
         undefined
       );
 
+      // T077: the fixture was `global-admin` — an "ordinary" credential before
+      // this feature, a role-family one after, which takes the sec-server-10
+      // holder-read branch instead of the plain READ_USERS one.
       await resolver.actorsWithCredential(
-        CredentialType.GLOBAL_ADMIN,
+        CredentialType.ORGANIZATION_ADMIN,
         undefined,
         mockActorContext
       );
@@ -129,7 +132,7 @@ describe('AdminAuthorizationResolverQueries (sec-server-10 fix)', () => {
       );
 
       await resolver.usersWithAuthorizationCredential(
-        { type: AuthorizationCredential.GLOBAL_ADMIN } as any,
+        { type: AuthorizationCredential.ORGANIZATION_ADMIN } as any,
         mockActorContext
       );
 

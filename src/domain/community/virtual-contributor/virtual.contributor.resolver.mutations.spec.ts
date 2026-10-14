@@ -177,7 +177,7 @@ describe('VirtualContributorResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         vc.authorization,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         expect.any(String)
       );
       expect(result).toBe(finalVC);

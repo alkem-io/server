@@ -227,7 +227,10 @@ describe('flow-state-layout — public-read cascade contract (FR-007, intake Q1)
     (
       platformRolesAccessService.getCredentialsForRolesWithAccess as any
     ).mockReturnValue([
-      { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+      {
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        resourceID: '',
+      },
     ]);
     RoleSetService.prototype as any;
     (module.get(RoleSetService).getCredentialsForRole as any).mockResolvedValue(
@@ -276,7 +279,10 @@ describe('flow-state-layout — public-read cascade contract (FR-007, intake Q1)
     (
       platformRolesAccessService.getCredentialsForRolesWithAccess as any
     ).mockReturnValue([
-      { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+      {
+        type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        resourceID: '',
+      },
     ]);
     (module.get(RoleSetService).getCredentialsForRole as any).mockResolvedValue(
       []
