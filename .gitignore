@@ -92,6 +92,8 @@ subscriptions.log
 
 # Ignores all scripts and files downloaded by the scripts and local build files
 .scripts/*
+!.scripts/attachment-placement/
+!.scripts/attachment-placement/**
 !.scripts/migrations/
 !.scripts/overmind/
 !.scripts/gql-validate/

@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
@@ -24,6 +25,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
@@ -877,7 +879,7 @@ describe('CalloutService', () => {
       );
     });
 
-    it('leaves the template service untouched for a plain (non-board) callout', async () => {
+    it('deletes the classification of a plain (non-board) callout, leaving the template service untouched', async () => {
       const callout = {
         id: 'callout-1',
         framing: { id: 'framing-1' },
@@ -894,12 +896,102 @@ describe('CalloutService', () => {
 
       vi.mocked(repository.findOne).mockResolvedValue(callout);
 
+      // Record whether the classification delete runs while the callout-row
+      // transaction is still open (it must not).
+      let inTransaction = false;
+      mockEntityManager.transaction.mockImplementation(
+        async (cb: (m: typeof mockManager) => unknown) => {
+          inTransaction = true;
+          try {
+            return await cb(mockManager);
+          } finally {
+            inTransaction = false;
+          }
+        }
+      );
+      let deletedInTransaction: boolean | undefined;
+      vi.mocked(classificationService.deleteClassification).mockImplementation(
+        async () => {
+          deletedInTransaction = inTransaction;
+          return {} as any;
+        }
+      );
+
       await service.deleteCallout('callout-1');
 
       expect(tagsetTemplateService.removeTagsetTemplate).not.toHaveBeenCalled();
-      // The explicit classification cleanup is board-only (guarded by the
-      // presence of a standalone board template); a plain callout skips it.
-      expect(classificationService.deleteClassification).not.toHaveBeenCalled();
+      // Every callout owns its classification, and removing the callout row
+      // does not take it along (the FK sits on the callout), so a plain callout
+      // must delete it explicitly too (alkem-io/server#6614) — after the row
+      // has committed: the framing, contributions and defaults are already
+      // gone, so a rollback of the row would strand an undeletable callout.
+      expect(classificationService.deleteClassification).toHaveBeenCalledWith(
+        'cls-1'
+      );
+      expect(deletedInTransaction).toBe(false);
+    });
+
+    it("keeps a board's column template when its classification delete fails", async () => {
+      const boardTemplate = { id: 'tmpl-1' };
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        authorization: { id: 'auth-1' },
+        classification: {
+          id: 'cls-1',
+          tagsets: [
+            {
+              name: TagsetReservedName.TASK,
+              tags: ['Backlog'],
+              tagsetTemplate: boardTemplate,
+            },
+          ],
+        },
+      } as any);
+      vi.mocked(classificationService.deleteClassification).mockRejectedValue(
+        new Error('boom')
+      );
+
+      // The surviving marker tagset still references the template, so dropping
+      // it would fail and turn a committed delete into a rejection.
+      await expect(service.deleteCallout('callout-1')).resolves.toMatchObject({
+        id: 'callout-1',
+      });
+      expect(tagsetTemplateService.removeTagsetTemplate).not.toHaveBeenCalled();
+    });
+
+    it('resolves and logs when the classification delete fails after the callout is deleted', async () => {
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: { contribution: {} },
+        authorization: { id: 'auth-1' },
+        classification: { id: 'cls-1', tagsets: [] },
+      } as any);
+      vi.mocked(classificationService.deleteClassification).mockRejectedValue(
+        new Error('boom')
+      );
+      const logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
+
+      // The callout row has already committed as deleted, so the caller must
+      // not read a cleanup failure as a failed delete — but it is not silent.
+      await expect(service.deleteCallout('callout-1')).resolves.toMatchObject({
+        id: 'callout-1',
+      });
+      expect(mockManager.remove).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calloutId: 'callout-1',
+          classificationId: 'cls-1',
+        }),
+        expect.any(String),
+        LogContext.COLLABORATION
+      );
     });
   });
 

@@ -154,13 +154,8 @@ export class BaseHandler extends AbstractHandler {
       InviteForEntryRoleOnRoleSetInput,
       UpdateInnovationFlowInput,
       RoomSendMessageInput,
-      // The match below is `types.includes(metatype)` — REFERENCE equality on
-      // the constructor, so a SUBCLASS is not covered by its parent's entry.
-      // RoomSendMessageReplyInput extends RoomSendMessageInput, so without its
-      // own entry NONE of the inherited validators ran on the reply mutation:
-      // `attachments` had no <=1 cap (@ArrayMaxSize), no uniqueness
-      // (@ArrayUnique) and no UUID check (@IsUUID), and `message` no
-      // @MaxLength. Any new subclass of a listed input needs its own entry too.
+      // Matching uses constructor identity; inherited input validators require
+      // registering each concrete mutation input.
       RoomSendMessageReplyInput,
       CreateCalloutFramingInput,
       CreateCalloutContributionDefaultsInput,
