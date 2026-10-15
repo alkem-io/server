@@ -1479,10 +1479,12 @@ export class SearchIngestService {
       flowStateID: string | undefined
     ) => {
       const markdown = memo.contentPointer
-        ? markdownByPointer.get(memo.contentPointer)
+        ? markdownByPointer?.get(memo.contentPointer)
         : undefined;
-      // only memos with content are ingested
-      if (!markdown) {
+      // only memos with content are ingested — unless the page's snapshot read
+      // failed (`markdownByPointer` undefined): content is then unknown, so the
+      // memo is indexed by profile only rather than dropped for this run.
+      if (!markdown && markdownByPointer) {
         return;
       }
 
@@ -1557,11 +1559,13 @@ export class SearchIngestService {
    * `contentPointer` (framing + contributions), reads them in ONE file-service
    * `content-batch` call, and decodes each to markdown — replacing the per-memo
    * inline-column read. Returns a `pointer → markdown` map; un-decodable / missing
-   * snapshots are omitted (the memo is then skipped from ingestion).
+   * snapshots are omitted (the memo is then skipped from ingestion). Returns
+   * `undefined` when the batch read itself fails, so the caller can index the
+   * page's memos by profile instead of losing the whole page for this run.
    */
   private async fetchMemoMarkdownByPointer(
     spaces: Space[]
-  ): Promise<Map<string, string>> {
+  ): Promise<Map<string, string> | undefined> {
     const pointers = new Set<string>();
     for (const space of spaces) {
       const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
@@ -1582,7 +1586,21 @@ export class SearchIngestService {
       return result;
     }
 
-    const items = await this.fileServiceAdapter.getContentBatch([...pointers]);
+    let items: ContentBatchItemResult[];
+    try {
+      items = await this.fileServiceAdapter.getContentBatch([...pointers]);
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Search ingest: failed to read memo snapshots; indexing by profile only',
+          pointerCount: pointers.size,
+          error: String(error),
+        },
+        LogContext.SEARCH_INGEST
+      );
+      return undefined;
+    }
     for (const item of items) {
       if (!item.found || !item.contentBase64) {
         continue;

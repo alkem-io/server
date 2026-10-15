@@ -1290,6 +1290,65 @@ describe('SearchIngestService', () => {
 
         expect(result).toEqual([]);
       });
+
+      const spaceWithFramingMemo = () => ({
+        id: 'space-1',
+        visibility: 'active',
+        parentSpace: undefined,
+        collaboration: {
+          id: 'collab-1',
+          calloutsSet: {
+            callouts: [
+              {
+                id: 'callout-1',
+                framing: {
+                  memo: {
+                    id: 'memo-1',
+                    contentPointer: 'ptr-memo-1',
+                    profile: { displayName: 'Memo', tagsets: [] },
+                  },
+                },
+                contributions: [],
+              },
+            ],
+          },
+        },
+      });
+
+      const getContentBatch = () =>
+        (service as any).fileServiceAdapter.getContentBatch as Mock;
+
+      it('should still skip a memo whose snapshot was read but has no content', async () => {
+        mockEntityManager.find.mockResolvedValue([spaceWithFramingMemo()]);
+        getContentBatch().mockResolvedValue([
+          { id: 'ptr-memo-1', found: false },
+        ]);
+
+        const result = await (service as any).fetchMemo(0, 100);
+
+        expect(result).toEqual([]);
+      });
+
+      it('should index memos by profile only when the snapshot read fails', async () => {
+        mockEntityManager.find.mockResolvedValue([spaceWithFramingMemo()]);
+        getContentBatch().mockRejectedValue(new Error('file-service down'));
+
+        const result = await (service as any).fetchMemo(0, 100);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('memo-1');
+        expect(result[0].type).toBe('memo');
+        expect(result[0].markdown).toBeUndefined();
+        expect(result[0].contentPointer).toBeUndefined();
+        expect(result[0].profile.displayName).toBe('Memo');
+        expect(_mockLogger.warn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Search ingest: failed to read memo snapshots; indexing by profile only',
+          }),
+          expect.anything()
+        );
+      });
     });
 
     describe('count methods', () => {
