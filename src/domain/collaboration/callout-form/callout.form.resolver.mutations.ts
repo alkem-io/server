@@ -3,7 +3,11 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -168,9 +172,21 @@ export class CalloutFormResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteCalloutFormResponseInput
   ): Promise<DeletedCalloutFormResponse> {
-    const response = await this.calloutFormResponseService.getResponseOrFail(
-      deleteData.responseID
-    );
+    // FR-020 (server#6591): an unknown id and a response the caller may not
+    // delete get the same refusal — same code, same message, no ids — so a
+    // guessed id never reveals whether that response exists.
+    const refusal = () =>
+      new ForbiddenAuthorizationPolicyException(
+        'Authorization: unable to delete Form response',
+        AuthorizationPrivilege.CREATE,
+        '',
+        actorContext.actorID
+      );
+    const response = await this.calloutFormResponseService
+      .getResponseOrFail(deleteData.responseID)
+      .catch((error: unknown) => {
+        throw error instanceof EntityNotFoundException ? refusal() : error;
+      });
 
     const isOwner =
       !!response.createdBy &&
@@ -183,7 +199,13 @@ export class CalloutFormResolverMutations {
         response.formId,
         CALLOUT_FORM_OWNER_RELATIONS
       );
-      this.formResponseAccess.assertCanModerate(actorContext, callout);
+      try {
+        this.formResponseAccess.assertCanModerate(actorContext, callout);
+      } catch (error) {
+        throw error instanceof ForbiddenAuthorizationPolicyException
+          ? refusal()
+          : error;
+      }
       calloutID = callout.id;
       moderatedAs = this.platformModerator(
         actorContext,
