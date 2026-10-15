@@ -57,37 +57,67 @@ export class CalloutResolverFields {
    * THAT spaces are hidden, never which or how many, but a viewer who receives
    * the stored list can diff it against the rendered `framing.subspaces` and
    * recover both the exact count and the UUIDs of the spaces withheld from
-   * them. So the list is readable only by actors who may edit it — the same
-   * UPDATE privilege the picker's own `accountSpaces` field requires.
+   * them. So the list is withheld from actors who cannot edit the callout.
    *
-   * Redacted to an EMPTY ARRAY, never thrown and never nulled: `selectedIds` is
-   * `[ID!]!`, so a throwing guard would nullify CalloutSelectionSettings and
-   * cascade up the non-null chain — the same whole-collection nullification
-   * this feature already had to design around twice (spec FEAS-01, FR-017).
-   * `mode` is left intact: it says how the collection is computed, not what is
-   * in it, and the client's two mount-site props read it.
+   * THE GATE IS `UPDATE` ON THE CALLOUT, which is NOT the same test as the
+   * write path's (`assertAdminOnlyCollaborationFraming`, admin on the
+   * calloutsSet) and NOT the picker's (`Space.accountSpaces` requires UPDATE on
+   * the SPACE). Two consequences are accepted, recorded, and NOT fixed here —
+   * both need a non-eager relation on this hot read path, which is a design
+   * decision and not a comment fix (review SEC-R2, ENG-084-R-05):
+   *   - a callout's CREATOR holds UPDATE permanently via
+   *     USER_SELF_MANAGEMENT:<createdBy> (callout.service.authorization.ts),
+   *     and that credential survives losing the space role — so a demoted
+   *     admin who created the callout still reads the list;
+   *   - Platform Support edits template callouts through
+   *     PLATFORM_SUPPORT_ORG_RESOURCES *instead of* UPDATE, so it reads `[]`;
+   *     a read-modify-write through the template form would wipe the stored
+   *     list, since mergeCalloutSettings replaces arrays wholesale. Unreachable
+   *     while the restricted-framing guard holds (a template callout should
+   *     carry no selection block).
+   *
+   * Redacted to an EMPTY ARRAY rather than thrown. NOT because of a non-null
+   * cascade — `ICalloutSettingsFraming.selection` is nullable, so a throw would
+   * stop at `framing.selection` — but because `selection: null` plus a GraphQL
+   * error would take `mode` with it and break the client's two `selection.mode`
+   * reads, surfacing an error to a viewer who did nothing wrong. `mode` itself
+   * is safe to keep: it says how the collection is computed, not what is in it,
+   * and `hasHiddenSpaces` already discloses more.
+   *
+   * Applied to BOTH collection kinds deliberately, not only SPACES: `selection`
+   * is one shared block (workspace#025), and a curated CONTRIBUTORS list is the
+   * same kind of secret. No client reads `selectedIds` outside the admin form.
+   *
+   * NO FIELD GUARD HERE, on purpose. An earlier revision carried
+   * `@AuthorizationActorHasPrivilege(READ)` + `@UseGuards(GraphqlGuard)`; both
+   * review lanes found it independently and both said delete it. It ran before
+   * the body on EVERY callout — so AUTO collections and every non-collection
+   * kind paid a full credential walk this field never used to cost, duplicating
+   * the READ filter `callouts.set.service.ts` already applies — and it turned a
+   * previously infallible non-null field into a throw surface on paths that do
+   * not pre-filter READ (activity log, in-app notification payloads,
+   * `template.callout`), where one forbidden callout nullifies the whole entry.
+   * Every path that hands a Callout to GraphQL already gated READ, and every
+   * other derived field on this resolver carries no guard.
    *
    * The returned object is a COPY. Mutating `callout.settings` in place would
    * redact the list for every later consumer of the same loaded entity in the
    * same request — including the authorization layer and any save path.
    */
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
-  @UseGuards(GraphqlGuard)
-  @ResolveField('settings', () => ICalloutSettings, {
-    nullable: false,
-    description:
-      'The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned empty to actors without UPDATE on the Callout: the curated list would otherwise reveal which and how many spaces a viewer is being denied (workspace#084 AC6).',
-  })
+  @ResolveField('settings', () => ICalloutSettings, { nullable: false })
   settings(
     @Parent() callout: ICallout,
     @CurrentActor() actorContext: ActorContext
   ): ICalloutSettings {
-    const settings = callout.settings;
-    const selection = settings?.framing?.selection;
+    const { settings } = callout;
+    // `framing` may legitimately be absent on a pre-025 row (spec FR-013).
+    const selection = settings.framing?.selection;
     if (!selection?.selectedIds?.length) return settings;
 
-    // Fail closed: isAccessGranted throws on an undefined policy, and an
-    // authorization-less callout must not be the one that leaks the list.
+    // Fail closed. Reachable now that no field guard runs first: an
+    // authorization-less callout (authorizationId is ON DELETE SET NULL) must
+    // not be the one that leaks the list, and isAccessGranted throws on an
+    // undefined policy rather than returning false.
     const mayEdit =
       !!callout.authorization &&
       this.authorizationService.isAccessGranted(

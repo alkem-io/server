@@ -78,6 +78,14 @@ describe('CalloutResolverFields', () => {
           visibility: 'published',
           contribution: { allowedTypes: [] },
           framing: {
+            // Siblings of `selection` are deliberately populated: with a
+            // framing that held nothing else, dropping the `...settings.framing`
+            // spread from the redaction kept every case green while nullifying
+            // the non-null CalloutSettingsFraming.commentsEnabled in production
+            // (review ENG-084-R-03).
+            commentsEnabled: true,
+            spaces: { cardVariant: 'COMPACT' },
+            contributors: { defaultView: 'LIST' },
             selection: {
               mode: CalloutSelectionMode.CUSTOM,
               selectedIds: ['space-a', 'space-b'],
@@ -125,6 +133,10 @@ describe('CalloutResolverFields', () => {
       expect(result.framing.selection?.mode).toBe(CalloutSelectionMode.CUSTOM);
       expect(result.visibility).toBe('published');
       expect(result.contribution).toEqual({ allowedTypes: [] });
+      // RED if the `...settings.framing` spread is dropped.
+      expect(result.framing.commentsEnabled).toBe(true);
+      expect(result.framing.spaces).toEqual({ cardVariant: 'COMPACT' });
+      expect(result.framing.contributors).toEqual({ defaultView: 'LIST' });
     });
 
     // RED against an in-place redaction: mutating callout.settings would strip
@@ -157,8 +169,10 @@ describe('CalloutResolverFields', () => {
       expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
     });
 
-    // Fail closed: isAccessGranted throws on an undefined policy, and an
-    // authorization-less callout must not be the one that leaks the list.
+    // Fail closed, and now REACHABLE through GraphQL: the field guard that used
+    // to throw first was deleted (review ENG-084-R-01/SEC-R3/SEC-R4), so an
+    // authorization-less callout — authorizationId is ON DELETE SET NULL —
+    // does reach this branch.
     it('redacts when the callout carries no authorization policy', () => {
       const callout = makeSelectionCallout();
       (callout as any).authorization = undefined;

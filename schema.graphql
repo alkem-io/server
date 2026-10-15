@@ -2086,7 +2086,9 @@ type Callout {
   Cheap always-shown summary (tier-1). Dataloader-batched; safe to select on feeds.
   """
   reactionsSummary: CalloutReactionsSummary!
-  """The Callout Settings associated with this Callout."""
+  """
+  The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned EMPTY to actors without UPDATE on the Callout — an empty list therefore means 'not visible to you', not 'nothing selected' (workspace#084 AC6: a viewer must not learn which or how many spaces are withheld from them). `framing.selection.mode` is always accurate.
+  """
   settings: CalloutSettings!
   """The sorting order for this Callout."""
   sortOrder: Float!
