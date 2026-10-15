@@ -1,7 +1,9 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions';
+import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ContributionDefaultSourceInput } from '@domain/collaboration/callout/callout.contribution.default.source.service';
@@ -14,9 +16,12 @@ import {
 } from '@domain/common/whiteboard-draft';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
+import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { AlkemioConfig } from '@src/types/alkemio.config';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ITemplate } from '../template/template.interface';
 import { TemplateService } from '../template/template.service';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
@@ -38,7 +43,8 @@ export class TemplatesSetResolverMutations {
     private templateContentSpaceService: TemplateContentSpaceService,
     private whiteboardService: WhiteboardService,
     private whiteboardDraftService: WhiteboardDraftService,
-    private storageAggregatorResolverService: StorageAggregatorResolverService
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
+    private configService: ConfigService<AlkemioConfig, true>
   ) {}
 
   @Mutation(() => UUID, {
@@ -101,12 +107,15 @@ export class TemplatesSetResolverMutations {
   }
 
   @Mutation(() => ITemplate, {
-    description: 'Creates a new Template on the specified TemplatesSet.',
+    description:
+      'Creates a new Template on the specified TemplatesSet. When `file` is supplied alongside a COLLABORA_DOCUMENT callout framing, the template is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing behaviour applies.',
   })
   async createTemplate(
     @CurrentActor() actorContext: ActorContext,
     @Args('templateData')
-    templateData: CreateTemplateOnTemplatesSetInput
+    templateData: CreateTemplateOnTemplatesSetInput,
+    @Args({ name: 'file', type: () => GraphQLUpload, nullable: true })
+    fileUpload?: FileUpload
   ): Promise<ITemplate> {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templateData.templatesSetID
@@ -191,6 +200,36 @@ export class TemplatesSetResolverMutations {
         AuthorizationPrivilege.READ,
         `template create clone whiteboard content from source: ${sourceWhiteboardID}`
       );
+    }
+    if (fileUpload) {
+      // Reject before buffering if the file isn't being routed to a
+      // COLLABORA_DOCUMENT framing — the file would otherwise be silently
+      // discarded and the caller would think the upload took effect.
+      const framing = templateData.calloutData?.framing;
+      if (
+        framing?.type !== CalloutFramingType.COLLABORA_DOCUMENT ||
+        !framing.collaboraDocument
+      ) {
+        throw new ValidationException(
+          'file argument is only valid with framing.type = COLLABORA_DOCUMENT and framing.collaboraDocument supplied',
+          LogContext.COLLABORATION
+        );
+      }
+      const streamTimeoutMs = this.configService.get<number>(
+        'storage.file.stream_timeout_ms',
+        { infer: true }
+      )!;
+      const buffer = await streamToBuffer(
+        fileUpload.createReadStream(),
+        streamTimeoutMs
+      );
+      // Plumb the buffered file through the CreateCollaboraDocumentInput's
+      // transient uploadedFile field; CollaboraDocumentService dispatches on it.
+      framing.collaboraDocument.uploadedFile = {
+        buffer,
+        filename: fileUpload.filename,
+        mimetype: fileUpload.mimetype,
+      };
     }
     await this.templateService.prepareContributionDefaultSource(
       templateData.calloutData?.contributionDefaults,

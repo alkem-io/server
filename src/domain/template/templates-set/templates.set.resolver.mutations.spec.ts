@@ -1,11 +1,16 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { ValidationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { WhiteboardDraftService } from '@domain/common/whiteboard-draft';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
+import { ConfigService } from '@nestjs/config';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { AlkemioConfig } from '@src/types/alkemio.config';
+import { Readable } from 'stream';
 import { vi } from 'vitest';
 import { TemplateService } from '../template/template.service';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
@@ -43,6 +48,7 @@ describe('TemplatesSetResolverMutations', () => {
     acquireForConsumption: ReturnType<typeof vi.fn>;
     materialize: ReturnType<typeof vi.fn>;
   };
+  let configService: { get: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     authorizationService = {
@@ -69,6 +75,7 @@ describe('TemplatesSetResolverMutations', () => {
     whiteboardService = {
       getWhiteboardOrFail: vi.fn(),
     };
+    configService = { get: vi.fn().mockReturnValue(1000) };
     const releaseDraftLock = vi.fn();
     whiteboardDraftService = {
       acquireForConsumption: vi.fn().mockResolvedValue({
@@ -93,7 +100,8 @@ describe('TemplatesSetResolverMutations', () => {
       whiteboardDraftService as unknown as WhiteboardDraftService,
       {
         getStorageAggregatorForTemplatesSet: vi.fn(),
-      } as unknown as StorageAggregatorResolverService
+      } as unknown as StorageAggregatorResolverService,
+      configService as unknown as ConfigService<AlkemioConfig, true>
     );
   });
 
@@ -139,6 +147,125 @@ describe('TemplatesSetResolverMutations', () => {
         AuthorizationPrivilege.CREATE,
         expect.any(String)
       );
+    });
+
+    describe('file argument (Collabora document upload)', () => {
+      const DOCX_MIME =
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      const arrange = () => {
+        const templatesSet = { id: 'ts-1', authorization: { id: 'ts-auth' } };
+        templatesSetService.getTemplatesSetOrFail.mockResolvedValue(
+          templatesSet
+        );
+        const template = { id: 'tpl-1' };
+        templatesSetService.createTemplate.mockResolvedValue(template);
+        templateAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+          []
+        );
+        templateService.getTemplateOrFail.mockResolvedValue(template);
+        return templatesSet;
+      };
+
+      const fileUpload = (createReadStream: ReturnType<typeof vi.fn>) =>
+        ({
+          filename: 'q3-plan.docx',
+          mimetype: DOCX_MIME,
+          createReadStream,
+        }) as any;
+
+      const docxStream = () =>
+        vi.fn(() => Readable.from([Buffer.from('docx-bytes')]));
+
+      it('buffers the upload onto the framing collabora document input', async () => {
+        arrange();
+        const templateData = {
+          templatesSetID: 'ts-1',
+          calloutData: {
+            framing: {
+              type: CalloutFramingType.COLLABORA_DOCUMENT,
+              collaboraDocument: {},
+            },
+          },
+        } as any;
+
+        await resolver.createTemplate(
+          { actorID: 'user-1' } as any,
+          templateData,
+          fileUpload(docxStream())
+        );
+
+        expect(templatesSetService.createTemplate).toHaveBeenCalled();
+        expect(
+          templateData.calloutData.framing.collaboraDocument.uploadedFile
+        ).toEqual({
+          buffer: Buffer.from('docx-bytes'),
+          filename: 'q3-plan.docx',
+          mimetype: DOCX_MIME,
+        });
+      });
+
+      it('rejects a file routed at a non-COLLABORA_DOCUMENT framing before reading the stream', async () => {
+        arrange();
+        const createReadStream = docxStream();
+
+        await expect(
+          resolver.createTemplate(
+            { actorID: 'user-1' } as any,
+            {
+              templatesSetID: 'ts-1',
+              calloutData: { framing: { type: CalloutFramingType.NONE } },
+            } as any,
+            fileUpload(createReadStream)
+          )
+        ).rejects.toThrow(ValidationException);
+
+        expect(createReadStream).not.toHaveBeenCalled();
+        expect(templatesSetService.createTemplate).not.toHaveBeenCalled();
+      });
+
+      it('rejects a file on a COLLABORA_DOCUMENT framing with no collaboraDocument before reading the stream', async () => {
+        arrange();
+        const createReadStream = docxStream();
+
+        await expect(
+          resolver.createTemplate(
+            { actorID: 'user-1' } as any,
+            {
+              templatesSetID: 'ts-1',
+              calloutData: {
+                framing: { type: CalloutFramingType.COLLABORA_DOCUMENT },
+              },
+            } as any,
+            fileUpload(createReadStream)
+          )
+        ).rejects.toThrow(ValidationException);
+
+        expect(createReadStream).not.toHaveBeenCalled();
+        expect(templatesSetService.createTemplate).not.toHaveBeenCalled();
+      });
+
+      it('leaves the input untouched when no file is supplied, whatever the framing', async () => {
+        const templatesSet = arrange();
+        const templateData = {
+          templatesSetID: 'ts-1',
+          calloutData: {
+            framing: { type: CalloutFramingType.NONE },
+          },
+        } as any;
+        const snapshot = JSON.stringify(templateData);
+
+        const actorContext = { actorID: 'user-1' } as any;
+        await resolver.createTemplate(actorContext, templateData);
+
+        expect(templatesSetService.createTemplate).toHaveBeenCalledWith(
+          templatesSet,
+          templateData,
+          actorContext
+        );
+        expect(JSON.stringify(templateData)).toBe(snapshot);
+        expect(configService.get).not.toHaveBeenCalled();
+      });
     });
 
     it('holds an owned framing draft through final creation and deletes it before releasing', async () => {
