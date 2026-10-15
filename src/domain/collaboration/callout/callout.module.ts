@@ -26,6 +26,7 @@ import { CollaboraDocumentModule } from '../collabora-document/collabora.documen
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { PostModule } from '../post/post.module';
 import { ReactionModule } from '../reaction/reaction.module';
+import { SpaceCollectionModule } from '../space-collection/space.collection.module';
 import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { Callout } from './callout.entity';
 import { CalloutResolverFields } from './callout.resolver.fields';
@@ -53,6 +54,12 @@ import { TaskBoardResolverMutations } from './task-board/task.board.resolver.mut
     WhiteboardModule,
     WhiteboardDraftModule,
     CalloutFramingModule,
+    // workspace#084: `Callout.hasHiddenSpaces` injects SpaceCollectionService
+    // into CalloutResolverFields. Closes no cycle —
+    // CalloutModule → CalloutFramingModule → SpaceCollectionModule already
+    // exists; without it Nest DI fails at application-context creation, which
+    // `vitest` cannot see (every spec hand-wires its providers).
+    SpaceCollectionModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
     CollaboraDocumentModule,
