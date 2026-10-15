@@ -895,6 +895,7 @@ export class CalloutResolverMutations {
       await this.calloutService.importCollaboraDocumentToCallout(
         uploadData,
         { buffer, filename, mimetype },
+        actorContext,
         actorContext.actorID
       );
 
