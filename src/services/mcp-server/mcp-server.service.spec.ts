@@ -3,6 +3,77 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { vi } from 'vitest';
 import { McpServerService } from './mcp-server.service';
+import { EditWhiteboardElementsTool } from './tools/edit-whiteboard-elements.tool';
+import { ToolRegistry } from './tools/tool.registry';
+
+describe('McpServerService registered tool schema rejection', () => {
+  it('returns typed invalid only for the edit tool without executing either rejected tool', async () => {
+    const whiteboard = { getWhiteboardOrFail: vi.fn() };
+    const executor = { execute: vi.fn() };
+    const edit = new EditWhiteboardElementsTool(
+      whiteboard as any,
+      {} as any,
+      executor as any
+    );
+    const editExecute = vi.spyOn(edit, 'execute');
+    const other = {
+      getDefinition: () => ({
+        name: 'other_tool',
+        description: 'Schema rejection control',
+        inputSchema: {
+          type: 'object' as const,
+          properties: { requiredValue: { type: 'string' } },
+          required: ['requiredValue'],
+        },
+      }),
+      execute: vi.fn(),
+    };
+    const logger = {
+      log: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      verbose: vi.fn(),
+    };
+    const gate = { checkToolAllowed: vi.fn() };
+    const service = new McpServerService(
+      {} as any,
+      new ToolRegistry([edit, other], logger),
+      {} as any,
+      {} as any,
+      gate as any,
+      logger as any,
+      {} as any
+    );
+    const server = (service as any).createMcpServer(
+      () => new ActorContext(),
+      () => [{ operations: ['tools'] }]
+    );
+    const handler = server.server._requestHandlers.get('tools/call');
+    const call = (name: string, args: object) =>
+      handler(
+        { method: 'tools/call', params: { name, arguments: args } },
+        { signal: new AbortController().signal }
+      );
+    const rejected = await call('edit_whiteboard_elements', {
+      whiteboardId: '22222222-2222-4222-8222-222222222222',
+      operations: [{ op: 'setText' }],
+    });
+    expect(rejected.isError).toBe(true);
+    expect(rejected.content[0].text).toBe(
+      JSON.stringify({ outcome: 'invalid' })
+    );
+    const unrelated = await call('other_tool', {});
+    expect(unrelated.isError).toBe(true);
+    expect(unrelated.content[0].text).toMatch(
+      /^Invalid arguments for tool 'other_tool':/
+    );
+    expect(editExecute).not.toHaveBeenCalled();
+    expect(other.execute).not.toHaveBeenCalled();
+    expect(whiteboard.getWhiteboardOrFail).not.toHaveBeenCalled();
+    expect(executor.execute).not.toHaveBeenCalled();
+    expect(gate.checkToolAllowed).not.toHaveBeenCalled();
+  });
+});
 
 describe('McpServerService HTTP caller cancellation', () => {
   it('propagates response disconnect through actual SDK tool dispatch', async () => {

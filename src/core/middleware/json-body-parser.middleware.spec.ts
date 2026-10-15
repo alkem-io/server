@@ -1,8 +1,76 @@
 import { gzipSync } from 'node:zlib';
+import { WinstonConfigService } from '@config/winston.config';
+import { GraphqlExceptionFilter } from '@core/error-handling/graphql.exception.filter';
+import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
+import { UnhandledExceptionFilter } from '@core/error-handling/unhandled.exception.filter';
+import { Test } from '@nestjs/testing';
 import express from 'express';
+import { WinstonLogger } from 'nest-winston';
 import request from 'supertest';
 import { vi } from 'vitest';
+import { createLogger } from 'winston';
 import { createJsonBodyParserMiddleware } from './json-body-parser.middleware';
+
+describe('MCP parser diagnostics through initialized Nest and JSON logging', () => {
+  it('keeps malformed body fragments out of the response and formatted logs', async () => {
+    const options = await new WinstonConfigService({
+      get: (key: string) =>
+        ({
+          'monitoring.logging.console_logging_enabled': true,
+          'monitoring.logging': { json: true },
+          'monitoring.logging.level': 'error',
+          'monitoring.logging.context_to_file': { enabled: false },
+        })[key],
+    } as any).createWinstonModuleOptions();
+    const formatted: string[] = [];
+    const transport = options.transports[0];
+    const output = vi
+      .spyOn(transport, 'log')
+      .mockImplementation((info: any, callback: any) => {
+        formatted.push(info[Symbol.for('message')]);
+        callback();
+      });
+    const winston = createLogger(options);
+    const logger = new WinstonLogger(winston);
+    const module = await Test.createTestingModule({}).compile();
+    const app = module.createNestApplication({
+      bodyParser: false,
+      logger: false,
+    });
+    const dispatch = vi.fn();
+    app.use(createJsonBodyParserMiddleware('1mb'));
+    app.getHttpAdapter().post('/rest/mcp', (_req, res) => {
+      dispatch();
+      res.json({ ok: true });
+    });
+    app.useGlobalFilters(
+      new UnhandledExceptionFilter(logger),
+      new GraphqlExceptionFilter(logger),
+      new HttpExceptionFilter(logger)
+    );
+    try {
+      await app.init();
+      for (const body of [
+        '{"operations":[{"op":"addText","text":"SYNTHETIC_PRIVATE_TEXT"}],"truncated":',
+        '{"x": S3NTINEL}',
+      ]) {
+        const response = await request(app.getHttpServer())
+          .post('/rest/mcp')
+          .set('Content-Type', 'application/json')
+          .send(body)
+          .expect(400);
+        expect(JSON.stringify(response.body)).not.toMatch(/SYNTHETIC|S3NTINEL/);
+      }
+      expect(formatted).toHaveLength(2);
+      expect(formatted.join('\n')).not.toMatch(/SYNTHETIC|S3NTINEL|"body":/);
+      expect(dispatch).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+      winston.close();
+      output.mockRestore();
+    }
+  });
+});
 
 describe('createJsonBodyParserMiddleware MCP decoded entity ceiling', () => {
   const setup = () => {

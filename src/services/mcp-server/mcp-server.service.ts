@@ -184,7 +184,18 @@ export class McpServerService implements OnModuleInit {
           args || {}
         );
         if (argError) {
-          return { content: [{ type: 'text', text: argError }], isError: true };
+          return {
+            content: [
+              {
+                type: 'text',
+                text:
+                  name === 'edit_whiteboard_elements'
+                    ? JSON.stringify({ outcome: 'invalid' })
+                    : argError,
+              },
+            ],
+            isError: true,
+          };
         }
 
         // Per-tool capability gate: for a DELEGATED call, the tool must
