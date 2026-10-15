@@ -4,6 +4,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ReactionType } from '@common/enums/reaction.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   CalloutActivityLoaderCreator,
   CalloutReactionsSummaryLoaderCreator,
@@ -16,6 +17,7 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { ICalloutSettings } from '@domain/collaboration/callout-settings/callout.settings.interface';
 import { CALLOUT_REACTION_ALLOWED_EMOJIS } from '@domain/collaboration/reaction/reaction.constants';
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
 import { SpaceCollectionService } from '@domain/collaboration/space-collection/space.collection.service';
@@ -45,8 +47,64 @@ export class CalloutResolverFields {
     private calloutService: CalloutService,
     private reactionService: ReactionService,
     private myReactionHelper: CalloutMyReactionLoaderCreator,
-    private spaceCollectionService: SpaceCollectionService
+    private spaceCollectionService: SpaceCollectionService,
+    private authorizationService: AuthorizationService
   ) {}
+
+  /**
+   * workspace#084 SEC-084-CW-01. `selectedIds` is the curated list itself, and
+   * handing it to a viewer defeats AC6: the notice deliberately reports only
+   * THAT spaces are hidden, never which or how many, but a viewer who receives
+   * the stored list can diff it against the rendered `framing.subspaces` and
+   * recover both the exact count and the UUIDs of the spaces withheld from
+   * them. So the list is readable only by actors who may edit it — the same
+   * UPDATE privilege the picker's own `accountSpaces` field requires.
+   *
+   * Redacted to an EMPTY ARRAY, never thrown and never nulled: `selectedIds` is
+   * `[ID!]!`, so a throwing guard would nullify CalloutSelectionSettings and
+   * cascade up the non-null chain — the same whole-collection nullification
+   * this feature already had to design around twice (spec FEAS-01, FR-017).
+   * `mode` is left intact: it says how the collection is computed, not what is
+   * in it, and the client's two mount-site props read it.
+   *
+   * The returned object is a COPY. Mutating `callout.settings` in place would
+   * redact the list for every later consumer of the same loaded entity in the
+   * same request — including the authorization layer and any save path.
+   */
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('settings', () => ICalloutSettings, {
+    nullable: false,
+    description:
+      'The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned empty to actors without UPDATE on the Callout: the curated list would otherwise reveal which and how many spaces a viewer is being denied (workspace#084 AC6).',
+  })
+  settings(
+    @Parent() callout: ICallout,
+    @CurrentActor() actorContext: ActorContext
+  ): ICalloutSettings {
+    const settings = callout.settings;
+    const selection = settings?.framing?.selection;
+    if (!selection?.selectedIds?.length) return settings;
+
+    // Fail closed: isAccessGranted throws on an undefined policy, and an
+    // authorization-less callout must not be the one that leaks the list.
+    const mayEdit =
+      !!callout.authorization &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE
+      );
+    if (mayEdit) return settings;
+
+    return {
+      ...settings,
+      framing: {
+        ...settings.framing,
+        selection: { ...selection, selectedIds: [] },
+      },
+    };
+  }
 
   /**
    * workspace#084 FR-018 / AC6. Lives on the CALLOUT, not on CalloutFraming:

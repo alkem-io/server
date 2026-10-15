@@ -1,4 +1,7 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { ReactionType } from '@common/enums/reaction.type';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutMyReactionLoaderCreator } from '@core/dataloader/creators/loader.creators/callout/callout.my.reaction.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
@@ -30,6 +33,7 @@ describe('CalloutResolverFields', () => {
   let reactionService: Mocked<ReactionService>;
   let myReactionHelper: Mocked<CalloutMyReactionLoaderCreator>;
   let spaceCollectionService: Mocked<SpaceCollectionService>;
+  let authorizationService: Mocked<AuthorizationService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -53,6 +57,117 @@ describe('CalloutResolverFields', () => {
     spaceCollectionService = module.get<SpaceCollectionService>(
       SpaceCollectionService
     ) as Mocked<SpaceCollectionService>;
+    authorizationService = module.get<AuthorizationService>(
+      AuthorizationService
+    ) as Mocked<AuthorizationService>;
+  });
+
+  // workspace#084 SEC-084-CW-01. The curated list is readable only by actors who
+  // may EDIT the callout. Handing it to a viewer defeats AC6: the notice reports
+  // only THAT spaces are hidden, but a viewer holding the stored list can diff it
+  // against the rendered `framing.subspaces` and recover the exact count and the
+  // UUIDs withheld from them.
+  describe('settings — selectedIds redaction', () => {
+    const actorContext = { actorID: 'actor-1' } as any;
+
+    const makeSelectionCallout = (): ICallout =>
+      ({
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        settings: {
+          visibility: 'published',
+          contribution: { allowedTypes: [] },
+          framing: {
+            selection: {
+              mode: CalloutSelectionMode.CUSTOM,
+              selectedIds: ['space-a', 'space-b'],
+            },
+          },
+        },
+      }) as unknown as ICallout;
+
+    it('hands the real list to an actor holding UPDATE', () => {
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      const callout = makeSelectionCallout();
+
+      const result = resolver.settings(callout, actorContext);
+
+      expect(result.framing.selection?.selectedIds).toEqual([
+        'space-a',
+        'space-b',
+      ]);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE
+      );
+    });
+
+    // RED without the redaction: the viewer receives ['space-a','space-b'].
+    it('redacts the list to EMPTY for an actor without UPDATE', () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = resolver.settings(makeSelectionCallout(), actorContext);
+
+      expect(result.framing.selection?.selectedIds).toEqual([]);
+    });
+
+    // An empty array, never a throw and never null: selectedIds is `[ID!]!`, so
+    // a throwing guard would nullify CalloutSelectionSettings and cascade up the
+    // non-null chain. `mode` says how the collection is computed, not what is in
+    // it, so it survives redaction — the client reads it at two mount sites.
+    it('keeps the non-null contract and preserves mode while redacting', () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = resolver.settings(makeSelectionCallout(), actorContext);
+
+      expect(Array.isArray(result.framing.selection?.selectedIds)).toBe(true);
+      expect(result.framing.selection?.mode).toBe(CalloutSelectionMode.CUSTOM);
+      expect(result.visibility).toBe('published');
+      expect(result.contribution).toEqual({ allowedTypes: [] });
+    });
+
+    // RED against an in-place redaction: mutating callout.settings would strip
+    // the list for every later consumer of the same loaded entity in the same
+    // request, including the authorization layer and any save path.
+    it('does NOT mutate the loaded callout', () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+      const callout = makeSelectionCallout();
+
+      resolver.settings(callout, actorContext);
+
+      expect(callout.settings.framing.selection?.selectedIds).toEqual([
+        'space-a',
+        'space-b',
+      ]);
+    });
+
+    // No selection, or an already-empty one, needs no privilege check at all —
+    // AUTO collections and every non-collection callout kind pay nothing.
+    it('short-circuits with no privilege check when there is nothing to redact', () => {
+      const callout = {
+        id: 'callout-2',
+        authorization: { id: 'auth-2' },
+        settings: { contribution: { allowedTypes: [] }, framing: {} },
+      } as unknown as ICallout;
+
+      const result = resolver.settings(callout, actorContext);
+
+      expect(result).toBe(callout.settings);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
+    // Fail closed: isAccessGranted throws on an undefined policy, and an
+    // authorization-less callout must not be the one that leaks the list.
+    it('redacts when the callout carries no authorization policy', () => {
+      const callout = makeSelectionCallout();
+      (callout as any).authorization = undefined;
+
+      const result = resolver.settings(callout, actorContext);
+
+      expect(result.framing.selection?.selectedIds).toEqual([]);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
   });
 
   // workspace#084 FR-018 / AC6. The field lives HERE, on the Callout, and not
