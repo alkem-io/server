@@ -186,6 +186,7 @@ export class CalloutContributionService {
         await this.collaboraDocumentService.createCollaboraDocument(
           collaboraDocument,
           storageAggregator,
+          actorContext,
           userID
         );
     }
