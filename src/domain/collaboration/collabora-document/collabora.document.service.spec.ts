@@ -1,8 +1,12 @@
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
 import {
+  ForbiddenException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -35,6 +39,7 @@ describe('CollaboraDocumentService', () => {
   let documentService: DocumentService;
   let profileService: ProfileService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let authorizationService: AuthorizationService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -65,6 +70,7 @@ describe('CollaboraDocumentService', () => {
     documentService = module.get(DocumentService);
     profileService = module.get(ProfileService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    authorizationService = module.get(AuthorizationService);
   });
 
   it('should be defined', () => {
@@ -73,6 +79,7 @@ describe('CollaboraDocumentService', () => {
 
   describe('createCollaboraDocument', () => {
     const storageAggregator = { id: 'aggregator-1' } as any;
+    const actorContext = { actorID: 'user-1' } as any;
 
     beforeEach(() => {
       vi.mocked(
@@ -102,6 +109,7 @@ describe('CollaboraDocumentService', () => {
           },
         } as any,
         storageAggregator,
+        actorContext,
         'user-1'
       );
 
@@ -138,6 +146,7 @@ describe('CollaboraDocumentService', () => {
             },
           } as any,
           storageAggregator,
+          actorContext,
           'user-1'
         )
       ).rejects.toThrow('415');
@@ -151,6 +160,7 @@ describe('CollaboraDocumentService', () => {
             documentType: CollaboraDocumentType.PDF,
           } as any,
           storageAggregator,
+          actorContext,
           'user-1'
         )
       ).rejects.toThrow(ValidationException);
@@ -159,6 +169,215 @@ describe('CollaboraDocumentService', () => {
       expect(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).not.toHaveBeenCalled();
+    });
+
+    it('still rejects a blank create with neither file nor source when displayName or documentType is missing', async () => {
+      await expect(
+        service.createCollaboraDocument(
+          { documentType: CollaboraDocumentType.WORDPROCESSING } as any,
+          storageAggregator,
+          actorContext,
+          'user-1'
+        )
+      ).rejects.toThrow(
+        'createCollaboraDocument requires displayName and documentType when no file is supplied.'
+      );
+
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    describe('source mode (copy-on-apply)', () => {
+      const SOURCE_ID = '3f2b7c1e-5a4d-4e6b-9c8a-1d2e3f4a5b6c';
+      const sourceDocument = { id: 'source-doc-1', mimeType: DOCX_MIME };
+      const source = {
+        id: SOURCE_ID,
+        documentType: CollaboraDocumentType.WORDPROCESSING,
+        originalMimeType: DOCX_MIME,
+        authorization: { id: 'source-auth' },
+        document: sourceDocument,
+        profile: { id: 'source-profile', displayName: 'Template body' },
+      };
+
+      beforeEach(() => {
+        repository.findOne.mockResolvedValue(source);
+        vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue({
+          id: 'copy-doc-1',
+          mimeType: DOCX_MIME,
+        } as any);
+      });
+
+      it('copies the source document into the destination bucket with skipDedup, never staging bytes', async () => {
+        await service.createCollaboraDocument(
+          { sourceCollaboraDocumentID: SOURCE_ID } as any,
+          storageAggregator,
+          actorContext,
+          'user-1'
+        );
+
+        expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+          'bucket-1',
+          sourceDocument,
+          'user-1',
+          true
+        );
+        expect(
+          storageBucketService.uploadFileAsDocumentFromBuffer
+        ).not.toHaveBeenCalled();
+      });
+
+      it('attributes the copy to the caller when no userID is threaded (template path), never to the source document creator', async () => {
+        repository.findOne.mockResolvedValue({
+          ...source,
+          document: { ...sourceDocument, createdBy: 'other-user' },
+        });
+
+        await service.createCollaboraDocument(
+          { sourceCollaboraDocumentID: SOURCE_ID } as any,
+          storageAggregator,
+          actorContext
+        );
+
+        expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+          'bucket-1',
+          expect.anything(),
+          'user-1',
+          true
+        );
+      });
+
+      it('never consults the blank-create MIME map when the input carries no documentType', async () => {
+        const getDefaultMimeForCreate = vi.spyOn(
+          service as any,
+          'getDefaultMimeForCreate'
+        );
+
+        await service.createCollaboraDocument(
+          { sourceCollaboraDocumentID: SOURCE_ID } as any,
+          storageAggregator,
+          actorContext,
+          'user-1'
+        );
+
+        expect(getDefaultMimeForCreate).not.toHaveBeenCalled();
+      });
+
+      it('authorizes READ on the source before any byte is copied', async () => {
+        await service.createCollaboraDocument(
+          { sourceCollaboraDocumentID: SOURCE_ID } as any,
+          storageAggregator,
+          actorContext,
+          'user-1'
+        );
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          source.authorization,
+          AuthorizationPrivilege.READ,
+          expect.stringContaining(SOURCE_ID)
+        );
+        expect(
+          vi.mocked(authorizationService.grantAccessOrFail).mock
+            .invocationCallOrder[0]
+        ).toBeLessThan(
+          vi.mocked(storageBucketService.copyDocumentToBucket).mock
+            .invocationCallOrder[0]
+        );
+      });
+
+      it('copies nothing when READ on the source is denied', async () => {
+        vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+          () => {
+            throw new ForbiddenException('denied', LogContext.COLLABORATION);
+          }
+        );
+
+        await expect(
+          service.createCollaboraDocument(
+            { sourceCollaboraDocumentID: SOURCE_ID } as any,
+            storageAggregator,
+            actorContext,
+            'user-1'
+          )
+        ).rejects.toThrow(ForbiddenException);
+
+        expect(
+          storageBucketService.copyDocumentToBucket
+        ).not.toHaveBeenCalled();
+      });
+
+      it('inherits documentType, originalMimeType and displayName from the source, ignoring any supplied in the input', async () => {
+        const result = await service.createCollaboraDocument(
+          {
+            sourceCollaboraDocumentID: SOURCE_ID,
+            displayName: 'Ignored title',
+            documentType: CollaboraDocumentType.SPREADSHEET,
+          } as any,
+          storageAggregator,
+          actorContext,
+          'user-1'
+        );
+
+        expect(result.documentType).toBe(CollaboraDocumentType.WORDPROCESSING);
+        expect(result.originalMimeType).toBe(DOCX_MIME);
+        expect(profileService.createProfile).toHaveBeenCalledWith(
+          { displayName: 'Template body' },
+          expect.anything(),
+          storageAggregator
+        );
+      });
+
+      it('rejects a create that supplies both an uploaded file and a source, before touching any adapter', async () => {
+        await expect(
+          service.createCollaboraDocument(
+            {
+              sourceCollaboraDocumentID: SOURCE_ID,
+              uploadedFile: {
+                buffer: Buffer.from('docx'),
+                filename: 'q3.docx',
+                mimetype: DOCX_MIME,
+              },
+            } as any,
+            storageAggregator,
+            actorContext,
+            'user-1'
+          )
+        ).rejects.toThrow(ValidationException);
+
+        expect(
+          storageAggregatorService.getDirectStorageBucket
+        ).not.toHaveBeenCalled();
+        expect(
+          storageBucketService.copyDocumentToBucket
+        ).not.toHaveBeenCalled();
+        expect(
+          storageBucketService.uploadFileAsDocumentFromBuffer
+        ).not.toHaveBeenCalled();
+      });
+
+      it('rolls back only the copied row when a later step fails, leaving the source file alone', async () => {
+        vi.mocked(profileService.createProfile).mockRejectedValue(
+          new Error('profile create failed')
+        );
+
+        await expect(
+          service.createCollaboraDocument(
+            { sourceCollaboraDocumentID: SOURCE_ID } as any,
+            storageAggregator,
+            actorContext,
+            'user-1'
+          )
+        ).rejects.toThrow('profile create failed');
+
+        expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+          'copy-doc-1'
+        );
+        expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalledWith(
+          'source-doc-1'
+        );
+      });
     });
   });
 

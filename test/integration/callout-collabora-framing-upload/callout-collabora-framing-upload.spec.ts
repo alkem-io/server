@@ -31,6 +31,7 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 
 describe('Collabora framing — upload integration', () => {
   let collaboraDocumentService: CollaboraDocumentService;
+  const actorContext = { actorID: 'user-1' } as any;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -96,6 +97,7 @@ describe('Collabora framing — upload integration', () => {
       await collaboraDocumentService.createCollaboraDocument(
         baseInput(),
         { id: 'agg-1' } as any,
+        actorContext,
         'user-1'
       );
 
@@ -156,6 +158,7 @@ describe('Collabora framing — upload integration', () => {
       const result = await collaboraDocumentService.createCollaboraDocument(
         baseInput({ documentType: CollaboraDocumentType.WORDPROCESSING }),
         { id: 'agg-1' } as any,
+        actorContext,
         'user-1'
       );
 
@@ -197,6 +200,7 @@ describe('Collabora framing — upload integration', () => {
       await collaboraDocumentService.createCollaboraDocument(
         baseInput({ displayName: '' }),
         { id: 'agg-1' } as any,
+        actorContext,
         'user-1'
       );
 
@@ -238,6 +242,7 @@ describe('Collabora framing — upload integration', () => {
         collaboraDocumentService.createCollaboraDocument(
           baseInput(),
           { id: 'agg-1' } as any,
+          actorContext,
           'user-1'
         )
       ).rejects.toThrow('profile bucket exhausted');
@@ -286,6 +291,7 @@ describe('Collabora framing — upload integration', () => {
         collaboraDocumentService.createCollaboraDocument(
           baseInput(),
           { id: 'agg-1' } as any,
+          actorContext,
           'user-1'
         )
       ).rejects.toThrow('finalize 500');
@@ -315,6 +321,7 @@ describe('Collabora framing — upload integration', () => {
         collaboraDocumentService.createCollaboraDocument(
           baseInput(),
           { id: 'agg-1' } as any,
+          actorContext,
           'user-1'
         )
       ).rejects.toThrow(StorageServiceUnavailableException);
@@ -332,7 +339,8 @@ describe('Collabora framing — upload integration', () => {
       await expect(
         collaboraDocumentService.createCollaboraDocument(
           {} as any,
-          { id: 'agg-1' } as any
+          { id: 'agg-1' } as any,
+          actorContext
         )
       ).rejects.toThrow(ValidationException);
     });
@@ -369,6 +377,7 @@ describe('Collabora framing — upload integration', () => {
           documentType: CollaboraDocumentType.WORDPROCESSING,
         },
         { id: 'agg-1' } as any,
+        actorContext,
         'user-1'
       );
 

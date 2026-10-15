@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
 import {
   COLLABORA_SUPPORTED_MIMES,
@@ -12,9 +13,12 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
@@ -38,6 +42,7 @@ export class CollaboraDocumentService {
     @InjectRepository(CollaboraDocument)
     private collaboraDocumentRepository: Repository<CollaboraDocument>,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private authorizationService: AuthorizationService,
     private profileService: ProfileService,
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
@@ -61,21 +66,34 @@ export class CollaboraDocumentService {
    *     defaults from the uploaded filename (extension stripped) when
    *     absent or empty.
    *
-   * The flow is identical for both modes: stage the bytes via file-service-go
-   * (upload uses `temporaryLocation: true` so a downstream entity-build
-   * failure can roll the file row back; blank writes directly to permanent
-   * since the placeholder has no rollback risk), build the entity (profile,
-   * tagset, auth), and on the upload path flip the file out of temp at the
-   * end. Any failure between staging and the final return rolls back the
-   * staged file (and the profile, if it was created).
+   *   - **Source copy**: `input.sourceCollaboraDocumentID` names an existing
+   *     CollaboraDocument whose current bytes are copied into the new
+   *     document's own backing file. `documentType`, `originalMimeType` and
+   *     `displayName` are inherited from the source; no other input field is
+   *     consulted.
+   *
+   * The three modes share everything after staging: build the entity (profile,
+   * tagset, auth), and on the upload path flip the file out of temp at the end
+   * (upload stages with `temporaryLocation: true` so a downstream entity-build
+   * failure can roll the file row back; blank and copy write directly to
+   * permanent). Any failure between staging and the final return rolls back
+   * the staged file (and the profile, if it was created).
    */
   public async createCollaboraDocument(
     input: CreateCollaboraDocumentInput,
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID?: string
   ): Promise<ICollaboraDocument> {
     const isUpload = !!input.uploadedFile;
-    if (!isUpload && (!input.displayName || !input.documentType)) {
+    const isSource = input.sourceCollaboraDocumentID != null;
+    if (isUpload && isSource) {
+      throw new ValidationException(
+        'A Collabora document create must supply EITHER an uploaded file OR sourceCollaboraDocumentID, not both',
+        LogContext.COLLABORATION
+      );
+    }
+    if (!isUpload && !isSource && (!input.displayName || !input.documentType)) {
       throw new ValidationException(
         'createCollaboraDocument requires displayName and documentType when no file is supplied.',
         LogContext.COLLABORATION
@@ -88,22 +106,48 @@ export class CollaboraDocumentService {
       );
     const storageBucketId = directStorage.id;
 
-    // Stage the bytes. skipDedup=true on both modes: each Collabora doc owns
-    // its own backing row, otherwise two blank docs in the same bucket would
-    // alias on Buffer.alloc(0) and corrupt each other's edits.
-    const blankCanonicalMime = isUpload
-      ? undefined
-      : this.getDefaultMimeForCreate(input.documentType!);
-    const stageBuffer = isUpload ? input.uploadedFile!.buffer : Buffer.alloc(0);
-    const stageMimeHint = isUpload
-      ? input.uploadedFile!.mimetype
-      : blankCanonicalMime!;
-    const stageFilename = isUpload
-      ? input.uploadedFile!.filename
-      : `${input.displayName}${MIME_TO_EXTENSION[blankCanonicalMime!]}`;
+    let source: ICollaboraDocument | undefined;
+    let blankCanonicalMime: string | undefined;
+    let document: IDocument;
+    if (isSource) {
+      // READ on the source is owned HERE and nowhere else. Unlike the adjacent
+      // whiteboard copy path, there is no resolver precheck: nothing is persisted
+      // before this runs, so a refusal here cannot orphan anything (spec 085 §0.2).
+      source = await this.resolveCopySource(
+        input.sourceCollaboraDocumentID!,
+        actorContext
+      );
+      // skipDedup=true: two posts created from one template share a destination
+      // bucket and an externalID, and per-bucket dedup would hand them the same row.
+      document = await this.storageBucketService.copyDocumentToBucket(
+        storageBucketId,
+        source.document!,
+        // The acting actor, never `userID`: on the template path `userID` is
+        // undefined and copyDocumentToBucket then falls back to the SOURCE
+        // document's createdBy, which would persist a creator rule granting a
+        // third party self-management over a document in the caller's own
+        // bucket. Same spelling as the whiteboard copy path.
+        actorContext.actorID || undefined,
+        true // skipDedup
+      );
+    } else {
+      // skipDedup=true on both modes: each Collabora doc owns its own backing
+      // row, otherwise two blank docs in the same bucket would alias on
+      // Buffer.alloc(0) and corrupt each other's edits.
+      blankCanonicalMime = isUpload
+        ? undefined
+        : this.getDefaultMimeForCreate(input.documentType!);
+      const stageBuffer = isUpload
+        ? input.uploadedFile!.buffer
+        : Buffer.alloc(0);
+      const stageMimeHint = isUpload
+        ? input.uploadedFile!.mimetype
+        : blankCanonicalMime!;
+      const stageFilename = isUpload
+        ? input.uploadedFile!.filename
+        : `${input.displayName}${MIME_TO_EXTENSION[blankCanonicalMime!]}`;
 
-    const document =
-      await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+      document = await this.storageBucketService.uploadFileAsDocumentFromBuffer(
         storageBucketId,
         stageBuffer,
         stageFilename,
@@ -113,37 +157,35 @@ export class CollaboraDocumentService {
         true, // skipDedup
         isUpload ? COLLABORA_SUPPORTED_MIMES : undefined
       );
+    }
 
     // From here on, any failure must roll back what was staged: the file
     // row always, and the profile too if it was created before the failure.
     let createdProfileId: string | undefined;
     try {
-      // Resolve documentType + originalMimeType. On upload the sniffed MIME
-      // is authoritative; any documentType in the input is ignored. On blank
-      // the input drives both.
+      // On upload the sniffed MIME is authoritative, so any documentType in
+      // the input is ignored; `'Imported document'` is reached only when an
+      // upload arrives with no displayName and a filename that strips to
+      // empty (e.g. `.docx`).
       let documentType: CollaboraDocumentType;
       let originalMimeType: string;
-      if (isUpload) {
+      let displayName: string;
+      if (isSource) {
+        documentType = source!.documentType;
+        originalMimeType = source!.originalMimeType;
+        displayName = source!.profile!.displayName;
+      } else if (isUpload) {
         originalMimeType = document.mimeType;
         documentType = this.documentTypeFromSniffedMimeOrFail(originalMimeType);
+        displayName =
+          input.displayName ||
+          this.deriveDisplayNameFromFilename(input.uploadedFile!.filename) ||
+          'Imported document';
       } else {
         documentType = input.documentType!;
         originalMimeType = blankCanonicalMime!;
+        displayName = input.displayName!;
       }
-
-      // Resolve displayName. Explicit input wins; on upload, fall back to
-      // the filename (extension stripped) when input is absent or empty
-      // (per FR-012). The blank path validates input.displayName up front,
-      // so neither fallback below is reachable on that path; the literal
-      // `'Imported document'` is only ever used when an upload arrives with
-      // no input override and a filename whose strip-extension result is
-      // empty (e.g. `.docx`).
-      const displayName =
-        input.displayName ||
-        (isUpload
-          ? this.deriveDisplayNameFromFilename(input.uploadedFile!.filename)
-          : undefined) ||
-        'Imported document';
 
       const collaboraDocument: ICollaboraDocument = new CollaboraDocument();
       collaboraDocument.documentType = documentType;
@@ -200,6 +242,38 @@ export class CollaboraDocumentService {
         .catch(() => undefined);
       throw error;
     }
+  }
+
+  /**
+   * Load the copy source and authorize READ on it. Mirrors the shipped
+   * `WhiteboardService.resolveContentSource`: the single owner of the source
+   * READ expression for this flow (spec 085 §0.2, FR-003).
+   */
+  private async resolveCopySource(
+    sourceCollaboraDocumentID: string,
+    actorContext: ActorContext
+  ): Promise<ICollaboraDocument> {
+    const source = await this.getCollaboraDocumentOrFail(
+      sourceCollaboraDocumentID,
+      {
+        loadEagerRelations: false,
+        relations: { authorization: true, document: true, profile: true },
+      }
+    );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      source.authorization,
+      AuthorizationPrivilege.READ,
+      `copy collabora document content from source: ${sourceCollaboraDocumentID}`
+    );
+    if (!source.document) {
+      throw new RelationshipNotFoundException(
+        'Document not found on source CollaboraDocument',
+        LogContext.COLLABORATION,
+        { collaboraDocumentId: sourceCollaboraDocumentID }
+      );
+    }
+    return source;
   }
 
   /**
