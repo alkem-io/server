@@ -365,6 +365,7 @@ describe('CalloutFramingService', () => {
       ).toHaveBeenCalledWith(
         framingData.collaboraDocument,
         expect.anything(),
+        actorContextData.actorContext,
         'user-1'
       );
     });
@@ -404,6 +405,7 @@ describe('CalloutFramingService', () => {
       ).toHaveBeenCalledWith(
         framingData.collaboraDocument,
         expect.anything(),
+        actorContextData.actorContext,
         'user-1'
       );
     });

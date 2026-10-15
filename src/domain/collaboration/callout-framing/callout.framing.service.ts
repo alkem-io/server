@@ -214,6 +214,7 @@ export class CalloutFramingService {
           await this.collaboraDocumentService.createCollaboraDocument(
             calloutFramingData.collaboraDocument,
             storageAggregator,
+            actorContext,
             userID
           );
       } else {
@@ -710,6 +711,7 @@ export class CalloutFramingService {
             await this.collaboraDocumentService.createCollaboraDocument(
               calloutFramingData.collaboraDocument,
               storageAggregator,
+              actorContext,
               userID
             );
         }
