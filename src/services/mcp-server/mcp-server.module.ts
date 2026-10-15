@@ -40,6 +40,7 @@ import {
   McpResourceProvider,
   McpTool,
 } from './dto/mcp.types';
+import { WhiteboardExecutorParent } from './executor/whiteboard-executor.parent';
 import { McpApiKeyResolverMutations } from './mcp-api-key.resolver.mutations';
 import { McpServerController } from './mcp-server.controller';
 import { McpServerService } from './mcp-server.service';
@@ -93,6 +94,7 @@ const RESOURCE_PROVIDERS = [
   ],
   controllers: [McpServerController],
   providers: [
+    WhiteboardExecutorParent,
     McpServerService,
     McpApiKeyService,
     McpApiKeyAuditService,

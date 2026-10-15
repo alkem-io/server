@@ -161,7 +161,8 @@ export class CollaborationDocumentSession {
   constructor(
     private readonly url: string,
     private readonly headers: Record<string, string>,
-    private readonly documentId: string
+    private readonly documentId: string,
+    private readonly onConnectionLoss?: () => void
   ) {
     this.syncedPromise = new Promise((resolve, reject) => {
       this.syncedResolve = resolve;
@@ -482,6 +483,7 @@ export class CollaborationDocumentSession {
   }
 
   private failPending(err: Error): void {
+    this.onConnectionLoss?.();
     if (!this.synced) {
       this.syncedReject?.(err);
     }

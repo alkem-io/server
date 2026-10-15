@@ -62,7 +62,11 @@ export interface McpTool {
   getDefinition(): McpToolDefinition;
 
   /** Execute the tool */
-  execute(args: unknown, agentInfo: ActorContext): Promise<McpToolResult>;
+  execute(
+    args: unknown,
+    agentInfo: ActorContext,
+    signal?: AbortSignal
+  ): Promise<McpToolResult>;
 }
 
 /**
