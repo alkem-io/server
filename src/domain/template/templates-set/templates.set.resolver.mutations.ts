@@ -2,6 +2,7 @@ import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
+import { TemplateType } from '@common/enums/template.type';
 import { ValidationException } from '@common/exceptions';
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -205,13 +206,18 @@ export class TemplatesSetResolverMutations {
       // Reject before buffering if the file isn't being routed to a
       // COLLABORA_DOCUMENT framing — the file would otherwise be silently
       // discarded and the caller would think the upload took effect.
+      // The template TYPE is part of that routing: only a CALLOUT template
+      // consumes `calloutData` (template.service.ts dispatches SPACE to
+      // `contentSpaceData`), so a SPACE template carrying both `calloutData`
+      // and a file would pass a framing-only check and still drop the upload.
       const framing = templateData.calloutData?.framing;
       if (
+        templateData.type !== TemplateType.CALLOUT ||
         framing?.type !== CalloutFramingType.COLLABORA_DOCUMENT ||
         !framing.collaboraDocument
       ) {
         throw new ValidationException(
-          'file argument is only valid with framing.type = COLLABORA_DOCUMENT and framing.collaboraDocument supplied',
+          'file argument is only valid on a CALLOUT template with framing.type = COLLABORA_DOCUMENT and framing.collaboraDocument supplied',
           LogContext.COLLABORATION
         );
       }

@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { TemplateType } from '@common/enums/template.type';
 import { ValidationException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -181,6 +182,7 @@ describe('TemplatesSetResolverMutations', () => {
         arrange();
         const templateData = {
           templatesSetID: 'ts-1',
+          type: TemplateType.CALLOUT,
           calloutData: {
             framing: {
               type: CalloutFramingType.COLLABORA_DOCUMENT,
@@ -214,6 +216,7 @@ describe('TemplatesSetResolverMutations', () => {
             { actorID: 'user-1' } as any,
             {
               templatesSetID: 'ts-1',
+              type: TemplateType.CALLOUT,
               calloutData: { framing: { type: CalloutFramingType.NONE } },
             } as any,
             fileUpload(createReadStream)
@@ -235,6 +238,36 @@ describe('TemplatesSetResolverMutations', () => {
               templatesSetID: 'ts-1',
               calloutData: {
                 framing: { type: CalloutFramingType.COLLABORA_DOCUMENT },
+              },
+            } as any,
+            fileUpload(createReadStream)
+          )
+        ).rejects.toThrow(ValidationException);
+
+        expect(createReadStream).not.toHaveBeenCalled();
+        expect(templatesSetService.createTemplate).not.toHaveBeenCalled();
+      });
+
+      // CodeRabbit, PR #6666: the framing-only guard passed a SPACE template
+      // carrying calloutData, but template.service.ts dispatches SPACE to
+      // contentSpaceData and never materialises calloutData — so the upload was
+      // buffered and then silently dropped, which is the exact outcome this
+      // guard exists to prevent.
+      it('rejects a file on a non-CALLOUT template even when the framing is COLLABORA_DOCUMENT', async () => {
+        arrange();
+        const createReadStream = docxStream();
+
+        await expect(
+          resolver.createTemplate(
+            { actorID: 'user-1' } as any,
+            {
+              templatesSetID: 'ts-1',
+              type: TemplateType.SPACE,
+              calloutData: {
+                framing: {
+                  type: CalloutFramingType.COLLABORA_DOCUMENT,
+                  collaboraDocument: {},
+                },
               },
             } as any,
             fileUpload(createReadStream)
