@@ -1,11 +1,12 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions';
+import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ContributionDefaultSourceInput } from '@domain/collaboration/callout/callout.contribution.default.source.service';
-import { bufferFramingUploadOrFail } from '@domain/collaboration/collabora-document/collabora.framing.upload.util';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UUID } from '@domain/common/scalars';
 import { WhiteboardService } from '@domain/common/whiteboard';
@@ -201,13 +202,34 @@ export class TemplatesSetResolverMutations {
       );
     }
     if (fileUpload) {
-      await bufferFramingUploadOrFail(
-        templateData.calloutData?.framing,
-        fileUpload,
-        this.configService.get<number>('storage.file.stream_timeout_ms', {
-          infer: true,
-        })!
+      // Reject before buffering if the file isn't being routed to a
+      // COLLABORA_DOCUMENT framing — the file would otherwise be silently
+      // discarded and the caller would think the upload took effect.
+      const framing = templateData.calloutData?.framing;
+      if (
+        framing?.type !== CalloutFramingType.COLLABORA_DOCUMENT ||
+        !framing.collaboraDocument
+      ) {
+        throw new ValidationException(
+          'file argument is only valid with framing.type = COLLABORA_DOCUMENT and framing.collaboraDocument supplied',
+          LogContext.COLLABORATION
+        );
+      }
+      const streamTimeoutMs = this.configService.get<number>(
+        'storage.file.stream_timeout_ms',
+        { infer: true }
+      )!;
+      const buffer = await streamToBuffer(
+        fileUpload.createReadStream(),
+        streamTimeoutMs
       );
+      // Plumb the buffered file through the CreateCollaboraDocumentInput's
+      // transient uploadedFile field; CollaboraDocumentService dispatches on it.
+      framing.collaboraDocument.uploadedFile = {
+        buffer,
+        filename: fileUpload.filename,
+        mimetype: fileUpload.mimetype,
+      };
     }
     await this.templateService.prepareContributionDefaultSource(
       templateData.calloutData?.contributionDefaults,
