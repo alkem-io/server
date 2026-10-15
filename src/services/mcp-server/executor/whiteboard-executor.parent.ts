@@ -226,13 +226,16 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
             break;
         }
       });
-      child.once('disconnect', () => finish(abnormal('cancelled-before-go')));
-      const cleanup = () => {
+      const cleanup = (code?: number | null) => {
         clearTimeout(timer);
         signal?.removeEventListener('abort', cancel);
         child.removeAllListeners();
         this.jobs.delete(jobId);
-        const outcome = terminal ?? abnormal('resource-exhausted-before-go');
+        const outcome =
+          terminal ??
+          abnormal(
+            code === 0 ? 'cancelled-before-go' : 'resource-exhausted-before-go'
+          );
         this.logger.log(
           {
             message: 'Whiteboard executor completed',

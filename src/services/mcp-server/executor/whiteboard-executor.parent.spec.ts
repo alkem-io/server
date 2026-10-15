@@ -10,8 +10,8 @@ import {
 class FakeChild extends EventEmitter {
   pid: number | undefined = 123;
   send = vi.fn();
-  kill = vi.fn(() => {
-    queueMicrotask(() => this.emit('exit', 0));
+  kill = vi.fn((signal: NodeJS.Signals = 'SIGTERM') => {
+    queueMicrotask(() => this.emit('exit', null, signal));
     return true;
   });
 }
@@ -182,14 +182,23 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     h.onModuleDestroy();
     await next;
   });
-  it.each([
-    'joining',
-    'synced',
-    'go',
-    'published',
-  ])('classifies child exit in %s without replay', async phase => {
+  it.each(
+    ['joining', 'synced', 'go', 'published'].flatMap(phase =>
+      [
+        { code: 0, signal: null },
+        { code: 1, signal: null },
+        { code: null, signal: 'SIGABRT' },
+      ].map(exit => ({ phase, ...exit }))
+    )
+  )('classifies disconnect then exit $code/$signal in $phase without replay', async ({
+    phase,
+    code,
+    signal,
+  }) => {
+    vi.useFakeTimers();
     const h = parent();
-    const pending = h.execute(randomUUID(), randomUUID(), operations);
+    const actor = randomUUID();
+    const pending = h.execute(randomUUID(), actor, operations);
     const child = h.children[0];
     if (phase !== 'joining') progress(child, 'SYNCED');
     if (phase === 'go' || phase === 'published')
@@ -199,13 +208,24 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         summary: [],
       });
     if (phase === 'published') progress(child, 'PUBLISHED');
-    child.emit('exit', 1);
+    child.emit('disconnect');
+    child.emit('exit', code, signal);
     expect((await pending).outcome).toBe(
       phase === 'go' || phase === 'published'
         ? 'indeterminate-after-go'
-        : 'resource-exhausted-before-go'
+        : code === 0
+          ? 'cancelled-before-go'
+          : 'resource-exhausted-before-go'
     );
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(child.eventNames()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
     expect(h.children).toHaveLength(1);
+    const next = h.execute(randomUUID(), actor, operations);
+    expect(h.children).toHaveLength(2);
+    h.onModuleDestroy();
+    await next;
+    expect(vi.getTimerCount()).toBe(0);
   });
   it.each([false, true])('caller cancellation afterGo=%s', async afterGo => {
     const h = parent();
