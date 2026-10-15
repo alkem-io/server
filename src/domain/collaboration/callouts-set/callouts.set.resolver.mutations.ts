@@ -5,12 +5,12 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions';
-import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
+import { bufferFramingUploadOrFail } from '@domain/collaboration/collabora-document/collabora.framing.upload.util';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UUID } from '@domain/common/scalars';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -245,22 +245,6 @@ export class CalloutsSetResolverMutations {
     }
 
     if (fileUpload) {
-      // Reject before buffering if the file isn't being routed to a
-      // COLLABORA_DOCUMENT framing — the file would otherwise be silently
-      // discarded and the caller would think the upload took effect.
-      if (
-        calloutData.framing?.type !== CalloutFramingType.COLLABORA_DOCUMENT ||
-        !calloutData.framing.collaboraDocument
-      ) {
-        throw new ValidationException(
-          'file argument is only valid with framing.type = COLLABORA_DOCUMENT and framing.collaboraDocument supplied',
-          LogContext.COLLABORATION
-        );
-      }
-      const streamTimeoutMs = this.configService.get<number>(
-        'storage.file.stream_timeout_ms',
-        { infer: true }
-      )!;
       this.logger.verbose?.(
         {
           message:
@@ -270,19 +254,13 @@ export class CalloutsSetResolverMutations {
         },
         LogContext.COLLABORATION
       );
-      const buffer = await streamToBuffer(
-        fileUpload.createReadStream(),
-        streamTimeoutMs
+      await bufferFramingUploadOrFail(
+        calloutData.framing,
+        fileUpload,
+        this.configService.get<number>('storage.file.stream_timeout_ms', {
+          infer: true,
+        })!
       );
-      // Plumb the buffered file through the CreateCollaboraDocumentInput's
-      // transient uploadedFile field. CollaboraDocumentService.createCollaboraDocument
-      // dispatches on this field's presence — its upload mode runs file-service-go's
-      // MIME sniff, type derivation, and the temp→permanent atomic flow.
-      calloutData.framing.collaboraDocument.uploadedFile = {
-        buffer,
-        filename: fileUpload.filename,
-        mimetype: fileUpload.mimetype,
-      };
     }
 
     // The only caller that grants the FORM placement capability, and only

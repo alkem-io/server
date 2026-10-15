@@ -87,7 +87,7 @@ export class CollaboraDocumentService {
   ): Promise<ICollaboraDocument> {
     const isUpload = !!input.uploadedFile;
     const isSource = input.sourceCollaboraDocumentID != null;
-    if (input.uploadedFile != null && input.sourceCollaboraDocumentID != null) {
+    if (isUpload && isSource) {
       throw new ValidationException(
         'A Collabora document create must supply EITHER an uploaded file OR sourceCollaboraDocumentID, not both',
         LogContext.COLLABORATION
@@ -106,9 +106,6 @@ export class CollaboraDocumentService {
       );
     const storageBucketId = directStorage.id;
 
-    // Stage the bytes. Three-way dispatch: the copy mode resolves and copies
-    // INSTEAD OF the blank/upload staging expressions below, which read
-    // `input.documentType` — absent by design in copy mode.
     let source: ICollaboraDocument | undefined;
     let blankCanonicalMime: string | undefined;
     let document: IDocument;
@@ -161,13 +158,10 @@ export class CollaboraDocumentService {
     // row always, and the profile too if it was created before the failure.
     let createdProfileId: string | undefined;
     try {
-      // Resolve documentType, originalMimeType and displayName per mode.
-      //  - copy:   all three come from the source; no input field is consulted.
-      //  - upload: the sniffed MIME is authoritative (any documentType in the
-      //            input is ignored); displayName falls back to the filename
-      //            with its extension stripped (FR-012), and finally to the
-      //            literal below when that strips to empty (e.g. `.docx`).
-      //  - blank:  the input drives all three, validated up front above.
+      // On upload the sniffed MIME is authoritative, so any documentType in
+      // the input is ignored; `'Imported document'` is reached only when an
+      // upload arrives with no displayName and a filename that strips to
+      // empty (e.g. `.docx`).
       let documentType: CollaboraDocumentType;
       let originalMimeType: string;
       let displayName: string;
