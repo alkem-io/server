@@ -37,7 +37,7 @@ export abstract class ICallout extends IAuthorizable {
   @Field(() => ICalloutSettings, {
     nullable: false,
     description:
-      "The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned EMPTY to actors without UPDATE on the Callout — an empty list therefore means 'not visible to you', not 'nothing selected' (workspace#084 AC6: a viewer must not learn which or how many spaces are withheld from them). `framing.selection.mode` is always accurate.",
+      "The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned EMPTY to actors without UPDATE on the Callout, so an empty list is AMBIGUOUS by design: it means either that nothing is selected or that the selection is withheld from you, and the two are deliberately indistinguishable (workspace#084 AC6: a viewer must not learn which or how many spaces are hidden from them). Hold UPDATE and the list is exact. `framing.selection.mode` is always accurate.",
   })
   settings!: ICalloutSettings;
 

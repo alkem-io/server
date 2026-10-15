@@ -605,7 +605,7 @@ export class CalloutService {
     // `stored === submitted`, so every out-of-account id a crafted update adds
     // is accepted and persisted, with every unit test still green.
     const storedSelectedIds = [
-      ...(callout.settings.framing.selection?.selectedIds ?? []),
+      ...(callout.settings.framing?.selection?.selectedIds ?? []),
     ];
 
     // Reject an off-kind selection/spaces block against the TARGET framing
