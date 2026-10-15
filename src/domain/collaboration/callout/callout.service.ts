@@ -1151,6 +1151,7 @@ export class CalloutService {
   public async importCollaboraDocumentToCallout(
     input: ImportCollaboraDocumentInput,
     file: { buffer: Buffer; filename: string; mimetype: string },
+    actorContext: ActorContext,
     userID: string
   ): Promise<ICalloutContribution> {
     const callout = await this.getCalloutOrFail(input.calloutID, {
@@ -1189,6 +1190,7 @@ export class CalloutService {
       await this.collaboraDocumentService.createCollaboraDocument(
         { displayName: input.displayName, uploadedFile: file },
         storageAggregator,
+        actorContext,
         userID
       );
 
