@@ -11,7 +11,7 @@ export const createJsonBodyParserMiddleware = (
   const mcpBodyParser = json({ limit: '256kb' });
 
   return (req, res, next) => {
-    if (req.path === '/rest/mcp' || req.path === '/rest/mcp/') {
+    if (/^\/rest\/mcp\/?$/i.test(req.path)) {
       return mcpBodyParser(req, res, next);
     }
 
