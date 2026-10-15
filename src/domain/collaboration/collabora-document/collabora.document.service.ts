@@ -122,7 +122,12 @@ export class CollaboraDocumentService {
       document = await this.storageBucketService.copyDocumentToBucket(
         storageBucketId,
         source.document!,
-        userID,
+        // The acting actor, never `userID`: on the template path `userID` is
+        // undefined and copyDocumentToBucket then falls back to the SOURCE
+        // document's createdBy, which would persist a creator rule granting a
+        // third party self-management over a document in the caller's own
+        // bucket. Same spelling as the whiteboard copy path.
+        actorContext.actorID || undefined,
         true // skipDedup
       );
     } else {

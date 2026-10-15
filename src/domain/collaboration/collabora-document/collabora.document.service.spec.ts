@@ -228,6 +228,26 @@ describe('CollaboraDocumentService', () => {
         ).not.toHaveBeenCalled();
       });
 
+      it('attributes the copy to the caller when no userID is threaded (template path), never to the source document creator', async () => {
+        repository.findOne.mockResolvedValue({
+          ...source,
+          document: { ...sourceDocument, createdBy: 'other-user' },
+        });
+
+        await service.createCollaboraDocument(
+          { sourceCollaboraDocumentID: SOURCE_ID } as any,
+          storageAggregator,
+          actorContext
+        );
+
+        expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+          'bucket-1',
+          expect.anything(),
+          'user-1',
+          true
+        );
+      });
+
       it('never consults the blank-create MIME map when the input carries no documentType', async () => {
         const getDefaultMimeForCreate = vi.spyOn(
           service as any,
