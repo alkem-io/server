@@ -13,6 +13,9 @@ import { CollaboraDocument } from '@domain/collaboration/collabora-document/coll
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Tagset } from '@domain/common/tagset';
+import { whiteboardSnapshotToSearchText } from '@domain/common/whiteboard/conversion';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { loadWhiteboardFork } from '@domain/common/whiteboard/whiteboard.fork';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';
@@ -20,6 +23,7 @@ import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { ContentBatchItemResult } from '@services/adapters/file-service-adapter/dto/content.batch.result';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { TaskService } from '@services/task';
@@ -28,6 +32,7 @@ import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindManyOptions } from 'typeorm';
 import {
+  CONTENT_FIELD_SIZE_LIMIT,
   CollaboraExtractSkipReason,
   CollaboraTextExtractService,
 } from '../extract/collabora.text.extract.service';
@@ -1111,175 +1116,255 @@ export class SearchIngestService {
     });
   }
 
-  private fetchWhiteboard(start: number, limit: number) {
-    return this.entityManager
-      .find<Space>(Space, {
-        loadEagerRelations: false,
-        where: {
-          visibility: SpaceVisibility.ACTIVE,
-        },
-        relations: {
-          collaboration: {
-            innovationFlow: {
-              states: true,
-            },
-            calloutsSet: {
-              callouts: {
-                framing: {
-                  whiteboard: {
-                    profile: profileRelationOptions,
-                  },
+  private async fetchWhiteboard(start: number, limit: number) {
+    const spaces = await this.entityManager.find<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
+      relations: {
+        collaboration: {
+          innovationFlow: {
+            states: true,
+          },
+          calloutsSet: {
+            callouts: {
+              framing: {
+                whiteboard: {
+                  profile: profileRelationOptions,
                 },
-                contributions: {
-                  whiteboard: {
-                    profile: profileRelationOptions,
-                  },
+              },
+              contributions: {
+                whiteboard: {
+                  profile: profileRelationOptions,
                 },
-                classification: {
-                  tagsets: true,
-                },
+              },
+              classification: {
+                tagsets: true,
               },
             },
           },
-          parentSpace: {
-            parentSpace: true,
-          },
         },
-        select: {
+        parentSpace: {
+          parentSpace: true,
+        },
+      },
+      select: {
+        id: true,
+        visibility: true,
+        collaboration: {
           id: true,
-          visibility: true,
-          collaboration: {
+          innovationFlow: {
             id: true,
-            innovationFlow: {
+            states: {
               id: true,
-              states: {
-                id: true,
-                displayName: true,
-              },
-            },
-            calloutsSet: {
-              id: true,
-              callouts: {
-                id: true,
-                createdBy: true,
-                createdDate: true,
-                nameID: true,
-                framing: {
-                  id: true,
-                  whiteboard: {
-                    id: true,
-                    profile: profileSelectOptions,
-                  },
-                },
-                contributions: {
-                  id: true,
-                  whiteboard: {
-                    id: true,
-                    profile: profileSelectOptions,
-                  },
-                },
-                classification: {
-                  id: true,
-                  tagsets: {
-                    id: true,
-                    name: true,
-                    tags: true,
-                  },
-                },
-              },
+              displayName: true,
             },
           },
-          parentSpace: {
+          calloutsSet: {
             id: true,
-            parentSpace: {
+            callouts: {
               id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                  contentPointer: true,
+                  profile: profileSelectOptions,
+                },
+              },
+              contributions: {
+                id: true,
+                whiteboard: {
+                  id: true,
+                  contentPointer: true,
+                  profile: profileSelectOptions,
+                },
+              },
+              classification: {
+                id: true,
+                tagsets: {
+                  id: true,
+                  name: true,
+                  tags: true,
+                },
+              },
             },
           },
         },
-        skip: start,
-        take: limit,
-      })
-      .then(spaces => {
-        return spaces.flatMap(space => {
-          const { map: flowStateNameToId, ambiguousNames } =
-            buildFlowStateNameToIdMap(
-              space.collaboration?.innovationFlow?.states
-            );
-          const callouts = space.collaboration?.calloutsSet?.callouts;
-          return callouts
-            ?.flatMap(callout => {
-              // children inherit the parent callout's scope fields
-              const flowStateID = resolveCalloutFlowStateID(
-                callout.classification?.tagsets,
-                flowStateNameToId,
-                ambiguousNames,
-                this.logUnresolvedFlowState.bind(this),
-                callout.id
-              );
-              // a callout can have whiteboard in the framing
-              // AND whiteboards in the contributions.
-              // NOTE (006-collab-content-unification): the whiteboard scene is no
-              // longer a JSON column — content lives only as a Yjs-V2 snapshot in
-              // the document's bucket — so the scene-text body is no longer indexed.
-              // Whiteboards are indexed by their profile (name/description/tags).
-              const wbs = [];
-              if (callout.framing.whiteboard) {
-                wbs.push({
-                  ...callout.framing.whiteboard,
-                  type: SearchResultType.WHITEBOARD,
-                  license: {
-                    visibility: space?.visibility ?? EMPTY_VALUE,
-                  },
-                  spaceID:
-                    space?.parentSpace?.parentSpace?.id ??
-                    space?.parentSpace?.id ??
-                    space.id,
-                  calloutID: callout.id,
-                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                  flowStateID,
-                  profile: {
-                    ...callout.framing.whiteboard.profile,
-                    tags: processTagsets(
-                      callout.framing.whiteboard?.profile?.tagsets
-                    ),
-                    tagsets: undefined,
-                  },
-                });
-              }
+        parentSpace: {
+          id: true,
+          parentSpace: {
+            id: true,
+          },
+        },
+      },
+      skip: start,
+      take: limit,
+    });
 
-              callout?.contributions?.forEach(contribution => {
-                if (!contribution?.whiteboard) {
-                  return;
-                }
+    // The whiteboard scene lives only as a Yjs-V2 snapshot in the document's
+    // bucket: derive the scene text from those snapshots in ONE batched
+    // file-service read for the whole page, keyed by `contentPointer`.
+    const textByPointer = await this.fetchWhiteboardTextByPointer(spaces);
 
-                wbs.push({
-                  ...contribution.whiteboard,
-                  type: SearchResultType.WHITEBOARD,
-                  license: {
-                    visibility: space?.visibility ?? EMPTY_VALUE,
-                  },
-                  spaceID:
-                    space?.parentSpace?.parentSpace?.id ??
-                    space?.parentSpace?.id ??
-                    space.id,
-                  calloutID: callout.id,
-                  collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                  flowStateID,
-                  profile: {
-                    ...contribution.whiteboard.profile,
-                    tags: processTagsets(
-                      contribution.whiteboard?.profile?.tagsets
-                    ),
-                    tagsets: undefined,
-                  },
-                });
-              });
+    const whiteboardForIngestion = (
+      whiteboard: Whiteboard,
+      callout: Callout,
+      space: Space,
+      flowStateID: string | undefined
+    ) => {
+      // A whiteboard is always indexed by its profile (name/description/tags);
+      // the scene text, when there is any, is added as `content`.
+      const content = whiteboard.contentPointer
+        ? textByPointer.get(whiteboard.contentPointer)
+        : undefined;
+      return {
+        ...whiteboard,
+        // the pointer is an internal storage locator, never indexed
+        contentPointer: undefined,
+        ...(content ? { content } : {}),
+        type: SearchResultType.WHITEBOARD,
+        license: {
+          visibility: space?.visibility ?? EMPTY_VALUE,
+        },
+        spaceID:
+          space?.parentSpace?.parentSpace?.id ??
+          space?.parentSpace?.id ??
+          space.id,
+        calloutID: callout.id,
+        collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        flowStateID,
+        profile: {
+          ...whiteboard.profile,
+          tags: processTagsets(whiteboard?.profile?.tagsets),
+          tagsets: undefined,
+        },
+      };
+    };
 
-              return wbs;
-            })
-            .filter(Boolean);
+    return spaces.flatMap(space => {
+      const { map: flowStateNameToId, ambiguousNames } =
+        buildFlowStateNameToIdMap(space.collaboration?.innovationFlow?.states);
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
+      return callouts.flatMap(callout => {
+        // children inherit the parent callout's scope fields
+        const flowStateID = resolveCalloutFlowStateID(
+          callout.classification?.tagsets,
+          flowStateNameToId,
+          ambiguousNames,
+          this.logUnresolvedFlowState.bind(this),
+          callout.id
+        );
+        // a callout can have whiteboard in the framing
+        // AND whiteboards in the contributions
+        const wbs: Record<string, unknown>[] = [];
+        if (callout.framing.whiteboard) {
+          wbs.push(
+            whiteboardForIngestion(
+              callout.framing.whiteboard,
+              callout,
+              space,
+              flowStateID
+            )
+          );
+        }
+
+        callout?.contributions?.forEach(({ whiteboard }) => {
+          if (!whiteboard) {
+            return;
+          }
+
+          wbs.push(
+            whiteboardForIngestion(whiteboard, callout, space, flowStateID)
+          );
         });
+
+        return wbs;
       });
+    });
+  }
+
+  /**
+   * Batched derivation of whiteboard scene text from the stored Yjs-V2
+   * snapshots for a page of spaces: gathers every whiteboard `contentPointer`
+   * (framing + contributions), reads them in ONE file-service `content-batch`
+   * call, and extracts the text elements of each. Returns a
+   * `pointer -> text` map; missing, undecodable or text-less snapshots are
+   * omitted, and a failed batch read yields an empty map, so the affected
+   * whiteboards are still indexed by their profile alone.
+   */
+  private async fetchWhiteboardTextByPointer(
+    spaces: Space[]
+  ): Promise<Map<string, string>> {
+    const pointers = new Set<string>();
+    for (const space of spaces) {
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
+      for (const callout of callouts) {
+        if (callout.framing.whiteboard?.contentPointer) {
+          pointers.add(callout.framing.whiteboard.contentPointer);
+        }
+        for (const contribution of callout.contributions ?? []) {
+          if (contribution.whiteboard?.contentPointer) {
+            pointers.add(contribution.whiteboard.contentPointer);
+          }
+        }
+      }
+    }
+
+    const result = new Map<string, string>();
+    if (pointers.size === 0) {
+      return result;
+    }
+
+    let items: ContentBatchItemResult[];
+    try {
+      items = await this.fileServiceAdapter.getContentBatch([...pointers]);
+    } catch (error) {
+      // Unlike memos (which are only searchable through their content),
+      // whiteboards stay findable by profile, so a failed read degrades the
+      // page to profile-only documents instead of failing the ingest.
+      this.logger.warn?.(
+        {
+          message:
+            'Search ingest: failed to read whiteboard snapshots; indexing by profile only',
+          pointerCount: pointers.size,
+          error: String(error),
+        },
+        LogContext.SEARCH_INGEST
+      );
+      return result;
+    }
+
+    const fork = await loadWhiteboardFork();
+    for (const item of items) {
+      if (!item.found || !item.contentBase64) {
+        continue;
+      }
+      try {
+        const text = whiteboardSnapshotToSearchText(
+          fork,
+          Buffer.from(item.contentBase64, 'base64'),
+          CONTENT_FIELD_SIZE_LIMIT
+        );
+        if (text) {
+          result.set(item.id, text);
+        }
+      } catch (error) {
+        this.logger.warn?.(
+          {
+            message: 'Search ingest: failed to decode whiteboard snapshot',
+            pointer: item.id,
+            error: String(error),
+          },
+          LogContext.SEARCH_INGEST
+        );
+      }
+    }
+    return result;
   }
 
   private fetchMemoCount() {
