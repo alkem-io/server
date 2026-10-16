@@ -227,6 +227,52 @@ describe('explicitly reviewed reference normalization', () => {
     expect((await applyNormalization(f.port, approve(plan))).ok).toBe(false);
     expect(f.writes).toEqual([]);
   });
+  const withAbsentRoom = (
+    f: ReturnType<typeof fixture>,
+    failure: string
+  ) => {
+    const roomC = id(103);
+    f.port.supportedRooms = async () => [roomA, roomB, roomC];
+    f.coverage.requestedRoomIds = [roomA, roomB, roomC];
+    f.coverage.rooms.push({
+      roomId: roomC,
+      mappingComplete: false,
+      paginationComplete: failure === 'room_absent',
+      pages: 0,
+      eventsScanned: 0,
+      attachmentsExported: 0,
+      skippedByReason: {},
+      failure,
+    });
+    return roomC;
+  };
+  it('covers a supported room that was never created in Matrix', async () => {
+    const f = fixture();
+    withAbsentRoom(f, 'room_absent');
+    const plan = await inventoryNormalization(f.port, f.events, f.coverage);
+    expect(plan.groups[0].eligible).toBe(true);
+    expect(plan.groups[0].reason).toBeUndefined();
+  });
+  it('does not cover an absent room that has exported events', async () => {
+    const f = fixture();
+    const roomC = withAbsentRoom(f, 'room_absent');
+    const plan = await inventoryNormalization(
+      f.port,
+      [...f.events, { ...f.events[0], roomId: roomC, eventId: '$c' }],
+      f.coverage
+    );
+    expect(plan.groups[0].reason).toBe('incomplete_coverage');
+  });
+  it('does not cover a room whose alias lookup failed', async () => {
+    const f = fixture();
+    withAbsentRoom(f, 'alias_resolution_failed');
+    const plan = approve(
+      await inventoryNormalization(f.port, f.events, f.coverage)
+    );
+    expect(plan.groups[0].reason).toBe('incomplete_coverage');
+    await applyNormalization(f.port, plan);
+    expect(f.writes).toEqual([]);
+  });
   it('requires all supported rooms, even when a fixture export claims complete', async () => {
     const f = fixture();
     f.coverage.requestedRoomIds = [roomB];
