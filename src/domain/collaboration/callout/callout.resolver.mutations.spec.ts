@@ -474,10 +474,11 @@ describe('CalloutResolverMutations', () => {
       expect(calloutService.updateCallout).not.toHaveBeenCalled();
     });
 
-    // The CONTRIBUTORS framing guard must hold on the UPDATE path too, not just
-    // create — otherwise the admin-only / collaboration-only restriction
-    // (FR-004a/FR-004f) is bypassable by converting a callout via updateCallout.
-    describe('CONTRIBUTORS framing guard', () => {
+    // The restricted-framing guard (CONTRIBUTORS, SPACES, FORM) must hold on the
+    // UPDATE path too, not just create — otherwise the admin-only /
+    // collaboration-only restriction (FR-004a/FR-004d/FR-004f) is bypassable by
+    // converting a callout via updateCallout.
+    describe('restricted framing guard', () => {
       it('rejects converting a callout to CONTRIBUTORS in a non-COLLABORATION callouts set', async () => {
         const callout = {
           id: 'callout-1',
@@ -536,6 +537,92 @@ describe('CalloutResolverMutations', () => {
           AuthorizationPrivilege.CREATE,
           expect.any(String)
         );
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
+
+      // SEC-084-01. The update guard once covered CONTRIBUTORS only, so any
+      // member who could create a callout (allowMembersToCreateCallouts maps
+      // CREATE_CALLOUT to CONTRIBUTE, and a creator is granted UPDATE on their
+      // own callout) could convert it to SPACES and publish an account-wide
+      // curated space collection — the capability AC3 reserves for a space
+      // admin. The resulting type drives the guard, so both converting to and
+      // editing an existing SPACES callout are gated.
+      it.each([
+        ['converting a callout to SPACES', CalloutFramingType.NONE, true],
+        [
+          'editing an existing SPACES callout',
+          CalloutFramingType.SPACES,
+          false,
+        ],
+      ])('requires the CREATE (admin) privilege when %s, even with UPDATE rights', async (_label, storedType, sendsFramingType) => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          framing: { type: storedType },
+          calloutsSet: {
+            type: CalloutsSetType.COLLABORATION,
+            authorization: { id: 'cs-auth' },
+          },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        // The generic UPDATE on the callout passes (the member created it);
+        // the admin CREATE on the callouts set is the only thing that denies.
+        vi.mocked(authorizationService.grantAccessOrFail)
+          .mockImplementationOnce(() => undefined as any)
+          .mockImplementationOnce(() => {
+            throw new ValidationException('forbidden', 'collaboration' as any);
+          });
+
+        const actorContext = { actorID: 'member-1' } as any;
+
+        await expect(
+          resolver.updateCallout(actorContext, {
+            ID: 'callout-1',
+            ...(sendsFramingType
+              ? { framing: { type: CalloutFramingType.SPACES } }
+              : {}),
+            settings: {
+              framing: {
+                selection: {
+                  mode: 'custom',
+                  selectedIds: ['space-in-account'],
+                },
+              },
+            },
+          } as any)
+        ).rejects.toThrow();
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          callout.calloutsSet.authorization,
+          AuthorizationPrivilege.CREATE,
+          expect.any(String)
+        );
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
+
+      it('rejects converting a callout to SPACES in a non-COLLABORATION callouts set', async () => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.NONE },
+          calloutsSet: {
+            type: CalloutsSetType.KNOWLEDGE_BASE,
+            authorization: { id: 'cs-auth' },
+          },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        await expect(
+          resolver.updateCallout(
+            { actorID: 'user-1' } as any,
+            {
+              ID: 'callout-1',
+              framing: { type: CalloutFramingType.SPACES },
+            } as any
+          )
+        ).rejects.toThrow(ValidationException);
         expect(calloutService.updateCallout).not.toHaveBeenCalled();
       });
     });

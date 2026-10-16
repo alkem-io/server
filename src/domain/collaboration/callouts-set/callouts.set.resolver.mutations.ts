@@ -11,6 +11,10 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
+import {
+  assertAdminOnlyCollaborationFraming,
+  isRestrictedCollaborationFraming,
+} from '@domain/collaboration/callout/callout.restricted.framing.guard';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UUID } from '@domain/common/scalars';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -43,7 +47,6 @@ import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { TaskBoardService } from '../callout/task-board/task.board.service';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
-import { ICalloutsSet } from './callouts.set.interface';
 import { CalloutsSetService } from './callouts.set.service';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
@@ -205,14 +208,12 @@ export class CalloutsSetResolverMutations {
     // require CREATE (space admin) even when allowMembersToCreateCallouts maps
     // CREATE_CALLOUT to CONTRIBUTE. SPACES is NOT level-restricted — an admin may
     // create it on any space (L0 or L1); only AUTOMATIC provisioning is L0-only
-    // (FR-004e). Shared guard keeps the two in sync as restricted framings grow.
+    // (FR-004e). Shared guard keeps create and update in sync as the restricted
+    // set grows.
     const restrictedFramingType = calloutData.framing?.type;
-    if (
-      restrictedFramingType === CalloutFramingType.CONTRIBUTORS ||
-      restrictedFramingType === CalloutFramingType.SPACES ||
-      restrictedFramingType === CalloutFramingType.FORM
-    ) {
-      this.assertAdminOnlyCollaborationFraming(
+    if (isRestrictedCollaborationFraming(restrictedFramingType)) {
+      assertAdminOnlyCollaborationFraming(
+        this.authorizationService,
         actorContext,
         calloutsSet,
         restrictedFramingType
@@ -451,33 +452,6 @@ export class CalloutsSetResolverMutations {
     return this.calloutsSetService.updateCalloutsSortOrder(
       calloutsSet,
       sortOrderData
-    );
-  }
-
-  /**
-   * Shared admin-only + collaboration-only guard for the "collection" framings
-   * (CONTRIBUTORS and SPACES), FR-004a/FR-004d/FR-004f (R5): reject on
-   * non-COLLABORATION callouts sets, and require CREATE (space admin) even when
-   * allowMembersToCreateCallouts maps CREATE_CALLOUT to CONTRIBUTE. Neither is
-   * level-restricted. Extracted so the two guards cannot drift out of sync.
-   */
-  private assertAdminOnlyCollaborationFraming(
-    actorContext: ActorContext,
-    calloutsSet: ICalloutsSet,
-    framingType: CalloutFramingType
-  ): void {
-    const label = framingType.toUpperCase();
-    if (calloutsSet.type !== CalloutsSetType.COLLABORATION) {
-      throw new ValidationException(
-        `${label} framing is only available on COLLABORATION callouts sets.`,
-        LogContext.COLLABORATION
-      );
-    }
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      calloutsSet.authorization,
-      AuthorizationPrivilege.CREATE,
-      `create ${label} callout (admin-only) on callouts Set: ${calloutsSet.id}`
     );
   }
 }

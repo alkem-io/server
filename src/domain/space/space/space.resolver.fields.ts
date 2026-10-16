@@ -40,6 +40,7 @@ import { ISpaceAbout } from '../space.about';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { ISpaceSettingsLayout } from '../space.settings/space.settings.layout.interface';
+import { ISpaceSelectionCandidate } from './dto/space.selection.candidate';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 
 @Resolver(() => ISpace)
@@ -227,6 +228,35 @@ export class SpaceResolverFields {
   })
   async account(@Parent() space: ISpace): Promise<IAccount> {
     return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
+  }
+
+  // UPDATE, not READ. UPDATE is the host-space-admin test the client already
+  // computes to decide whether to offer the admin-only Spaces framing chip at
+  // all, which is why the edit surface does not render the manual-selection
+  // block for an editor who lacks it rather than issuing a query that would be
+  // refused (workspace#084 FR-009a). Copying the sibling `account` field's
+  // READ instead would expose the account's readable space list - ids, names,
+  // levels, parentage - to any member holding READ on ONE space of the
+  // account, which is precisely the enumeration surface this feature must not
+  // widen (risk R-E). That gate is about WHO MAY ASK; the per-candidate gate is
+  // the actor's own READ inside the service (ruling D1). No account-level
+  // privilege check is added - the operator ruled the boundary (residuals
+  // R-A/R-B).
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.UPDATE)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('accountSpaces', () => [ISpaceSelectionCandidate], {
+    nullable: false,
+    description:
+      "Spaces of THIS Space's account, at any level, on which the current actor holds READ - candidates for a Spaces callout's manual selection. READ, not READ_ABOUT: for a level-zero Space READ_ABOUT is granted to every actor including anonymous, so a READ_ABOUT filter would return the account's whole level-zero set to anyone. Capped at 500 as an unordered resource bound - no order is guaranteed and the picker sorts by ancestor path. Requires UPDATE on this Space.",
+  })
+  async accountSpaces(
+    @Parent() space: ISpace,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<ISpaceSelectionCandidate[]> {
+    return await this.spaceService.getAccountSelectionCandidates(
+      space,
+      actorContext
+    );
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
