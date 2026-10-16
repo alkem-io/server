@@ -1,5 +1,8 @@
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { TaskColumnCount } from '@domain/collaboration/callout/task-board/dto/task.column.count';
@@ -29,10 +32,12 @@ export class CalloutTaskColumnCountsLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<TaskColumnCount[] | null> {
+  public create(
+    options?: DataLoaderCreatorOptions<TaskColumnCount[] | null>
+  ): ILoader<TaskColumnCount[] | null> {
     return new DataLoader<string, TaskColumnCount[] | null>(
       async calloutIds => this.batchLoad(calloutIds),
-      { cache: true, name: 'CalloutTaskColumnCountsLoader' }
+      { cache: options?.cache ?? true, name: 'CalloutTaskColumnCountsLoader' }
     );
   }
 

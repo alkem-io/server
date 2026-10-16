@@ -5,7 +5,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import DataLoader from 'dataloader';
 import { EntityManager } from 'typeorm';
 import { ILoader } from '../../../loader.interface';
-import { DataLoaderCreator } from '../../base';
+import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 /**
  * Batches lead-organization credential lookups across multiple spaces into a single query.
@@ -21,10 +21,15 @@ export class LeadOrganizationsByRoleSetLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<IOrganization[]> {
+  public create(
+    options?: DataLoaderCreatorOptions<IOrganization[]>
+  ): ILoader<IOrganization[]> {
     return new DataLoader<string, IOrganization[]>(
       async keys => this.batchLoadOrganizations(keys),
-      { cache: true, name: 'LeadOrganizationsByRoleSetLoader' }
+      {
+        cache: options?.cache ?? true,
+        name: 'LeadOrganizationsByRoleSetLoader',
+      }
     );
   }
 
