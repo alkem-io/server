@@ -33,7 +33,7 @@ const Y = nodeRequire('yjs') as typeof import('yjs');
 
 describe('whiteboard fork — CJS/ESM single-yjs-instance boundary', () => {
   it('loadWhiteboardFork resolves the CJS (`require`-condition) headless build', () => {
-    expect(nodeRequire.resolve('@excalidraw-yjs/element/headless')).toMatch(
+    expect(nodeRequire.resolve('@excalidraw-yjs/excalidraw/headless')).toMatch(
       /\.cjs$/
     );
   });

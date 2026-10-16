@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -62,6 +63,7 @@ interface McpSession {
 export class McpServerService implements OnModuleInit {
   private sessions: Map<string, McpSession> = new Map();
   private readonly argsValidator = new McpToolArgsValidator();
+  private readonly callerSignal = new AsyncLocalStorage<AbortSignal>();
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
@@ -146,64 +148,85 @@ export class McpServerService implements OnModuleInit {
     });
 
     // Handle tools/call
-    mcpServer.server.setRequestHandler(CallToolRequestSchema, async request => {
-      const { name, arguments: args } = request.params;
-      const actorContext = getActorContext();
-      this.logger.verbose?.(
-        `Calling MCP tool: ${name}, user: ${actorContext.actorID || 'anonymous'}${this.attributionSuffix(actorContext)}`,
-        LogContext.MCP_SERVER
-      );
-
-      // Authorization: the API key must carry the 'tools' operation.
-      const scopeError = scopeViolation(getScopes(), 'tools');
-      if (scopeError) {
-        return { content: [{ type: 'text', text: scopeError }], isError: true };
-      }
-
-      const tool = this.getTool(name);
-      if (!tool) {
-        this.logger.warn?.(
-          { message: 'MCP tool not found', toolName: name },
+    mcpServer.server.setRequestHandler(
+      CallToolRequestSchema,
+      async (request, extra) => {
+        const { name, arguments: args } = request.params;
+        const actorContext = getActorContext();
+        this.logger.verbose?.(
+          `Calling MCP tool: ${name}, user: ${actorContext.actorID || 'anonymous'}${this.attributionSuffix(actorContext)}`,
           LogContext.MCP_SERVER
         );
-        throw new Error('Tool not found');
-      }
 
-      // Validate arguments against the tool's declared input schema before
-      // handing them to the tool implementation.
-      const argError = this.argsValidator.validate(
-        name,
-        tool.getDefinition().inputSchema,
-        args || {}
-      );
-      if (argError) {
-        return { content: [{ type: 'text', text: argError }], isError: true };
-      }
+        // Authorization: the API key must carry the 'tools' operation.
+        const scopeError = scopeViolation(getScopes(), 'tools');
+        if (scopeError) {
+          return {
+            content: [{ type: 'text', text: scopeError }],
+            isError: true,
+          };
+        }
 
-      // Per-tool capability gate (FR-018): for a DELEGATED call, the tool must
-      // be enabled in the on-behalf-of user's assistant grant. This is layered
-      // ON TOP of the per-entity AuthorizationService check inside the tool —
-      // effective authority = user privileges ∩ enabled capabilities. Refusal
-      // maps to `capability_disabled` so assistant-service can explain it.
-      const gateRefusal = await this.capabilityGateService.checkToolAllowed(
-        name,
-        actorContext
-      );
-      if (gateRefusal) {
+        const tool = this.getTool(name);
+        if (!tool) {
+          this.logger.warn?.(
+            { message: 'MCP tool not found', toolName: name },
+            LogContext.MCP_SERVER
+          );
+          throw new Error('Tool not found');
+        }
+
+        // Validate arguments against the tool's declared input schema before
+        // handing them to the tool implementation.
+        const argError = this.argsValidator.validate(
+          name,
+          tool.getDefinition().inputSchema,
+          args || {}
+        );
+        if (argError) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text:
+                  name === 'edit_whiteboard_elements'
+                    ? JSON.stringify({ outcome: 'invalid' })
+                    : argError,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        // Per-tool capability gate: for a DELEGATED call, the tool must
+        // be enabled in the on-behalf-of user's assistant grant. This is layered
+        // ON TOP of the per-entity AuthorizationService check inside the tool —
+        // effective authority = user privileges ∩ enabled capabilities. Refusal
+        // maps to `capability_disabled` so assistant-service can explain it.
+        const gateRefusal = await this.capabilityGateService.checkToolAllowed(
+          name,
+          actorContext
+        );
+        if (gateRefusal) {
+          return {
+            content: [{ type: 'text', text: gateRefusal }],
+            isError: true,
+          };
+        }
+
+        const caller = this.callerSignal.getStore();
+        const signal = caller
+          ? AbortSignal.any([caller, extra.signal])
+          : extra.signal;
+        const result = await tool.execute(args || {}, actorContext, signal);
+
+        // Return in MCP SDK expected format
         return {
-          content: [{ type: 'text', text: gateRefusal }],
-          isError: true,
+          content: result.content,
+          isError: result.isError,
         };
       }
-
-      const result = await tool.execute(args || {}, actorContext);
-
-      // Return in MCP SDK expected format
-      return {
-        content: result.content,
-        isError: result.isError,
-      };
-    });
+    );
 
     return mcpServer;
   }
@@ -333,7 +356,7 @@ export class McpServerService implements OnModuleInit {
         }
       }
 
-      await session.transport.handleRequest(req, res);
+      await this.handleTransport(session.transport, req, res);
       return;
     }
 
@@ -369,7 +392,7 @@ export class McpServerService implements OnModuleInit {
       LogContext.MCP_SERVER
     );
 
-    await transport.handleRequest(req, res);
+    await this.handleTransport(transport, req, res);
 
     // sessionId is assigned by the transport during the initialize handshake.
     if (transport.sessionId && !this.sessions.has(transport.sessionId)) {
@@ -457,6 +480,42 @@ export class McpServerService implements OnModuleInit {
       await session.transport.close();
     }
     this.sessions.clear();
+  }
+
+  private async handleTransport(
+    transport: StreamableHTTPServerTransport,
+    req: IncomingMessage,
+    res: ServerResponse
+  ): Promise<void> {
+    const controller = new AbortController();
+    const cleanup = () => {
+      req.off('aborted', abort);
+      res.off('close', closed);
+      res.off('finish', cleanup);
+    };
+    const abort = () => {
+      controller.abort();
+      cleanup();
+    };
+    const closed = () => {
+      if (!res.writableFinished) controller.abort();
+      cleanup();
+    };
+    req.once('aborted', abort);
+    res.once('close', closed);
+    res.once('finish', cleanup);
+    try {
+      await this.callerSignal.run(controller.signal, () =>
+        transport.handleRequest(
+          req,
+          res,
+          (req as IncomingMessage & { body?: unknown }).body
+        )
+      );
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
   }
 
   /**

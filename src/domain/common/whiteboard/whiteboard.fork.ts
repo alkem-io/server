@@ -25,7 +25,8 @@ import { createRequire } from 'node:module';
  * through Node's native CommonJS resolver in every context — including under the Vitest
  * module runner, where the boundary spec must observe the real `.cjs` resolution.
  */
-export type WhiteboardFork = typeof import('@excalidraw-yjs/element/headless');
+export type WhiteboardFork =
+  typeof import('@excalidraw-yjs/excalidraw/headless');
 
 const nodeRequire = createRequire(__filename);
 
@@ -38,7 +39,9 @@ let cached: WhiteboardFork | undefined;
  */
 export function loadWhiteboardFork(): Promise<WhiteboardFork> {
   if (!cached) {
-    cached = nodeRequire('@excalidraw-yjs/element/headless') as WhiteboardFork;
+    cached = nodeRequire(
+      '@excalidraw-yjs/excalidraw/headless'
+    ) as WhiteboardFork;
   }
   return Promise.resolve(cached);
 }
