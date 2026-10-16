@@ -17,16 +17,34 @@ const sameSet = (left: string[], right: string[]): boolean => {
   );
 };
 
+// The exporter reports a room as absent when Synapse has no room under its
+// alias: it was never created in Matrix, so it holds no media to normalize.
+const isAbsentRoom = (room: Coverage['rooms'][number]): boolean =>
+  room.failure === 'room_absent' &&
+  room.paginationComplete &&
+  !room.mappingComplete &&
+  !room.matrixRoomId &&
+  room.pages === 0 &&
+  room.eventsScanned === 0 &&
+  room.attachmentsExported === 0 &&
+  Object.keys(room.skippedByReason).length === 0;
+
 export function coverageIsComplete(
   events: MediaEvent[],
   coverage: Coverage,
   supportedRooms: string[]
 ): boolean {
+  const absent = new Set(
+    coverage.rooms.filter(isAbsentRoom).map(room => room.roomId)
+  );
   if (
     !coverage.complete ||
     coverage.failure ||
     !sameSet(coverage.requestedRoomIds, supportedRooms) ||
-    !sameSet(coverage.resolvedRoomIds, supportedRooms) ||
+    !sameSet(
+      coverage.resolvedRoomIds,
+      supportedRooms.filter(room => !absent.has(room))
+    ) ||
     !sameSet(
       coverage.rooms.map(room => room.roomId),
       supportedRooms
@@ -43,6 +61,10 @@ export function coverageIsComplete(
   // unidentifiable staging data is not among candidate groups and stays put.
   for (const room of coverage.rooms) {
     const exported = roomEvents.get(room.roomId) ?? [];
+    if (absent.has(room.roomId)) {
+      if (exported.length > 0) return false;
+      continue;
+    }
     if (
       !room.mappingComplete ||
       !room.paginationComplete ||
