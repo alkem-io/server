@@ -5151,6 +5151,10 @@ type Mutation {
   Triggers a request to the backing AI Service to refresh the knowledge that is available to it.
   """
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
+  """
+  Bind a native device push token (FCM on Android, APNs on iOS) to the current user. If the token is already bound to another user, it is rebound to the caller.
+  """
+  registerDevicePushToken(registrationData: RegisterDevicePushTokenInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
@@ -5263,6 +5267,10 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
+  """
+  Unbind a native device push token from the current user. Unknown tokens, and tokens bound to another user, are no-ops.
+  """
+  unregisterDevicePushToken(registrationData: UnregisterDevicePushTokenInput!): Boolean!
   """
   Disable a push notification subscription for the current user. The subscription is retained but will not receive notifications until re-enabled.
   """
@@ -10004,6 +10012,15 @@ input RefreshVirtualContributorBodyOfKnowledgeInput {
   virtualContributorID: UUID!
 }
 
+input RegisterDevicePushTokenInput {
+  """The native platform of the device: 'ios' or 'android'."""
+  platform: String!
+  """
+  The native push token for this device (FCM registration token on Android, APNs device token on iOS).
+  """
+  token: String!
+}
+
 input RemoveCommunityGuidelinesContentInput {
   """ID of the CommunityGuidelines that will be emptied"""
   communityGuidelinesID: UUID!
@@ -10309,6 +10326,11 @@ input TransferCalloutInput {
   calloutID: UUID!
   """The target CalloutsSet to which the Callout will be transferred."""
   targetCalloutsSetID: UUID!
+}
+
+input UnregisterDevicePushTokenInput {
+  """The native push token to unbind from the current user."""
+  token: String!
 }
 
 input UnsubscribeFromPushNotificationsInput {
