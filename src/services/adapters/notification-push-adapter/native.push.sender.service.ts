@@ -174,14 +174,7 @@ export class NativePushSenderService {
     }
 
     if (status >= 200 && status < 300) {
-      this.logger.verbose?.(
-        {
-          message: 'Native push delivered',
-          platform: message.platform,
-          eventType: message.payload.eventType,
-        },
-        LogContext.PUSH_NOTIFICATION
-      );
+      this.logDelivered(message);
       return;
     }
 
@@ -280,6 +273,10 @@ export class NativePushSenderService {
       return;
     }
 
+    this.logDelivered(message);
+  }
+
+  private logDelivered(message: NativePushNotificationMessage): void {
     this.logger.verbose?.(
       {
         message: 'Native push delivered',

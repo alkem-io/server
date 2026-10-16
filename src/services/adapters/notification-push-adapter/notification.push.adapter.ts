@@ -142,23 +142,9 @@ export class NotificationPushAdapter {
         retryCount: 0,
       };
 
-      try {
-        await this.amqpConnection.publish(
-          '',
-          'alkemio-push-notifications',
-          message
-        );
-      } catch (error: any) {
-        this.logger.error?.(
-          {
-            message: 'Failed to publish push notification to queue',
-            subscriptionId: subscription.id,
-            error: error?.message,
-          },
-          error?.stack,
-          LogContext.PUSH_NOTIFICATION
-        );
-      }
+      await this.publishToQueue(message, {
+        subscriptionId: subscription.id,
+      });
     }
 
     // ...and one message per device token, to the SAME queue. No event filter:
@@ -171,23 +157,10 @@ export class NotificationPushAdapter {
         payload: payloadEnvelope,
       };
 
-      try {
-        await this.amqpConnection.publish(
-          '',
-          'alkemio-push-notifications',
-          message
-        );
-      } catch (error: any) {
-        this.logger.error?.(
-          {
-            message: 'Failed to publish native push notification to queue',
-            userId: deviceToken.userId,
-            error: error?.message,
-          },
-          error?.stack,
-          LogContext.PUSH_NOTIFICATION
-        );
-      }
+      await this.publishToQueue(message, {
+        userId: deviceToken.userId,
+        platform: deviceToken.platform,
+      });
     }
 
     this.logger.verbose?.(
@@ -200,5 +173,33 @@ export class NotificationPushAdapter {
       },
       LogContext.PUSH_NOTIFICATION
     );
+  }
+
+  /**
+   * One publish, one failure disposition. A publish failure for one recipient
+   * must never abort the fan-out for the others, so the catch is here rather
+   * than around the loops.
+   */
+  private async publishToQueue(
+    message: PushNotificationMessage | NativePushNotificationMessage,
+    identity: Record<string, string>
+  ): Promise<void> {
+    try {
+      await this.amqpConnection.publish(
+        '',
+        'alkemio-push-notifications',
+        message
+      );
+    } catch (error: any) {
+      this.logger.error?.(
+        {
+          message: 'Failed to publish push notification to queue',
+          ...identity,
+          error: error?.message,
+        },
+        error?.stack,
+        LogContext.PUSH_NOTIFICATION
+      );
+    }
   }
 }
