@@ -1,10 +1,20 @@
 import { DevicePushToken } from '@domain/device-push-token/device.push.token.entity';
 import { DevicePushTokenService } from '@domain/device-push-token/device.push.token.service';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
 import { getMetadataArgsStorage, In } from 'typeorm';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mockConfigService = {
+  get: vi.fn((key: string) => {
+    const config: Record<string, unknown> = {
+      'notifications.push.max_subscriptions_per_user': 10,
+    };
+    return config[key];
+  }),
+};
 
 describe('DevicePushTokenService', () => {
   let service: DevicePushTokenService;
@@ -20,10 +30,17 @@ describe('DevicePushTokenService', () => {
           provide: getRepositoryToken(DevicePushToken),
           useValue: repository,
         },
+        {
+          provide: ConfigService,
+          useValue: mockConfigService,
+        },
       ],
     }).compile();
 
     service = module.get<DevicePushTokenService>(DevicePushTokenService);
+    // The cap read runs on every register; a user at or under the cap evicts
+    // nothing.
+    repository.find!.mockResolvedValue([]);
   });
 
   describe('register (SC-001)', () => {
@@ -58,6 +75,45 @@ describe('DevicePushTokenService', () => {
         expect.objectContaining({ userId: 'user-2' }),
         { conflictPaths: ['token'] }
       );
+    });
+  });
+
+  // SEC-086-01 / ENG-086-SRV-02. `registerDevicePushToken` is NON_ADMIN and
+  // needs only a session, so without this bound one caller mints unbounded
+  // rows and every later notification for them publishes one AMQP message per
+  // row onto the queue that carries all web push too. Same bound, same config
+  // value as the web half's `enforceSubscriptionCap`.
+  describe('register enforces the per-user cap (SEC-086-01)', () => {
+    it('evicts the rows beyond the cap, newest kept', async () => {
+      repository.upsert!.mockResolvedValue({ identifiers: [] });
+      repository.find!.mockResolvedValue(
+        Array.from({ length: 13 }, (_, index) => ({ id: `tok-${index}` }))
+      );
+      repository.delete!.mockResolvedValue({ affected: 3 });
+
+      await service.register('user-1', { token: 'tok-new', platform: 'ios' });
+
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { userId: 'user-1' },
+        order: { updatedDate: 'DESC' },
+        select: { id: true },
+      });
+      expect(repository.delete).toHaveBeenCalledWith([
+        'tok-10',
+        'tok-11',
+        'tok-12',
+      ]);
+    });
+
+    it('deletes nothing for a user at the cap', async () => {
+      repository.upsert!.mockResolvedValue({ identifiers: [] });
+      repository.find!.mockResolvedValue(
+        Array.from({ length: 10 }, (_, index) => ({ id: `tok-${index}` }))
+      );
+
+      await service.register('user-1', { token: 'tok-new', platform: 'ios' });
+
+      expect(repository.delete).not.toHaveBeenCalled();
     });
   });
 

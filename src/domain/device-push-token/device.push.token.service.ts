@@ -1,15 +1,24 @@
 import { DevicePushToken } from '@domain/device-push-token/device.push.token.entity';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { AlkemioConfig } from '@src/types';
 import { In, Repository } from 'typeorm';
 import { RegisterDevicePushTokenInput } from './dto/device.push.token.dto.register.input';
 
 @Injectable()
 export class DevicePushTokenService {
+  private readonly maxTokensPerUser: number;
+
   constructor(
     @InjectRepository(DevicePushToken)
-    private devicePushTokenRepository: Repository<DevicePushToken>
-  ) {}
+    private devicePushTokenRepository: Repository<DevicePushToken>,
+    configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.maxTokensPerUser = configService.get<number>(
+      'notifications.push.max_subscriptions_per_user' as any
+    );
+  }
 
   /**
    * Bind a device token to a user in ONE statement. `token` is UNIQUE, so the
@@ -17,6 +26,15 @@ export class DevicePushTokenService {
    * user A's notifications off a device now signed in as user B. A `findOne`
    * before the write is the live defect X-3; a `findOne` after it has nothing
    * to populate, since the mutation returns `Boolean`.
+   *
+   * The eviction after it is SEC-086-01 / ENG-086-SRV-02, and it amends hard
+   * constraint 3's "no per-user cap": this mutation is `NON_ADMIN`, so without
+   * a bound one authenticated caller mints unbounded rows and EVERY later
+   * notification for them publishes one AMQP message per row onto the queue
+   * that carries all web push too. It is the same bound the web half already
+   * enforces (`push.subscription.service.ts` `enforceSubscriptionCap`), off the
+   * same config value — not a new mechanism, and still no `status`, no
+   * `lastActiveDate` and no `@Cron`.
    */
   async register(
     userId: string,
@@ -26,6 +44,18 @@ export class DevicePushTokenService {
       { token, platform, userId },
       { conflictPaths: ['token'] }
     );
+
+    const tokens = await this.devicePushTokenRepository.find({
+      where: { userId },
+      order: { updatedDate: 'DESC' },
+      select: { id: true },
+    });
+    const beyondCap = tokens.slice(this.maxTokensPerUser);
+    if (beyondCap.length > 0) {
+      await this.devicePushTokenRepository.delete(
+        beyondCap.map(evicted => evicted.id)
+      );
+    }
   }
 
   /**
