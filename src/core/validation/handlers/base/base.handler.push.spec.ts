@@ -28,8 +28,24 @@ describe('BaseHandler — the device push token DTOs are validated at the pipe (
 
   it("rejects a platform of 'web' — only the two native platforms are bindable", async () => {
     const value = plainToInstance(RegisterDevicePushTokenInput, {
-      token: 'tok-1',
+      token: 'a'.repeat(64),
       platform: 'web',
+    });
+
+    await expect(
+      handler.handle(value, RegisterDevicePushTokenInput)
+    ).rejects.toThrow(ValidationException);
+  });
+
+  // SEC-086-03. The stored token is interpolated into the APNs HTTP/2 `:path`,
+  // and a token outside the charset earns a session-level protocol error
+  // rather than the 400/410 that `deleteByToken` needs — so the row is
+  // immortal and costs a doomed TLS session on every dispatch. This case is
+  // the charset guard's only falsifiable owner.
+  it('rejects a token carrying path and whitespace characters', async () => {
+    const value = plainToInstance(RegisterDevicePushTokenInput, {
+      token: `../../3/device/${'a'.repeat(32)} x`,
+      platform: 'ios',
     });
 
     await expect(
@@ -39,7 +55,8 @@ describe('BaseHandler — the device push token DTOs are validated at the pipe (
 
   it('accepts a valid ios registration, so the rejections are not an everything-fails artefact', async () => {
     const value = plainToInstance(RegisterDevicePushTokenInput, {
-      token: 'tok-1',
+      // A real APNs device token: 64 hex characters.
+      token: 'a'.repeat(64),
       platform: 'ios',
     });
 
