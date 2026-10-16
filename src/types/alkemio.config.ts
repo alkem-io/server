@@ -264,6 +264,23 @@ export type AlkemioConfig = {
         private_key: string;
         subject: string;
       };
+      /**
+       * 086-app-push-mvp (FR-007). Native app push credentials, supplied per
+       * environment only (human gate HG-1). Absent keys disable the native
+       * transport for that platform; nothing throws at module load.
+       */
+      apns: {
+        /** The APNs auth key `.p8`, base64 single-line. */
+        key_base64: string;
+        key_id: string;
+        team_id: string;
+        bundle_id: string;
+      };
+      fcm: {
+        project_id: string;
+        /** The FCM service-account JSON, base64 single-line. */
+        service_account_base64: string;
+      };
       max_subscriptions_per_user: number;
       throttle: {
         max_per_minute: number;

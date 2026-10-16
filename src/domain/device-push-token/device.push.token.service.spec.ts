@@ -3,7 +3,7 @@ import { DevicePushTokenService } from '@domain/device-push-token/device.push.to
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
-import { getMetadataArgsStorage } from 'typeorm';
+import { getMetadataArgsStorage, In } from 'typeorm';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 describe('DevicePushTokenService', () => {
@@ -79,6 +79,23 @@ describe('DevicePushTokenService', () => {
       await expect(
         service.unregister('user-1', 'unknown-token')
       ).resolves.toBeUndefined();
+    });
+  });
+
+  // SC-015, second half (the fan-out read's predicate). A wrong column — `id`,
+  // the key BaseAlkemioEntity inherits, instead of `userId` — or a missing
+  // `In` returns no rows for EVERY recipient, so the native publish loop emits
+  // nothing and the widened early return fires exactly as it did before, with
+  // every other wave-2 gate leg green.
+  describe('getTokensForUsers (SC-015)', () => {
+    it('queries by userId with In(...) over the given users', async () => {
+      repository.find!.mockResolvedValue([]);
+
+      await service.getTokensForUsers(['a', 'b']);
+
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { userId: In(['a', 'b']) },
+      });
     });
   });
 

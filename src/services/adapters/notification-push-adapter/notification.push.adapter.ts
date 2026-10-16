@@ -1,13 +1,17 @@
 import { LogContext } from '@common/enums';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { IUser } from '@domain/community/user/user.interface';
+import { DevicePushTokenService } from '@domain/device-push-token/device.push.token.service';
 import { PushSubscriptionService } from '@domain/push-subscription/push.subscription.service';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { PushNotificationMessage } from './push.notification.message';
+import {
+  NativePushNotificationMessage,
+  PushNotificationMessage,
+} from './push.notification.message';
 import { PushThrottleService } from './push.throttle.service';
 
 export interface PushNotificationPayload {
@@ -24,6 +28,7 @@ export class NotificationPushAdapter {
 
   constructor(
     private pushSubscriptionService: PushSubscriptionService,
+    private devicePushTokenService: DevicePushTokenService,
     private pushThrottleService: PushThrottleService,
     private amqpConnection: AmqpConnection,
     private configService: ConfigService<AlkemioConfig, true>,
@@ -103,12 +108,27 @@ export class NotificationPushAdapter {
     const subscriptions =
       await this.pushSubscriptionService.getActiveSubscriptions(allowedUserIds);
 
-    if (subscriptions.length === 0) {
+    // 086-app-push-mvp (FR-005 / D-22). Read device tokens BEFORE the early
+    // return: the MVP's primary recipient has a phone and no browser
+    // subscription at all, and the unwidened guard dropped them silently.
+    const tokens =
+      await this.devicePushTokenService.getTokensForUsers(allowedUserIds);
+
+    if (subscriptions.length === 0 && tokens.length === 0) {
       return;
     }
 
-    // Publish one message per subscription to the push queue
     const timestamp = new Date().toISOString();
+    const payloadEnvelope = {
+      title: payload.title,
+      body: payload.body,
+      url: payload.url,
+      eventType: event,
+      timestamp,
+      ...(payload.tag ? { tag: payload.tag } : {}),
+    };
+
+    // Publish one message per subscription to the push queue
     for (const subscription of subscriptions) {
       const message: PushNotificationMessage = {
         subscriptionId: subscription.id,
@@ -118,14 +138,7 @@ export class NotificationPushAdapter {
           p256dh: subscription.p256dh,
           auth: subscription.auth,
         },
-        payload: {
-          title: payload.title,
-          body: payload.body,
-          url: payload.url,
-          eventType: event,
-          timestamp,
-          ...(payload.tag ? { tag: payload.tag } : {}),
-        },
+        payload: payloadEnvelope,
         retryCount: 0,
       };
 
@@ -148,11 +161,41 @@ export class NotificationPushAdapter {
       }
     }
 
+    // ...and one message per device token, to the SAME queue. No event filter:
+    // the transport is per-recipient and event-agnostic by ruling.
+    for (const deviceToken of tokens) {
+      const message: NativePushNotificationMessage = {
+        userId: deviceToken.userId,
+        platform: deviceToken.platform,
+        token: deviceToken.token,
+        payload: payloadEnvelope,
+      };
+
+      try {
+        await this.amqpConnection.publish(
+          '',
+          'alkemio-push-notifications',
+          message
+        );
+      } catch (error: any) {
+        this.logger.error?.(
+          {
+            message: 'Failed to publish native push notification to queue',
+            userId: deviceToken.userId,
+            error: error?.message,
+          },
+          error?.stack,
+          LogContext.PUSH_NOTIFICATION
+        );
+      }
+    }
+
     this.logger.verbose?.(
       {
         message: 'Push notifications queued',
         eventType: event,
         subscriptionCount: subscriptions.length,
+        tokenCount: tokens.length,
         recipientCount: allowedUserIds.length,
       },
       LogContext.PUSH_NOTIFICATION
