@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
+import { once } from 'node:events';
+import * as encoding from 'lib0/encoding';
 import { vi } from 'vitest';
+import WebSocket, { WebSocketServer } from 'ws';
+import * as syncProtocol from 'y-protocols/sync';
+import * as Y from 'yjs';
 import { CollaborationDocumentSession } from '../../collaboration-client/collaboration-document.session';
 import { WhiteboardExecutorChild } from './whiteboard-executor.child';
 import { ChildMessage, ParentMessage } from './whiteboard-executor.protocol';
@@ -69,7 +74,119 @@ const flush = async () => {
   await Promise.resolve();
 };
 
+async function withConnectedChild(
+  check: (context: {
+    peer: WebSocket;
+    session: CollaborationDocumentSession;
+    child: WhiteboardExecutorChild;
+    messages: ChildMessage[];
+    prepare: ReturnType<typeof vi.fn>;
+    ended: Promise<void>;
+    go: () => void;
+  }) => Promise<void>
+) {
+  const server = new WebSocketServer({ host: '127.0.0.1', port: 0 });
+  await once(server, 'listening');
+  const address = server.address();
+  if (typeof address !== 'object' || !address) throw new Error('No WS port');
+  const connected = once(server, 'connection');
+  const messages: ChildMessage[] = [];
+  const prepare = vi.fn().mockReturnValue(prepared);
+  let session!: CollaborationDocumentSession;
+  let finish!: () => void;
+  const ended = new Promise<void>(resolve => {
+    finish = resolve;
+  });
+  const child = new WhiteboardExecutorChild(
+    message => messages.push(message),
+    finish,
+    (grant, lost) => {
+      session = new CollaborationDocumentSession(
+        `ws://127.0.0.1:${address.port}`,
+        {},
+        grant.documentId,
+        lost
+      );
+      return session;
+    },
+    prepare
+  );
+  const command = start();
+  child.receive(command);
+  try {
+    const [peer] = await connected;
+    await check({
+      peer,
+      session,
+      child,
+      messages,
+      prepare,
+      ended,
+      go: () =>
+        child.receive({
+          type: 'GO',
+          jobId: command.childLaunchGrant.jobId,
+          generationId: 1,
+        }),
+    });
+  } finally {
+    child.disconnect();
+    for (const peer of server.clients) peer.terminate();
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+}
+
 describe('whiteboard-executor child publication boundary', () => {
+  it.each([
+    [1008, 'document deleted', 'forbidden'],
+    [1013, 'room-capacity-reached', 'cancelled-before-go'],
+  ])('classifies pre-sync close %s %s without preparation or publication', async (code, reason, outcome) => {
+    await withConnectedChild(async ({ peer, messages, prepare, ended, go }) => {
+      const sent: unknown[] = [];
+      peer.on('message', frame => sent.push(frame));
+      peer.close(code, reason);
+      await ended;
+      go();
+      expect(messages).toEqual([
+        expect.objectContaining({ type: 'FAILED', typedOutcome: outcome }),
+      ]);
+      expect(prepare).not.toHaveBeenCalled();
+      expect(sent).toEqual([]);
+    });
+  });
+  it('ends immediately after SyncStep2 even before the connect continuation runs', async () => {
+    await withConnectedChild(async ({ session, messages, prepare, go }) => {
+      const source = new Y.Doc();
+      const sync = encoding.createEncoder();
+      encoding.writeVarUint(sync, 0);
+      syncProtocol.writeSyncStep2(sync, source);
+      const end = encoding.createEncoder();
+      encoding.writeVarUint(end, 3);
+      encoding.writeUint8Array(
+        end,
+        new TextEncoder().encode(
+          JSON.stringify({ kind: 'session-end', code: 'document-deleted' })
+        )
+      );
+      const feed = (encoder: encoding.Encoder) =>
+        (
+          session as unknown as { onMessage: (frame: Buffer) => void }
+        ).onMessage(Buffer.from(encoding.toUint8Array(encoder)));
+      feed(sync);
+      feed(end);
+      expect(messages).toEqual([
+        expect.objectContaining({
+          type: 'FAILED',
+          typedOutcome: 'cancelled-before-go',
+        }),
+      ]);
+      go();
+      await flush();
+      expect(prepare).not.toHaveBeenCalled();
+      expect(messages).toHaveLength(1);
+      source.destroy();
+    });
+  });
   it('rejects malformed first START with a recoverable grant ID before joining', () => {
     const h = harness();
     h.child.receive({ ...h.command, operations: [{ op: 'setText' }] });

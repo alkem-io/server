@@ -483,9 +483,10 @@ export class CollaborationDocumentSession {
   }
 
   private failPending(err: Error): void {
-    this.onConnectionLoss?.();
     if (!this.synced) {
       this.syncedReject?.(err);
+    } else {
+      this.onConnectionLoss?.();
     }
     // A terminal close / ws error fails whatever barrier is outstanding (uncorrelated).
     this.settleBarrier(undefined, err);
