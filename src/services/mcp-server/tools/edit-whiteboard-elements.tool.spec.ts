@@ -1,138 +1,75 @@
-import { createRequire } from 'node:module';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type * as Yjs from 'yjs';
+import { randomUUID } from 'node:crypto';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { vi } from 'vitest';
 import { EditWhiteboardElementsTool } from './edit-whiteboard-elements.tool';
 
-// The real `loadWhiteboardFork` loads the fork's CommonJS `require` build (needs no mock),
-// so the tool exercises the real fork writer end to end. The WRITE PATH under test is
-// single-instance: the doc below is built from the SAME native `yjs.cjs` the fork uses
-// (createRequire), not Vitest's `import 'yjs'` (which would be a second instance and cross
-// the boundary). NOTE: this is NOT a whole-graph single-instance claim — the tool's other
-// transitively-imported DI/writer graph (CollaborationDocumentService, session, scene-writer)
-// is resolved by Vitest to yjs's ESM build, so Vitest loads BOTH builds at import time and
-// prints a benign, harness-only `[yjs#438]` BEFORE the actual CJS doc/fork write below.
-// Production is all-CommonJS (one instance); the clean isolate-safe single-instance proof
-// lives in `whiteboard.fork.cjs-boundary.spec.ts` (plus the canonical E2E).
-const Y = createRequire(__filename)('yjs') as typeof import('yjs');
-
-const WB_ID = 'wb-1';
-const ctx = { actorID: 'actor-1' } as any;
-
-/**
- * Native contract: `edit_whiteboard_elements` authorizes the whiteboard through the
- * SAME AuthorizationService as GraphQL, then applies the ops as an ephemeral Yjs
- * collaborator via `CollaborationDocumentService.mutate`. The collaborator mock
- * runs the mutator against a REAL `Y.Doc` (through the real fork writer), so these
- * tests exercise the actual write path and assert on the resulting doc — and prove
- * no room is joined without UPDATE_CONTENT.
- */
-const buildTool = (opts: { granted?: boolean; found?: boolean } = {}) => {
-  const granted = opts.granted ?? true;
-  const found = opts.found ?? true;
-  const whiteboardService = {
-    getWhiteboardOrFail: found
-      ? vi.fn().mockResolvedValue({ id: WB_ID, authorization: {} })
-      : vi.fn().mockRejectedValue(new Error('not found')),
-  };
-  const authorizationService = {
-    isAccessGranted: vi.fn().mockReturnValue(granted),
-  };
-  let mutatedDoc: Yjs.Doc | undefined;
-  const collaborationService = {
-    mutate: vi.fn(
-      async (
-        _id: string,
-        _type: string,
-        _actor: string,
-        mutator: (doc: Yjs.Doc) => void
-      ) => {
-        mutatedDoc = new Y.Doc();
-        mutator(mutatedDoc);
-      }
-    ),
-  };
-  const logger = { verbose: vi.fn(), warn: vi.fn(), error: vi.fn() };
-  const tool = new EditWhiteboardElementsTool(
-    whiteboardService as any,
-    authorizationService as any,
-    collaborationService as any,
-    logger as any
-  );
-  return {
-    tool,
-    whiteboardService,
-    authorizationService,
-    collaborationService,
-    getDoc: () => mutatedDoc,
-  };
-};
-
-describe('EditWhiteboardElementsTool (native Yjs)', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('an authorized addShape applies through the collaborator and lands in the live doc', async () => {
-    const { tool, collaborationService, getDoc } = buildTool();
-
-    const result = await tool.execute(
-      {
-        whiteboardId: WB_ID,
-        operations: [{ op: 'addShape', shape: 'rectangle' }],
-      },
-      ctx
+describe('EditWhiteboardElementsTool executor boundary', () => {
+  const setup = (allowed = true) => {
+    const executor = {
+      execute: vi.fn().mockResolvedValue({
+        outcome: 'durable-success',
+        result: { addedElementIds: ['created'], summary: [] },
+      }),
+    };
+    const whiteboard = {
+      getWhiteboardOrFail: vi.fn().mockResolvedValue({ authorization: {} }),
+    };
+    const authorization = { isAccessGranted: vi.fn().mockReturnValue(allowed) };
+    const tool = new EditWhiteboardElementsTool(
+      whiteboard as any,
+      authorization as any,
+      executor as any
     );
-
-    expect(result.isError).toBeFalsy();
-    expect(collaborationService.mutate).toHaveBeenCalledWith(
-      WB_ID,
-      'whiteboard',
-      'actor-1',
-      expect.any(Function)
-    );
-    // The real fork writer wrote one element into the shared Y.Doc.
-    expect(getDoc()?.getMap('elements').size).toBe(1);
-  });
-
-  it('an UNAUTHORIZED edit is refused and never joins the room (no mutate)', async () => {
-    const { tool, collaborationService } = buildTool({ granted: false });
-
-    const result = await tool.execute(
-      {
-        whiteboardId: WB_ID,
-        operations: [{ op: 'addShape', shape: 'rectangle' }],
-      },
-      ctx
-    );
-
+    const actor = Object.assign(new ActorContext(), { actorID: randomUUID() });
+    const args = {
+      whiteboardId: randomUUID(),
+      operations: [{ op: 'addText', text: 'hello' }],
+    };
+    return { tool, actor, args, executor, whiteboard };
+  };
+  it('authorization refusal never admits or spawns', async () => {
+    const h = setup(false);
+    const result = await h.tool.execute(h.args, h.actor);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toMatch(/Access denied/);
-    expect(collaborationService.mutate).not.toHaveBeenCalled();
+    expect(h.executor.execute).not.toHaveBeenCalled();
+    expect(JSON.parse(result.content[0].text!)).toEqual({
+      outcome: 'unauthorized',
+    });
   });
-
-  it('a missing whiteboard errors before joining any room', async () => {
-    const { tool, collaborationService } = buildTool({ found: false });
-
-    const result = await tool.execute(
-      {
-        whiteboardId: WB_ID,
-        operations: [{ op: 'addShape', shape: 'rectangle' }],
-      },
-      ctx
+  it('invalid schema never admits or spawns', async () => {
+    const h = setup();
+    await h.tool.execute(
+      { ...h.args, operations: [{ op: 'setText' }] },
+      h.actor
     );
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0].text).toMatch(/not found/);
-    expect(collaborationService.mutate).not.toHaveBeenCalled();
+    expect(h.executor.execute).not.toHaveBeenCalled();
+    expect(h.whiteboard.getWhiteboardOrFail).not.toHaveBeenCalled();
   });
-
-  it('rejects an empty operations list without joining', async () => {
-    const { tool, collaborationService } = buildTool();
-
-    const result = await tool.execute(
-      { whiteboardId: WB_ID, operations: [] },
-      ctx
+  it('passes exactly the resolved actor and cancellation signal, returning only durable success', async () => {
+    const h = setup();
+    const signal = new AbortController().signal;
+    const result = await h.tool.execute(h.args, h.actor, signal);
+    expect(h.executor.execute).toHaveBeenCalledWith(
+      h.args.whiteboardId,
+      h.actor.actorID,
+      h.args.operations,
+      signal
     );
-
-    expect(result.isError).toBe(true);
-    expect(collaborationService.mutate).not.toHaveBeenCalled();
+    expect(result.isError).toBeUndefined();
+    expect(JSON.parse(result.content[0].text!)).toMatchObject({
+      outcome: 'durable-success',
+      updated: true,
+    });
+  });
+  it('preserves typed indeterminate without a replay or updated claim', async () => {
+    const h = setup();
+    h.executor.execute.mockResolvedValueOnce({
+      outcome: 'indeterminate-after-go',
+    } as any);
+    const result = await h.tool.execute(h.args, h.actor);
+    expect(JSON.parse(result.content[0].text!)).toEqual({
+      outcome: 'indeterminate-after-go',
+    });
+    expect(h.executor.execute).toHaveBeenCalledOnce();
   });
 });
