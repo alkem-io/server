@@ -4,7 +4,7 @@ import { loadWhiteboardFork } from '../whiteboard.fork';
  * Server-side `Excalidraw scene JSON → Yjs-V2 state snapshot` — the single stored
  * content representation (R1/R2, FR-005). The element↔`Y.Map` schema, fractional
  * z-index seeding, `files` asset map and V2 encoding are ALL owned by the
- * excalidraw-yjs headless fork (`@excalidraw-yjs/element/headless`): this adapter
+ * excalidraw-yjs headless fork (`@excalidraw-yjs/excalidraw/headless`): this adapter
  * does NOT reimplement any of them. It parses the legacy scene, seeds fractional
  * legacy element order/bindings through the fork's canonical compatibility
  * helpers, and hands

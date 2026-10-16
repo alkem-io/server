@@ -4,6 +4,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { ReactionType } from '@common/enums/reaction.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   CalloutActivityLoaderCreator,
   CalloutReactionsSummaryLoaderCreator,
@@ -16,8 +17,10 @@ import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { ICalloutSettings } from '@domain/collaboration/callout-settings/callout.settings.interface';
 import { CALLOUT_REACTION_ALLOWED_EMOJIS } from '@domain/collaboration/reaction/reaction.constants';
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
+import { SpaceCollectionService } from '@domain/collaboration/space-collection/space.collection.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -43,8 +46,116 @@ export class CalloutResolverFields {
     private readonly logger: LoggerService,
     private calloutService: CalloutService,
     private reactionService: ReactionService,
-    private myReactionHelper: CalloutMyReactionLoaderCreator
+    private myReactionHelper: CalloutMyReactionLoaderCreator,
+    private spaceCollectionService: SpaceCollectionService,
+    private authorizationService: AuthorizationService
   ) {}
+
+  /**
+   * workspace#084 SEC-084-CW-01. `selectedIds` is the curated list itself, and
+   * handing it to a viewer defeats AC6: the notice deliberately reports only
+   * THAT spaces are hidden, never which or how many, but a viewer who receives
+   * the stored list can diff it against the rendered `framing.subspaces` and
+   * recover both the exact count and the UUIDs of the spaces withheld from
+   * them. So the list is withheld from actors who cannot edit the callout.
+   *
+   * THE GATE IS `UPDATE` ON THE CALLOUT, which is NOT the same test as the
+   * write path's (`assertAdminOnlyCollaborationFraming`, admin on the
+   * calloutsSet) and NOT the picker's (`Space.accountSpaces` requires UPDATE on
+   * the SPACE). Two consequences are accepted, recorded, and NOT fixed here —
+   * both need a non-eager relation on this hot read path, which is a design
+   * decision and not a comment fix (review SEC-R2, ENG-084-R-05):
+   *   - a callout's CREATOR holds UPDATE permanently via
+   *     USER_SELF_MANAGEMENT:<createdBy> (callout.service.authorization.ts),
+   *     and that credential survives losing the space role — so a demoted
+   *     admin who created the callout still reads the list;
+   *   - Platform Support edits template callouts through
+   *     PLATFORM_SUPPORT_ORG_RESOURCES *instead of* UPDATE, so it reads `[]`;
+   *     a read-modify-write through the template form would wipe the stored
+   *     list, since mergeCalloutSettings replaces arrays wholesale. Unreachable
+   *     while the restricted-framing guard holds (a template callout should
+   *     carry no selection block).
+   *
+   * Redacted to an EMPTY ARRAY rather than thrown. NOT because of a non-null
+   * cascade — `ICalloutSettingsFraming.selection` is nullable, so a throw would
+   * stop at `framing.selection` — but because `selection: null` plus a GraphQL
+   * error would take `mode` with it and break the client's two `selection.mode`
+   * reads, surfacing an error to a viewer who did nothing wrong. `mode` itself
+   * is safe to keep: it says how the collection is computed, not what is in it,
+   * and `hasHiddenSpaces` already discloses more.
+   *
+   * Applied to BOTH collection kinds deliberately, not only SPACES: `selection`
+   * is one shared block (workspace#025), and a curated CONTRIBUTORS list is the
+   * same kind of secret. No client reads `selectedIds` outside the admin form.
+   *
+   * NO FIELD GUARD HERE, on purpose. An earlier revision carried
+   * `@AuthorizationActorHasPrivilege(READ)` + `@UseGuards(GraphqlGuard)`; both
+   * review lanes found it independently and both said delete it. It ran before
+   * the body on EVERY callout — so AUTO collections and every non-collection
+   * kind paid a full credential walk this field never used to cost, duplicating
+   * the READ filter `callouts.set.service.ts` already applies — and it turned a
+   * previously infallible non-null field into a throw surface on paths that do
+   * not pre-filter READ (activity log, in-app notification payloads,
+   * `template.callout`), where one forbidden callout nullifies the whole entry.
+   * Every path that hands a Callout to GraphQL already gated READ, and every
+   * other derived field on this resolver carries no guard.
+   *
+   * The returned object is a COPY. Mutating `callout.settings` in place would
+   * redact the list for every later consumer of the same loaded entity in the
+   * same request — including the authorization layer and any save path.
+   */
+  @ResolveField('settings', () => ICalloutSettings, { nullable: false })
+  settings(
+    @Parent() callout: ICallout,
+    @CurrentActor() actorContext: ActorContext
+  ): ICalloutSettings {
+    const { settings } = callout;
+    // `framing` may legitimately be absent on a pre-025 row (spec FR-013).
+    const selection = settings.framing?.selection;
+    if (!selection?.selectedIds?.length) return settings;
+
+    // Fail closed. Reachable now that no field guard runs first: an
+    // authorization-less callout (authorizationId is ON DELETE SET NULL) must
+    // not be the one that leaks the list, and isAccessGranted throws on an
+    // undefined policy rather than returning false.
+    const mayEdit =
+      !!callout.authorization &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE
+      );
+    if (mayEdit) return settings;
+
+    return {
+      ...settings,
+      framing: {
+        ...settings.framing,
+        selection: { ...selection, selectedIds: [] },
+      },
+    };
+  }
+
+  /**
+   * workspace#084 FR-018 / AC6. Lives on the CALLOUT, not on CalloutFraming:
+   * the flag is derived from `callout.settings.framing.selection.mode`, a jsonb
+   * column already on this parent object, so AUTO answers `false` with ZERO
+   * queries. A framing-level field would first have to call
+   * `calloutFramingService.getParentCallout()` — an un-dataloadered findOne —
+   * before it could answer at all, adding one round trip to every AUTO SPACES
+   * render (SC-005). Spec A16/A17.
+   */
+  @ResolveField('hasHiddenSpaces', () => Boolean, {
+    nullable: false,
+    description:
+      "Whether this Callout's SPACES collection is hiding at least one manually selected space from the requesting actor because they may not READ it. Always false for a SPACES collection in AUTO mode and for every other callout kind. A selection entry that has left the host space's account is stale, not hidden, and does NOT raise this flag; no count is exposed.",
+  })
+  async hasHiddenSpaces(
+    @Parent() callout: ICallout,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<boolean> {
+    return this.spaceCollectionService.hasHiddenSpaces(callout, actorContext);
+  }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

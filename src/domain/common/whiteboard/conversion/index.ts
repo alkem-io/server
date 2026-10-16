@@ -9,3 +9,4 @@ export {
   parseLegacyWhiteboardScene,
   whiteboardSceneToYjsV2State,
 } from './whiteboard.scene.to.yjs.v2.state';
+export { whiteboardSnapshotToSearchText } from './whiteboard.snapshot.to.search.text';

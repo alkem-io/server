@@ -30,9 +30,14 @@ export abstract class ICallout extends IAuthorizable {
   })
   framing!: ICalloutFraming;
 
+  // The description lives HERE and not on CalloutResolverFields.settings: with
+  // the field declared in both places the model's @Field wins the SDL, so a
+  // description on the resolve field is silently discarded and documents the
+  // behaviour nowhere a consumer can see it (review ENG-084-R-04).
   @Field(() => ICalloutSettings, {
     nullable: false,
-    description: 'The Callout Settings associated with this Callout.',
+    description:
+      "The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned EMPTY to actors without UPDATE on the Callout, so an empty list is AMBIGUOUS by design: it means either that nothing is selected or that the selection is withheld from you, and the two are deliberately indistinguishable (workspace#084 AC6: a viewer must not learn which or how many spaces are hidden from them). Hold UPDATE and the list is exact. `framing.selection.mode` is always accurate.",
   })
   settings!: ICalloutSettings;
 

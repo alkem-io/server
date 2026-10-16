@@ -133,7 +133,27 @@ export class CalloutResourceProvider implements McpResourceProvider {
             }
           : undefined,
       },
-      settings: callout.settings,
+      // Hand-picked, NOT the raw jsonb (workspace#084 SEC-R1). This resource is
+      // gated on READ alone and is reachable with an ordinary browser session
+      // cookie on /rest/mcp, so spreading `callout.settings` shipped
+      // `framing.selection.selectedIds` — the curated space list — to any
+      // registered non-member, letting them diff it against the spaces they can
+      // actually see and recover the exact count and UUIDs of the ones withheld
+      // from them. That is precisely what AC6's notice exists to withhold, and
+      // it defeated the redaction on Callout.settings via a second surface.
+      // Narrowed to what this resource actually uses; every other field in this
+      // provider is already hand-picked rather than spread, so this follows the
+      // file's own convention. Do NOT reintroduce the blob: anything added here
+      // is served to READ-only callers.
+      settings: {
+        visibility: callout.settings?.visibility,
+        contribution: {
+          allowedTypes: callout.settings?.contribution?.allowedTypes,
+        },
+        framing: {
+          commentsEnabled: callout.settings?.framing?.commentsEnabled,
+        },
+      },
       contributionDefaults: callout.contributionDefaults
         ? {
             postDescription: callout.contributionDefaults.postDescription,
