@@ -227,7 +227,11 @@ export class TagsetService {
         continue;
       }
       if (valueRenamed && tagsetSelectedValue === valueRenamed.old) {
+        // The tagset template does not cascade to the tagsets that use it, so
+        // the re-tag has to be persisted here or the renamed value would only
+        // exist in memory and every callout in that phase would vanish on reload.
         tagset.tags = [valueRenamed.new];
+        await this.tagsetRepository.save(tagset);
         continue;
       }
       tagset.tags = [newDefaultValue];
