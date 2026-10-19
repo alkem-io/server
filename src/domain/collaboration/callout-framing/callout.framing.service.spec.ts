@@ -2,6 +2,7 @@ import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
 import {
   EntityNotFoundException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
@@ -11,6 +12,7 @@ import { MemoService } from '@domain/common/memo/memo.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -318,9 +320,10 @@ describe('CalloutFramingService', () => {
       vi.mocked(profileService.createProfile).mockResolvedValue({
         id: 'profile-1',
       } as any);
-      vi.mocked(mediaGalleryService.createMediaGallery).mockResolvedValue({
-        id: 'mg-1',
-      } as any);
+      const builtGallery = { storageBucket: {} } as any;
+      vi.mocked(mediaGalleryService.buildMediaGallery).mockReturnValue(
+        builtGallery
+      );
 
       const result = await service.createCalloutFraming(
         framingData,
@@ -330,7 +333,16 @@ describe('CalloutFramingService', () => {
       );
 
       expect(result.type).toBe(CalloutFramingType.MEDIA_GALLERY);
-      expect(mediaGalleryService.createMediaGallery).toHaveBeenCalled();
+      expect(result.mediaGallery).toBe(builtGallery);
+      expect(mediaGalleryService.buildMediaGallery).toHaveBeenCalledWith(
+        storageAggregator,
+        'user-1'
+      );
+      // server#6614: nothing is persisted before the callout's cascading save.
+      expect(mediaGalleryService.createMediaGallery).not.toHaveBeenCalled();
+      expect(
+        mediaGalleryService.addVisualToMediaGallery
+      ).not.toHaveBeenCalled();
     });
 
     it('should call createCollaboraDocument with the framing input on COLLABORA_DOCUMENT (blank shape)', async () => {
@@ -432,6 +444,104 @@ describe('CalloutFramingService', () => {
       expect(
         collaboraDocumentService.createCollaboraDocument
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('materializeCalloutFramingContent — MEDIA_GALLERY visuals (server#6614)', () => {
+    const rollback = vi.fn();
+    const framingData = (visuals: { name: string; uri: string }[]) =>
+      ({
+        type: CalloutFramingType.MEDIA_GALLERY,
+        profile: { displayName: 'Gallery' },
+        mediaGallery: { visuals, sourceStorageBucketID: 'src-bucket' },
+      }) as any;
+
+    it('copies the visuals into the gallery bucket once the gallery is persisted', async () => {
+      const profileDocumentsService = (service as any)
+        .profileDocumentsService as ProfileDocumentsService;
+      const bucket = { id: 'bucket-1' };
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEDIA_GALLERY,
+        profile: { id: 'profile-1', storageBucket: { id: 'pb' } },
+        mediaGallery: { id: 'mg-1', storageBucket: bucket, visuals: [] },
+      } as any;
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue('https://alkem.io/new.png');
+      vi.mocked(mediaGalleryService.addVisualToMediaGallery).mockResolvedValue({
+        id: 'visual-1',
+      } as any);
+
+      await service.materializeCalloutFramingContent(
+        framing,
+        framingData([{ name: 'MEDIA_GALLERY_IMAGE', uri: 'https://x/1.png' }]),
+        rollback,
+        actorContextData.actorContext
+      );
+
+      expect(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).toHaveBeenCalledWith('https://x/1.png', bucket, false, {
+        sourceStorageBucketID: 'src-bucket',
+        actorContext: actorContextData.actorContext,
+      });
+      expect(mediaGalleryService.addVisualToMediaGallery).toHaveBeenCalledWith(
+        'mg-1',
+        'MEDIA_GALLERY_IMAGE'
+      );
+      expect(mediaGalleryService.saveVisual).toHaveBeenCalledWith(
+        expect.objectContaining({ uri: 'https://alkem.io/new.png' })
+      );
+      expect(framing.mediaGallery.visuals).toHaveLength(1);
+    });
+
+    it('fails fast when visuals are requested but the gallery bucket is not loaded', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEDIA_GALLERY,
+        profile: { id: 'profile-1' },
+        mediaGallery: { id: 'mg-1' },
+      } as any;
+
+      await expect(
+        service.materializeCalloutFramingContent(
+          framing,
+          framingData([
+            { name: 'MEDIA_GALLERY_IMAGE', uri: 'https://x/1.png' },
+          ]),
+          rollback
+        )
+      ).rejects.toThrow(RelationshipNotFoundException);
+      expect(
+        mediaGalleryService.addVisualToMediaGallery
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deletePersistedChildrenOfUnsavedFraming (server#6614)', () => {
+    it('deletes the self-persisted whiteboard and memo children', async () => {
+      await service.deletePersistedChildrenOfUnsavedFraming({
+        whiteboard: { id: 'wb-1' },
+        memo: { id: 'memo-1' },
+        mediaGallery: { storageBucket: {} },
+      } as any);
+
+      expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
+      expect(memoService.deleteMemo).toHaveBeenCalledWith('memo-1');
+      expect(mediaGalleryService.deleteMediaGallery).not.toHaveBeenCalled();
+    });
+
+    it('logs and swallows a failed deletion so the original error survives', async () => {
+      vi.mocked(whiteboardService.deleteWhiteboard).mockRejectedValue(
+        new Error('boom')
+      );
+
+      await expect(
+        service.deletePersistedChildrenOfUnsavedFraming({
+          whiteboard: { id: 'wb-1' },
+        } as any)
+      ).resolves.toBeUndefined();
     });
   });
 
