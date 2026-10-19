@@ -142,98 +142,113 @@ export class CalloutService {
       options
     );
 
-    callout.settings = this.createCalloutSettings(calloutData.settings);
+    // Everything below runs while the callout is still unsaved: the caller's
+    // cascading save persists it. A framing Whiteboard/Memo has already
+    // persisted itself, so a failure here must delete it again or it is left
+    // orphaned with its never-computed authorization policy (server#6614).
+    try {
+      callout.settings = this.createCalloutSettings(calloutData.settings);
 
-    // Validate + auto-heal the contributors framing settings against the
-    // framing type (present iff CONTRIBUTORS; defaultContributorType/defaultView
-    // normalization). FR-004b/FR-006a/FR-006b/FR-006c.
-    callout.settings.framing =
-      this.calloutFramingService.validateAndNormalizeContributorsSettings(
-        callout.framing.type,
-        callout.settings.framing
-      );
-
-    // Validate + normalize selection settings (workspace#025, FR-013/FR-022).
-    // Runs after contributors normalization so the framing type is stable.
-    callout.settings.framing =
-      this.calloutFramingService.validateAndNormalizeSelectionSettings(
-        callout.framing.type,
-        callout.settings.framing,
-        calloutData.settings?.framing?.selection
-      );
-
-    // Validate + normalize the card-variant settings (SPACES-only). Runs
-    // after selection normalization so the framing type is stable.
-    callout.settings.framing =
-      this.calloutFramingService.validateAndNormalizeSpacesSettings(
-        callout.framing.type,
-        callout.settings.framing,
-        calloutData.settings?.framing?.spaces
-      );
-
-    // AC3 host-scope guard: reject any selectedId not in the host's RoleSet
-    // (contributors) or outside the host space's account (spaces). Only runs
-    // when the normalized selection is CUSTOM + non-empty (FR-006).
-    // On create there is no stored selection, so every submitted id is "added"
-    // and nothing can be a silent drop.
-    await this.validateAndNormalizeSelectionScope(
-      callout.framing.type,
-      callout.settings.framing.selection,
-      parentSpaceId,
-      []
-    );
-
-    if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-      callout.publishedDate = new Date();
-      // Empty-string actorID (anonymous/system context, e.g. bootstrap template
-      // seeding) → NULL, never a malformed empty string in the nullable `uuid`
-      // publishedBy column (matches the createdBy guard above).
-      callout.publishedBy = userID || undefined;
-    }
-
-    // A generic 'task' tagset supplied through the classification input is never
-    // allowed to fabricate board state: only an explicit taskBoard block makes a
-    // board. Strip any such tagset before the classification is built so a
-    // template round-trip or a hand-crafted create cannot smuggle a marker in.
-    this.stripGenericTaskTagsets(calloutData);
-
-    const taskBoardTagsetTemplate = await this.prepareTaskBoardTemplate(
-      calloutData,
-      callout.settings.contribution.allowedTypes
-    );
-    const effectiveTagsetTemplates = taskBoardTagsetTemplate
-      ? [...classificationTagsetTemplates, taskBoardTagsetTemplate]
-      : classificationTagsetTemplates;
-
-    callout.classification = this.classificationService.createClassification(
-      effectiveTagsetTemplates,
-      calloutData.classification
-    );
-
-    callout.contributionDefaults =
-      this.contributionDefaultsService.createCalloutContributionDefaults(
-        calloutData.contributionDefaults
-      );
-
-    if (userID && calloutData.contributions && callout.settings.contribution) {
-      callout.contributions =
-        await this.contributionService.createCalloutContributions(
-          calloutData.contributions,
-          storageAggregator,
-          callout.settings.contribution,
-          actorContext,
-          userID,
-          parentSpaceId,
-          taskBoardTagsetTemplate
+      // Validate + auto-heal the contributors framing settings against the
+      // framing type (present iff CONTRIBUTORS; defaultContributorType/defaultView
+      // normalization). FR-004b/FR-006a/FR-006b/FR-006c.
+      callout.settings.framing =
+        this.calloutFramingService.validateAndNormalizeContributorsSettings(
+          callout.framing.type,
+          callout.settings.framing
         );
-    }
 
-    if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
-      callout.comments = await this.roomService.createRoom({
-        displayName: `callout-comments-${callout.nameID}`,
-        type: RoomType.CALLOUT,
-        parentContextId: parentSpaceId,
-      });
+      // Validate + normalize selection settings (workspace#025, FR-013/FR-022).
+      // Runs after contributors normalization so the framing type is stable.
+      callout.settings.framing =
+        this.calloutFramingService.validateAndNormalizeSelectionSettings(
+          callout.framing.type,
+          callout.settings.framing,
+          calloutData.settings?.framing?.selection
+        );
+
+      // Validate + normalize the card-variant settings (SPACES-only). Runs
+      // after selection normalization so the framing type is stable.
+      callout.settings.framing =
+        this.calloutFramingService.validateAndNormalizeSpacesSettings(
+          callout.framing.type,
+          callout.settings.framing,
+          calloutData.settings?.framing?.spaces
+        );
+
+      // AC3 host-scope guard: reject any selectedId not in the host's RoleSet
+      // (contributors) or outside the host space's account (spaces). Only runs
+      // when the normalized selection is CUSTOM + non-empty (FR-006).
+      // On create there is no stored selection, so every submitted id is "added"
+      // and nothing can be a silent drop.
+      await this.validateAndNormalizeSelectionScope(
+        callout.framing.type,
+        callout.settings.framing.selection,
+        parentSpaceId,
+        []
+      );
+
+      if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+        callout.publishedDate = new Date();
+        // Empty-string actorID (anonymous/system context, e.g. bootstrap template
+        // seeding) → NULL, never a malformed empty string in the nullable `uuid`
+        // publishedBy column (matches the createdBy guard above).
+        callout.publishedBy = userID || undefined;
+      }
+
+      // A generic 'task' tagset supplied through the classification input is never
+      // allowed to fabricate board state: only an explicit taskBoard block makes a
+      // board. Strip any such tagset before the classification is built so a
+      // template round-trip or a hand-crafted create cannot smuggle a marker in.
+      this.stripGenericTaskTagsets(calloutData);
+
+      const taskBoardTagsetTemplate = await this.prepareTaskBoardTemplate(
+        calloutData,
+        callout.settings.contribution.allowedTypes
+      );
+      const effectiveTagsetTemplates = taskBoardTagsetTemplate
+        ? [...classificationTagsetTemplates, taskBoardTagsetTemplate]
+        : classificationTagsetTemplates;
+
+      callout.classification = this.classificationService.createClassification(
+        effectiveTagsetTemplates,
+        calloutData.classification
+      );
+
+      callout.contributionDefaults =
+        this.contributionDefaultsService.createCalloutContributionDefaults(
+          calloutData.contributionDefaults
+        );
+
+      if (
+        userID &&
+        calloutData.contributions &&
+        callout.settings.contribution
+      ) {
+        callout.contributions =
+          await this.contributionService.createCalloutContributions(
+            calloutData.contributions,
+            storageAggregator,
+            callout.settings.contribution,
+            actorContext,
+            userID,
+            parentSpaceId,
+            taskBoardTagsetTemplate
+          );
+      }
+
+      if (!callout.isTemplate && callout.settings.framing.commentsEnabled) {
+        callout.comments = await this.roomService.createRoom({
+          displayName: `callout-comments-${callout.nameID}`,
+          type: RoomType.CALLOUT,
+          parentContextId: parentSpaceId,
+        });
+      }
+    } catch (error) {
+      await this.calloutFramingService.deletePersistedChildrenOfUnsavedFraming(
+        callout.framing
+      );
+      throw error;
     }
 
     return callout;

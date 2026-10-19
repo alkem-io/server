@@ -186,11 +186,10 @@ export class CalloutFramingService {
     }
 
     if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
-      await this.createNewMediaGalleryInCalloutFraming(
-        calloutFraming,
-        calloutFramingData.mediaGallery,
+      // Unsaved: persisted by the parent's cascading save; its visuals are
+      // uploaded in materializeCalloutFramingContent (server#6614).
+      calloutFraming.mediaGallery = this.mediaGalleryService.buildMediaGallery(
         storageAggregator,
-        actorContext,
         userID
       );
     }
@@ -246,11 +245,10 @@ export class CalloutFramingService {
    * (callout, template-callout, etc.); the parent's save persists the
    * framing's bucket before this is called.
    *
-   * Walks the framing's own profile and the LINK child if present.
-   * Whiteboard and Memo children are self-materializing inside their own
-   * createX flows (already saved + materialized). MediaGallery handles
-   * its own visuals inline via createMediaGallery (saves the bucket
-   * eagerly). Poll has no profile.
+   * Walks the framing's own profile, the LINK child and the MEDIA_GALLERY
+   * visuals if present. Whiteboard and Memo children are self-materializing
+   * inside their own createX flows (already saved + materialized). Poll has
+   * no profile.
    */
   public async materializeCalloutFramingContent(
     calloutFraming: ICalloutFraming,
@@ -281,6 +279,21 @@ export class CalloutFramingService {
         }
       );
     }
+    const galleryVisuals = calloutFramingData?.mediaGallery?.visuals ?? [];
+    if (
+      calloutFraming.type === CalloutFramingType.MEDIA_GALLERY &&
+      galleryVisuals.length > 0 &&
+      !calloutFraming.mediaGallery?.storageBucket
+    ) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutFramingId: calloutFraming.id,
+          missing: ['mediaGallery.storageBucket'],
+        }
+      );
+    }
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       calloutFraming.profile,
       calloutFramingData?.profile,
@@ -303,6 +316,67 @@ export class CalloutFramingService {
             calloutFramingData?.profile?.sourceStorageBucketID,
         }
       );
+    }
+    if (
+      calloutFraming.type === CalloutFramingType.MEDIA_GALLERY &&
+      calloutFraming.mediaGallery &&
+      galleryVisuals.length > 0
+    ) {
+      await this.addVisualsToMediaGallery(
+        calloutFraming.mediaGallery,
+        calloutFramingData?.mediaGallery,
+        actorContext
+      );
+    }
+  }
+
+  /**
+   * Compensation for a callout create that fails after createCalloutFraming
+   * returned but before the callout was saved. Whiteboard and Memo children
+   * persist themselves (their file-service snapshot needs a saved bucket id),
+   * so they are deleted here; every other framing child is still unsaved and
+   * simply discarded with the in-memory callout. Never throws: the caller is
+   * already handling the original failure.
+   */
+  public async deletePersistedChildrenOfUnsavedFraming(
+    calloutFraming: ICalloutFraming
+  ): Promise<void> {
+    const deletions: {
+      entity: string;
+      id: string;
+      run: () => Promise<unknown>;
+    }[] = [];
+    if (calloutFraming.whiteboard?.id) {
+      const id = calloutFraming.whiteboard.id;
+      deletions.push({
+        entity: 'whiteboard',
+        id,
+        run: () => this.whiteboardService.deleteWhiteboard(id),
+      });
+    }
+    if (calloutFraming.memo?.id) {
+      const id = calloutFraming.memo.id;
+      deletions.push({
+        entity: 'memo',
+        id,
+        run: () => this.memoService.deleteMemo(id),
+      });
+    }
+    for (const { entity, id, run } of deletions) {
+      try {
+        await run();
+      } catch (error: unknown) {
+        this.logger.error?.(
+          {
+            message:
+              'Failed to delete framing child after callout creation failed',
+            entity,
+            id,
+          },
+          error instanceof Error ? (error.stack ?? '') : String(error),
+          LogContext.COLLABORATION
+        );
+      }
     }
   }
 
@@ -362,33 +436,26 @@ export class CalloutFramingService {
     );
   }
 
-  private async createNewMediaGalleryInCalloutFraming(
-    calloutFraming: ICalloutFraming,
+  /**
+   * Phase-2: copies the requested visuals into the (now persisted) gallery's
+   * bucket. A visual that fails is logged and skipped, as before.
+   */
+  private async addVisualsToMediaGallery(
+    mediaGallery: IMediaGallery,
     mediaGalleryData: CreateCalloutFramingInput['mediaGallery'],
-    storageAggregator: IStorageAggregator,
-    actorContext: ActorContext,
-    userID?: string
+    actorContext?: ActorContext
   ) {
     const visuals = mediaGalleryData?.visuals;
-    calloutFraming.mediaGallery =
-      await this.mediaGalleryService.createMediaGallery(
-        storageAggregator,
-        userID
-      );
-    if (
-      visuals &&
-      visuals.length > 0 &&
-      calloutFraming.mediaGallery.storageBucket
-    ) {
-      if (!calloutFraming.mediaGallery.visuals) {
-        calloutFraming.mediaGallery.visuals = [];
+    if (visuals && visuals.length > 0 && mediaGallery.storageBucket) {
+      if (!mediaGallery.visuals) {
+        mediaGallery.visuals = [];
       }
       for (const visualData of visuals) {
         try {
           const newUrl =
             await this.profileDocumentsService.reuploadFileOnStorageBucket(
               visualData.uri,
-              calloutFraming.mediaGallery.storageBucket,
+              mediaGallery.storageBucket,
               false,
               {
                 sourceStorageBucketID: mediaGalleryData?.sourceStorageBucketID,
@@ -398,11 +465,11 @@ export class CalloutFramingService {
           if (newUrl) {
             const visual =
               await this.mediaGalleryService.addVisualToMediaGallery(
-                calloutFraming.mediaGallery.id,
+                mediaGallery.id,
                 visualData.name
               );
             visual.uri = newUrl;
-            calloutFraming.mediaGallery.visuals.push(visual);
+            mediaGallery.visuals.push(visual);
             await this.mediaGalleryService.saveVisual(visual);
           }
         } catch (error: unknown) {
@@ -654,13 +721,11 @@ export class CalloutFramingService {
       case CalloutFramingType.MEDIA_GALLERY: {
         // Media gallery updates are done through media gallery service/mutations or visual mutations
         if (!calloutFraming.mediaGallery) {
-          await this.createNewMediaGalleryInCalloutFraming(
-            calloutFraming,
-            undefined,
-            storageAggregator,
-            actorContext,
-            userID
-          );
+          calloutFraming.mediaGallery =
+            await this.mediaGalleryService.createMediaGallery(
+              storageAggregator,
+              userID
+            );
         }
         break;
       }
