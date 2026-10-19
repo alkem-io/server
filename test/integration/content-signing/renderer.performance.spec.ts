@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { memoSchema } from '@domain/common/memo/conversion/memo.extensions';
 import { MAX_MEMO_EDITOR_CONTENT_BYTES } from '@domain/common/memo/conversion/yjs.state.to.tiptap.html';
-import { MemoPdfRenderer } from '@domain/common/memo/memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from '@domain/common/memo/memo.pdf.test-helper';
 import {
   prosemirrorToYDoc,
   yXmlFragmentToProseMirrorRootNode,
@@ -181,20 +181,20 @@ const createRenderer = (sources: Buffer[]) => {
   const documents = new Map(
     sources.map((source, index) => [imageUrl(index), { index, source }])
   );
-  return new MemoPdfRenderer(
-    {
+  return inProcessMemoPdfRenderer({
+    documentService: {
       isAlkemioDocumentURL: (url: string) => documents.has(url),
       getDocumentFromURL: async (url: string) => ({
         id: url,
         authorization: { id: `auth-${url}` },
         storageBucket: { id: 'bucket-1' },
       }),
-    } as any,
-    { grantAccessOrFail: () => undefined } as any,
-    {
+    },
+    authorizationService: { grantAccessOrFail: () => undefined },
+    fileServiceAdapter: {
       getDocumentContent: async (url: string) => documents.get(url)!.source,
-    } as any
-  );
+    },
+  });
 };
 
 const renderAndAssert = async (
