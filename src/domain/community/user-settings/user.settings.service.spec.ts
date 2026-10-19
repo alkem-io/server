@@ -2,6 +2,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -20,6 +21,7 @@ import { UserSettingsService } from './user.settings.service';
 
 describe('UserSettingsService', () => {
   let service: UserSettingsService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let repository: {
     findOne: Mock;
     save: Mock;
@@ -41,6 +43,7 @@ describe('UserSettingsService', () => {
       .compile();
 
     service = module.get(UserSettingsService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     repository = module.get(getRepositoryToken(UserSettings));
   });
 
@@ -958,6 +961,22 @@ describe('UserSettingsService', () => {
 
       await expect(service.deleteUserSettings('nonexistent')).rejects.toThrow(
         EntityNotFoundException
+      );
+    });
+
+    it('should delete the authorization policy, forwarding the entity manager', async () => {
+      const mockSettings = {
+        id: 'settings-1',
+        authorization: { id: 'auth-1' },
+      };
+      const em = { remove: vi.fn().mockResolvedValue(mockSettings) } as any;
+      repository.findOne.mockResolvedValue(mockSettings);
+
+      await service.deleteUserSettings('settings-1', em);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        mockSettings.authorization,
+        em
       );
     });
   });

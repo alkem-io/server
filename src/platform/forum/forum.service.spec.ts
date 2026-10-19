@@ -6,6 +6,7 @@ import {
 } from '@common/exceptions';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
 import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/forum.discussion.category.not.empty.exception';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Platform } from '@platform/platform/platform.entity';
@@ -24,6 +25,7 @@ import { ForumService } from './forum.service';
 
 describe('ForumService', () => {
   let service: ForumService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let repo: MockType<Repository<Forum>>;
   let platformRepo: MockType<Repository<Platform>>;
   let discussionService: DiscussionService;
@@ -46,6 +48,7 @@ describe('ForumService', () => {
       .compile();
 
     service = module.get(ForumService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     repo = module.get(getRepositoryToken(Forum));
     platformRepo = module.get(getRepositoryToken(Platform));
     discussionService = module.get(DiscussionService);
@@ -421,6 +424,22 @@ describe('ForumService', () => {
       expect(result).toBe(true);
       expect(discussionService.removeDiscussion).toHaveBeenCalledTimes(2);
       expect(repo.remove).toHaveBeenCalled();
+    });
+
+    it('should delete the authorization policy', async () => {
+      const forum = {
+        id: 'f1',
+        discussions: [],
+        authorization: { id: 'auth-1' },
+      } as any;
+      repo.findOne!.mockResolvedValue(forum);
+      repo.remove!.mockResolvedValue(undefined);
+
+      await service.removeForum('f1');
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        forum.authorization
+      );
     });
   });
 

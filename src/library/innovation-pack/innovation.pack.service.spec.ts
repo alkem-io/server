@@ -3,6 +3,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
@@ -19,6 +20,7 @@ import { InnovationPackService } from './innovation.pack.service';
 
 describe('InnovationPackService', () => {
   let service: InnovationPackService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let repository: Repository<InnovationPack>;
   let profileService: ProfileService;
   let templatesSetService: TemplatesSetService;
@@ -39,6 +41,7 @@ describe('InnovationPackService', () => {
       .compile();
 
     service = module.get<InnovationPackService>(InnovationPackService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     repository = module.get(getRepositoryToken(InnovationPack));
     profileService = module.get(ProfileService);
     templatesSetService = module.get(TemplatesSetService);
@@ -473,6 +476,25 @@ describe('InnovationPackService', () => {
         'ts-1'
       );
       expect(profileService.deleteProfile).not.toHaveBeenCalled();
+    });
+
+    it('should delete the authorization policy', async () => {
+      const pack = {
+        id: 'pack-1',
+        templatesSet: undefined,
+        profile: undefined,
+        authorization: { id: 'auth-1' },
+      } as unknown as InnovationPack;
+      (repository.findOne as ReturnType<typeof vi.fn>).mockResolvedValue(pack);
+      (repository.remove as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...pack,
+      });
+
+      await service.deleteInnovationPack({ ID: 'pack-1' });
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        pack.authorization
+      );
     });
   });
 });
