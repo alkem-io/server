@@ -1,4 +1,5 @@
 import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -15,6 +16,7 @@ import { DiscussionService } from './discussion.service';
 
 describe('DiscussionService', () => {
   let service: DiscussionService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let discussionRepository: MockType<Repository<Discussion>>;
   let profileService: ProfileService;
   let roomService: RoomService;
@@ -39,6 +41,7 @@ describe('DiscussionService', () => {
       .compile();
 
     service = module.get(DiscussionService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     discussionRepository = module.get(getRepositoryToken(Discussion));
     profileService = module.get(ProfileService);
     roomService = module.get(RoomService);
@@ -110,6 +113,23 @@ describe('DiscussionService', () => {
       await service.removeDiscussion({ ID: 'disc-1' });
 
       expect(vi.mocked(roomService.deleteRoom)).not.toHaveBeenCalled();
+    });
+
+    it('should delete the authorization policy', async () => {
+      const discussion = {
+        id: 'disc-1',
+        profile: undefined,
+        comments: undefined,
+        authorization: { id: 'auth-1' },
+      } as unknown as Discussion;
+      discussionRepository.findOne!.mockResolvedValue(discussion);
+      discussionRepository.remove!.mockResolvedValue({ id: '' } as Discussion);
+
+      await service.removeDiscussion({ ID: 'disc-1' });
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        discussion.authorization
+      );
     });
   });
 

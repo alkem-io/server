@@ -7,6 +7,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Template } from '@domain/template/template/template.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,6 +23,7 @@ import { normalizeStateSettings } from './normalize.state.settings';
 @Injectable()
 export class InnovationFlowStateService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(InnovationFlowState)
     private innovationFlowStateRepository: Repository<InnovationFlowState>,
     @InjectRepository(Template)
@@ -137,6 +139,9 @@ export class InnovationFlowStateService {
   }
 
   async delete(state: IInnovationFlowState): Promise<IInnovationFlowState> {
+    if (state.authorization) {
+      await this.authorizationPolicyService.delete(state.authorization);
+    }
     const result = await this.innovationFlowStateRepository.remove(
       state as InnovationFlowState
     );

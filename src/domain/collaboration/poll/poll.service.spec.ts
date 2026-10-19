@@ -3,6 +3,7 @@ import { PollResultsVisibility } from '@common/enums/poll.results.visibility';
 import { PollStatus } from '@common/enums/poll.status';
 import { ValidationException } from '@common/exceptions';
 import { PollVote } from '@domain/collaboration/poll-vote/poll.vote.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -13,6 +14,7 @@ import { PollService } from './poll.service';
 
 describe('PollService', () => {
   let service: PollService;
+  let authorizationPolicyService: AuthorizationPolicyService;
 
   const mockPollRepository = {
     findOne: vi.fn(),
@@ -63,6 +65,7 @@ describe('PollService', () => {
       .compile();
 
     service = module.get<PollService>(PollService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
   it('should be defined', () => {
@@ -235,6 +238,19 @@ describe('PollService', () => {
       const result = await service.deletePoll('poll-1');
       expect(mockRemove).toHaveBeenCalledWith(poll);
       expect(result.id).toBe('poll-1');
+    });
+
+    it('deletes the poll authorization policy', async () => {
+      const poll = new Poll();
+      poll.id = 'poll-1';
+      poll.authorization = { id: 'auth-1' } as any;
+      mockPollRepository.findOne.mockResolvedValue(poll);
+
+      await service.deletePoll('poll-1');
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        poll.authorization
+      );
     });
   });
 

@@ -4,6 +4,7 @@ import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -25,6 +26,7 @@ import { IRoom } from './room.interface';
 @Injectable()
 export class RoomService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
     private readonly communicationAdapter: CommunicationAdapter,
@@ -101,6 +103,10 @@ export class RoomService {
 
     // Capture ID before removal - TypeORM's remove() clears the entity's id field
     const roomId = room.id;
+
+    if (room.authorization) {
+      await this.authorizationPolicyService.delete(room.authorization);
+    }
 
     const result = await this.roomRepository.remove(room as Room);
 

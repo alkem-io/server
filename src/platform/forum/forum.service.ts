@@ -12,6 +12,7 @@ import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/for
 import { getForumCategoryContextId } from '@constants/forum.constants';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -35,6 +36,7 @@ const INVISIBLE_STATE = { 'io.alkemio.visibility': { visible: false } };
 @Injectable()
 export class ForumService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private discussionService: DiscussionService,
     private communicationAdapter: CommunicationAdapter,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
@@ -380,6 +382,10 @@ export class ForumService {
       await this.discussionService.removeDiscussion({
         ID: discussion.id,
       });
+    }
+
+    if (forum.authorization) {
+      await this.authorizationPolicyService.delete(forum.authorization);
     }
 
     await this.forumRepository.remove(forum as Forum);
