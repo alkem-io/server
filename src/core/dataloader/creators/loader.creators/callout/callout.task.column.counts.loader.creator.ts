@@ -37,7 +37,7 @@ export class CalloutTaskColumnCountsLoaderCreator
   ): ILoader<TaskColumnCount[] | null> {
     return new DataLoader<string, TaskColumnCount[] | null>(
       async calloutIds => this.batchLoad(calloutIds),
-      { cache: options?.cache ?? true, name: 'CalloutTaskColumnCountsLoader' }
+      { cache: options?.cache, name: 'CalloutTaskColumnCountsLoader' }
     );
   }
 

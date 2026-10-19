@@ -25,7 +25,7 @@ export class CalloutActivityLoaderCreator implements DataLoaderCreator<number> {
   public create(options?: DataLoaderCreatorOptions<number>): ILoader<number> {
     return new DataLoader<string, number>(
       async calloutIds => this.batchLoad(calloutIds),
-      { cache: options?.cache ?? true, name: 'CalloutActivityLoader' }
+      { cache: options?.cache, name: 'CalloutActivityLoader' }
     );
   }
 

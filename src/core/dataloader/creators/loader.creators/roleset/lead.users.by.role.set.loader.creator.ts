@@ -1,3 +1,7 @@
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { Injectable } from '@nestjs/common';
@@ -5,7 +9,6 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import DataLoader from 'dataloader';
 import { EntityManager } from 'typeorm';
 import { ILoader } from '../../../loader.interface';
-import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
 
 /**
  * Batches lead-user credential lookups across multiple spaces into a single query.
@@ -24,7 +27,7 @@ export class LeadUsersByRoleSetLoaderCreator
   public create(options?: DataLoaderCreatorOptions<IUser[]>): ILoader<IUser[]> {
     return new DataLoader<string, IUser[]>(
       async keys => this.batchLoadUsers(keys),
-      { cache: options?.cache ?? true, name: 'LeadUsersByRoleSetLoader' }
+      { cache: options?.cache, name: 'LeadUsersByRoleSetLoader' }
     );
   }
 

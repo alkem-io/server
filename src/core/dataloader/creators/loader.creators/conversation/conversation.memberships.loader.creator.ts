@@ -39,7 +39,7 @@ export class ConversationMembershipsLoaderCreator
   ): ILoader<IConversationMembershipWithActorType[]> {
     return new DataLoader<string, IConversationMembershipWithActorType[]>(
       async conversationIds => this.batchLoadMemberships(conversationIds),
-      { cache: options?.cache ?? true, name: 'ConversationMembershipsLoader' }
+      { cache: options?.cache, name: 'ConversationMembershipsLoader' }
     );
   }
 

@@ -33,7 +33,7 @@ export class CalloutReactionsSummaryLoaderCreator
   ): ILoader<CalloutReactionsSummaryResult | null> {
     return new DataLoader<string, CalloutReactionsSummaryResult | null>(
       async calloutIds => this.batchLoad(calloutIds),
-      { cache: options?.cache ?? true, name: 'CalloutReactionsSummaryLoader' }
+      { cache: options?.cache, name: 'CalloutReactionsSummaryLoader' }
     );
   }
 

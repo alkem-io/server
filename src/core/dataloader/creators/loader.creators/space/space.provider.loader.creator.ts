@@ -31,7 +31,7 @@ export class SpaceProviderLoaderCreator
   ): ILoader<IActor | null> {
     return new DataLoader<string, IActor | null>(
       async spaceAboutIds => this.batchLoad(spaceAboutIds),
-      { cache: options?.cache ?? true, name: 'SpaceProviderLoader' }
+      { cache: options?.cache, name: 'SpaceProviderLoader' }
     );
   }
 

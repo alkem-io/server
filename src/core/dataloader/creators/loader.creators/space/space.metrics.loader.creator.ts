@@ -27,7 +27,7 @@ export class SpaceMetricsLoaderCreator implements DataLoaderCreator<INVP[]> {
   public create(options?: DataLoaderCreatorOptions<INVP[]>): ILoader<INVP[]> {
     return new DataLoader<string, INVP[]>(
       async spaceAboutIds => this.batchLoad(spaceAboutIds),
-      { cache: options?.cache ?? true, name: 'SpaceMetricsLoader' }
+      { cache: options?.cache, name: 'SpaceMetricsLoader' }
     );
   }
 

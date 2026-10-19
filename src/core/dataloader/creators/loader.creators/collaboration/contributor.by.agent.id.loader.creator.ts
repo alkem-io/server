@@ -30,7 +30,7 @@ export class ContributorByAgentIdLoaderCreator
   ): ILoader<IActor | null> {
     return new DataLoader<string, IActor | null>(
       async agentIds => this.batchLoadByAgentIds(agentIds),
-      { cache: options?.cache ?? true, name: 'ContributorByAgentIdLoader' }
+      { cache: options?.cache, name: 'ContributorByAgentIdLoader' }
     );
   }
 

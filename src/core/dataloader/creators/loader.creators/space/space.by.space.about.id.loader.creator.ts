@@ -27,7 +27,7 @@ export class SpaceBySpaceAboutIdLoaderCreator
   ): ILoader<ISpace | null> {
     return new DataLoader<string, ISpace | null>(
       async spaceAboutIds => this.batchLoadBySpaceAboutIds(spaceAboutIds),
-      { cache: options?.cache ?? true, name: 'SpaceBySpaceAboutIdLoader' }
+      { cache: options?.cache, name: 'SpaceBySpaceAboutIdLoader' }
     );
   }
 
