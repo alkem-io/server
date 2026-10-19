@@ -57,7 +57,7 @@ describe('InputCreatorService', () => {
   });
 
   describe('buildCreateInnovationFlowStateInputFromInnovationFlowState', () => {
-    it('should map states to create inputs preserving displayName, description, settings, and sortOrder', () => {
+    it('should map states to create inputs preserving displayName, description, settings, and order', () => {
       const states = [
         {
           id: 's1',
@@ -85,14 +85,64 @@ describe('InputCreatorService', () => {
         displayName: 'State 1',
         description: 'First state',
         settings: { theme: 'blue' },
-        sortOrder: 0,
+        sortOrder: 5,
       });
       expect(result[1]).toEqual({
         displayName: 'State 2',
         description: 'Second state',
         settings: { theme: 'red' },
-        sortOrder: 1,
+        sortOrder: 10,
       });
+    });
+
+    it('should renumber tied sort orders strictly increasing in the source (sortOrder, id) order, keeping the first state and its sidebar first', () => {
+      // Array order deliberately disagrees with the (sortOrder, id) rank.
+      const states = [
+        {
+          id: 'c3000000-0000-4000-8000-000000000003',
+          displayName: 'Third',
+          description: '',
+          settings: { sidebar: [SidebarWidget.EVENTS] },
+          sortOrder: 20,
+        },
+        {
+          id: 'b2000000-0000-4000-8000-000000000002',
+          displayName: 'Second',
+          description: '',
+          settings: { sidebar: [SidebarWidget.ABOUT] },
+          sortOrder: 10,
+        },
+        {
+          id: 'a1000000-0000-4000-8000-000000000001',
+          displayName: 'First',
+          description: '',
+          settings: { sidebar: [SidebarWidget.INTENT, SidebarWidget.INDEX] },
+          sortOrder: 10,
+        },
+      ] as any[];
+
+      const result =
+        service.buildCreateInnovationFlowStateInputFromInnovationFlowState(
+          states
+        );
+
+      expect(result.map(state => state.displayName)).toEqual([
+        'First',
+        'Second',
+        'Third',
+      ]);
+      const sortOrders = result.map(state => state.sortOrder as number);
+      expect(sortOrders[0]).toBeGreaterThan(0);
+      for (let i = 1; i < sortOrders.length; i++) {
+        expect(sortOrders[i]).toBeGreaterThan(sortOrders[i - 1]);
+      }
+      const copyFirst = [...result].sort(
+        (x, y) => (x.sortOrder as number) - (y.sortOrder as number)
+      )[0];
+      expect(copyFirst.settings?.sidebar).toEqual([
+        SidebarWidget.INTENT,
+        SidebarWidget.INDEX,
+      ]);
     });
 
     it('should return empty array when states array is empty', () => {
