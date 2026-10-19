@@ -879,4 +879,21 @@ describe('CollaboraDocumentService', () => {
       );
     });
   });
+
+  describe('deleteUnsavedCollaboraDocument', () => {
+    it('deletes the document and profile that exist before the entity is saved (server#6614)', async () => {
+      vi.mocked(documentService.deleteDocument).mockResolvedValue({} as any);
+      vi.mocked(profileService.deleteProfile).mockResolvedValue({} as any);
+
+      await service.deleteUnsavedCollaboraDocument({
+        document: { id: 'doc-1' },
+        profile: { id: 'profile-1' },
+      } as any);
+
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'doc-1',
+      });
+      expect(profileService.deleteProfile).toHaveBeenCalledWith('profile-1');
+    });
+  });
 });

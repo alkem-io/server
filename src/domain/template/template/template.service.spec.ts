@@ -8,6 +8,7 @@ import { CalloutContributionDefaultSourceService } from '@domain/collaboration/c
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
@@ -29,6 +30,7 @@ import { TemplateService } from './template.service';
 
 describe('TemplateService', () => {
   let service: TemplateService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let templateRepository: Mocked<Repository<Template>>;
   let entityManager: Mocked<EntityManager>;
   let profileService: Mocked<ProfileService>;
@@ -70,6 +72,7 @@ describe('TemplateService', () => {
       .compile();
 
     service = module.get(TemplateService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     templateRepository = module.get(getRepositoryToken(Template)) as Mocked<
       Repository<Template>
     >;
@@ -776,6 +779,17 @@ describe('TemplateService', () => {
       const result = await service.delete({ id: 'tpl-1' } as ITemplate);
 
       expect(result.id).toBe('tpl-1');
+    });
+
+    it('should delete the authorization policy', async () => {
+      const template = makeTemplate(TemplateType.POST);
+      templateRepository.find.mockResolvedValue([template]);
+
+      await service.delete({ id: 'tpl-1' } as ITemplate);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        template.authorization
+      );
     });
   });
 

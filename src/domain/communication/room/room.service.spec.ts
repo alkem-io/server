@@ -1,6 +1,7 @@
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -17,6 +18,7 @@ import { RoomService } from './room.service';
 
 describe('RoomService', () => {
   let service: RoomService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let roomLookupService: Mocked<RoomLookupService>;
   let _actorLookupService: Mocked<ActorLookupService>;
@@ -36,6 +38,7 @@ describe('RoomService', () => {
       .compile();
 
     service = module.get(RoomService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     communicationAdapter = module.get(CommunicationAdapter);
     roomLookupService = module.get(RoomLookupService);
     _actorLookupService = module.get(ActorLookupService);
@@ -202,6 +205,22 @@ describe('RoomService', () => {
       expect(roomRepo.remove).toHaveBeenCalledWith(mockRoom);
       expect(communicationAdapter.deleteRoom).toHaveBeenCalledWith('room-1');
       expect(result.id).toBe('room-1');
+    });
+
+    it('should delete the room authorization policy', async () => {
+      const mockRoom = {
+        id: 'room-1',
+        authorization: { id: 'auth-1' },
+      } as Room;
+      roomLookupService.getRoomOrFail.mockResolvedValue(mockRoom);
+      roomRepo.remove.mockResolvedValue({ ...mockRoom, id: '' } as Room);
+      communicationAdapter.deleteRoom.mockResolvedValue(undefined as any);
+
+      await service.deleteRoom({ roomID: 'room-1' });
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        mockRoom.authorization
+      );
     });
   });
 

@@ -1627,6 +1627,7 @@ describe('WhiteboardService', () => {
         {} as any,
         {} as any,
         {} as any,
+        {} as any,
         {} as any
       );
       vi.spyOn(contributionService, 'save').mockImplementation(
