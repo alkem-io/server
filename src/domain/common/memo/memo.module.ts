@@ -19,6 +19,7 @@ import { AuthorizationPolicyModule } from '../authorization-policy/authorization
 import { LicenseModule } from '../license/license.module';
 import { ProfileModule } from '../profile/profile.module';
 import { Memo } from './memo.entity';
+import { MemoPdfDownloadService } from './memo.pdf.download.service';
 import { MemoPdfExecutor } from './memo.pdf.executor';
 import { MemoPdfImageResolver } from './memo.pdf.image.resolver';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
@@ -59,6 +60,7 @@ import { MemoSigningSweepService } from './memo.signing.sweep.service';
     MemoPdfImageResolver,
     MemoPdfExecutor,
     MemoPdfRenderer,
+    MemoPdfDownloadService,
     MemoSigningService,
     MemoSignatureResolverFields,
     MemoSigningSweepService,
@@ -70,6 +72,7 @@ import { MemoSigningSweepService } from './memo.signing.sweep.service';
     MemoResolverMutations,
     MemoResolverFields,
     MemoSigningService,
+    MemoPdfDownloadService,
   ],
 })
 export class MemoModule {}

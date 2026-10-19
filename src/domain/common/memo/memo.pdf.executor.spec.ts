@@ -31,6 +31,9 @@ class FakeChild extends EventEmitter {
 }
 
 const pdf = Buffer.from('%PDF-1.7 fake');
+// Every executor a test creates, so that renders a test leaves in flight are
+// killed (and their deadline timers cleared) before the next test runs.
+const executors: MemoPdfExecutor[] = [];
 
 const setup = (
   pdfExport: Record<string, unknown> = {
@@ -57,18 +60,24 @@ const setup = (
     { get: vi.fn(() => pdfExport) } as any,
     logger as any
   );
+  executors.push(executor);
   const resolveImage = vi.fn<ResolveMemoImage>();
   const run = (
     actorId = 'actor-1',
     extra: { signal?: AbortSignal; memoId?: string } = {}
-  ) =>
-    executor.run({
+  ) => {
+    const rendering = executor.run({
       state: Buffer.from('state'),
       resolveImage,
       actorId,
       memoId: 'memo-1',
       ...extra,
     });
+    // Renders a test deliberately leaves in flight end at teardown; their
+    // rejection is expected and must not surface as unhandled.
+    rendering.catch(() => undefined);
+    return rendering;
+  };
   return {
     executor,
     children,
@@ -85,7 +94,11 @@ const setup = (
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
 describe('MemoPdfExecutor', () => {
-  afterEach(() => vi.useRealTimers());
+  afterEach(async () => {
+    vi.useRealTimers();
+    for (const executor of executors.splice(0)) executor.onModuleDestroy();
+    await flush();
+  });
 
   it('forks one worker per render, starts it with the state and resolves the PDF', async () => {
     const { children, run, executor } = setup();
