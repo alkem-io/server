@@ -19,6 +19,7 @@ import { InnovationFlowState } from './innovation.flow.state.entity';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { SIDEBAR_DEFAULT_GENERIC } from './innovation.flow.state.sidebar.defaults';
 import { normalizeStateSettings } from './normalize.state.settings';
+import { withRawSidebar } from './utils/withRawSidebar';
 
 @Injectable()
 export class InnovationFlowStateService {
@@ -147,6 +148,46 @@ export class InnovationFlowStateService {
     );
     result.id = state.id; // Preserve the ID for consistency
     return result;
+  }
+
+  /**
+   * Deletes a state whose sidebar list must survive on another state: used when the FIRST
+   * state of a subspace (L1/L2) flow is deleted, because the first state's list is the whole
+   * subspace's sidebar. The deleted state's RAW stored list (never read-normalized; an absent
+   * key stays absent) is copied onto the inheritor — and nothing else from its settings — and
+   * the copy and the delete commit in one transaction, so a failed copy never leaves the
+   * subspace showing the next state's list.
+   */
+  async deleteWithSidebarInheritance(
+    deletedStateID: string,
+    inheritorStateID: string
+  ): Promise<IInnovationFlowState> {
+    const deleted = await this.getRawInnovationFlowStateOrFail(deletedStateID);
+    const inheritor =
+      await this.getRawInnovationFlowStateOrFail(inheritorStateID);
+
+    inheritor.settings = withRawSidebar(
+      inheritor.settings,
+      deleted.settings?.sidebar
+    );
+
+    const removed =
+      await this.innovationFlowStateRepository.manager.transaction(
+        async entityManager => {
+          await entityManager.save(InnovationFlowState, inheritor);
+          if (deleted.authorization) {
+            await this.authorizationPolicyService.delete(
+              deleted.authorization,
+              entityManager
+            );
+          }
+          return entityManager.remove(InnovationFlowState, deleted);
+        }
+      );
+    removed.id = deletedStateID; // Preserve the ID for consistency
+    // The removed row is detached from the database, so normalizing it for the API
+    // response cannot persist anything.
+    return normalizeStateSettings(removed);
   }
 
   async getInnovationFlowStateOrFail(

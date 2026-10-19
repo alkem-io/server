@@ -21,6 +21,7 @@ import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { keyBy } from 'lodash';
@@ -38,6 +39,7 @@ import {
   normalizeStatesSettings,
 } from '../innovation-flow-state/normalize.state.settings';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
+import { withRawSidebar } from '../innovation-flow-state/utils/withRawSidebar';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
 import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
@@ -468,6 +470,46 @@ export class InnovationFlowService {
     return space?.level === SpaceLevel.L0;
   }
 
+  /**
+   * Resolves the level of whatever owns this flow: the owning Space's level, else the owning
+   * TemplateContentSpace's level, else `undefined` for an orphan flow. Unlike
+   * isLevelZeroInnovationFlow (which treats every template flow as non-L0 and drives
+   * template application), this tells L0 templates apart from subspace templates, which is
+   * what the positional sidebar semantics need.
+   */
+  private async resolveInnovationFlowLevel(
+    innovationFlowId: string
+  ): Promise<SpaceLevel | undefined> {
+    const manager = this.innovationFlowRepository.manager;
+    const space = await manager.getRepository(Space).findOne({
+      where: {
+        collaboration: { innovationFlow: { id: innovationFlowId } },
+      },
+      select: { id: true, level: true },
+    });
+    if (space) {
+      return space.level;
+    }
+    const templateContentSpace = await manager
+      .getRepository(TemplateContentSpace)
+      .findOne({
+        where: {
+          collaboration: { innovationFlow: { id: innovationFlowId } },
+        },
+        select: { id: true, level: true },
+      });
+    return templateContentSpace?.level;
+  }
+
+  /**
+   * On a subspace (L1/L2) flow — space or template — the first state's sidebar list is the
+   * sidebar of the whole subspace, so sidebar lists belong to POSITIONS rather than to the
+   * states that happen to sit there. L0 and orphan flows keep lists owned by their states.
+   */
+  private isPositionalSidebarLevel(level: SpaceLevel | undefined): boolean {
+    return level === SpaceLevel.L1 || level === SpaceLevel.L2;
+  }
+
   public async updateInnovationFlowStates(
     innovationFlow: IInnovationFlow,
     newStates: CreateInnovationFlowStateInput[]
@@ -711,7 +753,25 @@ export class InnovationFlowService {
       );
     }
 
-    // Delete the state AFTER moving callouts
+    // Delete the state AFTER moving callouts.
+    // On a subspace flow the first state's list is the subspace sidebar: deleting that
+    // state hands its raw list to the new first state, atomically with the delete.
+    const level = await this.resolveInnovationFlowLevel(innovationFlow.id);
+    const ranked = [...innovationFlow.states].sort(sortBySortOrder);
+    if (
+      this.isPositionalSidebarLevel(level) &&
+      ranked.length > 1 &&
+      ranked[0].id === stateData.ID
+    ) {
+      const deletedState =
+        await this.innovationFlowStateService.deleteWithSidebarInheritance(
+          stateData.ID,
+          ranked[1].id
+        );
+      deletedState.id = stateData.ID;
+      return deletedState;
+    }
+
     const state: IInnovationFlowState =
       await this.innovationFlowStateService.getInnovationFlowStateOrFail(
         stateData.ID
@@ -1012,6 +1072,17 @@ export class InnovationFlowService {
       );
     }
 
+    // On a subspace flow sidebar lists stay at their positions: capture the RAW lists by
+    // rank before renumbering (getInnovationFlowOrFail is a plain findOne — nothing here
+    // went through read normalization).
+    const level = await this.resolveInnovationFlowLevel(innovationFlowID);
+    const positional = this.isPositionalSidebarLevel(level);
+    const sidebarsByRank = positional
+      ? [...allStates]
+          .sort(sortBySortOrder)
+          .map(state => state.settings?.sidebar)
+      : [];
+
     const sortOrders = sortOrderData.stateIDs.map(
       stateID => statesByID[stateID].sortOrder
     );
@@ -1020,23 +1091,42 @@ export class InnovationFlowService {
       sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
     const modifiedStates: IInnovationFlowState[] = [];
 
-    // Get the callouts specified
-    const statesInOrder: IInnovationFlowState[] = [];
     let newSortOrder = minimumSortOrder + 10;
     for (const stateID of sortOrderData.stateIDs) {
       const state = statesByID[stateID];
 
-      statesInOrder.push(state);
       state.sortOrder = newSortOrder;
       modifiedStates.push(state);
 
       newSortOrder += 10; // Increment sort order for the next state
     }
 
-    await this.innovationFlowStateService.saveAll(modifiedStates);
+    const statesByRank = [...allStates].sort(sortBySortOrder);
+    if (positional) {
+      // Ranks are computed over the WHOLE flow, so a partial or duplicate id list is still
+      // well-defined. Only the sidebar key moves; visibility and every other per-state
+      // setting stay with their state. An identity order is a natural no-op.
+      statesByRank.forEach((state, rank) => {
+        state.settings = withRawSidebar(state.settings, sidebarsByRank[rank]);
+      });
+    }
 
-    // This mutation returns [IInnovationFlowState!]! straight from the raw rows.
-    return normalizeStatesSettings(statesInOrder);
+    // One array save runs in one transaction, so positions and lists change together.
+    await this.innovationFlowStateService.saveAll(
+      positional ? allStates : modifiedStates
+    );
+
+    // Every state is returned, in the new order, so a client cache sees each state's list
+    // after lists moved between states. Normalize detached copies only: the raw entities
+    // must never carry read-path filtering.
+    return normalizeStatesSettings(
+      statesByRank.map(state => ({
+        ...state,
+        settings: state.settings
+          ? structuredClone(state.settings)
+          : state.settings,
+      }))
+    );
   }
 
   private async getCollaborationByInnovationFlowId(innovationFlowId: string) {
