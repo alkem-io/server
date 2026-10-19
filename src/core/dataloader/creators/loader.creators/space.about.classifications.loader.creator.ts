@@ -23,7 +23,7 @@ export class SpaceAboutClassificationsLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(_options?: DataLoaderCreatorOptions<IClassificationEntry[]>) {
+  create(options?: DataLoaderCreatorOptions<IClassificationEntry[]>) {
     return new DataLoader<string, IClassificationEntry[]>(
       async keys => {
         const { entities, raw } = await this.manager
@@ -46,7 +46,7 @@ export class SpaceAboutClassificationsLoaderCreator
         });
         return keys.map(key => byAboutId.get(key) ?? []);
       },
-      { name: this.constructor.name }
+      { cache: options?.cache, name: this.constructor.name }
     );
   }
 }

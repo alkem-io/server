@@ -20,6 +20,7 @@ export class CommunityTypeLoaderCreator
       name: this.constructor.name,
       loadedTypeName: 'CommunityContributorType',
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 

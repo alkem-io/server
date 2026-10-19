@@ -23,6 +23,7 @@ export class ActorLoaderCreator implements DataLoaderCreator<IActor> {
       name: this.constructor.name,
       loadedTypeName: 'Actor',
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 

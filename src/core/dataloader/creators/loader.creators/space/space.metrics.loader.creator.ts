@@ -1,5 +1,8 @@
 import { RoleName } from '@common/enums/role.name';
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Credential } from '@domain/actor/credential/credential.entity';
 import { NVP } from '@domain/common/nvp/nvp.entity';
@@ -21,10 +24,10 @@ import { EntityManager, In } from 'typeorm';
 export class SpaceMetricsLoaderCreator implements DataLoaderCreator<INVP[]> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<INVP[]> {
+  public create(options?: DataLoaderCreatorOptions<INVP[]>): ILoader<INVP[]> {
     return new DataLoader<string, INVP[]>(
       async spaceAboutIds => this.batchLoad(spaceAboutIds),
-      { cache: true, name: 'SpaceMetricsLoader' }
+      { cache: options?.cache, name: 'SpaceMetricsLoader' }
     );
   }
 

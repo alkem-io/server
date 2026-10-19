@@ -50,6 +50,7 @@ export class MemoContentLoaderCreator
         // A missing/un-decodable snapshot resolves to null markdown rather than
         // erroring the whole field (FR-007 — flagged, never a hard failure).
         resolveToNull: options.resolveToNull ?? true,
+        cache: options.cache,
       }
     );
   }
