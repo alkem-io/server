@@ -1,10 +1,12 @@
 import { SidebarWidget } from '@common/enums/sidebar.widget';
 import {
   insertSearchWidget,
+  resolveSubspaceDefaultSidebar,
   SIDEBAR_DEFAULT_GENERIC,
   SIDEBAR_DEFAULT_L0_TAB_1,
   SIDEBAR_DEFAULT_L0_TAB_2,
   SIDEBAR_DEFAULT_L0_TAB_3,
+  SIDEBAR_DEFAULT_SUBSPACE,
 } from './innovation.flow.state.sidebar.defaults';
 
 const {
@@ -134,5 +136,75 @@ describe('SIDEBAR_DEFAULT_* literals follow the placement rule', () => {
   ])('%s equals its pre-search shape with search inserted by the rule', (_name, literal) => {
     expect(literal).toContain(SEARCH);
     expect(insertSearchWidget(withoutSearch(literal))).toEqual([...literal]);
+  });
+});
+
+describe('SIDEBAR_DEFAULT_SUBSPACE and resolveSubspaceDefaultSidebar', () => {
+  it("reproduces the subspace page's previous hard-coded sidebar, in order", () => {
+    expect([...SIDEBAR_DEFAULT_SUBSPACE]).toEqual([
+      'intent',
+      'about',
+      'createPost',
+      'community',
+      'events',
+      'activity',
+      'index',
+      'subspaceLinks',
+      'virtualContributors',
+      'updates',
+    ]);
+  });
+
+  it('does not contain search and is frozen', () => {
+    expect(SIDEBAR_DEFAULT_SUBSPACE).not.toContain(SEARCH);
+    expect(Object.isFrozen(SIDEBAR_DEFAULT_SUBSPACE)).toBe(true);
+  });
+
+  it.each([
+    [1, SIDEBAR_DEFAULT_SUBSPACE],
+    [2, SIDEBAR_DEFAULT_L0_TAB_2],
+    [3, SIDEBAR_DEFAULT_L0_TAB_3],
+    [4, SIDEBAR_DEFAULT_GENERIC],
+    [5, SIDEBAR_DEFAULT_GENERIC],
+    [12, SIDEBAR_DEFAULT_GENERIC],
+  ])('position %i resolves to the expected default', (position, expected) => {
+    expect(resolveSubspaceDefaultSidebar(position)).toBe(expected);
+  });
+
+  it('leaves the L0 and generic literals unchanged', () => {
+    expect([...SIDEBAR_DEFAULT_GENERIC]).toEqual([
+      INTENT,
+      CREATE_POST,
+      APPLICATION_BUTTON,
+      SEARCH,
+      INDEX,
+    ]);
+    expect([...SIDEBAR_DEFAULT_L0_TAB_1]).toEqual([
+      INTENT,
+      ABOUT,
+      CREATE_POST,
+      SEARCH,
+      APPLICATION_BUTTON,
+      SUBSPACE_LINKS,
+      EVENTS,
+      UPDATES,
+    ]);
+    expect([...SIDEBAR_DEFAULT_L0_TAB_2]).toEqual([
+      INTENT,
+      CREATE_POST,
+      SEARCH,
+      APPLICATION_BUTTON,
+      CONTACT_LEADS,
+      ADD_USER,
+      VIRTUAL_CONTRIBUTORS,
+      GUIDELINES,
+    ]);
+    expect([...SIDEBAR_DEFAULT_L0_TAB_3]).toEqual([
+      INTENT,
+      CREATE_SUBSPACE,
+      CREATE_POST,
+      SEARCH,
+      APPLICATION_BUTTON,
+    ]);
   });
 });
