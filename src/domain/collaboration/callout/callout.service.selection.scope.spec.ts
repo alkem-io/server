@@ -41,6 +41,7 @@ describe('CalloutService — selection scope guard (T008)', () => {
   // Minimal CalloutFramingService stubs: just enough for createCallout flow.
   const mockFramingService = {
     createCalloutFraming: vi.fn(),
+    deletePersistedChildrenOfUnsavedFraming: vi.fn(),
     validateAndNormalizeContributorsSettings: vi.fn((_, s) => s),
     validateAndNormalizeSelectionSettings: vi.fn((_, s, inc) => {
       // Simulate the real normalizer: materialize {AUTO, []} if absent.

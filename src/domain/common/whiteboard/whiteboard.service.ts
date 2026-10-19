@@ -65,6 +65,7 @@ export interface ResolvedWhiteboardContentSource {
   content: string;
   storageBucketID: string;
   previewURI?: string;
+  cardURI?: string;
 }
 
 export interface MaterializedWhiteboardContent {
@@ -140,7 +141,7 @@ export class WhiteboardService {
     //    can READ it; otherwise its reference is kept as it is.
     let initialScene: string | undefined;
     let sourceBucketId = sourceStorageBucketID;
-    let sourcePreviewURI: string | undefined;
+    let sourceVisuals: { name: VisualType; uri: string | undefined }[] = [];
     if (sourceWhiteboardID != null) {
       const source = await this.resolveContentSource(
         sourceWhiteboardID,
@@ -148,7 +149,10 @@ export class WhiteboardService {
       );
       sourceBucketId = source.storageBucketID;
       initialScene = source.content;
-      sourcePreviewURI = source.previewURI;
+      sourceVisuals = [
+        { name: VisualType.WHITEBOARD_PREVIEW, uri: source.previewURI },
+        { name: VisualType.CARD, uri: source.cardURI },
+      ];
     } else {
       initialScene = content ?? undefined;
     }
@@ -183,16 +187,12 @@ export class WhiteboardService {
           }
         : {}),
     };
-    if (
-      sourcePreviewURI &&
-      !profileData.visuals?.some(
-        visual => visual.name === VisualType.WHITEBOARD_PREVIEW
-      )
-    ) {
-      profileData.visuals = [
-        ...(profileData.visuals ?? []),
-        { name: VisualType.WHITEBOARD_PREVIEW, uri: sourcePreviewURI },
-      ];
+    // The copied whiteboard starts with its source's preview images, unless
+    // the caller supplied its own.
+    for (const { name, uri } of sourceVisuals) {
+      if (uri && !profileData.visuals?.some(visual => visual.name === name)) {
+        profileData.visuals = [...(profileData.visuals ?? []), { name, uri }];
+      }
     }
     whiteboard.profile = await this.profileService.createProfile(
       profileData,
@@ -316,10 +316,16 @@ export class WhiteboardService {
     const content =
       (await this.getWhiteboardContent(sourceWhiteboardID)) ||
       Buffer.from(await whiteboardSceneToYjsV2State('')).toString('base64');
-    const previewURI = source.profile?.visuals?.find(
-      visual => visual.name === VisualType.WHITEBOARD_PREVIEW && visual.uri
-    )?.uri;
-    return { content, storageBucketID, previewURI };
+    const visualURI = (name: VisualType) =>
+      source.profile?.visuals?.find(
+        visual => visual.name === name && visual.uri
+      )?.uri;
+    return {
+      content,
+      storageBucketID,
+      previewURI: visualURI(VisualType.WHITEBOARD_PREVIEW),
+      cardURI: visualURI(VisualType.CARD),
+    };
   }
 
   /**

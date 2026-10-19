@@ -52,6 +52,28 @@ export class MediaGalleryService {
     return await this.mediaGalleryRepository.save(mediaGallery);
   }
 
+  /**
+   * Builds an unsaved MediaGallery (with its storage bucket) for a parent
+   * whose cascading save persists the whole tree in one go, so a failure
+   * before that save leaves nothing behind (server#6614). Visuals need the
+   * persisted gallery + bucket ids, so they are added after the parent save.
+   */
+  public buildMediaGallery(
+    storageAggregator: IStorageAggregator,
+    userID?: string
+  ): IMediaGallery {
+    const mediaGallery: IMediaGallery = MediaGallery.create();
+    mediaGallery.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.MEDIA_GALLERY
+    );
+    mediaGallery.createdBy = userID;
+    mediaGallery.storageBucket = this.storageBucketService.createStorageBucket({
+      storageAggregator,
+    });
+    mediaGallery.visuals = [] as Visual[];
+    return mediaGallery;
+  }
+
   public async addVisualToMediaGallery(
     mediaGalleryId: string,
     visualType: VisualType,

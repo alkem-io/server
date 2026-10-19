@@ -10,6 +10,7 @@ import { PollOption } from '@domain/collaboration/poll-option/poll.option.entity
 import { PollVote } from '@domain/collaboration/poll-vote/poll.vote.entity';
 import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -21,6 +22,7 @@ import { Poll } from './poll.entity';
 @Injectable()
 export class PollService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Poll)
     private pollRepository: Repository<Poll>,
     @InjectRepository(PollOption)
@@ -150,6 +152,10 @@ export class PollService {
 
   async deletePoll(pollId: string): Promise<Poll> {
     const poll = await this.getPollOrFail(pollId);
+
+    if (poll.authorization) {
+      await this.authorizationPolicyService.delete(poll.authorization);
+    }
 
     const result = await this.pollRepository.remove(poll);
     result.id = pollId;

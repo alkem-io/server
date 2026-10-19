@@ -22,6 +22,7 @@ export class InvitationLoaderCreator implements DataLoaderCreator<IInvitation> {
       name: this.constructor.name,
       loadedTypeName: Invitation.name,
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 

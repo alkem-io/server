@@ -452,6 +452,24 @@ export class CollaboraDocumentService {
     return result;
   }
 
+  /**
+   * Compensation for a CollaboraDocument that createCollaboraDocument returned
+   * but whose parent was never saved: the entity row does not exist, while
+   * its document and profile already do (server#6614).
+   */
+  public async deleteUnsavedCollaboraDocument(
+    collaboraDocument: ICollaboraDocument
+  ): Promise<void> {
+    if (collaboraDocument.document?.id) {
+      await this.documentService.deleteDocument({
+        ID: collaboraDocument.document.id,
+      });
+    }
+    if (collaboraDocument.profile?.id) {
+      await this.profileService.deleteProfile(collaboraDocument.profile.id);
+    }
+  }
+
   public async updateCollaboraDocument(
     collaboraDocumentID: string,
     displayName: string

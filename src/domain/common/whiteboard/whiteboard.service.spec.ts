@@ -1411,6 +1411,61 @@ describe('WhiteboardService', () => {
       );
     });
 
+    it('copies the source CARD alongside the preview, unless the caller supplied one', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'source-wb',
+        authorization: { id: 'source-auth' },
+        profile: {
+          storageBucket: { id: SOURCE_BUCKET },
+          visuals: [
+            { name: VisualType.WHITEBOARD_PREVIEW, uri: 'preview-source' },
+            { name: VisualType.CARD, uri: 'card-from-source' },
+          ],
+        },
+      } as unknown as Whiteboard);
+
+      await service.createWhiteboard(
+        {
+          sourceWhiteboardID: 'source-wb',
+          profile: { displayName: 'Copy' },
+        },
+        mockStorageAggregator,
+        actorContext
+      );
+      expect(profileService.createProfile).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          visuals: [
+            { name: VisualType.WHITEBOARD_PREVIEW, uri: 'preview-source' },
+            { name: VisualType.CARD, uri: 'card-from-source' },
+          ],
+        }),
+        ProfileType.WHITEBOARD,
+        mockStorageAggregator
+      );
+
+      await service.createWhiteboard(
+        {
+          sourceWhiteboardID: 'source-wb',
+          profile: {
+            displayName: 'Copy',
+            visuals: [{ name: VisualType.CARD, uri: 'card-supplied' }],
+          },
+        },
+        mockStorageAggregator,
+        actorContext
+      );
+      expect(profileService.createProfile).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          visuals: [
+            { name: VisualType.CARD, uri: 'card-supplied' },
+            { name: VisualType.WHITEBOARD_PREVIEW, uri: 'preview-source' },
+          ],
+        }),
+        ProfileType.WHITEBOARD,
+        mockStorageAggregator
+      );
+    });
+
     it('rejects the clone when the actor lacks READ on the source — no profile created, no snapshot written', async () => {
       mockSource({ contentPointer: 'source-ptr' });
       vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
@@ -1568,6 +1623,7 @@ describe('WhiteboardService', () => {
         {} as any,
         {} as any,
         service,
+        {} as any,
         {} as any,
         {} as any,
         {} as any,

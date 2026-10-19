@@ -28,7 +28,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Readable } from 'stream';
-import { Repository } from 'typeorm';
+import { EntityManager, EntityNotFoundError, Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
@@ -486,6 +486,30 @@ describe('StorageBucketService', () => {
       await expect(service.getStorageBucketOrFail('')).rejects.toThrow(
         EntityNotFoundException
       );
+    });
+
+    it('should throw EntityNotFoundException when no storage bucket matches the id', async () => {
+      (storageBucketRepository.findOneOrFail as Mock).mockRejectedValue(
+        new EntityNotFoundError(StorageBucket, { id: 'non-existent' })
+      );
+
+      await expect(
+        service.getStorageBucketOrFail('non-existent')
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should throw EntityNotFoundException when no storage bucket matches the id inside a transaction', async () => {
+      const em = {
+        findOneOrFail: vi
+          .fn()
+          .mockRejectedValue(
+            new EntityNotFoundError(StorageBucket, { id: 'non-existent' })
+          ),
+      } as unknown as EntityManager;
+
+      await expect(
+        service.getStorageBucketOrFail('non-existent', undefined, em)
+      ).rejects.toThrow(EntityNotFoundException);
     });
 
     it('should propagate error when findOneOrFail rejects', async () => {

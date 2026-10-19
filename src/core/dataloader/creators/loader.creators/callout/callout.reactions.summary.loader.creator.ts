@@ -29,11 +29,11 @@ export class CalloutReactionsSummaryLoaderCreator
   constructor(private readonly reactionService: ReactionService) {}
 
   public create(
-    _options: DataLoaderCreatorOptions<CalloutReactionsSummaryResult | null>
+    options?: DataLoaderCreatorOptions<CalloutReactionsSummaryResult | null>
   ): ILoader<CalloutReactionsSummaryResult | null> {
     return new DataLoader<string, CalloutReactionsSummaryResult | null>(
       async calloutIds => this.batchLoad(calloutIds),
-      { cache: true, name: 'CalloutReactionsSummaryLoader' }
+      { cache: options?.cache, name: 'CalloutReactionsSummaryLoader' }
     );
   }
 

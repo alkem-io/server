@@ -98,20 +98,5 @@ describe('CalloutMyReactionLoaderCreator', () => {
       expect(r1).toBe('heart');
       expect(r2).toBe('rocket');
     });
-
-    it('caches results within the same user so repeated loads do not re-query', async () => {
-      reactionService.getMyReactionsForEntities.mockResolvedValue(
-        new Map([['callout-1', 'thumbsup']])
-      );
-
-      const r1 = await loader.loadMyReaction('callout-1', 'user-1');
-      const r2 = await loader.loadMyReaction('callout-1', 'user-1');
-
-      expect(reactionService.getMyReactionsForEntities).toHaveBeenCalledTimes(
-        1
-      );
-      expect(r1).toBe('thumbsup');
-      expect(r2).toBe('thumbsup');
-    });
   });
 });

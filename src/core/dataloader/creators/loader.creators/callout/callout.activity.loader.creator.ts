@@ -1,4 +1,7 @@
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Injectable } from '@nestjs/common';
@@ -19,10 +22,10 @@ import { EntityManager } from 'typeorm';
 export class CalloutActivityLoaderCreator implements DataLoaderCreator<number> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<number> {
+  public create(options?: DataLoaderCreatorOptions<number>): ILoader<number> {
     return new DataLoader<string, number>(
       async calloutIds => this.batchLoad(calloutIds),
-      { cache: true, name: 'CalloutActivityLoader' }
+      { cache: options?.cache, name: 'CalloutActivityLoader' }
     );
   }
 

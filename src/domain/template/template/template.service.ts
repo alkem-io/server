@@ -19,6 +19,7 @@ import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.
 import { ICollaboration } from '@domain/collaboration/collaboration';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   deriveClassificationValueIds,
   deriveClassificationValueIdsForEdit,
@@ -53,6 +54,7 @@ import { ITemplate } from './template.interface';
 @Injectable()
 export class TemplateService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private communityGuidelinesService: CommunityGuidelinesService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
@@ -971,6 +973,7 @@ export class TemplateService {
 
     const templateId: string = template.id;
     await this.profileService.deleteProfile(template.profile.id);
+    await this.authorizationPolicyService.delete(template.authorization);
 
     const result = await this.templateRepository.remove(template as Template);
     result.id = templateId;

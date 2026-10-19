@@ -5,6 +5,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Template } from '@domain/template/template/template.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -18,6 +19,7 @@ import { InnovationFlowStateService } from './innovation.flow.state.service';
 
 describe('InnovationFlowStateService', () => {
   let service: InnovationFlowStateService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let repository: Repository<InnovationFlowState>;
   let templateRepository: Repository<Template>;
 
@@ -44,6 +46,7 @@ describe('InnovationFlowStateService', () => {
       .compile();
 
     service = module.get(InnovationFlowStateService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     repository = module.get(getRepositoryToken(InnovationFlowState));
     templateRepository = module.get(getRepositoryToken(Template));
   });
@@ -709,6 +712,227 @@ describe('InnovationFlowStateService', () => {
 
       expect(repository.remove).toHaveBeenCalledWith(state);
       expect(result.id).toBe('state-1');
+    });
+
+    it('should delete the authorization policy before removing the state', async () => {
+      const state = {
+        id: 'state-1',
+        authorization: { id: 'auth-1' },
+      } as InnovationFlowState;
+      vi.mocked(repository.remove).mockResolvedValue({
+        id: undefined,
+      } as any);
+
+      await service.delete(state);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        state.authorization
+      );
+    });
+  });
+
+  describe('deleteWithSidebarInheritance', () => {
+    const buildStates = (deletedSidebar: unknown) => {
+      const deleted = {
+        id: 'deleted-1',
+        sortOrder: 10,
+        authorization: { id: 'auth-deleted' },
+        settings: {
+          allowNewCallouts: false,
+          visible: false,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+          showPublishDetails: false,
+          ...(deletedSidebar === undefined ? {} : { sidebar: deletedSidebar }),
+        },
+      };
+      // What the inheritor looked like before the transaction began.
+      const staleInheritor = {
+        id: 'inheritor-1',
+        sortOrder: 20,
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+          sidebar: [SidebarWidget.EVENTS],
+        },
+      };
+      // The same row as read inside the transaction, after a concurrent settings edit.
+      const inheritor = {
+        ...staleInheritor,
+        settings: {
+          ...staleInheritor.settings,
+          visible: false,
+          showPublishDetails: false,
+        },
+      };
+      vi.mocked(repository.findOne).mockImplementation(
+        async (options: any) =>
+          (options.where.id === deleted.id ? deleted : staleInheritor) as any
+      );
+      return { deleted, inheritor };
+    };
+
+    const mockTransaction = (
+      inheritor: unknown,
+      overrides: { update?: any; remove?: any; findOne?: any } = {}
+    ) => {
+      const em = {
+        findOne: overrides.findOne ?? vi.fn().mockResolvedValue(inheritor),
+        update: overrides.update ?? vi.fn().mockResolvedValue(undefined),
+        save: vi.fn(),
+        remove:
+          overrides.remove ??
+          vi.fn().mockImplementation(async (_target, entity) => ({
+            ...entity,
+            id: undefined,
+          })),
+      };
+      const transaction = vi.fn(async (work: any) => work(em));
+      (repository as any).manager = { transaction };
+      return { em, transaction };
+    };
+
+    const writtenSettings = (em: { update: any }) =>
+      vi.mocked(em.update).mock.calls[0][2].settings;
+
+    it('copies the raw list (unknown values included) onto the inheritor, every other setting from the in-transaction read', async () => {
+      const raw = [SidebarWidget.INTENT, 'zzz'];
+      const { inheritor, deleted } = buildStates(raw);
+      const { em, transaction } = mockTransaction(inheritor);
+
+      const result = await service.deleteWithSidebarInheritance(
+        'deleted-1',
+        'inheritor-1'
+      );
+
+      expect(transaction).toHaveBeenCalledTimes(1);
+      expect(em.findOne).toHaveBeenCalledWith(InnovationFlowState, {
+        where: { id: 'inheritor-1' },
+      });
+      expect(em.update).toHaveBeenCalledWith(
+        InnovationFlowState,
+        { id: 'inheritor-1' },
+        { settings: expect.any(Object) }
+      );
+      expect(writtenSettings(em)).toEqual({
+        allowNewCallouts: true,
+        visible: false,
+        descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+        showPublishDetails: false,
+        sidebar: raw,
+      });
+      expect(em.save).not.toHaveBeenCalled();
+      expect(repository.findOne).toHaveBeenCalledTimes(1);
+      expect(em.remove).toHaveBeenCalledWith(InnovationFlowState, deleted);
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        deleted.authorization,
+        em
+      );
+      expect(result.id).toBe('deleted-1');
+    });
+
+    it('writes the inheritor before removing the deleted state, both inside the transaction', async () => {
+      const { inheritor } = buildStates([SidebarWidget.ABOUT]);
+      const order: string[] = [];
+      const { transaction } = mockTransaction(inheritor, {
+        update: vi.fn(async () => {
+          order.push('update');
+        }),
+        remove: vi.fn(async (_t: unknown, entity: any) => {
+          order.push('remove');
+          return { ...entity };
+        }),
+      });
+      vi.mocked(authorizationPolicyService.delete).mockImplementation(
+        async () => {
+          order.push('auth');
+          return {} as any;
+        }
+      );
+
+      await service.deleteWithSidebarInheritance('deleted-1', 'inheritor-1');
+
+      expect(transaction).toHaveBeenCalledTimes(1);
+      expect(order).toEqual(['update', 'auth', 'remove']);
+      expect(repository.save).not.toHaveBeenCalled();
+      expect(repository.remove).not.toHaveBeenCalled();
+    });
+
+    it('runs persistAlongside first, with the transaction manager', async () => {
+      const { inheritor } = buildStates([SidebarWidget.ABOUT]);
+      const order: string[] = [];
+      const { em } = mockTransaction(inheritor, {
+        update: vi.fn(async () => {
+          order.push('update');
+        }),
+      });
+      const persistAlongside = vi.fn(async () => {
+        order.push('alongside');
+      });
+
+      await service.deleteWithSidebarInheritance(
+        'deleted-1',
+        'inheritor-1',
+        persistAlongside
+      );
+
+      expect(persistAlongside).toHaveBeenCalledWith(em);
+      expect(order).toEqual(['alongside', 'update']);
+    });
+
+    it('a failing persistAlongside propagates and nothing else is written', async () => {
+      const { inheritor } = buildStates([SidebarWidget.ABOUT]);
+      const { em } = mockTransaction(inheritor);
+
+      await expect(
+        service.deleteWithSidebarInheritance(
+          'deleted-1',
+          'inheritor-1',
+          vi.fn().mockRejectedValue(new Error('callouts failed'))
+        )
+      ).rejects.toThrow('callouts failed');
+      expect(em.update).not.toHaveBeenCalled();
+      expect(em.remove).not.toHaveBeenCalled();
+    });
+
+    it('an explicit empty list is inherited as []', async () => {
+      const { inheritor } = buildStates([]);
+      const { em } = mockTransaction(inheritor);
+      await service.deleteWithSidebarInheritance('deleted-1', 'inheritor-1');
+      expect(writtenSettings(em).sidebar).toEqual([]);
+    });
+
+    it('an absent list leaves the inheritor without the key', async () => {
+      const { inheritor } = buildStates(undefined);
+      const { em } = mockTransaction(inheritor);
+      await service.deleteWithSidebarInheritance('deleted-1', 'inheritor-1');
+      expect('sidebar' in writtenSettings(em)).toBe(false);
+      expect(writtenSettings(em).allowNewCallouts).toBe(true);
+    });
+
+    it('a missing inheritor fails the delete', async () => {
+      buildStates([SidebarWidget.ABOUT]);
+      const { em } = mockTransaction(null);
+
+      await expect(
+        service.deleteWithSidebarInheritance('deleted-1', 'inheritor-1')
+      ).rejects.toThrow(EntityNotFoundException);
+      expect(em.remove).not.toHaveBeenCalled();
+    });
+
+    it('a failing inheritor write propagates and the state is not removed', async () => {
+      const { inheritor } = buildStates([SidebarWidget.ABOUT]);
+      const remove = vi.fn();
+      mockTransaction(inheritor, {
+        update: vi.fn().mockRejectedValue(new Error('write failed')),
+        remove,
+      });
+
+      await expect(
+        service.deleteWithSidebarInheritance('deleted-1', 'inheritor-1')
+      ).rejects.toThrow('write failed');
+      expect(remove).not.toHaveBeenCalled();
     });
   });
 
