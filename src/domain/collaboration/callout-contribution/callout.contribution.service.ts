@@ -83,17 +83,30 @@ export class CalloutContributionService {
   ): Promise<ICalloutContribution[]> {
     const contributions: ICalloutContribution[] = [];
 
-    for (const calloutContributionData of calloutContributionsData) {
-      const contribution = await this.createCalloutContribution(
-        calloutContributionData,
-        storageAggregator,
-        contributionSettings,
-        parentSpaceId,
-        actorContext,
-        userID,
-        boardTemplate
-      );
-      contributions.push(contribution);
+    try {
+      for (const calloutContributionData of calloutContributionsData) {
+        const contribution = await this.createCalloutContribution(
+          calloutContributionData,
+          storageAggregator,
+          contributionSettings,
+          parentSpaceId,
+          actorContext,
+          userID,
+          boardTemplate
+        );
+        contributions.push(contribution);
+      }
+    } catch (error) {
+      // A later input failed (e.g. a disallowed type or an unknown task
+      // column): the caller never receives the contributions built so far, so
+      // their self-persisted children must be removed here (server#6614).
+      // Cleanup failures are swallowed so the original error surfaces.
+      for (const contribution of contributions) {
+        await this.deletePersistedChildrenOfUnsavedContribution(
+          contribution
+        ).catch(() => undefined);
+      }
+      throw error;
     }
 
     return contributions;

@@ -320,6 +320,37 @@ describe('CalloutContributionService', () => {
 
       expect(results).toHaveLength(2);
     });
+
+    it('deletes the children of contributions already created when a later one throws (server#6614)', async () => {
+      vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue({
+        id: 'wb-1',
+      } as any);
+      vi.mocked(whiteboardService.deleteWhiteboard).mockResolvedValue(
+        {} as any
+      );
+
+      await expect(
+        service.createCalloutContributions(
+          [
+            {
+              type: CalloutContributionType.WHITEBOARD,
+              whiteboard: { profile: { displayName: 'Board' } },
+            },
+            // Not in allowedTypes: rejected after the whiteboard persisted.
+            {
+              type: CalloutContributionType.POST,
+              post: { profileData: { displayName: 'Post' } },
+            },
+          ] as any[],
+          { id: 'agg-1' } as any,
+          { allowedTypes: [CalloutContributionType.WHITEBOARD] } as any,
+          actorContextData.actorContext,
+          'user-1'
+        )
+      ).rejects.toThrow();
+
+      expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
+    });
   });
 
   describe('delete', () => {
