@@ -618,6 +618,21 @@ collaboration:
   memo:
     enabled: ${MEMO_ENABLED}:true
     max_collaborators_in_room: ${MEMO_MAX_COLLABORATORS_IN_ROOM}:20
+    # Memo PDF rendering (downloads and the signing preview). Every render runs
+    # in its own forked worker process; these bound how many run at once.
+    pdf_export:
+      # Concurrent renders per server instance; 0 switches memo PDF rendering off
+      # (every request answers "temporarily unavailable").
+      max_concurrent_renders: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS}:2
+      # Concurrent renders per actor per server instance; a fixed value, not
+      # derived from the global cap.
+      max_concurrent_renders_per_actor: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS_PER_ACTOR}:1
+      # V8 old-space limit of each render worker, in MB (--max-old-space-size).
+      heap_mb: ${MEMO_PDF_EXPORT_HEAP_MB}:512
+      # Deadline for the whole render in milliseconds, including image
+      # resolution and the worker cold start (~1 s); keep it below the gateway
+      # request timeout.
+      deadline_ms: ${MEMO_PDF_EXPORT_DEADLINE_MS}:30000
 
 ## MCP Server ##
 # Model Context Protocol server for AI client integrations.

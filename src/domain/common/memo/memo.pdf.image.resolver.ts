@@ -7,8 +7,8 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import sharp from 'sharp';
-import {
-  MAX_SOURCE_IMAGE_PIXELS,
+import { MAX_SOURCE_IMAGE_PIXELS } from './memo.pdf.limits';
+import type {
   MemoPdfImageOutcome,
   ResolveMemoImage,
 } from './memo.pdf.render.core';

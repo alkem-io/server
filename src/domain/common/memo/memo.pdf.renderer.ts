@@ -1,15 +1,43 @@
+import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { Injectable } from '@nestjs/common';
+import { MAX_MEMO_EDITOR_CONTENT_BYTES } from './conversion/yjs.state.to.tiptap.html';
+import { MemoPdfExecutor } from './memo.pdf.executor';
 import { MemoPdfImageResolver } from './memo.pdf.image.resolver';
-import { MemoPdfRenderCore } from './memo.pdf.render.core';
 
+/**
+ * The single entry point for rendering a memo state to PDF, used by both the
+ * download and the signing preview. The layout runs in a forked worker (see
+ * MemoPdfExecutor); this process only checks the input size and resolves the
+ * memo's images on the worker's request.
+ */
 @Injectable()
 export class MemoPdfRenderer {
-  constructor(private readonly imageResolver: MemoPdfImageResolver) {}
+  constructor(
+    private readonly imageResolver: MemoPdfImageResolver,
+    private readonly executor: MemoPdfExecutor
+  ) {}
 
-  async render(state: Buffer, bucketId: string, actor: ActorContext) {
-    return new MemoPdfRenderCore(
-      this.imageResolver.bind(bucketId, actor)
-    ).render(state);
+  async render(
+    state: Buffer,
+    bucketId: string | undefined,
+    actor: ActorContext,
+    options: { signal?: AbortSignal; memoId?: string } = {}
+  ): Promise<Buffer> {
+    // Rejected here, before a worker is spent on it; the worker repeats the
+    // check on the decoded document.
+    if (state.byteLength > MAX_MEMO_EDITOR_CONTENT_BYTES)
+      throw new ValidationException(
+        `Memo PDF supports at most ${MAX_MEMO_EDITOR_CONTENT_BYTES.toLocaleString('en-US')} bytes of memo editor content`,
+        LogContext.MEMOS
+      );
+    return this.executor.run({
+      state,
+      resolveImage: this.imageResolver.bind(bucketId, actor),
+      actorId: actor.actorID,
+      memoId: options.memoId,
+      signal: options.signal,
+    });
   }
 }

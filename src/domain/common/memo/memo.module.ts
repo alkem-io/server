@@ -19,6 +19,8 @@ import { AuthorizationPolicyModule } from '../authorization-policy/authorization
 import { LicenseModule } from '../license/license.module';
 import { ProfileModule } from '../profile/profile.module';
 import { Memo } from './memo.entity';
+import { MemoPdfExecutor } from './memo.pdf.executor';
+import { MemoPdfImageResolver } from './memo.pdf.image.resolver';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 import { MemoResolverFields } from './memo.resolver.fields';
 import { MemoResolverMutations } from './memo.resolver.mutations';
@@ -54,6 +56,8 @@ import { MemoSigningSweepService } from './memo.signing.sweep.service';
     MemoAuthorizationService,
     MemoResolverMutations,
     MemoResolverFields,
+    MemoPdfImageResolver,
+    MemoPdfExecutor,
     MemoPdfRenderer,
     MemoSigningService,
     MemoSignatureResolverFields,

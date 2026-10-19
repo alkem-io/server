@@ -8,6 +8,7 @@ import {
   memoFontFiles,
   memoPdfFonts,
 } from './memo.pdf.fonts';
+import { MAX_IMAGES } from './memo.pdf.limits';
 
 // pdfmake and html-to-pdfmake publish CommonJS without TypeScript declarations.
 const htmlToPdfMake = require('html-to-pdfmake') as (
@@ -31,9 +32,6 @@ pdfMake.addFonts({ ...fonts, ...memoPdfFonts });
 pdfMake.setUrlAccessPolicy(() => false);
 pdfMake.setLocalAccessPolicy(path => allowedFonts.has(path));
 
-// Measured renderer bounds for synchronous layout and source decoding.
-export const MAX_IMAGES = 20;
-export const MAX_SOURCE_IMAGE_PIXELS = 16_777_216;
 const A4_PAGE_WIDTH = 595.28;
 const A4_PAGE_HEIGHT = 841.89;
 const PAGE_MARGIN = 40;

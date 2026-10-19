@@ -337,6 +337,12 @@ export type AlkemioConfig = {
     memo: {
       enabled: boolean;
       max_collaborators_in_room: number;
+      pdf_export: {
+        max_concurrent_renders: number;
+        max_concurrent_renders_per_actor: number;
+        heap_mb: number;
+        deadline_ms: number;
+      };
     };
   };
   language: {
