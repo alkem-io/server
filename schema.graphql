@@ -964,12 +964,14 @@ enum SearchVisibility {
 }
 
 """
-The widgets available for the Space sidepanel, per InnovationFlow state (tab).
+The widgets available for the Space sidepanel, per InnovationFlow state (tab/phase).
 """
 enum SidebarWidget {
   ABOUT
+  ACTIVITY
   ADD_USER
   APPLICATION_BUTTON
+  COMMUNITY
   CONTACT_LEADS
   CREATE_POST
   CREATE_SUBSPACE
