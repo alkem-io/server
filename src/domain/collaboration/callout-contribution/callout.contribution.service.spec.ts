@@ -350,7 +350,7 @@ describe('CalloutContributionService', () => {
           actorContextData.actorContext,
           'user-1'
         )
-      ).rejects.toThrow();
+      ).rejects.toThrow(ValidationException);
 
       expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
     });
@@ -380,7 +380,7 @@ describe('CalloutContributionService', () => {
           actorContextData.actorContext,
           'user-1'
         )
-      ).rejects.not.toThrow('broker unavailable');
+      ).rejects.toThrow(ValidationException);
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.objectContaining({ whiteboardId: 'wb-1' }),
