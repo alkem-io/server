@@ -33,7 +33,12 @@ import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.c
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityManager,
+  EntityNotFoundError,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
@@ -216,25 +221,33 @@ export class StorageBucketService {
   ): Promise<IStorageBucket> {
     if (!storageBucketID) {
       throw new EntityNotFoundException(
-        `StorageBucket not found: ${storageBucketID}`,
-        LogContext.STORAGE_BUCKET
+        'StorageBucket not found',
+        LogContext.STORAGE_BUCKET,
+        { storageBucketId: storageBucketID }
       );
     }
-    const storageBucket = em
-      ? await em.findOneOrFail(StorageBucket, {
-          ...options,
-          where: { ...options?.where, id: storageBucketID },
-        })
-      : await this.storageBucketRepository.findOneOrFail({
-          where: { id: storageBucketID },
-          ...options,
-        });
-    if (!storageBucket)
-      throw new EntityNotFoundException(
-        `StorageBucket not found: ${storageBucketID}`,
-        LogContext.STORAGE_BUCKET
-      );
-    return storageBucket;
+    try {
+      return em
+        ? await em.findOneOrFail(StorageBucket, {
+            ...options,
+            where: { ...options?.where, id: storageBucketID },
+          })
+        : await this.storageBucketRepository.findOneOrFail({
+            where: { id: storageBucketID },
+            ...options,
+          });
+    } catch (error) {
+      // TypeORM's EntityNotFoundError would surface to GraphQL as UNSPECIFIED
+      // with its raw message; every other lookup answers ENTITY_NOT_FOUND.
+      if (error instanceof EntityNotFoundError) {
+        throw new EntityNotFoundException(
+          'StorageBucket not found',
+          LogContext.STORAGE_BUCKET,
+          { storageBucketId: storageBucketID }
+        );
+      }
+      throw error;
+    }
   }
 
   public async getDocuments(

@@ -1,5 +1,6 @@
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -14,6 +15,7 @@ import { CommunityGuidelinesService } from './community.guidelines.service';
 
 describe('CommunityGuidelinesService', () => {
   let service: CommunityGuidelinesService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let repository: {
     findOne: Mock;
     save: Mock;
@@ -47,6 +49,7 @@ describe('CommunityGuidelinesService', () => {
       .compile();
 
     service = module.get(CommunityGuidelinesService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     repository = module.get(getRepositoryToken(CommunityGuidelines));
     profileService = module.get(ProfileService) as any;
     tagsetService = module.get(TagsetService) as any;
@@ -197,6 +200,23 @@ describe('CommunityGuidelinesService', () => {
       expect(profileService.deleteProfile).toHaveBeenCalledWith('profile-1');
       expect(repository.remove).toHaveBeenCalled();
       expect(result.id).toBe('cg-1');
+    });
+
+    it('should delete the authorization policy', async () => {
+      const mockGuidelines = {
+        id: 'cg-1',
+        profile: { id: 'profile-1' },
+        authorization: { id: 'auth-1' },
+      };
+      repository.findOne.mockResolvedValue(mockGuidelines);
+      profileService.deleteProfile.mockResolvedValue(undefined);
+      repository.remove.mockResolvedValue({ ...mockGuidelines, id: undefined });
+
+      await service.deleteCommunityGuidelines('cg-1');
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        mockGuidelines.authorization
+      );
     });
 
     it('should throw EntityNotFoundException when community guidelines are not found', async () => {

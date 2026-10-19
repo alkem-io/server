@@ -53,7 +53,9 @@ export class CalloutMyReactionLoaderCreator {
         );
         return calloutIds.map(id => map.get(id) ?? null);
       },
-      { cache: true, name: `CalloutMyReactionLoader:${userID}` }
+      // cache: false — the class is Scope.REQUEST, but on a WebSocket
+      // subscription the instance lives for the whole operation.
+      { cache: false, name: `CalloutMyReactionLoader:${userID}` }
     );
   }
 }

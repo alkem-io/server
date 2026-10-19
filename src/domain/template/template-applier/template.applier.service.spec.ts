@@ -311,6 +311,113 @@ describe('TemplateApplierService', () => {
       });
     });
 
+    it('materializes the copied callouts after the save, so framing media-gallery visuals are copied (server#6614)', async () => {
+      const sourceCollab = {
+        innovationFlow: { states: [{ displayName: 'New' }] },
+        calloutsSet: { callouts: [{ id: 'src-callout-1' }] },
+      };
+      templateService.getTemplateOrFail.mockResolvedValue({
+        id: 'tpl-1',
+        contentSpace: { id: 'tcs-1', collaboration: sourceCollab },
+      } as any);
+      const targetCollab = {
+        id: 'collab-1',
+        innovationFlow: { states: [{ displayName: 'Old' }] },
+        calloutsSet: { id: 'cs-1', callouts: [] },
+      } as any;
+      const calloutInputs = [{ nameID: 'new-callout' }];
+      const newCallout = { id: 'new-c-1', nameID: 'new-callout' };
+      inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
+        [{ displayName: 'New' }] as any
+      );
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
+        {} as any
+      );
+      storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(
+        {} as any
+      );
+      inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
+        calloutInputs as any
+      );
+      calloutsSetService.addCallouts.mockResolvedValue([newCallout] as any);
+      const order: string[] = [];
+      collaborationService.save.mockImplementation(async () => {
+        order.push('save');
+        return targetCollab;
+      });
+      calloutsSetService.materializeCalloutsSetContent.mockImplementation(
+        async () => {
+          order.push('materialize');
+        }
+      );
+
+      await service.updateCollaborationFromSpaceTemplate(
+        {
+          collaborationID: 'collab-1',
+          spaceTemplateID: 'tpl-1',
+          addCallouts: true,
+          deleteExistingCallouts: false,
+        },
+        targetCollab,
+        actorContextData.actorContext
+      );
+
+      expect(order).toEqual(['save', 'materialize']);
+      const [set, inputs, rollback, actor] =
+        calloutsSetService.materializeCalloutsSetContent.mock.lastCall ?? [];
+      // Only the copied callouts, paired with their source inputs.
+      expect(set?.callouts).toEqual([newCallout]);
+      expect(inputs).toBe(calloutInputs);
+      expect(actor).toBe(actorContextData.actorContext);
+      // The rollback removes the copied callouts, not the target collaboration.
+      calloutService.deleteCallout.mockResolvedValue({} as any);
+      await rollback?.();
+      expect(calloutService.deleteCallout).toHaveBeenCalledWith('new-c-1');
+    });
+
+    it('does not materialize when no callouts are added', async () => {
+      templateService.getTemplateOrFail.mockResolvedValue({
+        id: 'tpl-1',
+        contentSpace: {
+          id: 'tcs-1',
+          collaboration: {
+            innovationFlow: { states: [{ displayName: 'New' }] },
+            calloutsSet: { callouts: [] },
+          },
+        },
+      } as any);
+      const targetCollab = {
+        id: 'collab-1',
+        innovationFlow: { states: [{ displayName: 'Old' }] },
+        calloutsSet: { callouts: [] },
+      } as any;
+      inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState.mockReturnValue(
+        [{ displayName: 'New' }] as any
+      );
+      innovationFlowService.updateInnovationFlowStatesFromTemplate.mockResolvedValue(
+        {} as any
+      );
+      storageAggregatorResolverService.getStorageAggregatorForCollaboration.mockResolvedValue(
+        {} as any
+      );
+      collaborationService.save.mockResolvedValue(targetCollab);
+
+      await service.updateCollaborationFromSpaceTemplate(
+        {
+          collaborationID: 'collab-1',
+          spaceTemplateID: 'tpl-1',
+          addCallouts: false,
+          deleteExistingCallouts: false,
+        },
+        targetCollab,
+        actorContextData.actorContext
+      );
+
+      expect(
+        calloutsSetService.materializeCalloutsSetContent
+      ).not.toHaveBeenCalled();
+    });
+
     describe.each([
       { targetIsTemplate: true, expected: true },
       { targetIsTemplate: false, expected: false },

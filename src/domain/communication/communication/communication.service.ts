@@ -6,6 +6,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import {
   Communication,
   ICommunication,
@@ -20,6 +21,7 @@ import { RoomService } from '../room/room.service';
 @Injectable()
 export class CommunicationService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly roomService: RoomService,
     private readonly communicationAdapter: CommunicationAdapter,
     @InjectRepository(Communication)
@@ -94,6 +96,10 @@ export class CommunicationService {
     await this.roomService.deleteRoom({
       roomID: communication.updates.id,
     });
+
+    if (communication.authorization) {
+      await this.authorizationPolicyService.delete(communication.authorization);
+    }
 
     await this.communicationRepository.remove(communication as Communication);
     return true;

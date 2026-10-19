@@ -17,7 +17,7 @@ export const createBatchLoader = <TResult extends { id: string }>(
   options: {
     name: string; // for debugging purposes
     loadedTypeName: string; // for debugging purposes
-  } & Pick<DataLoaderCreatorBaseOptions<any, any>, 'resolveToNull'>
+  } & Pick<DataLoaderCreatorBaseOptions<any, any>, 'resolveToNull' | 'cache'>
 ): ILoader<
   | TResult
   | null
@@ -45,7 +45,7 @@ export const createBatchLoader = <TResult extends { id: string }>(
       key => resultsById.get(key) ?? resolveUnresolvedForKey(key)
     );
   };
-  const { name, loadedTypeName, resolveToNull } = options;
+  const { name, loadedTypeName, resolveToNull, cache } = options;
   // a function to resolve an unresolved entity for a given key (e.g. if not found, etc.)
   const resolveUnresolvedForKey = (key: string) => {
     return resolveToNull
@@ -64,7 +64,7 @@ export const createBatchLoader = <TResult extends { id: string }>(
     | EntityNotFoundException
     | ForbiddenAuthorizationPolicyException
   >(keys => loadAndEnsureOutputLengthAndOrder(keys), {
-    cache: true,
+    cache,
     name,
   });
 };

@@ -1,4 +1,5 @@
 import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -13,6 +14,7 @@ import { LicensePolicyService } from './license.policy.service';
 
 describe('LicensePolicyService', () => {
   let service: LicensePolicyService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let licensePolicyRepository: MockType<Repository<LicensePolicy>>;
   let entityManager: EntityManager;
 
@@ -30,6 +32,7 @@ describe('LicensePolicyService', () => {
       .compile();
 
     service = module.get(LicensePolicyService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     licensePolicyRepository = module.get(getRepositoryToken(LicensePolicy));
     entityManager = module.get(EntityManager);
   });
@@ -194,6 +197,22 @@ describe('LicensePolicyService', () => {
       });
 
       expect(result.credentialType).toBe('TYPE_B');
+    });
+  });
+
+  describe('delete', () => {
+    it('should delete the authorization policy before removing the policy', async () => {
+      const policy = {
+        id: 'policy-1',
+        authorization: { id: 'auth-1' },
+      } as unknown as ILicensePolicy;
+      licensePolicyRepository.remove!.mockResolvedValue(policy);
+
+      await service.delete(policy);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        policy.authorization
+      );
     });
   });
 });

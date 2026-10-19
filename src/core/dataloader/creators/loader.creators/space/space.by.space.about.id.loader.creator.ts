@@ -1,4 +1,7 @@
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -19,10 +22,12 @@ export class SpaceBySpaceAboutIdLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<ISpace | null> {
+  public create(
+    options?: DataLoaderCreatorOptions<ISpace | null>
+  ): ILoader<ISpace | null> {
     return new DataLoader<string, ISpace | null>(
       async spaceAboutIds => this.batchLoadBySpaceAboutIds(spaceAboutIds),
-      { cache: true, name: 'SpaceBySpaceAboutIdLoader' }
+      { cache: options?.cache, name: 'SpaceBySpaceAboutIdLoader' }
     );
   }
 

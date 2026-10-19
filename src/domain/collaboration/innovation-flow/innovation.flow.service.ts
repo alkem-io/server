@@ -11,6 +11,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateProfileInput } from '@domain/common/profile/dto';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -49,6 +50,7 @@ import { IInnovationFlow } from './innovation.flow.interface';
 @Injectable()
 export class InnovationFlowService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
@@ -878,6 +880,11 @@ export class InnovationFlowService {
     await this.profileService.deleteProfile(innovationFlow.profile.id);
     for (const state of innovationFlow.states) {
       await this.innovationFlowStateService.delete(state);
+    }
+    if (innovationFlow.authorization) {
+      await this.authorizationPolicyService.delete(
+        innovationFlow.authorization
+      );
     }
 
     const result = await this.innovationFlowRepository.remove(

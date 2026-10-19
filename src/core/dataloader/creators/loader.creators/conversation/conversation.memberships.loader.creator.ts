@@ -1,5 +1,8 @@
 import { ActorType } from '@common/enums/actor.type';
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { ConversationMembership } from '@domain/communication/conversation-membership/conversation.membership.entity';
@@ -31,10 +34,12 @@ export class ConversationMembershipsLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<IConversationMembershipWithActorType[]> {
+  public create(
+    options?: DataLoaderCreatorOptions<IConversationMembershipWithActorType[]>
+  ): ILoader<IConversationMembershipWithActorType[]> {
     return new DataLoader<string, IConversationMembershipWithActorType[]>(
       async conversationIds => this.batchLoadMemberships(conversationIds),
-      { cache: true, name: 'ConversationMembershipsLoader' }
+      { cache: options?.cache, name: 'ConversationMembershipsLoader' }
     );
   }
 
