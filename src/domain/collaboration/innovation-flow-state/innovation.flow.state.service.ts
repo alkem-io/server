@@ -157,24 +157,40 @@ export class InnovationFlowStateService {
    * key stays absent) is copied onto the inheritor — and nothing else from its settings — and
    * the copy and the delete commit in one transaction, so a failed copy never leaves the
    * subspace showing the next state's list.
+   *
+   * The inheritor is read inside the transaction and only its `settings` column is written,
+   * so every other setting is the value stored at that moment rather than a stale copy taken
+   * before the transaction began.
    */
   async deleteWithSidebarInheritance(
     deletedStateID: string,
     inheritorStateID: string
   ): Promise<IInnovationFlowState> {
     const deleted = await this.getRawInnovationFlowStateOrFail(deletedStateID);
-    const inheritor =
-      await this.getRawInnovationFlowStateOrFail(inheritorStateID);
-
-    inheritor.settings = withRawSidebar(
-      inheritor.settings,
-      deleted.settings?.sidebar
-    );
 
     const removed =
       await this.innovationFlowStateRepository.manager.transaction(
         async entityManager => {
-          await entityManager.save(InnovationFlowState, inheritor);
+          const inheritor = await entityManager.findOne(InnovationFlowState, {
+            where: { id: inheritorStateID },
+          });
+          if (!inheritor) {
+            throw new EntityNotFoundException(
+              'Unable to find InnovationFlowState to inherit the sidebar',
+              LogContext.INNOVATION_FLOW,
+              { innovationFlowStateID: inheritorStateID }
+            );
+          }
+          await entityManager.update(
+            InnovationFlowState,
+            { id: inheritorStateID },
+            {
+              settings: withRawSidebar(
+                inheritor.settings,
+                deleted.settings?.sidebar
+              ),
+            }
+          );
           if (deleted.authorization) {
             await this.authorizationPolicyService.delete(
               deleted.authorization,
