@@ -89,8 +89,8 @@ export const SIDEBAR_DEFAULT_L0_TAB_3: readonly SidebarWidget[] = Object.freeze(
 );
 
 // Also used as: the create-path default for a state with no explicit sidebar, the
-// read-normalization fallback for a row missing the key, and the L0 4th+/subspace/orphan
-// backfill default.
+// read-normalization fallback for a row missing the key, the L0 4th+/orphan backfill
+// default, and the subspace 4th+ positional default.
 export const SIDEBAR_DEFAULT_GENERIC: readonly SidebarWidget[] = Object.freeze([
   SidebarWidget.INTENT,
   SidebarWidget.CREATE_POST,
@@ -98,3 +98,46 @@ export const SIDEBAR_DEFAULT_GENERIC: readonly SidebarWidget[] = Object.freeze([
   SidebarWidget.SEARCH,
   SidebarWidget.INDEX,
 ]);
+
+/**
+ * The sidebar of the first phase of a subspace (L1/L2) flow, reproducing the subspace page's
+ * previously hard-coded sidebar in its DOM order: the info block, About, Add Post, the Quick
+ * Actions (Community, Events, Recent Activity, Post Index), the nested subspaces, the virtual
+ * contributor card and the latest update. It deliberately contains NO `search`: that sidebar
+ * never had one, so adding it would be a visible change for every untouched subspace.
+ */
+export const SIDEBAR_DEFAULT_SUBSPACE: readonly SidebarWidget[] = Object.freeze(
+  [
+    SidebarWidget.INTENT,
+    SidebarWidget.ABOUT,
+    SidebarWidget.CREATE_POST,
+    SidebarWidget.COMMUNITY,
+    SidebarWidget.EVENTS,
+    SidebarWidget.ACTIVITY,
+    SidebarWidget.INDEX,
+    SidebarWidget.SUBSPACE_LINKS,
+    SidebarWidget.VIRTUAL_CONTRIBUTORS,
+    SidebarWidget.UPDATES,
+  ]
+);
+
+/**
+ * Positional defaults for the phases of a subspace (L1/L2) flow, by 1-based position in
+ * `(sortOrder, id)` order: 1 → the subspace sidebar (the one every phase of a subspace shows),
+ * 2 → the L0 tab-2 list, 3 → the L0 tab-3 list, 4+ → the generic list. Positions 2+ only
+ * matter when a subspace template is applied to, or a subspace converted into, a top-level
+ * Space — they give those tabs sensible lists.
+ *
+ * Consumers: the bootstrap subspace template and the static spec of the migration that
+ * rewrites untouched subspace flows (its SQL literals must equal this output). The creation
+ * funnel deliberately keeps SIDEBAR_DEFAULT_GENERIC for a state with no explicit list:
+ * subspaces are created by copying a template's phases, whose lists are copied verbatim.
+ */
+export const resolveSubspaceDefaultSidebar = (
+  position: number
+): readonly SidebarWidget[] => {
+  if (position <= 1) return SIDEBAR_DEFAULT_SUBSPACE;
+  if (position === 2) return SIDEBAR_DEFAULT_L0_TAB_2;
+  if (position === 3) return SIDEBAR_DEFAULT_L0_TAB_3;
+  return SIDEBAR_DEFAULT_GENERIC;
+};
