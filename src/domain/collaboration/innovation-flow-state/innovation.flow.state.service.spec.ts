@@ -5,6 +5,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Template } from '@domain/template/template/template.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -18,6 +19,7 @@ import { InnovationFlowStateService } from './innovation.flow.state.service';
 
 describe('InnovationFlowStateService', () => {
   let service: InnovationFlowStateService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let repository: Repository<InnovationFlowState>;
   let templateRepository: Repository<Template>;
 
@@ -44,6 +46,7 @@ describe('InnovationFlowStateService', () => {
       .compile();
 
     service = module.get(InnovationFlowStateService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     repository = module.get(getRepositoryToken(InnovationFlowState));
     templateRepository = module.get(getRepositoryToken(Template));
   });
@@ -709,6 +712,22 @@ describe('InnovationFlowStateService', () => {
 
       expect(repository.remove).toHaveBeenCalledWith(state);
       expect(result.id).toBe('state-1');
+    });
+
+    it('should delete the authorization policy before removing the state', async () => {
+      const state = {
+        id: 'state-1',
+        authorization: { id: 'auth-1' },
+      } as InnovationFlowState;
+      vi.mocked(repository.remove).mockResolvedValue({
+        id: undefined,
+      } as any);
+
+      await service.delete(state);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        state.authorization
+      );
     });
   });
 

@@ -5,6 +5,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -18,6 +19,7 @@ import { ITemplateDefault } from './template.default.interface';
 @Injectable()
 export class TemplateDefaultService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(TemplateDefault)
     private templateDefaultRepository: Repository<TemplateDefault>,
     private templateService: TemplateService,
@@ -79,6 +81,11 @@ export class TemplateDefaultService {
   public async removeTemplateDefault(
     templateDefault: ITemplateDefault
   ): Promise<boolean> {
+    if (templateDefault.authorization) {
+      await this.authorizationPolicyService.delete(
+        templateDefault.authorization
+      );
+    }
     await this.templateDefaultRepository.remove(
       templateDefault as TemplateDefault
     );

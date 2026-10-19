@@ -9,6 +9,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
@@ -25,6 +26,7 @@ import { UpdateCommunityGuidelinesInput } from './dto/community.guidelines.dto.u
 @Injectable()
 export class CommunityGuidelinesService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     @InjectRepository(CommunityGuidelines)
@@ -146,6 +148,11 @@ export class CommunityGuidelinesService {
     );
 
     await this.profileService.deleteProfile(communityGuidelines.profile.id);
+    if (communityGuidelines.authorization) {
+      await this.authorizationPolicyService.delete(
+        communityGuidelines.authorization
+      );
+    }
 
     const result = await this.communityGuidelinesRepository.remove(
       communityGuidelines as CommunityGuidelines
