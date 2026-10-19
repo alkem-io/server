@@ -1,4 +1,5 @@
 import {
+  CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL,
   CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
   CREDENTIAL_RULE_ROLESET_VIRTUAL_REMOVAL,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
@@ -18,6 +19,7 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Injectable } from '@nestjs/common';
 import { IRoleSet } from './role.set.interface';
@@ -31,6 +33,7 @@ export class RoleSetAuthorizationService {
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
     private virtualActorLookupService: VirtualActorLookupService,
+    private organizationLookupService: OrganizationLookupService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
@@ -147,20 +150,21 @@ export class RoleSetAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // 027-platform-role-redesign (T076, Slice B): both blanket
-    // entry-role-assign rules are DELETED, not re-anchored.
-    //
-    // They granted `{global-admin, global-support, beta-tester}` the right to
-    // add members and organizations to ANY community role-set. No target role
-    // inherits that: spec §Target global role model row 2 denies Content Full
-    // Access role assignment outright ("it can never elevate anyone, itself
-    // included"), and row 1's Roles Admin owns PLATFORM role assignment and
-    // nothing else (FR-003). Community membership stays with the space's or
-    // organization's own admins — their rules are unchanged — plus Platform
-    // Support where the space sets `allowPlatformSupportAsAdmin`, which arrives
-    // through `platformRolesAccess`, per space, rather than as a standing grant.
-
-    //
+    // 027-platform-role-redesign (T076, Slice B) deleted the two blanket
+    // type-only rules that gave `{global-admin, global-support(, beta-tester)}`
+    // ROLESET_ENTRY_ROLE_ASSIGN / _ASSIGN_ORGANIZATION on every role set. No
+    // target role inherits them, and the role set adds no entry-assign rule of
+    // its own. The resulting model is intended (ruling 2026-10-08,
+    // server#6623), pinned by this file's spec and the community one:
+    // - L0 Space: users enter only by invitation, application or join; nobody
+    //   holds ROLESET_ENTRY_ROLE_ASSIGN, so no direct user add, and no
+    //   cross-account VC add (`assignRoleToVirtualContributor`).
+    // - L1/L2 Space: direct user add stays with subspace/ancestor admins, plus
+    //   Platform Support where the L0 sets `allowPlatformSupportAsAdmin`
+    //   (`CommunityAuthorizationService.extendAuthorizationPolicySubspace`).
+    // - Organizations enter any Space only by invitation: nobody holds
+    //   ROLESET_ENTRY_ROLE_ASSIGN_ORGANIZATION. Changing the role of one
+    //   already in the role set needs GRANT only.
     const updatedAuthorization =
       this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,
@@ -240,6 +244,42 @@ export class RoleSetAuthorizationService {
       );
 
     return updatedAuthorization;
+  }
+
+  /**
+   * Organization ADMIN/OWNER hold the implicit ACCOUNT_ADMIN credential on the
+   * organization's account (see RoleSetService.getCredentialForOrganizationImplicitRole),
+   * so they may remove their own organization. The clone is never persisted.
+   */
+  public async extendAuthorizationPolicyForOrganizationRemoval(
+    roleSet: IRoleSet,
+    organizationToBeRemovedID: string
+  ): Promise<IAuthorizationPolicy> {
+    const accountID =
+      await this.organizationLookupService.getOrganizationAccountIdOrFail(
+        organizationToBeRemovedID
+      );
+    const accountAdminCredential: ICredentialDefinition = {
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: accountID,
+    };
+
+    const organizationSelfRemovalRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.GRANT],
+        [accountAdminCredential],
+        CREDENTIAL_RULE_ORGANIZATION_SELF_REMOVAL
+      );
+
+    const clonedRoleSetAuthorization =
+      this.authorizationPolicyService.cloneAuthorizationPolicy(
+        roleSet.authorization
+      );
+
+    return this.authorizationPolicyService.appendCredentialAuthorizationRules(
+      clonedRoleSetAuthorization,
+      [organizationSelfRemovalRule]
+    );
   }
 
   private appendPrivilegeRules(

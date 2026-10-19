@@ -1,4 +1,5 @@
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
+import { whiteboardSceneToYjsV2State } from '@domain/common/whiteboard/conversion';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
@@ -894,52 +895,211 @@ describe('SearchIngestService', () => {
     });
 
     describe('fetchWhiteboard', () => {
-      it('should ingest framing whiteboards by profile (no scene text)', async () => {
-        // NOTE (006-collab-content-unification): the scene is no longer a JSON
-        // column — it lives only as a Yjs-V2 snapshot in the doc's bucket — so
-        // the scene-text body is no longer indexed; whiteboards are indexed by
-        // their profile (name/description/tags) and `content` is not selected.
-        const space = {
-          id: 'space-1',
-          visibility: 'active',
-          parentSpace: undefined,
-          collaboration: {
-            id: 'collab-1',
-            calloutsSet: {
-              callouts: [
-                {
-                  id: 'callout-1',
-                  framing: {
-                    whiteboard: {
-                      id: 'wb-1',
-                      profile: {
-                        displayName: 'WB',
-                        tagsets: [],
-                      },
-                    },
-                  },
-                  contributions: [],
-                },
-              ],
-            },
+      const sceneSnapshotBase64 = async (...texts: string[]) =>
+        Buffer.from(
+          await whiteboardSceneToYjsV2State(
+            JSON.stringify({
+              type: 'excalidraw',
+              version: 2,
+              source: '',
+              elements: texts.map((text, i) => ({
+                id: `t${i}`,
+                type: 'text',
+                text,
+                originalText: text,
+                x: 0,
+                y: 0,
+                index: `a${i}`,
+              })),
+              appState: {},
+              files: {},
+            })
+          )
+        ).toString('base64');
+
+      const spaceWithWhiteboards = (
+        framing: Record<string, unknown> | null,
+        contributions: Record<string, unknown>[] = []
+      ) => ({
+        id: 'space-1',
+        visibility: 'active',
+        parentSpace: undefined,
+        collaboration: {
+          id: 'collab-1',
+          calloutsSet: {
+            callouts: [
+              {
+                id: 'callout-1',
+                framing: { whiteboard: framing },
+                contributions: contributions.map(whiteboard => ({
+                  whiteboard,
+                })),
+              },
+            ],
           },
-        };
-        mockEntityManager.find.mockResolvedValue([space]);
+        },
+      });
+
+      const getContentBatch = () =>
+        (service as any).fileServiceAdapter.getContentBatch as Mock;
+
+      it('should index the scene text of a framing whiteboard as content', async () => {
+        mockEntityManager.find.mockResolvedValue([
+          spaceWithWhiteboards({
+            id: 'wb-1',
+            contentPointer: 'ptr-1',
+            profile: { displayName: 'WB', tagsets: [] },
+          }),
+        ]);
+        getContentBatch().mockResolvedValue([
+          {
+            id: 'ptr-1',
+            found: true,
+            contentBase64: await sceneSnapshotBase64('quasar055'),
+          },
+        ]);
 
         const result = await (service as any).fetchWhiteboard(0, 100);
 
+        expect(getContentBatch()).toHaveBeenCalledWith(['ptr-1']);
         expect(result).toHaveLength(1);
         expect(result[0].type).toBe('whiteboard');
         expect(result[0].id).toBe('wb-1');
         expect(result[0].calloutID).toBe('callout-1');
-        // Scene text is no longer indexed.
-        expect(result[0].content).toBeUndefined();
+        expect(result[0].content).toBe('quasar055');
+        // the storage locator must never reach the index
+        expect(result[0].contentPointer).toBeUndefined();
         expect(result[0].profile.displayName).toBe('WB');
       });
 
+      it('should index the scene text of contribution whiteboards with one batched read per page', async () => {
+        mockEntityManager.find.mockResolvedValue([
+          spaceWithWhiteboards(
+            {
+              id: 'wb-1',
+              contentPointer: 'ptr-1',
+              profile: { displayName: 'WB', tagsets: [] },
+            },
+            [
+              {
+                id: 'wb-2',
+                contentPointer: 'ptr-2',
+                profile: { displayName: 'WB2', tagsets: [] },
+              },
+            ]
+          ),
+        ]);
+        getContentBatch().mockResolvedValue([
+          {
+            id: 'ptr-1',
+            found: true,
+            contentBase64: await sceneSnapshotBase64('framing words'),
+          },
+          {
+            id: 'ptr-2',
+            found: true,
+            contentBase64: await sceneSnapshotBase64('nebula'),
+          },
+        ]);
+
+        const result = await (service as any).fetchWhiteboard(0, 100);
+
+        expect(getContentBatch()).toHaveBeenCalledTimes(1);
+        expect(getContentBatch().mock.calls[0][0].sort()).toEqual([
+          'ptr-1',
+          'ptr-2',
+        ]);
+        const byId = Object.fromEntries(result.map((r: any) => [r.id, r]));
+        expect(byId['wb-1'].content).toBe('framing words');
+        expect(byId['wb-2'].content).toBe('nebula');
+        expect(byId['wb-2'].contentPointer).toBeUndefined();
+      });
+
+      it('should still index a whiteboard with no content pointer, without content', async () => {
+        mockEntityManager.find.mockResolvedValue([
+          spaceWithWhiteboards({
+            id: 'wb-1',
+            contentPointer: null,
+            profile: { displayName: 'WB', tagsets: [] },
+          }),
+        ]);
+
+        const result = await (service as any).fetchWhiteboard(0, 100);
+
+        expect(getContentBatch()).not.toHaveBeenCalled();
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('wb-1');
+        expect(result[0].content).toBeUndefined();
+        expect(result[0].contentPointer).toBeUndefined();
+      });
+
+      it('should index an undecodable whiteboard by profile only and warn', async () => {
+        mockEntityManager.find.mockResolvedValue([
+          spaceWithWhiteboards(
+            {
+              id: 'wb-1',
+              contentPointer: 'ptr-bad',
+              profile: { displayName: 'WB', tagsets: [] },
+            },
+            [
+              {
+                id: 'wb-2',
+                contentPointer: 'ptr-good',
+                profile: { displayName: 'WB2', tagsets: [] },
+              },
+            ]
+          ),
+        ]);
+        getContentBatch().mockResolvedValue([
+          {
+            id: 'ptr-bad',
+            found: true,
+            contentBase64: Buffer.from([0xff, 0xfe, 0x01, 0x02]).toString(
+              'base64'
+            ),
+          },
+          {
+            id: 'ptr-good',
+            found: true,
+            contentBase64: await sceneSnapshotBase64('nebula'),
+          },
+        ]);
+
+        const result = await (service as any).fetchWhiteboard(0, 100);
+
+        const byId = Object.fromEntries(result.map((r: any) => [r.id, r]));
+        expect(byId['wb-1'].content).toBeUndefined();
+        expect(byId['wb-1'].profile.displayName).toBe('WB');
+        expect(byId['wb-2'].content).toBe('nebula');
+        expect(_mockLogger.warn).toHaveBeenCalledWith(
+          expect.objectContaining({ pointer: 'ptr-bad' }),
+          expect.anything()
+        );
+      });
+
+      it('should index whiteboards by profile only when the batch read fails', async () => {
+        mockEntityManager.find.mockResolvedValue([
+          spaceWithWhiteboards({
+            id: 'wb-1',
+            contentPointer: 'ptr-1',
+            profile: { displayName: 'WB', tagsets: [] },
+          }),
+        ]);
+        getContentBatch().mockRejectedValue(new Error('file-service down'));
+
+        const result = await (service as any).fetchWhiteboard(0, 100);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('wb-1');
+        expect(result[0].content).toBeUndefined();
+        expect(result[0].contentPointer).toBeUndefined();
+        expect(result[0].profile.displayName).toBe('WB');
+        expect(_mockLogger.warn).toHaveBeenCalled();
+      });
+
       it('should ingest whiteboards regardless of scene content', async () => {
-        // The old "skip whiteboards with no content" behavior is gone: a
-        // whiteboard is now always ingested by its profile, even with no scene.
+        // A whiteboard is always ingested by its profile, even with no scene
+        // text, so it stays findable by title.
         const space = {
           id: 'space-1',
           visibility: 'active',
@@ -1129,6 +1289,65 @@ describe('SearchIngestService', () => {
         const result = await (service as any).fetchMemo(0, 100);
 
         expect(result).toEqual([]);
+      });
+
+      const spaceWithFramingMemo = () => ({
+        id: 'space-1',
+        visibility: 'active',
+        parentSpace: undefined,
+        collaboration: {
+          id: 'collab-1',
+          calloutsSet: {
+            callouts: [
+              {
+                id: 'callout-1',
+                framing: {
+                  memo: {
+                    id: 'memo-1',
+                    contentPointer: 'ptr-memo-1',
+                    profile: { displayName: 'Memo', tagsets: [] },
+                  },
+                },
+                contributions: [],
+              },
+            ],
+          },
+        },
+      });
+
+      const getContentBatch = () =>
+        (service as any).fileServiceAdapter.getContentBatch as Mock;
+
+      it('should still skip a memo whose snapshot was read but has no content', async () => {
+        mockEntityManager.find.mockResolvedValue([spaceWithFramingMemo()]);
+        getContentBatch().mockResolvedValue([
+          { id: 'ptr-memo-1', found: false },
+        ]);
+
+        const result = await (service as any).fetchMemo(0, 100);
+
+        expect(result).toEqual([]);
+      });
+
+      it('should index memos by profile only when the snapshot read fails', async () => {
+        mockEntityManager.find.mockResolvedValue([spaceWithFramingMemo()]);
+        getContentBatch().mockRejectedValue(new Error('file-service down'));
+
+        const result = await (service as any).fetchMemo(0, 100);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('memo-1');
+        expect(result[0].type).toBe('memo');
+        expect(result[0].markdown).toBeUndefined();
+        expect(result[0].contentPointer).toBeUndefined();
+        expect(result[0].profile.displayName).toBe('Memo');
+        expect(_mockLogger.warn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message:
+              'Search ingest: failed to read memo snapshots; indexing by profile only',
+          }),
+          expect.anything()
+        );
       });
     });
 

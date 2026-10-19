@@ -4,6 +4,7 @@ import { RoomType } from '@common/enums/room.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -37,7 +38,8 @@ export class CalendarEventService {
   public async createCalendarEvent(
     calendarEventInput: CreateCalendarEventInput,
     storageAggregator: IStorageAggregator,
-    userID: string
+    userID: string,
+    actorContext?: ActorContext
   ): Promise<ICalendarEvent> {
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const calendarEvent: ICalendarEvent =
@@ -81,9 +83,10 @@ export class CalendarEventService {
     }
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
-      calendarEventInput.profileData?.visuals,
+      calendarEventInput.profileData,
       [],
-      () => this.deleteCalendarEvent({ ID: saved.id })
+      () => this.deleteCalendarEvent({ ID: saved.id }),
+      actorContext
     );
     return saved;
   }

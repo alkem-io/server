@@ -7,6 +7,7 @@ import {
   NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILocation, LocationService } from '@domain/common/location';
@@ -18,6 +19,7 @@ import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { IVisual } from '@domain/common/visual/visual.interface';
 import { VisualService } from '@domain/common/visual/visual.service';
+import { DocumentCopyAuthority } from '@domain/profile-documents/document.copy.authority';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -111,7 +113,8 @@ export class ProfileService {
    * yet — that's a programmer error, not a runtime condition.
    */
   private async materializeProfileContent(
-    profile: IProfile
+    profile: IProfile,
+    copyAuthority: DocumentCopyAuthority
   ): Promise<IProfile> {
     if (!profile.storageBucket?.id) {
       throw new EntityNotInitializedException(
@@ -124,7 +127,8 @@ export class ProfileService {
       profile.description =
         await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
           profile.description,
-          profile.storageBucket
+          profile.storageBucket,
+          copyAuthority
         );
     }
     for (const reference of profile.references ?? []) {
@@ -132,13 +136,46 @@ export class ProfileService {
         await this.profileDocumentsService.reuploadFileOnStorageBucket(
           reference.uri,
           profile.storageBucket,
-          false
+          false,
+          copyAuthority
         );
       if (newUrl) {
         reference.uri = newUrl;
       }
     }
     return profile;
+  }
+
+  /**
+   * Re-homes the file URLs in markdown that belongs with `profile` but is
+   * stored on its owning entity (a space's who/why, a flow state's
+   * description), into the profile's bucket, under the same copy rule as the
+   * profile's own description.
+   */
+  public async materializeMarkdownIntoProfileBucket(
+    markdown: string,
+    profile: IProfile,
+    profileData: CreateProfileInput | undefined,
+    actorContext?: ActorContext
+  ): Promise<string> {
+    if (!markdown) {
+      return markdown;
+    }
+    if (!profile.storageBucket?.id) {
+      throw new EntityNotInitializedException(
+        'Profile storage bucket must be persisted before materializing content',
+        LogContext.PROFILE,
+        { profileId: profile.id }
+      );
+    }
+    return await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+      markdown,
+      profile.storageBucket,
+      {
+        sourceStorageBucketID: profileData?.sourceStorageBucketID,
+        actorContext,
+      }
+    );
   }
 
   /**
@@ -149,13 +186,22 @@ export class ProfileService {
    *
    * Precondition: `profile.storageBucket` must be persisted (typically via
    * the parent entity's cascade save). See {@link materializeProfileContent}.
+   *
+   * `profileData` is the create input the profile was built from: its visuals
+   * are attached, and its `sourceStorageBucketID` together with `actorContext`
+   * decides which files stored elsewhere may be copied in.
    */
   public async materializeProfileContentAndVisuals(
     profile: IProfile,
-    visualsData: CreateVisualOnProfileInput[] | undefined,
-    visualTypes: VisualType[]
+    profileData: CreateProfileInput | undefined,
+    visualTypes: VisualType[],
+    actorContext?: ActorContext
   ): Promise<IProfile> {
-    await this.materializeProfileContent(profile);
+    const copyAuthority: DocumentCopyAuthority = {
+      sourceStorageBucketID: profileData?.sourceStorageBucketID,
+      actorContext,
+    };
+    await this.materializeProfileContent(profile, copyAuthority);
     if (visualTypes.length > 0) {
       // Filter out visualTypes the profile already has — `addVisualsOnProfile`
       // doesn't dedupe internally, so without this filter every re-invocation
@@ -165,7 +211,12 @@ export class ProfileService {
       const existing = new Set(profile.visuals?.map(v => v.name) ?? []);
       const missing = requested.filter(type => !existing.has(type));
       if (missing.length > 0) {
-        await this.addVisualsOnProfile(profile, visualsData, missing);
+        await this.addVisualsOnProfile(
+          profile,
+          profileData?.visuals,
+          missing,
+          copyAuthority
+        );
       }
     }
     return await this.profileRepository.save(profile);
@@ -189,15 +240,17 @@ export class ProfileService {
    */
   public async materializeProfileContentAndVisualsOrRollback(
     profile: IProfile,
-    visualsData: CreateVisualOnProfileInput[] | undefined,
+    profileData: CreateProfileInput | undefined,
     visualTypes: VisualType[],
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<IProfile> {
     try {
       return await this.materializeProfileContentAndVisuals(
         profile,
-        visualsData,
-        visualTypes
+        profileData,
+        visualTypes,
+        actorContext
       );
     } catch (error) {
       try {
@@ -426,7 +479,8 @@ export class ProfileService {
   public async addVisualsOnProfile(
     profile: IProfile,
     visualsData: CreateVisualOnProfileInput[] | undefined,
-    visualTypes: VisualType[]
+    visualTypes: VisualType[],
+    copyAuthority: DocumentCopyAuthority = {}
   ): Promise<IProfile> {
     if (!profile.visuals || !profile.storageBucket) {
       throw new EntityNotInitializedException(
@@ -480,7 +534,8 @@ export class ProfileService {
           await this.profileDocumentsService.reuploadFileOnStorageBucket(
             providedVisual.uri,
             profile.storageBucket,
-            !allowExternalUrl
+            !allowExternalUrl,
+            copyAuthority
           );
         if (url) {
           visual.uri = url;

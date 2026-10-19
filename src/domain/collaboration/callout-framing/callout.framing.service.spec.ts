@@ -365,6 +365,7 @@ describe('CalloutFramingService', () => {
       ).toHaveBeenCalledWith(
         framingData.collaboraDocument,
         expect.anything(),
+        actorContextData.actorContext,
         'user-1'
       );
     });
@@ -404,6 +405,7 @@ describe('CalloutFramingService', () => {
       ).toHaveBeenCalledWith(
         framingData.collaboraDocument,
         expect.anything(),
+        actorContextData.actorContext,
         'user-1'
       );
     });
@@ -969,7 +971,8 @@ describe('CalloutFramingService', () => {
       expect(memoService.replaceMemoContent).toHaveBeenCalledWith(
         'memo-1',
         'actor-1',
-        'new content'
+        'new content',
+        expect.anything()
       );
     });
 

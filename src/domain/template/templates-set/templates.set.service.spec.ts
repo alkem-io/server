@@ -282,6 +282,10 @@ describe('TemplatesSetService', () => {
       inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace.mockResolvedValue(
         contentSpaceInput
       );
+      const withoutSourceBuckets = { about: {}, stripped: true } as any;
+      inputCreatorService.withoutSourceBuckets.mockReturnValue(
+        withoutSourceBuckets
+      );
       namingService.getReservedNameIDsInTemplatesSet.mockResolvedValue([]);
       namingService.createNameIdAvoidingReservedNameIDs.mockReturnValue(
         'space-template'
@@ -308,10 +312,15 @@ describe('TemplatesSetService', () => {
       expect(
         inputCreatorService.buildCreateTemplateContentSpaceInputFromSpace
       ).toHaveBeenCalledWith('space-1', true);
+      // A live space's nested buckets are never trusted: each file needs the
+      // saver's own READ to be copied into the template.
+      expect(inputCreatorService.withoutSourceBuckets).toHaveBeenCalledWith(
+        contentSpaceInput
+      );
       expect(templateService.createTemplate).toHaveBeenCalledWith(
         expect.objectContaining({
           type: TemplateType.SPACE,
-          contentSpaceData: contentSpaceInput,
+          contentSpaceData: withoutSourceBuckets,
         }),
         expect.anything(),
         actorContextData.actorContext

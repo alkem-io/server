@@ -1,6 +1,8 @@
 language: en
 early_access: false
 reviews:
+  # Approve once all CodeRabbit comments are resolved; request changes while any are open.
+  request_changes_workflow: true
   high_level_summary: true
   poem: false
   review_status: true

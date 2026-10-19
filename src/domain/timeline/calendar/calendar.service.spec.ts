@@ -291,7 +291,8 @@ describe('CalendarService', () => {
       expect(calendarEventService.createCalendarEvent).toHaveBeenCalledWith(
         input,
         mockStorageAggregator,
-        'user-1'
+        'user-1',
+        undefined
       );
       expect(mockEvent.calendar).toBe(mockCalendar);
       expect(calendarEventService.save).toHaveBeenCalledWith(mockEvent);
@@ -336,7 +337,8 @@ describe('CalendarService', () => {
       expect(calendarEventService.createCalendarEvent).toHaveBeenCalledWith(
         expect.objectContaining({ nameID: 'custom-name-id' }),
         mockStorageAggregator,
-        'user-1'
+        'user-1',
+        undefined
       );
     });
 

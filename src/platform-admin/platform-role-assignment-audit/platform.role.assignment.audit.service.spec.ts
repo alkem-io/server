@@ -74,9 +74,9 @@ describe('PlatformRoleAssignmentAuditService', () => {
     expect(logger.error).toHaveBeenCalled();
   });
 
-  it('records an FR-025 attribution fallback: a legacy-broad-credential operator writes as platform_admin', async () => {
+  it('records a caller-supplied platform_admin initiator role verbatim — the enum value stays writable', async () => {
     await service.recordGrantOrRevoke({
-      initiatorUserId: 'legacy-admin-1',
+      initiatorUserId: 'operator-1',
       initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ADMIN,
       targetKind: 'user',
       targetId: 'user-1',

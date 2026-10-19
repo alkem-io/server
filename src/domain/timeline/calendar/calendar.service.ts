@@ -127,7 +127,8 @@ export class CalendarService {
 
   public async createCalendarEvent(
     calendarEventData: CreateCalendarEventOnCalendarInput,
-    userID: string
+    userID: string,
+    actorContext?: ActorContext
   ): Promise<ICalendarEvent> {
     const calendar = await this.getCalendarOrFail(
       calendarEventData.calendarID,
@@ -160,7 +161,8 @@ export class CalendarService {
     const calendarEvent = await this.calendarEventService.createCalendarEvent(
       calendarEventData,
       storageAggregator,
-      userID
+      userID,
+      actorContext
     );
     calendarEvent.calendar = calendar;
     return await this.calendarEventService.save(calendarEvent);

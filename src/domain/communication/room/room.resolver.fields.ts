@@ -2,7 +2,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { MessageID } from '@domain/common/scalars';
+import { MessageID, UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
@@ -35,9 +35,15 @@ export class RoomResolverFields {
   async messages(@Parent() room: IRoom): Promise<IMessage[]> {
     const result = await this.roomService.getMessages(room);
     if (!result) return [];
-    // Share one bucket/document lookup across the history field resolvers.
-    await this.messageAttachmentService.stampAttachmentBucket(room, result);
     return result;
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('attachmentBucketId', () => UUID, { nullable: true })
+  async attachmentBucketId(@Parent() room: IRoom): Promise<string | undefined> {
+    return (await this.messageAttachmentService.getTargetBucketForRoom(room))
+      ?.id;
   }
 
   @ResolveField('vcInteractions', () => [IVcInteraction], {

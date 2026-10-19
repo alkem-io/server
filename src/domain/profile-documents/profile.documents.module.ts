@@ -1,3 +1,4 @@
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
@@ -5,7 +6,12 @@ import { FileServiceAdapterModule } from '@services/adapters/file-service-adapte
 import { ProfileDocumentsService } from './profile.documents.service';
 
 @Module({
-  imports: [DocumentModule, StorageBucketModule, FileServiceAdapterModule],
+  imports: [
+    AuthorizationModule,
+    DocumentModule,
+    StorageBucketModule,
+    FileServiceAdapterModule,
+  ],
   providers: [ProfileDocumentsService],
   exports: [ProfileDocumentsService],
 })

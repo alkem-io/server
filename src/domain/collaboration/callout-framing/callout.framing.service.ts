@@ -174,6 +174,7 @@ export class CalloutFramingService {
           calloutFraming,
           calloutFramingData.memo,
           storageAggregator,
+          actorContext,
           userID
         );
       } else {
@@ -187,8 +188,9 @@ export class CalloutFramingService {
     if (calloutFraming.type === CalloutFramingType.MEDIA_GALLERY) {
       await this.createNewMediaGalleryInCalloutFraming(
         calloutFraming,
-        calloutFramingData.mediaGallery?.visuals,
+        calloutFramingData.mediaGallery,
         storageAggregator,
+        actorContext,
         userID
       );
     }
@@ -212,6 +214,7 @@ export class CalloutFramingService {
           await this.collaboraDocumentService.createCollaboraDocument(
             calloutFramingData.collaboraDocument,
             storageAggregator,
+            actorContext,
             userID
           );
       } else {
@@ -252,7 +255,8 @@ export class CalloutFramingService {
   public async materializeCalloutFramingContent(
     calloutFraming: ICalloutFraming,
     calloutFramingData: CreateCalloutFramingInput | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<void> {
     if (!calloutFraming.profile) {
       throw new RelationshipNotFoundException(
@@ -279,9 +283,10 @@ export class CalloutFramingService {
     }
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       calloutFraming.profile,
-      calloutFramingData?.profile?.visuals,
+      calloutFramingData?.profile,
       [VisualType.CARD, VisualType.BANNER],
-      rollback
+      rollback,
+      actorContext
     );
     if (
       calloutFraming.type === CalloutFramingType.LINK &&
@@ -290,7 +295,13 @@ export class CalloutFramingService {
       await this.linkService.materializeLinkContent(
         calloutFraming.link,
         calloutFramingData?.link,
-        rollback
+        rollback,
+        actorContext,
+        {
+          bucket: calloutFraming.profile.storageBucket,
+          sourceStorageBucketID:
+            calloutFramingData?.profile?.sourceStorageBucketID,
+        }
       );
     }
   }
@@ -320,6 +331,7 @@ export class CalloutFramingService {
     calloutFraming: ICalloutFraming,
     memoData: CreateMemoInput,
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID?: string
   ) {
     const reservedNameIDs: string[] = []; // no reserved nameIDs for framing
@@ -334,7 +346,8 @@ export class CalloutFramingService {
       memoData,
       storageAggregator,
       userID,
-      [VisualType.CARD, VisualType.BANNER]
+      [VisualType.CARD, VisualType.BANNER],
+      actorContext
     );
   }
 
@@ -351,12 +364,12 @@ export class CalloutFramingService {
 
   private async createNewMediaGalleryInCalloutFraming(
     calloutFraming: ICalloutFraming,
-    visuals:
-      | { name: VisualType; uri: string; sortOrder?: number }[]
-      | undefined,
+    mediaGalleryData: CreateCalloutFramingInput['mediaGallery'],
     storageAggregator: IStorageAggregator,
+    actorContext: ActorContext,
     userID?: string
   ) {
+    const visuals = mediaGalleryData?.visuals;
     calloutFraming.mediaGallery =
       await this.mediaGalleryService.createMediaGallery(
         storageAggregator,
@@ -375,14 +388,18 @@ export class CalloutFramingService {
           const newUrl =
             await this.profileDocumentsService.reuploadFileOnStorageBucket(
               visualData.uri,
-              calloutFraming.mediaGallery.storageBucket
+              calloutFraming.mediaGallery.storageBucket,
+              false,
+              {
+                sourceStorageBucketID: mediaGalleryData?.sourceStorageBucketID,
+                actorContext,
+              }
             );
           if (newUrl) {
             const visual =
               await this.mediaGalleryService.addVisualToMediaGallery(
                 calloutFraming.mediaGallery.id,
-                visualData.name,
-                visualData.sortOrder
+                visualData.name
               );
             visual.uri = newUrl;
             calloutFraming.mediaGallery.visuals.push(visual);
@@ -600,7 +617,8 @@ export class CalloutFramingService {
           calloutFraming.memo = await this.memoService.replaceMemoContent(
             calloutFraming.memo.id,
             userID ?? '',
-            calloutFramingData.memoContent
+            calloutFramingData.memoContent,
+            actorContext
           );
         } else {
           // if there is content and no Memo, we create a new one
@@ -613,6 +631,7 @@ export class CalloutFramingService {
               // content: calloutFramingData.memoContent,
             },
             storageAggregator,
+            actorContext,
             userID
           );
         }
@@ -637,8 +656,9 @@ export class CalloutFramingService {
         if (!calloutFraming.mediaGallery) {
           await this.createNewMediaGalleryInCalloutFraming(
             calloutFraming,
-            [],
+            undefined,
             storageAggregator,
+            actorContext,
             userID
           );
         }
@@ -691,6 +711,7 @@ export class CalloutFramingService {
             await this.collaboraDocumentService.createCollaboraDocument(
               calloutFramingData.collaboraDocument,
               storageAggregator,
+              actorContext,
               userID
             );
         }

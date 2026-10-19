@@ -33,12 +33,9 @@ export class AdminAuthorizationResolverMutations {
 
   // 027-platform-role-redesign (T080, Slice B, FR-022): the four credential
   // mutations that stood here — grant/revokeCredentialTo{User,Organization}
-  // — are DELETED, and T034a's resolver-local `[GLOBAL_ADMIN]` pin goes with
-  // them. That pairing is the point of the census's `retiredIn: 'B'` marker:
-  // the pin existed only to keep T034's widening of PLATFORM_ROLES_ASSIGN
-  // off these four, so a pin outliving its mutations would be a policy
-  // object guarding nothing, and a mutation outliving its pin would be the
-  // hole T034a was built to close.
+  // — are DELETED, and the resolver-local `[GLOBAL_ADMIN]` pin went with
+  // them: the pin existed only to keep the widening of
+  // PLATFORM_ROLES_ASSIGN off these four.
   //
   // The SERVICE methods are deliberately retained on
   // `AdminAuthorizationService` — `bootstrap.service.ts` calls

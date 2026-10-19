@@ -235,7 +235,6 @@ describe('InnovationPackResolverMutations', () => {
         expect.arrayContaining([
           AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
         ]),
-        expect.any(Array),
         expect.objectContaining({
           resourceKind: 'innovation-pack',
           resourceId: 'pack-1',

@@ -56,9 +56,7 @@ export class AdminMcpApiKeyResolverFields {
 
   // 027-platform-role-redesign (A5): a user's MCP keys are user-credential
   // lifecycle — the Platform Users Admin family, same as identity reset —
-  // so the gate is PLATFORM_USERS_ADMIN on the platform policy (Slice A:
-  // that rule still unions the legacy broad credentials), never the
-  // retiring PLATFORM_ADMIN catch-all.
+  // so the gate is PLATFORM_USERS_ADMIN on the platform policy.
   private async assertUsersAdmin(
     actorContext: ActorContext,
     description: string

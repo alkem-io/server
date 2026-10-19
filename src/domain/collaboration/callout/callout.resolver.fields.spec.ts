@@ -1,10 +1,14 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { ReactionType } from '@common/enums/reaction.type';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutMyReactionLoaderCreator } from '@core/dataloader/creators/loader.creators/callout/callout.my.reaction.loader.creator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CALLOUT_REACTION_ALLOWED_EMOJIS } from '@domain/collaboration/reaction/reaction.constants';
 import { ReactionService } from '@domain/collaboration/reaction/reaction.service';
+import { SpaceCollectionService } from '@domain/collaboration/space-collection/space.collection.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -28,6 +32,8 @@ describe('CalloutResolverFields', () => {
   let calloutService: Mocked<CalloutService>;
   let reactionService: Mocked<ReactionService>;
   let myReactionHelper: Mocked<CalloutMyReactionLoaderCreator>;
+  let spaceCollectionService: Mocked<SpaceCollectionService>;
+  let authorizationService: Mocked<AuthorizationService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -48,6 +54,156 @@ describe('CalloutResolverFields', () => {
     myReactionHelper = module.get<CalloutMyReactionLoaderCreator>(
       CalloutMyReactionLoaderCreator
     ) as Mocked<CalloutMyReactionLoaderCreator>;
+    spaceCollectionService = module.get<SpaceCollectionService>(
+      SpaceCollectionService
+    ) as Mocked<SpaceCollectionService>;
+    authorizationService = module.get<AuthorizationService>(
+      AuthorizationService
+    ) as Mocked<AuthorizationService>;
+  });
+
+  // workspace#084 SEC-084-CW-01. The curated list is readable only by actors who
+  // may EDIT the callout. Handing it to a viewer defeats AC6: the notice reports
+  // only THAT spaces are hidden, but a viewer holding the stored list can diff it
+  // against the rendered `framing.subspaces` and recover the exact count and the
+  // UUIDs withheld from them.
+  describe('settings — selectedIds redaction', () => {
+    const actorContext = { actorID: 'actor-1' } as any;
+
+    const makeSelectionCallout = (): ICallout =>
+      ({
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        settings: {
+          visibility: 'published',
+          contribution: { allowedTypes: [] },
+          framing: {
+            // Siblings of `selection` are deliberately populated: with a
+            // framing that held nothing else, dropping the `...settings.framing`
+            // spread from the redaction kept every case green while nullifying
+            // the non-null CalloutSettingsFraming.commentsEnabled in production
+            // (review ENG-084-R-03).
+            commentsEnabled: true,
+            spaces: { cardVariant: 'COMPACT' },
+            contributors: { defaultView: 'LIST' },
+            selection: {
+              mode: CalloutSelectionMode.CUSTOM,
+              selectedIds: ['space-a', 'space-b'],
+            },
+          },
+        },
+      }) as unknown as ICallout;
+
+    it('hands the real list to an actor holding UPDATE', () => {
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      const callout = makeSelectionCallout();
+
+      const result = resolver.settings(callout, actorContext);
+
+      expect(result.framing.selection?.selectedIds).toEqual([
+        'space-a',
+        'space-b',
+      ]);
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE
+      );
+    });
+
+    // RED without the redaction: the viewer receives ['space-a','space-b'].
+    it('redacts the list to EMPTY for an actor without UPDATE', () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = resolver.settings(makeSelectionCallout(), actorContext);
+
+      expect(result.framing.selection?.selectedIds).toEqual([]);
+    });
+
+    // An empty array, never a throw and never null: selectedIds is `[ID!]!`, so
+    // a throwing guard would nullify CalloutSelectionSettings and cascade up the
+    // non-null chain. `mode` says how the collection is computed, not what is in
+    // it, so it survives redaction — the client reads it at two mount sites.
+    it('keeps the non-null contract and preserves mode while redacting', () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = resolver.settings(makeSelectionCallout(), actorContext);
+
+      expect(Array.isArray(result.framing.selection?.selectedIds)).toBe(true);
+      expect(result.framing.selection?.mode).toBe(CalloutSelectionMode.CUSTOM);
+      expect(result.visibility).toBe('published');
+      expect(result.contribution).toEqual({ allowedTypes: [] });
+      // RED if the `...settings.framing` spread is dropped.
+      expect(result.framing.commentsEnabled).toBe(true);
+      expect(result.framing.spaces).toEqual({ cardVariant: 'COMPACT' });
+      expect(result.framing.contributors).toEqual({ defaultView: 'LIST' });
+    });
+
+    // RED against an in-place redaction: mutating callout.settings would strip
+    // the list for every later consumer of the same loaded entity in the same
+    // request, including the authorization layer and any save path.
+    it('does NOT mutate the loaded callout', () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+      const callout = makeSelectionCallout();
+
+      resolver.settings(callout, actorContext);
+
+      expect(callout.settings.framing.selection?.selectedIds).toEqual([
+        'space-a',
+        'space-b',
+      ]);
+    });
+
+    // No selection, or an already-empty one, needs no privilege check at all —
+    // AUTO collections and every non-collection callout kind pay nothing.
+    it('short-circuits with no privilege check when there is nothing to redact', () => {
+      const callout = {
+        id: 'callout-2',
+        authorization: { id: 'auth-2' },
+        settings: { contribution: { allowedTypes: [] }, framing: {} },
+      } as unknown as ICallout;
+
+      const result = resolver.settings(callout, actorContext);
+
+      expect(result).toBe(callout.settings);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
+    // Fail closed, and now REACHABLE through GraphQL: the field guard that used
+    // to throw first was deleted (review ENG-084-R-01/SEC-R3/SEC-R4), so an
+    // authorization-less callout — authorizationId is ON DELETE SET NULL —
+    // does reach this branch.
+    it('redacts when the callout carries no authorization policy', () => {
+      const callout = makeSelectionCallout();
+      (callout as any).authorization = undefined;
+
+      const result = resolver.settings(callout, actorContext);
+
+      expect(result.framing.selection?.selectedIds).toEqual([]);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+  });
+
+  // workspace#084 FR-018 / AC6. The field lives HERE, on the Callout, and not
+  // on CalloutFraming, because the selection mode is a jsonb column on this
+  // parent object — a framing-level field would have to load the parent
+  // callout before it could answer `false` for AUTO (carried finding
+  // COMP-084-R5-07: the sibling resolve fields all carry cases here).
+  describe('hasHiddenSpaces', () => {
+    const actorContext = { credentials: [] } as any;
+
+    it('delegates to the collection service with the requesting actor', async () => {
+      const callout = makeCallout('c-1', []);
+      spaceCollectionService.hasHiddenSpaces.mockResolvedValue(true);
+
+      const result = await resolver.hasHiddenSpaces(callout, actorContext);
+
+      expect(result).toBe(true);
+      expect(spaceCollectionService.hasHiddenSpaces).toHaveBeenCalledWith(
+        callout,
+        actorContext
+      );
+    });
   });
 
   describe('activity', () => {

@@ -57,19 +57,35 @@ describe('CalloutService — card-variant settings wiring', () => {
   };
 
   /** Host space with the given direct subspaces, resolved via calloutsSet. */
-  function mockHostSpace(subspaceIds: string[]) {
+  /**
+   * `accountSpaceIds` are the ids that belong to the host space's ACCOUNT —
+   * the scope the SPACES selection guard tests against since workspace#084
+   * (it was "the host's direct subspaces" before).
+   */
+  function mockHostSpace(accountSpaceIds: string[]) {
+    // `createQueryBuilder(Space, alias)` → the shared account-scope predicate;
+    // `createQueryBuilder()` → `getParentSpaceId`.
+    const accountScopeBuilder: any = {
+      innerJoin: vi.fn(() => accountScopeBuilder),
+      where: vi.fn(() => accountScopeBuilder),
+      andWhere: vi.fn(() => accountScopeBuilder),
+      select: vi.fn(() => accountScopeBuilder),
+      getRawMany: vi
+        .fn()
+        .mockResolvedValue(accountSpaceIds.map(id => ({ id }))),
+    };
+    const parentSpaceBuilder: any = {
+      select: vi.fn(() => parentSpaceBuilder),
+      from: vi.fn(() => parentSpaceBuilder),
+      innerJoin: vi.fn(() => parentSpaceBuilder),
+      where: vi.fn(() => parentSpaceBuilder),
+      getRawOne: vi.fn().mockResolvedValue({ spaceId: 'host-space-1' }),
+    };
     calloutRepo.manager = {
-      findOne: vi.fn().mockResolvedValue({
-        id: 'host-space-1',
-        subspaces: subspaceIds.map(id => ({ id })),
-      }),
-      createQueryBuilder: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        from: vi.fn().mockReturnThis(),
-        innerJoin: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        getRawOne: vi.fn().mockResolvedValue({ spaceId: 'host-space-1' }),
-      }),
+      findOne: vi.fn().mockResolvedValue({ id: 'host-space-1' }),
+      createQueryBuilder: vi.fn((entity?: unknown) =>
+        entity ? accountScopeBuilder : parentSpaceBuilder
+      ),
     };
   }
 
@@ -136,7 +152,10 @@ describe('CalloutService — card-variant settings wiring', () => {
 
     service = module.get(CalloutService);
     // Call-through spy on the private host-scope guard.
-    scopeGuardSpy = vi.spyOn(service as any, 'validateSelectionScopeGuard');
+    scopeGuardSpy = vi.spyOn(
+      service as any,
+      'validateAndNormalizeSelectionScope'
+    );
 
     calloutRepo = module.get<any>(getRepositoryToken(Callout));
     vi.mocked(calloutRepo.save).mockImplementation(async (c: any) => c);
@@ -418,7 +437,10 @@ describe('CalloutService — card-variant settings wiring', () => {
       expect(scopeGuardSpy).toHaveBeenCalledWith(
         CalloutFramingType.SPACES,
         { mode: CalloutSelectionMode.CUSTOM, selectedIds: ['sub-1'] },
-        'host-space-1'
+        'host-space-1',
+        // The PRE-MERGE stored selection (workspace#084 ruling D3) — here the
+        // callout stored none, so the whole submitted list counts as added.
+        []
       );
       // Writing spaces never disturbs the sibling selection block.
       expect(result.settings.framing.selection).toEqual({

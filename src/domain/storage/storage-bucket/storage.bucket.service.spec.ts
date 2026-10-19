@@ -20,6 +20,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { FileServiceAdapterException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -97,6 +98,86 @@ describe('StorageBucketService', () => {
   let configService: ConfigService;
   let signingAttemptService: SigningAttemptService;
 
+  describe('shared first media placement', () => {
+    const expectedSource = '00000000-0000-4000-8000-000000000013';
+    it.each([
+      409,
+      undefined,
+    ])('cleans only definitely unused MOVE metadata (status %s)', async status => {
+      const target = mockStorageBucket({
+        id: 'target',
+        authorization: { id: 'parent' } as any,
+      });
+      vi.spyOn(service, 'getStorageBucketOrFail').mockResolvedValue(target);
+      const source = mockDocument({ id: 'staged', externalReference: 'media' });
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'prepared-policy',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'prepared-tags' });
+      (fileServiceAdapter.moveDocument as Mock).mockRejectedValue(
+        new FileServiceAdapterException('rejected', 'moveDocument', status)
+      );
+      await expect(
+        service.moveDocumentToBucket(target.id, source, 'actor', expectedSource)
+      ).rejects.toThrow('rejected');
+      expect(authorizationPolicyService.delete).toHaveBeenCalledTimes(
+        status === 409 ? 1 : 0
+      );
+      expect(tagsetService.removeTagset).toHaveBeenCalledTimes(
+        status === 409 ? 1 : 0
+      );
+    });
+    it('composes policy/tagset before an atomic identity-preserving MOVE', async () => {
+      const target = mockStorageBucket({
+        id: 'target',
+        authorization: { id: 'parent' } as any,
+        directStorageOwner: { type: StorageAggregatorType.CONVERSATION } as any,
+      });
+      vi.spyOn(service, 'getStorageBucketOrFail').mockResolvedValue(target);
+      const source = mockDocument({
+        id: 'staged',
+        externalReference: 'media',
+        storageBucket: { id: expectedSource } as any,
+      });
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'prepared-policy',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'prepared-tags' });
+      (fileServiceAdapter.moveDocument as Mock).mockImplementation(async () => {
+        expect(
+          documentAuthorizationService.applyAuthorizationPolicy
+        ).toHaveBeenCalled();
+        return { id: source.id, storageBucketId: target.id };
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument({ id: source.id })
+      );
+      const result = await service.moveDocumentToBucket(
+        target.id,
+        source,
+        'actor',
+        expectedSource,
+        { displayName: 'sent.png' }
+      );
+      expect(result.id).toBe(source.id);
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        source.id,
+        expect.objectContaining({
+          storageBucketId: target.id,
+          expectedStorageBucketId: expectedSource,
+          authorizationId: 'prepared-policy',
+          tagsetId: 'prepared-tags',
+          createdBy: 'actor',
+          displayName: 'sent.png',
+          temporaryLocation: false,
+        })
+      );
+      expect(
+        documentAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith(expect.anything(), target.authorization, false);
+    });
+  });
+
   beforeEach(async () => {
     vi.restoreAllMocks();
 
@@ -116,6 +197,7 @@ describe('StorageBucketService', () => {
             createDocument: vi.fn(),
             createDocumentFromStream: vi.fn(),
             copyDocument: vi.fn(),
+            moveDocument: vi.fn(),
             getDocumentContent: vi.fn(),
             updateDocument: vi.fn(),
             deleteDocument: vi.fn(),
@@ -1299,6 +1381,30 @@ describe('StorageBucketService', () => {
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
+    it('retains prepared entities when COPY reuse references this same invocation after a committed retry', async () => {
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+        mockStorageBucket({ id: 'bucket-dst' })
+      );
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-this-call',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tags-this-call' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'committed',
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument({
+          id: 'committed',
+          authorization: { id: 'auth-this-call' } as any,
+          tagset: { id: 'tags-this-call' } as any,
+        })
+      );
+      await service.copyDocumentToBucket('bucket-dst', makeSourceDoc());
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+    });
+
     it('releases pre-created auth + tagset when Go responds reused:true', async () => {
       // Same dedup-reuse contract as createDocument: when Go returns an
       // existing row, our pre-created auth/tagset are orphans and must be
@@ -2100,6 +2206,46 @@ describe('StorageBucketService', () => {
       await expect(service.getDocuments(bucket)).rejects.toThrow(
         EntityNotFoundException
       );
+    });
+  });
+
+  describe('uploadFileFromURI', () => {
+    const upload = (oldDocumentBucketID: string) => {
+      (documentService.getDocumentFromURL as Mock).mockResolvedValue({
+        id: 'old-doc',
+        externalID: 'old-ext',
+        storageBucket: { id: oldDocumentBucketID },
+      } as any);
+      vi.spyOn(service, 'uploadFileAsDocument').mockResolvedValue({
+        id: 'new-doc',
+        externalID: 'new-ext',
+      } as any);
+      (documentService.deleteDocument as Mock).mockResolvedValue(undefined);
+      return service.uploadFileFromURI(
+        'https://alkem.io/api/private/rest/storage/document/old-doc',
+        'reference-1',
+        { id: 'own-bucket' } as any,
+        Readable.from(['x']),
+        'file.png',
+        'image/png',
+        'user-1'
+      );
+    };
+
+    it('replaces and deletes the previous file when this bucket owns it', async () => {
+      await upload('own-bucket');
+
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'old-doc',
+      });
+    });
+
+    it('never deletes a previous file stored in another bucket', async () => {
+      // A reference may point at someone else's file; replacing it must not
+      // delete that file.
+      await upload('someone-elses-bucket');
+
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
   });
 });
