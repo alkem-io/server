@@ -169,6 +169,14 @@ export class MemoPdfExecutor implements OnModuleDestroy {
       throw cancelled();
     }
     const running = [...this.jobs.values()];
+    // The actor's own in-flight render is checked first: it is the actor's
+    // doing (429, retry shortly), whereas a full instance is not (503). An
+    // actor whose render holds the only download slot must still hear 429.
+    const owned = running.filter(other => other.actorId === job.actorId).length;
+    if (owned >= this.capacity.maxPerActor) {
+      refuse('busy-actor');
+      throw new MemoPdfUnavailableException('busy-actor');
+    }
     if (
       running.length >= this.capacity.maxConcurrent ||
       (job.purpose === 'download' &&
@@ -177,11 +185,6 @@ export class MemoPdfExecutor implements OnModuleDestroy {
     ) {
       refuse('busy-global');
       throw new MemoPdfUnavailableException('busy-global');
-    }
-    const owned = running.filter(other => other.actorId === job.actorId).length;
-    if (owned >= this.capacity.maxPerActor) {
-      refuse('busy-actor');
-      throw new MemoPdfUnavailableException('busy-actor');
     }
 
     // The slot is reserved synchronously, before the fork, so concurrent

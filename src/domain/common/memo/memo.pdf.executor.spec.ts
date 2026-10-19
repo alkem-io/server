@@ -66,16 +66,15 @@ const setup = (
   );
   executors.push(executor);
   const resolveImage = vi.fn<ResolveMemoImage>();
+  // The purpose is always explicit: downloads and signing previews are
+  // admitted by different rules, so neither may be silently the one tested.
   const run = (
+    purpose: MemoPdfRenderPurpose,
     actorId = 'actor-1',
-    extra: {
-      signal?: AbortSignal;
-      memoId?: string;
-      purpose?: MemoPdfRenderPurpose;
-    } = {}
+    extra: { signal?: AbortSignal; memoId?: string } = {}
   ) => {
     const rendering = executor.run({
-      purpose: 'signing',
+      purpose,
       state: Buffer.from('state'),
       resolveImage,
       actorId,
@@ -112,7 +111,7 @@ describe('MemoPdfExecutor', () => {
   it('forks one worker per render, starts it with the state and resolves the PDF', async () => {
     const { children, run, executor } = setup();
 
-    const rendering = run();
+    const rendering = run('signing');
     expect(children).toHaveLength(1);
     expect(children[0].sent[0]).toEqual({
       type: 'START',
@@ -129,9 +128,9 @@ describe('MemoPdfExecutor', () => {
   it('refuses a third concurrent render with busy-global and no fork', async () => {
     const { children, run } = setup();
 
-    void run('actor-1');
-    void run('actor-2');
-    const error = await run('actor-3').catch(caught => caught);
+    void run('signing', 'actor-1');
+    void run('signing', 'actor-2');
+    const error = await run('signing', 'actor-3').catch(caught => caught);
 
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
     expect(error.reason).toBe('busy-global');
@@ -141,10 +140,31 @@ describe('MemoPdfExecutor', () => {
   it('refuses a second concurrent render by the same actor with busy-actor and no fork', async () => {
     const { children, run } = setup();
 
-    void run('actor-1');
-    const error = await run('actor-1').catch(caught => caught);
+    void run('signing', 'actor-1');
+    const error = await run('signing', 'actor-1').catch(caught => caught);
 
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
+    expect(error.reason).toBe('busy-actor');
+    expect(children).toHaveLength(1);
+  });
+
+  it('refuses a second concurrent download by the same reader with busy-actor at the default caps', async () => {
+    const { children, run } = setup();
+
+    void run('download', 'reader-1');
+    const error = await run('download', 'reader-1').catch(caught => caught);
+
+    expect(error).toBeInstanceOf(MemoPdfUnavailableException);
+    expect(error.reason).toBe('busy-actor');
+    expect(children).toHaveLength(1);
+  });
+
+  it('refuses a download by an actor whose signing preview is in flight with busy-actor', async () => {
+    const { children, run } = setup();
+
+    void run('signing', 'actor-1');
+    const error = await run('download', 'actor-1').catch(caught => caught);
+
     expect(error.reason).toBe('busy-actor');
     expect(children).toHaveLength(1);
   });
@@ -157,40 +177,36 @@ describe('MemoPdfExecutor', () => {
       deadline_ms: 30_000,
     });
 
-    void run('reader-1', { purpose: 'download' });
-    void run('reader-2', { purpose: 'download' });
-    const refused = await run('reader-3', { purpose: 'download' }).catch(
-      caught => caught
-    );
+    void run('download', 'reader-1');
+    void run('download', 'reader-2');
+    const refused = await run('download', 'reader-3').catch(caught => caught);
     expect(refused).toBeInstanceOf(MemoPdfUnavailableException);
     expect(refused.reason).toBe('busy-global');
     expect(children).toHaveLength(2);
 
-    void run('signer-1', { purpose: 'signing' });
+    void run('signing', 'signer-1');
     expect(children).toHaveLength(3);
   });
 
   it('admits one download at the default caps and keeps the other slot for signing', async () => {
     const { children, run } = setup();
 
-    void run('reader-1', { purpose: 'download' });
-    const refused = await run('reader-2', { purpose: 'download' }).catch(
-      caught => caught
-    );
+    void run('download', 'reader-1');
+    const refused = await run('download', 'reader-2').catch(caught => caught);
     expect(refused.reason).toBe('busy-global');
 
-    void run('signer-1', { purpose: 'signing' });
+    void run('signing', 'signer-1');
     expect(children).toHaveLength(2);
   });
 
   it('frees the download share when a download ends', async () => {
     const { children, run } = setup();
 
-    const first = run('reader-1', { purpose: 'download' });
+    const first = run('download', 'reader-1');
     children[0].reply({ type: 'DONE', pdf, imageCount: 0 });
     await first;
 
-    void run('reader-2', { purpose: 'download' });
+    void run('download', 'reader-2');
     expect(children).toHaveLength(2);
   });
 
@@ -202,11 +218,9 @@ describe('MemoPdfExecutor', () => {
       deadline_ms: 30_000,
     });
 
-    void run('reader-1', { purpose: 'download' });
+    void run('download', 'reader-1');
     expect(children).toHaveLength(1);
-    const refused = await run('signer-1', { purpose: 'signing' }).catch(
-      caught => caught
-    );
+    const refused = await run('signing', 'signer-1').catch(caught => caught);
     expect(refused.reason).toBe('busy-global');
   });
 
@@ -218,7 +232,7 @@ describe('MemoPdfExecutor', () => {
       deadline_ms: 30_000,
     });
 
-    const error = await run().catch(caught => caught);
+    const error = await run('signing').catch(caught => caught);
 
     expect(error.reason).toBe('busy-global');
     expect(children).toHaveLength(0);
@@ -227,7 +241,7 @@ describe('MemoPdfExecutor', () => {
   it('reserves the slot before forking', () => {
     const { run, reservedAtLaunch } = setup();
 
-    void run();
+    void run('signing');
 
     expect(reservedAtLaunch).toEqual([1]);
   });
@@ -236,19 +250,19 @@ describe('MemoPdfExecutor', () => {
     const { run, failLaunch, children } = setup();
     failLaunch(Object.assign(new Error('spawn EAGAIN'), { code: 'EAGAIN' }));
 
-    const error = await run().catch(caught => caught);
+    const error = await run('signing').catch(caught => caught);
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
     expect(error.reason).toBe('launch-failed');
 
     failLaunch(undefined);
-    void run();
+    void run('signing');
     expect(children).toHaveLength(1);
   });
 
   it('reports an asynchronous spawn error before a pid as launch-failed', async () => {
     const { run, children } = setup();
 
-    const rendering = run();
+    const rendering = run('signing');
     children[0].pid = undefined;
     children[0].kill.mockImplementation(() => true);
     children[0].emit('error', new Error('spawn ENOMEM'));
@@ -266,7 +280,7 @@ describe('MemoPdfExecutor', () => {
       deadline_ms: 5_000,
     });
 
-    const rendering = run().catch(caught => caught);
+    const rendering = run('signing').catch(caught => caught);
     vi.advanceTimersByTime(5_000);
 
     const error = await rendering;
@@ -280,9 +294,9 @@ describe('MemoPdfExecutor', () => {
     const abort = new AbortController();
     abort.abort();
 
-    await expect(run('actor-1', { signal: abort.signal })).rejects.toThrow(
-      'Memo PDF render cancelled'
-    );
+    await expect(
+      run('signing', 'actor-1', { signal: abort.signal })
+    ).rejects.toThrow('Memo PDF render cancelled');
     expect(children).toHaveLength(0);
   });
 
@@ -290,12 +304,12 @@ describe('MemoPdfExecutor', () => {
     const { run, children } = setup();
     const abort = new AbortController();
 
-    const rendering = run('actor-1', { signal: abort.signal });
+    const rendering = run('signing', 'actor-1', { signal: abort.signal });
     abort.abort();
 
     await expect(rendering).rejects.toThrow('Memo PDF render cancelled');
     expect(children[0].kill).toHaveBeenCalledWith('SIGKILL');
-    void run('actor-1');
+    void run('signing', 'actor-1');
     expect(children).toHaveLength(2);
   });
 
@@ -309,7 +323,7 @@ describe('MemoPdfExecutor', () => {
     };
     resolveImage.mockResolvedValue(outcome);
 
-    const rendering = run();
+    const rendering = run('signing');
     children[0].reply({
       type: 'RESOLVE_IMAGE',
       index: 0,
@@ -333,7 +347,7 @@ describe('MemoPdfExecutor', () => {
     const denied = new ForbiddenException('denied', LogContext.MEMOS);
     resolveImage.mockRejectedValue(denied);
 
-    const rendering = run().catch(caught => caught);
+    const rendering = run('signing').catch(caught => caught);
     children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
 
     expect(await rendering).toBe(denied);
@@ -343,7 +357,7 @@ describe('MemoPdfExecutor', () => {
   it('turns FAILED invalid into a ValidationException with the worker message', async () => {
     const { run, children } = setup();
 
-    const rendering = run().catch(caught => caught);
+    const rendering = run('signing').catch(caught => caught);
     children[0].reply({
       type: 'FAILED',
       kind: 'invalid',
@@ -369,7 +383,7 @@ describe('MemoPdfExecutor', () => {
   ])('kills the worker and reports crashed on %s', async (_label, message) => {
     const { run, children } = setup();
 
-    const rendering = run().catch(caught => caught);
+    const rendering = run('signing').catch(caught => caught);
     children[0].reply(message);
 
     const error = await rendering;
@@ -381,7 +395,7 @@ describe('MemoPdfExecutor', () => {
   it('kills the worker and reports crashed on a message for another job', async () => {
     const { run, children } = setup();
 
-    const rendering = run().catch(caught => caught);
+    const rendering = run('signing').catch(caught => caught);
     children[0].emit('message', {
       type: 'DONE',
       jobId: 'another-job',
@@ -395,7 +409,7 @@ describe('MemoPdfExecutor', () => {
   it('reports crashed when the worker exits before answering', async () => {
     const { run, children, executor } = setup();
 
-    const rendering = run().catch(caught => caught);
+    const rendering = run('signing').catch(caught => caught);
     children[0].emit('exit', 1, null);
 
     expect((await rendering).reason).toBe('crashed');
@@ -405,8 +419,8 @@ describe('MemoPdfExecutor', () => {
   it('kills every live worker on module destroy', async () => {
     const { run, children, executor } = setup();
 
-    const first = run('actor-1').catch(caught => caught);
-    const second = run('actor-2').catch(caught => caught);
+    const first = run('signing', 'actor-1').catch(caught => caught);
+    const second = run('signing', 'actor-2').catch(caught => caught);
     executor.onModuleDestroy();
 
     for (const child of children)
@@ -418,7 +432,7 @@ describe('MemoPdfExecutor', () => {
   it('writes one log line per render with ids, outcome and sizes only', async () => {
     const { run, children, logger } = setup();
 
-    const rendering = run('actor-1', { memoId: 'memo-9' });
+    const rendering = run('signing', 'actor-1', { memoId: 'memo-9' });
     children[0].reply({ type: 'DONE', pdf, imageCount: 3 });
     await rendering;
 
@@ -453,8 +467,8 @@ describe('MemoPdfExecutor', () => {
   it('logs refusals and cancellations as warnings and crashes as errors', async () => {
     const { run, children, logger } = setup();
 
-    const first = run('actor-1').catch(caught => caught);
-    await run('actor-1').catch(() => undefined);
+    const first = run('signing', 'actor-1').catch(caught => caught);
+    await run('signing', 'actor-1').catch(() => undefined);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({ outcome: 'busy-actor', durationMs: 0 }),
       LogContext.MEMOS
