@@ -190,6 +190,13 @@ describe('NativePushSenderService', () => {
         Authorization: 'Bearer access-token-abc',
         'Content-Type': 'application/json',
       });
+      // BOTH Google requests must be bounded. `fetch` is not unbounded the way
+      // `node:http2` is, but undici's own defaults are 300 s per phase over two
+      // sequential requests, so a stalled endpoint holds one of the shared
+      // queue's 10 prefetch slots for minutes — the same starvation the APNs
+      // session timeout above exists for.
+      expect(exchangeInit.signal).toBeInstanceOf(AbortSignal);
+      expect(sendInit.signal).toBeInstanceOf(AbortSignal);
 
       const body = JSON.parse(sendInit.body);
       // `message.token` is the HTTP v1 recipient field: without it there is no

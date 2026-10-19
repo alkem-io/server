@@ -27,6 +27,25 @@ const APNS_SESSION_TIMEOUT_MS = 5000;
 
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const FCM_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
+/**
+ * `sendFcm` goes over global `fetch`, so it cannot wait FOREVER the way
+ * `node:http2` can — which is why CMP-505 put the session timeout on the APNs
+ * leg only. But "not forever" is not "bounded": undici's defaults are 300 s
+ * per phase (`headersTimeout`/`bodyTimeout`) across TWO sequential requests,
+ * so a stalled Google endpoint holds one of the shared
+ * `alkemio-push-notifications` queue's 10 prefetch slots for minutes and
+ * delays live WEB push behind it — the same starvation
+ * `APNS_SESSION_TIMEOUT_MS` exists for.
+ *
+ * The number deliberately differs from the APNs literal. `session.setTimeout`
+ * is an INACTIVITY timer on a session doing one round trip, whereas
+ * `AbortSignal.timeout` bounds TOTAL elapsed time including TLS setup — so
+ * reusing 5 s would make this leg strictly tighter than the one it is matching
+ * and turn slow successes into drops. An abort rejects out of `send()` in the
+ * same network-error shape FR-008 already routes to log-and-drop, owned by the
+ * single boundary catch, so the taxonomy gains no arm.
+ */
+const FCM_REQUEST_TIMEOUT_MS = 10000;
 
 /**
  * 086-app-push-mvp (FR-007, FR-008). Sends an already-rendered notification to
@@ -219,6 +238,7 @@ export class NativePushSenderService {
         grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
         assertion,
       }).toString(),
+      signal: AbortSignal.timeout(FCM_REQUEST_TIMEOUT_MS),
     });
     if (!tokenResponse.ok) {
       // FR-008: a failed exchange logs and drops, and touches no row.
@@ -255,6 +275,7 @@ export class NativePushSenderService {
             data: { url: message.payload.url },
           },
         }),
+        signal: AbortSignal.timeout(FCM_REQUEST_TIMEOUT_MS),
       }
     );
 
