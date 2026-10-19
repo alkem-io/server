@@ -1,8 +1,10 @@
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { MediaGallery } from '@domain/common/media-gallery/media.gallery.entity';
 import { MediaGalleryService } from '@domain/common/media-gallery/media.gallery.service';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
 import { VisualService } from '@domain/common/visual/visual.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { RoomService } from '@domain/communication/room/room.service';
@@ -17,10 +19,14 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
 import { vi } from 'vitest';
+import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutFraming } from '../callout-framing/callout.framing.entity';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
+import { CollaboraDocumentService } from '../collabora-document/collabora.document.service';
+import { PollService } from '../poll/poll.service';
 import { Callout } from './callout.entity';
 import { CalloutService } from './callout.service';
+import { TaskBoardService } from './task-board/task.board.service';
 
 /**
  * server#6614 (fix area 2, callout slice): every framing child built by
@@ -43,6 +49,11 @@ describe('CalloutService.createCallout — framing children are atomic with the 
   let whiteboardService: WhiteboardService;
   let memoService: MemoService;
   let roomService: RoomService;
+  let pollService: PollService;
+  let collaboraDocumentService: CollaboraDocumentService;
+  let contributionService: CalloutContributionService;
+  let tagsetTemplateService: TagsetTemplateService;
+  let taskBoardService: TaskBoardService;
 
   const storageAggregator = { id: 'agg-1' } as any;
   const laterStepFailure = new Error('room creation failed');
@@ -98,6 +109,11 @@ describe('CalloutService.createCallout — framing children are atomic with the 
     whiteboardService = module.get(WhiteboardService);
     memoService = module.get(MemoService);
     roomService = module.get(RoomService);
+    pollService = module.get(PollService);
+    collaboraDocumentService = module.get(CollaboraDocumentService);
+    contributionService = module.get(CalloutContributionService);
+    tagsetTemplateService = module.get(TagsetTemplateService);
+    taskBoardService = module.get(TaskBoardService);
 
     vi.mocked(module.get(ProfileService).createProfile).mockResolvedValue({
       tagsets: [],
@@ -194,6 +210,93 @@ describe('CalloutService.createCallout — framing children are atomic with the 
     ).rejects.toBe(laterStepFailure);
 
     expect(memoService.deleteMemo).toHaveBeenCalledWith('memo-1');
+  });
+
+  it('deletes the already-persisted POLL framing child when a later step throws', async () => {
+    vi.mocked(pollService.createPoll).mockResolvedValue({
+      poll: { id: 'poll-1' },
+      warnings: [],
+    } as any);
+
+    await expect(
+      create(
+        calloutInput({
+          type: CalloutFramingType.POLL,
+          poll: { options: ['a', 'b'] },
+        })
+      )
+    ).rejects.toBe(laterStepFailure);
+
+    expect(pollService.deletePoll).toHaveBeenCalledWith('poll-1');
+  });
+
+  it('deletes the document and profile of a COLLABORA_DOCUMENT framing child when a later step throws', async () => {
+    const collaboraDocument = {
+      document: { id: 'doc-1' },
+      profile: { id: 'profile-1' },
+    };
+    vi.mocked(
+      collaboraDocumentService.createCollaboraDocument
+    ).mockResolvedValue(collaboraDocument as any);
+
+    await expect(
+      create(
+        calloutInput({
+          type: CalloutFramingType.COLLABORA_DOCUMENT,
+          collaboraDocument: { profile: { displayName: 'doc' } },
+        })
+      )
+    ).rejects.toBe(laterStepFailure);
+
+    expect(
+      collaboraDocumentService.deleteUnsavedCollaboraDocument
+    ).toHaveBeenCalledWith(collaboraDocument);
+  });
+
+  it('deletes the persisted children of the created contributions when a later step throws', async () => {
+    const contribution = { whiteboard: { id: 'contribution-wb' } };
+    vi.mocked(contributionService.createCalloutContributions).mockResolvedValue(
+      [contribution] as any
+    );
+
+    await expect(
+      create({
+        ...calloutInput({ type: CalloutFramingType.NONE }),
+        contributions: [{ type: CalloutContributionType.WHITEBOARD }],
+      })
+    ).rejects.toBe(laterStepFailure);
+
+    expect(
+      contributionService.deletePersistedChildrenOfUnsavedContribution
+    ).toHaveBeenCalledWith(contribution);
+  });
+
+  it('removes the saved Tasks-board template when a later step throws', async () => {
+    const savedTemplate = { id: 'task-template-1' };
+    vi.mocked(taskBoardService.validateColumnNames).mockReturnValue(['To do']);
+    vi.mocked(tagsetTemplateService.createTagsetTemplate).mockReturnValue(
+      {} as any
+    );
+    vi.mocked(tagsetTemplateService.save).mockResolvedValue(
+      savedTemplate as any
+    );
+
+    await expect(
+      create({
+        ...calloutInput({ type: CalloutFramingType.NONE }),
+        settings: {
+          contribution: {
+            enabled: true,
+            allowedTypes: [CalloutContributionType.POST],
+          },
+        },
+        taskBoard: {},
+      })
+    ).rejects.toBe(laterStepFailure);
+
+    expect(tagsetTemplateService.removeTagsetTemplate).toHaveBeenCalledWith(
+      savedTemplate
+    );
   });
 
   it('surfaces the original error even when the cleanup itself fails', async () => {

@@ -332,11 +332,11 @@ export class CalloutFramingService {
 
   /**
    * Compensation for a callout create that fails after createCalloutFraming
-   * returned but before the callout was saved. Whiteboard and Memo children
-   * persist themselves (their file-service snapshot needs a saved bucket id),
-   * so they are deleted here; every other framing child is still unsaved and
-   * simply discarded with the in-memory callout. Never throws: the caller is
-   * already handling the original failure.
+   * returned but before the callout was saved. Whiteboard, Memo and Poll
+   * children persist themselves, and a CollaboraDocument's document and
+   * profile already exist, so they are deleted here; every other framing
+   * child is still unsaved and simply discarded with the in-memory callout.
+   * Never throws: the caller is already handling the original failure.
    */
   public async deletePersistedChildrenOfUnsavedFraming(
     calloutFraming: ICalloutFraming
@@ -360,6 +360,25 @@ export class CalloutFramingService {
         entity: 'memo',
         id,
         run: () => this.memoService.deleteMemo(id),
+      });
+    }
+    if (calloutFraming.poll?.id) {
+      const id = calloutFraming.poll.id;
+      deletions.push({
+        entity: 'poll',
+        id,
+        run: () => this.pollService.deletePoll(id),
+      });
+    }
+    if (calloutFraming.collaboraDocument) {
+      const collaboraDocument = calloutFraming.collaboraDocument;
+      deletions.push({
+        entity: 'collaboraDocument',
+        id: collaboraDocument.document?.id ?? '',
+        run: () =>
+          this.collaboraDocumentService.deleteUnsavedCollaboraDocument(
+            collaboraDocument
+          ),
       });
     }
     for (const { entity, id, run } of deletions) {

@@ -49,6 +49,29 @@ export class CalloutContributionService {
     private contributionRepository: Repository<CalloutContribution>
   ) {}
 
+  /**
+   * Compensation for a contribution built by createCalloutContributions whose
+   * callout was never saved: the contribution row does not exist, but its
+   * Whiteboard and Memo persisted themselves and a CollaboraDocument's
+   * document and profile already exist (server#6614). Posts and links are
+   * still unsaved and are discarded with the in-memory callout.
+   */
+  public async deletePersistedChildrenOfUnsavedContribution(
+    contribution: ICalloutContribution
+  ): Promise<void> {
+    if (contribution.whiteboard?.id) {
+      await this.whiteboardService.deleteWhiteboard(contribution.whiteboard.id);
+    }
+    if (contribution.memo?.id) {
+      await this.memoService.deleteMemo(contribution.memo.id);
+    }
+    if (contribution.collaboraDocument) {
+      await this.collaboraDocumentService.deleteUnsavedCollaboraDocument(
+        contribution.collaboraDocument
+      );
+    }
+  }
+
   public async createCalloutContributions(
     calloutContributionsData: CreateCalloutContributionInput[],
     storageAggregator: IStorageAggregator,

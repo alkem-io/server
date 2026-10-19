@@ -4,7 +4,9 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
@@ -162,8 +164,10 @@ export class TemplateApplierService {
       await this.storageAggregatorResolverService.getStorageAggregatorForCollaboration(
         targetCollaboration.id
       );
+    let newCallouts: ICallout[] = [];
+    let calloutsFromSourceCollaboration: CreateCalloutInput[] = [];
     if (addCallouts) {
-      const calloutsFromSourceCollaboration =
+      calloutsFromSourceCollaboration =
         await this.inputCreatorService.buildCreateCalloutInputsFromCallouts(
           sourceCollaboration.calloutsSet.callouts ?? []
         );
@@ -173,7 +177,7 @@ export class TemplateApplierService {
         callout => (callout.isTemplate = !!targetCollaboration.isTemplate)
       );
 
-      const newCallouts = await this.calloutsSetService.addCallouts(
+      newCallouts = await this.calloutsSetService.addCallouts(
         targetCollaboration.calloutsSet,
         calloutsFromSourceCollaboration,
         storageAggregator,
@@ -192,6 +196,27 @@ export class TemplateApplierService {
     );
 
     // Need to save before applying authorization policy to get the callout ids
-    return await this.collaborationService.save(targetCollaboration);
+    const savedCollaboration =
+      await this.collaborationService.save(targetCollaboration);
+
+    // Phase-2 materialization for the copied callouts, as every other callout
+    // create path does: it re-homes cross-bucket content and copies the
+    // framing media-gallery visuals, which need the persisted gallery and
+    // bucket ids (server#6614). On failure the copied callouts are removed so
+    // the apply does not leave half-materialized callouts behind.
+    if (newCallouts.length > 0) {
+      await this.calloutsSetService.materializeCalloutsSetContent(
+        { ...targetCollaboration.calloutsSet, callouts: newCallouts },
+        calloutsFromSourceCollaboration,
+        async () => {
+          for (const callout of newCallouts) {
+            await this.calloutService.deleteCallout(callout.id);
+          }
+        },
+        actorContext
+      );
+    }
+
+    return savedCollaboration;
   }
 }

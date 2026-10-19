@@ -833,4 +833,30 @@ describe('CalloutContributionService', () => {
       expect(classificationService.createClassification).not.toHaveBeenCalled();
     });
   });
+
+  describe('deletePersistedChildrenOfUnsavedContribution', () => {
+    it('deletes the self-persisted whiteboard and memo of an unsaved contribution (server#6614)', async () => {
+      vi.mocked(whiteboardService.deleteWhiteboard).mockResolvedValue(
+        {} as any
+      );
+      vi.mocked(memoService.deleteMemo).mockResolvedValue({} as any);
+
+      await service.deletePersistedChildrenOfUnsavedContribution({
+        whiteboard: { id: 'wb-1' },
+        memo: { id: 'memo-1' },
+      } as any);
+
+      expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
+      expect(memoService.deleteMemo).toHaveBeenCalledWith('memo-1');
+    });
+
+    it('deletes nothing for a post contribution, which is still unsaved', async () => {
+      await service.deletePersistedChildrenOfUnsavedContribution({
+        post: { id: undefined },
+      } as any);
+
+      expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+      expect(memoService.deleteMemo).not.toHaveBeenCalled();
+    });
+  });
 });
