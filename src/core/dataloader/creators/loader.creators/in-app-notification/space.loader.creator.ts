@@ -22,6 +22,7 @@ export class SpaceLoaderCreator implements DataLoaderCreator<ISpace> {
       name: this.constructor.name,
       loadedTypeName: Space.name,
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 

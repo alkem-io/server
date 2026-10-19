@@ -24,6 +24,7 @@ export class ApplicationLoaderCreator
       name: this.constructor.name,
       loadedTypeName: Application.name,
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 
