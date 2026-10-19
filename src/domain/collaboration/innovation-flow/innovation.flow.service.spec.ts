@@ -1,4 +1,5 @@
 import { SidebarWidget } from '@common/enums/sidebar.widget';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -1075,7 +1076,7 @@ describe('InnovationFlowService', () => {
         );
         expect(
           innovationFlowStateService.deleteWithSidebarInheritance
-        ).toHaveBeenCalledWith(A, B);
+        ).toHaveBeenCalledWith(A, B, undefined);
         expect(innovationFlowStateService.delete).not.toHaveBeenCalled();
         expect(result.id).toBe(A);
       });
@@ -1093,7 +1094,7 @@ describe('InnovationFlowService', () => {
         );
         expect(
           innovationFlowStateService.deleteWithSidebarInheritance
-        ).toHaveBeenCalledWith(A, B);
+        ).toHaveBeenCalledWith(A, B, undefined);
       });
 
       it('L1 non-first state: plain delete, no inheritance', async () => {
@@ -1118,6 +1119,103 @@ describe('InnovationFlowService', () => {
           innovationFlowStateService.deleteWithSidebarInheritance
         ).not.toHaveBeenCalled();
         expect(innovationFlowStateService.delete).toHaveBeenCalled();
+      });
+
+      describe('callouts on the deleted state', () => {
+        const calloutOn = (stateName: string) => ({
+          id: 'callout-1',
+          classification: {
+            tagsets: [
+              { name: TagsetReservedName.FLOW_STATE, tags: [stateName] },
+            ],
+          },
+        });
+        const calloutsSet = { id: 'cs-1', callouts: [calloutOn('Alpha')] };
+
+        const buildNamedFlow = () => {
+          const flow = buildFlow() as any;
+          ['Alpha', 'Beta', 'Gamma'].forEach((name, index) => {
+            flow.states[index].displayName = name;
+          });
+          return flow;
+        };
+
+        const mockCalloutsSet = (spaceLevel: number) => {
+          mockFlowOwners({ spaceLevel });
+          const getRepository = (repository as any).manager.getRepository;
+          (repository as any).manager.getRepository = vi.fn(
+            (entity: unknown) =>
+              entity === Space || entity === TemplateContentSpace
+                ? getRepository(entity)
+                : {
+                    findOne: vi.fn().mockResolvedValue({
+                      id: 'collab-1',
+                      calloutsSet: { id: 'cs-1' },
+                    }),
+                  }
+          );
+          vi.mocked(_calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+            calloutsSet as any
+          );
+          vi.mocked(_calloutsSetService.save).mockResolvedValue(
+            calloutsSet as any
+          );
+        };
+
+        it('L1 first state: the callout move is saved inside the delete transaction', async () => {
+          mockCalloutsSet(1);
+          await service.deleteStateOnInnovationFlow(buildNamedFlow(), {
+            ID: A,
+          } as any);
+
+          expect(
+            _calloutsSetService.moveCalloutsToDefaultFlowState
+          ).toHaveBeenCalledWith(['Beta', 'Gamma'], [calloutsSet.callouts[0]]);
+          // nothing persisted before the transaction
+          expect(_calloutsSetService.save).not.toHaveBeenCalled();
+          const persistAlongside = vi.mocked(
+            innovationFlowStateService.deleteWithSidebarInheritance
+          ).mock.calls[0][2];
+          expect(persistAlongside).toBeTypeOf('function');
+
+          const entityManager = { marker: 'tx' } as any;
+          await persistAlongside?.(entityManager);
+          expect(_calloutsSetService.save).toHaveBeenCalledWith(
+            calloutsSet,
+            entityManager
+          );
+        });
+
+        it('L1 first state: a failing callout save inside the transaction surfaces as the move failure', async () => {
+          mockCalloutsSet(1);
+          vi.mocked(_calloutsSetService.save).mockRejectedValue(
+            new Error('callouts write failed')
+          );
+          await service.deleteStateOnInnovationFlow(buildNamedFlow(), {
+            ID: A,
+          } as any);
+          const persistAlongside = vi.mocked(
+            innovationFlowStateService.deleteWithSidebarInheritance
+          ).mock.calls[0][2];
+
+          await expect(persistAlongside?.({} as any)).rejects.toThrow(
+            ValidationException
+          );
+        });
+
+        it('L1 non-first state: the callout move is saved before the plain delete', async () => {
+          mockCalloutsSet(1);
+          const flow = buildNamedFlow();
+          calloutsSet.callouts = [calloutOn('Beta')];
+          await service.deleteStateOnInnovationFlow(flow, { ID: B } as any);
+          calloutsSet.callouts = [calloutOn('Alpha')];
+
+          expect(_calloutsSetService.save).toHaveBeenCalledWith(calloutsSet);
+          expect(
+            innovationFlowStateService.deleteWithSidebarInheritance
+          ).not.toHaveBeenCalled();
+          expect(innovationFlowStateService.delete).toHaveBeenCalled();
+        });
       });
 
       it('L2 template first state inherits; orphan first state does not', async () => {

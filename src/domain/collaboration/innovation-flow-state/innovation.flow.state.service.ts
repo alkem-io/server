@@ -12,7 +12,7 @@ import { Template } from '@domain/template/template/template.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
 import { InnovationFlowState } from './innovation.flow.state.entity';
@@ -160,17 +160,20 @@ export class InnovationFlowStateService {
    *
    * The inheritor is read inside the transaction and only its `settings` column is written,
    * so every other setting is the value stored at that moment rather than a stale copy taken
-   * before the transaction began.
+   * before the transaction began. `persistAlongside` runs first in the same transaction, for
+   * writes that must commit or roll back together with the delete.
    */
   async deleteWithSidebarInheritance(
     deletedStateID: string,
-    inheritorStateID: string
+    inheritorStateID: string,
+    persistAlongside?: (entityManager: EntityManager) => Promise<unknown>
   ): Promise<IInnovationFlowState> {
     const deleted = await this.getRawInnovationFlowStateOrFail(deletedStateID);
 
     const removed =
       await this.innovationFlowStateRepository.manager.transaction(
         async entityManager => {
+          await persistAlongside?.(entityManager);
           const inheritor = await entityManager.findOne(InnovationFlowState, {
             where: { id: inheritorStateID },
           });

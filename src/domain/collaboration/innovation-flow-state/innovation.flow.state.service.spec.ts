@@ -859,6 +859,43 @@ describe('InnovationFlowStateService', () => {
       expect(repository.remove).not.toHaveBeenCalled();
     });
 
+    it('runs persistAlongside first, with the transaction manager', async () => {
+      const { inheritor } = buildStates([SidebarWidget.ABOUT]);
+      const order: string[] = [];
+      const { em } = mockTransaction(inheritor, {
+        update: vi.fn(async () => {
+          order.push('update');
+        }),
+      });
+      const persistAlongside = vi.fn(async () => {
+        order.push('alongside');
+      });
+
+      await service.deleteWithSidebarInheritance(
+        'deleted-1',
+        'inheritor-1',
+        persistAlongside
+      );
+
+      expect(persistAlongside).toHaveBeenCalledWith(em);
+      expect(order).toEqual(['alongside', 'update']);
+    });
+
+    it('a failing persistAlongside propagates and nothing else is written', async () => {
+      const { inheritor } = buildStates([SidebarWidget.ABOUT]);
+      const { em } = mockTransaction(inheritor);
+
+      await expect(
+        service.deleteWithSidebarInheritance(
+          'deleted-1',
+          'inheritor-1',
+          vi.fn().mockRejectedValue(new Error('callouts failed'))
+        )
+      ).rejects.toThrow('callouts failed');
+      expect(em.update).not.toHaveBeenCalled();
+      expect(em.remove).not.toHaveBeenCalled();
+    });
+
     it('an explicit empty list is inherited as []', async () => {
       const { inheritor } = buildStates([]);
       const { em } = mockTransaction(inheritor);

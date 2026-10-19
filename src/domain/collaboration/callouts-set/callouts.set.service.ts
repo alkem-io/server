@@ -29,7 +29,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { compact, keyBy } from 'lodash';
-import { FindOneOptions, FindOptionsRelations, In, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  FindOptionsRelations,
+  In,
+  Repository,
+} from 'typeorm';
 import { Callout } from '../callout/callout.entity';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
@@ -447,7 +453,14 @@ export class CalloutsSetService {
     }
   }
 
-  public async save(calloutsSet: ICalloutsSet): Promise<ICalloutsSet> {
+  /** Saves through `entityManager` when given, so the write joins the caller's transaction. */
+  public async save(
+    calloutsSet: ICalloutsSet,
+    entityManager?: EntityManager
+  ): Promise<ICalloutsSet> {
+    if (entityManager) {
+      return await entityManager.save(CalloutsSet, calloutsSet as CalloutsSet);
+    }
     return await this.calloutsSetRepository.save(calloutsSet);
   }
 

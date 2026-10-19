@@ -27,6 +27,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { Collaboration } from '../collaboration/collaboration.entity';
 import { IInnovationFlowSettings } from '../innovation-flow-settings/innovation.flow.settings.interface';
@@ -681,6 +682,20 @@ export class InnovationFlowService {
       );
     }
 
+    // On a subspace flow the first state's list is the subspace sidebar: deleting that
+    // state hands its raw list to the new first state, atomically with the delete.
+    const level = await this.resolveInnovationFlowLevel(innovationFlow.id);
+    const ranked = [...innovationFlow.states].sort(sortBySortOrder);
+    const sidebarInheritorID =
+      this.isPositionalSidebarLevel(level) &&
+      ranked.length > 1 &&
+      ranked[0].id === stateData.ID
+        ? ranked[1].id
+        : undefined;
+
+    // Callouts moved off the deleted state; when the sidebar is inherited they are saved in
+    // the delete's transaction, so a failed delete never leaves them moved.
+    let movedCalloutsSet: ICalloutsSet | undefined;
     try {
       const collaboration = await this.getCollaborationByInnovationFlowId(
         innovationFlow.id
@@ -742,31 +757,37 @@ export class InnovationFlowService {
             calloutsInDeletedState
           );
 
-          // Save the entire callouts set to persist all callout changes
-          await this.calloutsSetService.save(calloutsSetWithCallouts);
+          if (sidebarInheritorID) {
+            movedCalloutsSet = calloutsSetWithCallouts;
+          } else {
+            // Save the entire callouts set to persist all callout changes
+            await this.calloutsSetService.save(calloutsSetWithCallouts);
+          }
         }
       }
     } catch (error) {
-      throw new ValidationException(
-        `Failed to move all posts, try again or move them manually. ${error}`,
-        LogContext.INNOVATION_FLOW
-      );
+      throw this.calloutMoveFailed(error);
     }
 
     // Delete the state AFTER moving callouts.
-    // On a subspace flow the first state's list is the subspace sidebar: deleting that
-    // state hands its raw list to the new first state, atomically with the delete.
-    const level = await this.resolveInnovationFlowLevel(innovationFlow.id);
-    const ranked = [...innovationFlow.states].sort(sortBySortOrder);
-    if (
-      this.isPositionalSidebarLevel(level) &&
-      ranked.length > 1 &&
-      ranked[0].id === stateData.ID
-    ) {
+    if (sidebarInheritorID) {
+      const calloutsSetToSave = movedCalloutsSet;
       const deletedState =
         await this.innovationFlowStateService.deleteWithSidebarInheritance(
           stateData.ID,
-          ranked[1].id
+          sidebarInheritorID,
+          calloutsSetToSave
+            ? async entityManager => {
+                try {
+                  await this.calloutsSetService.save(
+                    calloutsSetToSave,
+                    entityManager
+                  );
+                } catch (error) {
+                  throw this.calloutMoveFailed(error);
+                }
+              }
+            : undefined
         );
       deletedState.id = stateData.ID;
       return deletedState;
@@ -782,6 +803,13 @@ export class InnovationFlowService {
 
     deletedInnovationFlowState.id = stateData.ID;
     return deletedInnovationFlowState;
+  }
+
+  private calloutMoveFailed(error: unknown): ValidationException {
+    return new ValidationException(
+      `Failed to move all posts, try again or move them manually. ${error}`,
+      LogContext.INNOVATION_FLOW
+    );
   }
 
   public validateInnovationFlowDefinition(
