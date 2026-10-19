@@ -3,7 +3,7 @@ import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { Injectable } from '@nestjs/common';
 import { MAX_MEMO_EDITOR_CONTENT_BYTES } from './conversion/yjs.state.to.tiptap.html';
-import { MemoPdfExecutor } from './memo.pdf.executor';
+import { MemoPdfExecutor, MemoPdfRenderPurpose } from './memo.pdf.executor';
 import { MemoPdfImageResolver } from './memo.pdf.image.resolver';
 
 /**
@@ -23,7 +23,11 @@ export class MemoPdfRenderer {
     state: Buffer,
     bucketId: string | undefined,
     actor: ActorContext,
-    options: { signal?: AbortSignal; memoId?: string } = {}
+    options: {
+      signal?: AbortSignal;
+      memoId?: string;
+      purpose?: MemoPdfRenderPurpose;
+    } = {}
   ): Promise<Buffer> {
     // Rejected here, before a worker is spent on it; the worker repeats the
     // check on the decoded document.
@@ -38,6 +42,9 @@ export class MemoPdfRenderer {
       actorId: actor.actorID,
       memoId: options.memoId,
       signal: options.signal,
+      // The signing preview calls without options; it is the default so that
+      // it keeps the render capacity downloads may not take.
+      purpose: options.purpose ?? 'signing',
     });
   }
 }

@@ -8,6 +8,7 @@ import { BaseException } from './base.exception';
 export type MemoPdfUnavailableReason =
   | 'busy-actor'
   | 'busy-global'
+  | 'rate-limited'
   | 'deadline'
   | 'crashed'
   | 'launch-failed'
@@ -19,12 +20,19 @@ export type MemoPdfUnavailableReason =
  * as a problem with the memo.
  */
 export class MemoPdfUnavailableException extends BaseException {
+  /** When known, how long the caller should wait before retrying. */
+  public readonly retryAfterSeconds?: number;
+
   constructor(
     public readonly reason: MemoPdfUnavailableReason,
-    message = `Memo PDF rendering is unavailable (${reason})`
+    options: { retryAfterSeconds?: number } = {}
   ) {
-    super(message, LogContext.MEMOS, AlkemioErrorStatus.MEMO_PDF_UNAVAILABLE, {
-      reason,
-    });
+    super(
+      `Memo PDF rendering is unavailable (${reason})`,
+      LogContext.MEMOS,
+      AlkemioErrorStatus.MEMO_PDF_UNAVAILABLE,
+      { reason }
+    );
+    this.retryAfterSeconds = options.retryAfterSeconds;
   }
 }

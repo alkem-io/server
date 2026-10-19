@@ -2,7 +2,11 @@ import { EventEmitter } from 'node:events';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavailable.exception';
-import { MemoPdfExecutor, memoPdfExecutorCapacity } from './memo.pdf.executor';
+import {
+  MemoPdfExecutor,
+  MemoPdfRenderPurpose,
+  memoPdfExecutorCapacity,
+} from './memo.pdf.executor';
 import { ParentMessage } from './memo.pdf.executor.protocol';
 import { ResolveMemoImage } from './memo.pdf.render.core';
 
@@ -64,9 +68,14 @@ const setup = (
   const resolveImage = vi.fn<ResolveMemoImage>();
   const run = (
     actorId = 'actor-1',
-    extra: { signal?: AbortSignal; memoId?: string } = {}
+    extra: {
+      signal?: AbortSignal;
+      memoId?: string;
+      purpose?: MemoPdfRenderPurpose;
+    } = {}
   ) => {
     const rendering = executor.run({
+      purpose: 'signing',
       state: Buffer.from('state'),
       resolveImage,
       actorId,
@@ -138,6 +147,67 @@ describe('MemoPdfExecutor', () => {
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
     expect(error.reason).toBe('busy-actor');
     expect(children).toHaveLength(1);
+  });
+
+  it('keeps the last slot for the signing preview when downloads fill the rest', async () => {
+    const { children, run } = setup({
+      max_concurrent_renders: 3,
+      max_concurrent_renders_per_actor: 1,
+      heap_mb: 512,
+      deadline_ms: 30_000,
+    });
+
+    void run('reader-1', { purpose: 'download' });
+    void run('reader-2', { purpose: 'download' });
+    const refused = await run('reader-3', { purpose: 'download' }).catch(
+      caught => caught
+    );
+    expect(refused).toBeInstanceOf(MemoPdfUnavailableException);
+    expect(refused.reason).toBe('busy-global');
+    expect(children).toHaveLength(2);
+
+    void run('signer-1', { purpose: 'signing' });
+    expect(children).toHaveLength(3);
+  });
+
+  it('admits one download at the default caps and keeps the other slot for signing', async () => {
+    const { children, run } = setup();
+
+    void run('reader-1', { purpose: 'download' });
+    const refused = await run('reader-2', { purpose: 'download' }).catch(
+      caught => caught
+    );
+    expect(refused.reason).toBe('busy-global');
+
+    void run('signer-1', { purpose: 'signing' });
+    expect(children).toHaveLength(2);
+  });
+
+  it('frees the download share when a download ends', async () => {
+    const { children, run } = setup();
+
+    const first = run('reader-1', { purpose: 'download' });
+    children[0].reply({ type: 'DONE', pdf, imageCount: 0 });
+    await first;
+
+    void run('reader-2', { purpose: 'download' });
+    expect(children).toHaveLength(2);
+  });
+
+  it('lets downloads use the only slot when the global cap is 1', async () => {
+    const { children, run } = setup({
+      max_concurrent_renders: 1,
+      max_concurrent_renders_per_actor: 1,
+      heap_mb: 512,
+      deadline_ms: 30_000,
+    });
+
+    void run('reader-1', { purpose: 'download' });
+    expect(children).toHaveLength(1);
+    const refused = await run('signer-1', { purpose: 'signing' }).catch(
+      caught => caught
+    );
+    expect(refused.reason).toBe('busy-global');
   });
 
   it('refuses every render when the global cap is 0', async () => {
@@ -365,6 +435,7 @@ describe('MemoPdfExecutor', () => {
         'message',
         'outcome',
         'pdfBytes',
+        'purpose',
       ].sort()
     );
     expect(line).toMatchObject({
@@ -372,6 +443,7 @@ describe('MemoPdfExecutor', () => {
       jobId: children[0].jobId,
       memoId: 'memo-9',
       actorId: 'actor-1',
+      purpose: 'signing',
       outcome: 'ok',
       pdfBytes: pdf.length,
       imageCount: 3,
@@ -410,6 +482,7 @@ describe('memoPdfExecutorCapacity', () => {
     const warn = vi.fn();
     expect(memoPdfExecutorCapacity(valid, warn)).toEqual({
       maxConcurrent: 3,
+      maxConcurrentDownloads: 2,
       maxPerActor: 2,
       heapMb: 256,
       deadlineMs: 10_000,
@@ -428,6 +501,7 @@ describe('memoPdfExecutorCapacity', () => {
       warn
     );
     expect(capacity.maxConcurrent).toBe(0);
+    expect(capacity.maxConcurrentDownloads).toBe(0);
     expect(capacity.maxPerActor).toBe(0);
     expect(warn).not.toHaveBeenCalled();
   });
@@ -452,6 +526,7 @@ describe('memoPdfExecutorCapacity', () => {
       )
     ).toEqual({
       maxConcurrent: 2,
+      maxConcurrentDownloads: 1,
       maxPerActor: 1,
       heapMb: 512,
       deadlineMs: 30_000,
@@ -462,6 +537,12 @@ describe('memoPdfExecutorCapacity', () => {
       ['heap_mb'],
       ['deadline_ms'],
     ]);
+  });
+
+  it('reserves nothing for signing when there is a single slot', () => {
+    expect(
+      memoPdfExecutorCapacity({ ...valid, max_concurrent_renders: 1 }, vi.fn())
+    ).toMatchObject({ maxConcurrent: 1, maxConcurrentDownloads: 1 });
   });
 
   it('rejects 0 for the heap and the deadline', () => {

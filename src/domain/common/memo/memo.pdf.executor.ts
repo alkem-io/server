@@ -22,6 +22,12 @@ import type { ResolveMemoImage } from './memo.pdf.render.core';
 
 export type MemoPdfExecutorCapacity = {
   maxConcurrent: number;
+  /**
+   * Downloads may use every slot but one, so that a signing preview always
+   * finds capacity however many readers download. With a single slot there is
+   * nothing to reserve and both share it.
+   */
+  maxConcurrentDownloads: number;
   maxPerActor: number;
   heapMb: number;
   deadlineMs: number;
@@ -53,15 +59,26 @@ export function memoPdfExecutorCapacity(
     warn(key);
     return DEFAULTS[key];
   };
+  const maxConcurrent = read('max_concurrent_renders', 0);
   return {
-    maxConcurrent: read('max_concurrent_renders', 0),
+    maxConcurrent,
+    maxConcurrentDownloads:
+      maxConcurrent > 1 ? maxConcurrent - 1 : maxConcurrent,
     maxPerActor: read('max_concurrent_renders_per_actor', 0),
     heapMb: read('heap_mb', 1),
     deadlineMs: read('deadline_ms', 1),
   };
 }
 
+/**
+ * Why a render runs. The signing preview is part of a paid, entitlement-gated
+ * flow; a download is open to every reader, so downloads alone can never fill
+ * the instance's capacity.
+ */
+export type MemoPdfRenderPurpose = 'download' | 'signing';
+
 export type MemoPdfRenderJob = {
+  purpose: MemoPdfRenderPurpose;
   state: Buffer;
   resolveImage: ResolveMemoImage;
   actorId: string;
@@ -100,7 +117,7 @@ export class MemoPdfExecutor implements OnModuleDestroy {
   private readonly capacity: MemoPdfExecutorCapacity;
   private readonly jobs = new Map<
     string,
-    { actorId: string; stop: () => void }
+    { actorId: string; purpose: MemoPdfRenderPurpose; stop: () => void }
   >();
 
   constructor(
@@ -151,13 +168,17 @@ export class MemoPdfExecutor implements OnModuleDestroy {
       refuse('cancelled');
       throw cancelled();
     }
-    if (this.jobs.size >= this.capacity.maxConcurrent) {
+    const running = [...this.jobs.values()];
+    if (
+      running.length >= this.capacity.maxConcurrent ||
+      (job.purpose === 'download' &&
+        running.filter(other => other.purpose === 'download').length >=
+          this.capacity.maxConcurrentDownloads)
+    ) {
       refuse('busy-global');
       throw new MemoPdfUnavailableException('busy-global');
     }
-    const owned = [...this.jobs.values()].filter(
-      running => running.actorId === job.actorId
-    ).length;
+    const owned = running.filter(other => other.actorId === job.actorId).length;
     if (owned >= this.capacity.maxPerActor) {
       refuse('busy-actor');
       throw new MemoPdfUnavailableException('busy-actor');
@@ -165,7 +186,11 @@ export class MemoPdfExecutor implements OnModuleDestroy {
 
     // The slot is reserved synchronously, before the fork, so concurrent
     // requests can never both pass the capacity checks above.
-    this.jobs.set(jobId, { actorId: job.actorId, stop: () => {} });
+    this.jobs.set(jobId, {
+      actorId: job.actorId,
+      purpose: job.purpose,
+      stop: () => {},
+    });
     let child: ChildProcess;
     try {
       child = this.launch();
@@ -217,6 +242,7 @@ export class MemoPdfExecutor implements OnModuleDestroy {
 
       this.jobs.set(jobId, {
         actorId: job.actorId,
+        purpose: job.purpose,
         stop: () => finish({ outcome: 'cancelled' }),
       });
       job.signal?.addEventListener('abort', onAbort, { once: true });
@@ -309,6 +335,7 @@ export class MemoPdfExecutor implements OnModuleDestroy {
       jobId,
       memoId: job.memoId,
       actorId: job.actorId,
+      purpose: job.purpose,
       outcome: terminal.outcome,
       durationMs,
       pdfBytes: terminal.pdf?.length,

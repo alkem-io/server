@@ -137,6 +137,21 @@ describe('MemoPdfController', () => {
     expect(response.sendStatus).toHaveBeenCalledWith(429);
   });
 
+  it('maps a rate-limited actor to 429 with the computed Retry-After', async () => {
+    const { controller, response } = setup(() =>
+      Promise.reject(
+        new MemoPdfUnavailableException('rate-limited', {
+          retryAfterSeconds: 40,
+        })
+      )
+    );
+
+    await controller.download(memoId, actor, response as any);
+
+    expect(response.set).toHaveBeenCalledWith('Retry-After', '40');
+    expect(response.sendStatus).toHaveBeenCalledWith(429);
+  });
+
   it.each([
     'busy-global',
     'deadline',

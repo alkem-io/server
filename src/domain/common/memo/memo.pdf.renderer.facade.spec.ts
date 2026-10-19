@@ -43,14 +43,29 @@ describe('MemoPdfRenderer façade', () => {
       actorId: 'actor-1',
       memoId: 'memo-1',
       signal: abort.signal,
+      purpose: 'signing',
     });
+  });
+
+  it('passes the download purpose through to the executor', async () => {
+    await renderer.render(Buffer.from('state'), 'bucket-1', actor, {
+      purpose: 'download',
+    });
+
+    expect(executor.run).toHaveBeenLastCalledWith(
+      expect.objectContaining({ purpose: 'download' })
+    );
   });
 
   it('keeps the signing call shape: three arguments, no options', async () => {
     await renderer.render(Buffer.from('state'), 'bucket-1', actor);
 
     expect(executor.run).toHaveBeenCalledWith(
-      expect.objectContaining({ memoId: undefined, signal: undefined })
+      expect.objectContaining({
+        memoId: undefined,
+        signal: undefined,
+        purpose: 'signing',
+      })
     );
   });
 

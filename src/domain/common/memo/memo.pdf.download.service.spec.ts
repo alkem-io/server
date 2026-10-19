@@ -9,7 +9,10 @@ import {
 import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavailable.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import * as Y from 'yjs';
-import { MemoPdfDownloadService } from './memo.pdf.download.service';
+import {
+  MEMO_PDF_DOWNLOADS_PER_ACTOR_PER_MINUTE,
+  MemoPdfDownloadService,
+} from './memo.pdf.download.service';
 
 describe('MemoPdfDownloadService', () => {
   const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
@@ -91,7 +94,7 @@ describe('MemoPdfDownloadService', () => {
       Buffer.from(Y.encodeStateAsUpdateV2(liveDoc)),
       'bucket-1',
       actor,
-      { signal: abort.signal, memoId: 'memo-1' }
+      { signal: abort.signal, memoId: 'memo-1', purpose: 'download' }
     );
   });
 
@@ -200,5 +203,55 @@ describe('MemoPdfDownloadService', () => {
     renderer.render.mockRejectedValue(thrown);
 
     await expect(service.download('memo-1', actor)).rejects.toBe(thrown);
+  });
+
+  it('refuses a download beyond the per-actor rate before any lookup, read or render', async () => {
+    vi.useFakeTimers({
+      toFake: ['Date'],
+      now: new Date('2026-10-19T12:00:00Z'),
+    });
+    const {
+      service,
+      memoService,
+      collaborationDocumentService,
+      renderer,
+      logger,
+    } = setup();
+    for (let i = 0; i < MEMO_PDF_DOWNLOADS_PER_ACTOR_PER_MINUTE; i++)
+      await service.download('memo-1', actor);
+    vi.setSystemTime(new Date('2026-10-19T12:00:20.500Z'));
+
+    const error = await service.download('memo-1', actor).catch(e => e);
+
+    expect(error).toBeInstanceOf(MemoPdfUnavailableException);
+    expect(error.reason).toBe('rate-limited');
+    expect(error.retryAfterSeconds).toBe(40);
+    expect(memoService.getMemoOrFail).toHaveBeenCalledTimes(
+      MEMO_PDF_DOWNLOADS_PER_ACTOR_PER_MINUTE
+    );
+    expect(collaborationDocumentService.read).toHaveBeenCalledTimes(
+      MEMO_PDF_DOWNLOADS_PER_ACTOR_PER_MINUTE
+    );
+    expect(renderer.render).toHaveBeenCalledTimes(
+      MEMO_PDF_DOWNLOADS_PER_ACTOR_PER_MINUTE
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      {
+        message: 'Memo PDF download rate limited',
+        memoId: 'memo-1',
+        actorId: 'actor-1',
+      },
+      LogContext.MEMOS
+    );
+
+    const other = Object.assign(new ActorContext(), { actorID: 'actor-2' });
+    await expect(service.download('memo-1', other)).resolves.toMatchObject({
+      pdf,
+    });
+
+    vi.setSystemTime(new Date('2026-10-19T12:01:00Z'));
+    await expect(service.download('memo-1', actor)).resolves.toMatchObject({
+      pdf,
+    });
   });
 });

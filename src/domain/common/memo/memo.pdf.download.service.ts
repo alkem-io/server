@@ -14,8 +14,16 @@ import { CollaborationDocumentService } from '@services/collaboration-client/col
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as Y from 'yjs';
 import { memoPdfFilename } from './memo.pdf.filename';
+import { ActorRateWindow } from './memo.pdf.rate.window';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
 import { MemoService } from './memo.service';
+
+/**
+ * Downloads one actor may start per minute on one server instance. A reader
+ * downloads a memo now and then; this keeps one account from holding a render
+ * slot continuously by looping requests.
+ */
+export const MEMO_PDF_DOWNLOADS_PER_ACTOR_PER_MINUTE = 10;
 
 /**
  * Produces a memo's current content as a PDF for a reader. Nothing is stored:
@@ -25,6 +33,11 @@ import { MemoService } from './memo.service';
  */
 @Injectable()
 export class MemoPdfDownloadService {
+  private readonly rateWindow = new ActorRateWindow(
+    MEMO_PDF_DOWNLOADS_PER_ACTOR_PER_MINUTE,
+    60_000
+  );
+
   constructor(
     private readonly memoService: MemoService,
     private readonly authorizationService: AuthorizationService,
@@ -39,6 +52,22 @@ export class MemoPdfDownloadService {
     actor: ActorContext,
     signal?: AbortSignal
   ): Promise<{ pdf: Buffer; filename: string }> {
+    // Checked first, so a refused request costs no lookup and no live read.
+    const rate = this.rateWindow.take(actor.actorID);
+    if (!rate.admitted) {
+      this.logger.warn?.(
+        {
+          message: 'Memo PDF download rate limited',
+          memoId,
+          actorId: actor.actorID,
+        },
+        LogContext.MEMOS
+      );
+      throw new MemoPdfUnavailableException('rate-limited', {
+        retryAfterSeconds: Math.max(1, Math.ceil(rate.retryAfterMs / 1000)),
+      });
+    }
+
     const memo = await this.memoService.getMemoOrFail(memoId, {
       relations: { authorization: true, profile: { storageBucket: true } },
     });
@@ -76,7 +105,7 @@ export class MemoPdfDownloadService {
         state,
         memo.profile?.storageBucket?.id,
         actor,
-        { signal, memoId }
+        { signal, memoId, purpose: 'download' }
       );
     } catch (error) {
       // The reader may read the memo; an image inside it that they may not

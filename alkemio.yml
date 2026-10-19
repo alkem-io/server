@@ -622,7 +622,10 @@ collaboration:
     # in its own forked worker process; these bound how many run at once.
     pdf_export:
       # Concurrent renders per server instance; 0 switches memo PDF rendering off
-      # (every request answers "temporarily unavailable").
+      # for downloads AND the signing preview (every request answers
+      # "temporarily unavailable"). Downloads may use every slot but one, which
+      # stays free for the signing preview; at 1 both share the single slot.
+      # Each actor may also start at most 10 downloads per minute per instance.
       max_concurrent_renders: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS}:2
       # Concurrent renders per actor per server instance; a fixed value, not
       # derived from the global cap.
