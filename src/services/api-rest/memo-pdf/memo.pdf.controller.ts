@@ -77,15 +77,8 @@ export class MemoPdfController {
       return response.status(422).json({ message: error.message });
     if (error instanceof MemoPdfUnavailableException)
       return response
-        .set(
-          'Retry-After',
-          error.retryAfterSeconds?.toString() ?? RETRY_AFTER_SECONDS
-        )
-        .sendStatus(
-          error.reason === 'busy-actor' || error.reason === 'rate-limited'
-            ? 429
-            : 503
-        );
+        .set('Retry-After', RETRY_AFTER_SECONDS)
+        .sendStatus(error.reason === 'busy-actor' ? 429 : 503);
     throw error;
   }
 }

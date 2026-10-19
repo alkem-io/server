@@ -36,7 +36,7 @@ export type MemoPdfExecutorCapacity = {
 type PdfExportConfig = AlkemioConfig['collaboration']['memo']['pdf_export'];
 
 const DEFAULTS: PdfExportConfig = {
-  max_concurrent_renders: 2,
+  max_concurrent_renders: 3,
   max_concurrent_renders_per_actor: 1,
   heap_mb: 512,
   deadline_ms: 30_000,

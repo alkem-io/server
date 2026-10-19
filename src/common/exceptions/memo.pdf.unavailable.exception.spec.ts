@@ -20,15 +20,4 @@ describe('MemoPdfUnavailableException', () => {
       'Memo PDF rendering is unavailable (busy-actor)'
     );
   });
-
-  it('carries a retry hint only when one is given', () => {
-    expect(
-      new MemoPdfUnavailableException('busy-global').retryAfterSeconds
-    ).toBeUndefined();
-    const limited = new MemoPdfUnavailableException('rate-limited', {
-      retryAfterSeconds: 42,
-    });
-    expect(limited.retryAfterSeconds).toBe(42);
-    expect(limited.details).toEqual({ reason: 'rate-limited' });
-  });
 });

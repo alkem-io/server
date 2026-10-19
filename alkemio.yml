@@ -625,8 +625,9 @@ collaboration:
       # for downloads AND the signing preview (every request answers
       # "temporarily unavailable"). Downloads may use every slot but one, which
       # stays free for the signing preview; at 1 both share the single slot.
-      # Each actor may also start at most 10 downloads per minute per instance.
-      max_concurrent_renders: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS}:2
+      # The default 3 gives downloads 2 slots and keeps 1 for signing. Each
+      # worker may use up to heap_mb.
+      max_concurrent_renders: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS}:3
       # Concurrent renders per actor per server instance; a fixed value, not
       # derived from the global cap.
       max_concurrent_renders_per_actor: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS_PER_ACTOR}:1

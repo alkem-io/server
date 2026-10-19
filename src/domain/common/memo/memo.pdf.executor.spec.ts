@@ -188,7 +188,7 @@ describe('MemoPdfExecutor', () => {
     expect(children).toHaveLength(3);
   });
 
-  it('admits one download at the default caps and keeps the other slot for signing', async () => {
+  it('admits one download at two slots and keeps the other slot for signing', async () => {
     const { children, run } = setup();
 
     void run('download', 'reader-1');
@@ -197,6 +197,21 @@ describe('MemoPdfExecutor', () => {
 
     void run('signing', 'signer-1');
     expect(children).toHaveLength(2);
+  });
+
+  it('lets a second actor download while another holds one at the default caps', async () => {
+    // No key is configured, so the executor runs on its own defaults.
+    const { children, run } = setup({});
+
+    void run('download', 'actor-a');
+    void run('download', 'actor-b');
+    expect(children).toHaveLength(2);
+
+    const refused = await run('download', 'actor-c').catch(caught => caught);
+    expect(refused.reason).toBe('busy-global');
+
+    void run('signing', 'signer-1');
+    expect(children).toHaveLength(3);
   });
 
   it('frees the download share when a download ends', async () => {
@@ -539,8 +554,8 @@ describe('memoPdfExecutorCapacity', () => {
         warn
       )
     ).toEqual({
-      maxConcurrent: 2,
-      maxConcurrentDownloads: 1,
+      maxConcurrent: 3,
+      maxConcurrentDownloads: 2,
       maxPerActor: 1,
       heapMb: 512,
       deadlineMs: 30_000,
