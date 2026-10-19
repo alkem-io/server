@@ -23,8 +23,9 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { ILink } from '../link/link.interface';
@@ -46,7 +47,9 @@ export class CalloutContributionService {
     private collaboraDocumentService: CollaboraDocumentService,
     private classificationService: ClassificationService,
     @InjectRepository(CalloutContribution)
-    private contributionRepository: Repository<CalloutContribution>
+    private contributionRepository: Repository<CalloutContribution>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   /**
@@ -100,11 +103,26 @@ export class CalloutContributionService {
       // A later input failed (e.g. a disallowed type or an unknown task
       // column): the caller never receives the contributions built so far, so
       // their self-persisted children must be removed here (server#6614).
-      // Cleanup failures are swallowed so the original error surfaces.
+      // A cleanup failure is logged, not thrown, so the original error
+      // surfaces; the log names the child left behind.
       for (const contribution of contributions) {
-        await this.deletePersistedChildrenOfUnsavedContribution(
-          contribution
-        ).catch(() => undefined);
+        try {
+          await this.deletePersistedChildrenOfUnsavedContribution(contribution);
+        } catch (cleanupError: unknown) {
+          this.logger.error?.(
+            {
+              message:
+                'Failed to delete contribution child after contribution creation failed',
+              whiteboardId: contribution.whiteboard?.id,
+              memoId: contribution.memo?.id,
+              collaboraDocumentId: contribution.collaboraDocument?.document?.id,
+            },
+            cleanupError instanceof Error
+              ? (cleanupError.stack ?? '')
+              : String(cleanupError),
+            LogContext.COLLABORATION
+          );
+        }
       }
       throw error;
     }

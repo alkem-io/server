@@ -16,6 +16,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { LinkService } from '../link/link.service';
@@ -25,6 +26,7 @@ import { CalloutContributionService } from './callout.contribution.service';
 
 describe('CalloutContributionService', () => {
   let service: CalloutContributionService;
+  let logger: { error: ReturnType<typeof vi.fn> };
   let repository: Repository<CalloutContribution>;
   let postService: PostService;
   let whiteboardService: WhiteboardService;
@@ -58,6 +60,7 @@ describe('CalloutContributionService', () => {
     repository = module.get(getRepositoryToken(CalloutContribution));
     postService = module.get(PostService);
     whiteboardService = module.get(WhiteboardService);
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
     linkService = module.get(LinkService);
     memoService = module.get(MemoService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
@@ -350,6 +353,40 @@ describe('CalloutContributionService', () => {
       ).rejects.toThrow();
 
       expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
+    });
+
+    it('logs a failed cleanup and still surfaces the original error', async () => {
+      vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue({
+        id: 'wb-1',
+      } as any);
+      vi.mocked(whiteboardService.deleteWhiteboard).mockRejectedValue(
+        new Error('broker unavailable')
+      );
+
+      await expect(
+        service.createCalloutContributions(
+          [
+            {
+              type: CalloutContributionType.WHITEBOARD,
+              whiteboard: { profile: { displayName: 'Board' } },
+            },
+            {
+              type: CalloutContributionType.POST,
+              post: { profileData: { displayName: 'Post' } },
+            },
+          ] as any[],
+          { id: 'agg-1' } as any,
+          { allowedTypes: [CalloutContributionType.WHITEBOARD] } as any,
+          actorContextData.actorContext,
+          'user-1'
+        )
+      ).rejects.not.toThrow('broker unavailable');
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ whiteboardId: 'wb-1' }),
+        expect.any(String),
+        expect.any(String)
+      );
     });
   });
 
