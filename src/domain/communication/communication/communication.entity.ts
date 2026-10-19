@@ -9,6 +9,9 @@ export class Communication
   extends AuthorizableEntity
   implements ICommunication
 {
+  // Not read anywhere: rows hold either the level-zero space id (older
+  // communities) or an empty string, and neither identifies the owning space.
+  // Resolve the owning space via space."communityId" -> community."communicationId".
   @Column('varchar', { nullable: false, length: UUID_LENGTH })
   spaceID: string;
 

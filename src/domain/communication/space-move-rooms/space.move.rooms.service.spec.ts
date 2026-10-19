@@ -107,43 +107,6 @@ describe('SpaceMoveRoomsService', () => {
     });
   });
 
-  describe('revokeSpaceMembershipsForActors', () => {
-    it('should call batchRemoveSpaceMember once per actor with all space IDs', () => {
-      const actorIds = ['actor-1', 'actor-2'];
-      const spaceIds = ['space-1', 'space-2'];
-
-      service.revokeSpaceMembershipsForActors(actorIds, spaceIds);
-
-      expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalledTimes(
-        2
-      );
-      expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalledWith(
-        'actor-1',
-        spaceIds,
-        'cross-L0-move'
-      );
-      expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalledWith(
-        'actor-2',
-        spaceIds,
-        'cross-L0-move'
-      );
-    });
-
-    it('should not throw when adapter rejects (fire-and-forget)', async () => {
-      communicationAdapter.batchRemoveSpaceMember.mockRejectedValue(
-        new Error('Adapter failure')
-      );
-
-      expect(() =>
-        service.revokeSpaceMembershipsForActors(['actor-1'], ['space-1'])
-      ).not.toThrow();
-
-      await vi.waitFor(() => {
-        expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalled();
-      });
-    });
-  });
-
   describe('handleRoomsDuringMove — revocation orchestration', () => {
     beforeEach(() => {
       spaceLookupService.getAllDescendantSpaceIDs.mockResolvedValue([
@@ -159,25 +122,18 @@ describe('SpaceMoveRoomsService', () => {
 
       // Mock communication lookup (no updates rooms to recreate for simplicity)
       communicationAdapter.batchRemoveMember.mockResolvedValue(true);
-      communicationAdapter.batchRemoveSpaceMember.mockResolvedValue(true);
     });
 
     it('should skip revocation when removedActorIds is empty', async () => {
       await service.handleRoomsDuringMove('space-1', []);
 
       expect(communicationAdapter.batchRemoveMember).not.toHaveBeenCalled();
-      expect(
-        communicationAdapter.batchRemoveSpaceMember
-      ).not.toHaveBeenCalled();
     });
 
     it('should revoke for all actors when removedActorIds is provided', async () => {
       await service.handleRoomsDuringMove('space-1', ['actor-1', 'actor-2']);
 
       expect(communicationAdapter.batchRemoveMember).toHaveBeenCalledTimes(2);
-      expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalledTimes(
-        2
-      );
     });
 
     it('should never throw — errors are caught and logged', async () => {
@@ -203,7 +159,6 @@ describe('SpaceMoveRoomsService', () => {
         .mockResolvedValueOnce([{ id: 'updates-room-1' }]);
       entityManager.createQueryBuilder.mockReturnValue(qb as any);
       communicationAdapter.batchRemoveMember.mockResolvedValue(true);
-      communicationAdapter.batchRemoveSpaceMember.mockResolvedValue(true);
     });
 
     it('should NOT call deleteRoom for callout or post rooms', async () => {
@@ -238,7 +193,6 @@ describe('SpaceMoveRoomsService', () => {
     const mockCommunication = {
       id: 'comm-1',
       updates: { id: 'old-room-1' },
-      spaceID: 'space-1',
       displayName: 'TestSpace',
     } as ICommunication;
 
@@ -385,7 +339,7 @@ describe('SpaceMoveRoomsService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should query communications by spaceID', async () => {
+    it('should return the communications found for the given spaces', async () => {
       const qb = mockQueryBuilder();
       qb.getRawMany.mockResolvedValue([
         {

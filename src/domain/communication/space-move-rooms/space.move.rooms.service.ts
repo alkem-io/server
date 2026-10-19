@@ -36,8 +36,11 @@ export class SpaceMoveRoomsService {
    * Operations (fire-and-forget for adapter calls):
    * 1. Collect all room IDs in the moved subtree
    * 2. Revoke Matrix room memberships for all removed actors
-   * 3. Revoke Matrix space memberships for all removed actors
-   * 4. Recreate community updates rooms for the moved space and descendants
+   * 3. Recreate community updates rooms for the moved space and descendants
+   *
+   * Matrix space memberships are not revoked: the server adds no actor to a
+   * Matrix space, and no room's join rule depends on Matrix space membership —
+   * every member is added to each room directly.
    */
   async handleRoomsDuringMove(
     movedSpaceId: string,
@@ -51,19 +54,16 @@ export class SpaceMoveRoomsService {
       // Step 1: Collect all room IDs in the subtree
       const roomIds = await this.collectAllRoomIdsInSubtree(allSpaceIds);
 
-      // Step 2–3: Revoke memberships for removed actors
+      // Step 2: Revoke room memberships for removed actors
       if (removedActorIds.length > 0 && roomIds.length > 0) {
         this.revokeRoomMembershipsForActors(removedActorIds, roomIds);
       }
-      if (removedActorIds.length > 0 && allSpaceIds.length > 0) {
-        this.revokeSpaceMembershipsForActors(removedActorIds, allSpaceIds);
-      }
 
-      // Step 4: Recreate updates rooms
+      // Step 3: Recreate updates rooms
       // PRESERVATION VERIFICATION (US1):
       //  - collectAllRoomIdsInSubtree() is read-only (no DELETE/UPDATE on room table)
-      //  - revokeRoomMembershipsForActors/revokeSpaceMembershipsForActors only call
-      //    batchRemoveMember/batchRemoveSpaceMember (membership ops), never deleteRoom
+      //  - revokeRoomMembershipsForActors only calls batchRemoveMember
+      //    (membership op), never deleteRoom
       //  - Only updates rooms are deleted below (via recreateUpdatesRooms); callout/post
       //    rooms survive untouched with full message history and original attribution
       //  - Room.messagesCount is adapter-derived at query time, not a stale cache
@@ -130,13 +130,15 @@ export class SpaceMoveRoomsService {
         .where('s.id IN (:...spaceIds)', { spaceIds })
         .getRawMany<{ id: string }>(),
 
-      // Updates rooms: Room ← Communication (by spaceID)
+      // Updates rooms: Room ← Communication ← Community ← Space
       this.entityManager
         .createQueryBuilder()
         .select('r.id', 'id')
         .from('room', 'r')
         .innerJoin('communication', 'comm', 'comm."updatesId" = r.id')
-        .where('comm."spaceID" IN (:...spaceIds)', { spaceIds })
+        .innerJoin('community', 'cmty', 'cmty."communicationId" = comm.id')
+        .innerJoin('space', 's', 's."communityId" = cmty.id')
+        .where('s.id IN (:...spaceIds)', { spaceIds })
         .getRawMany<{ id: string }>(),
     ]);
 
@@ -151,6 +153,8 @@ export class SpaceMoveRoomsService {
   /**
    * Retrieves Communication entities with their updates room info for the given spaces.
    * Used to delete old and create new updates rooms during the move.
+   * The owning space is resolved through its community, never through
+   * communication."spaceID", which does not hold the owning space's id.
    */
   async getCommunicationsWithUpdatesRooms(
     spaceIds: string[]
@@ -161,10 +165,12 @@ export class SpaceMoveRoomsService {
       .createQueryBuilder()
       .select('comm.id', 'communicationId')
       .addSelect('comm."updatesId"', 'updatesRoomId')
-      .addSelect('comm."spaceID"', 'spaceId')
+      .addSelect('s.id', 'spaceId')
       .addSelect('comm."displayName"', 'displayName')
       .from('communication', 'comm')
-      .where('comm."spaceID" IN (:...spaceIds)', { spaceIds })
+      .innerJoin('community', 'cmty', 'cmty."communicationId" = comm.id')
+      .innerJoin('space', 's', 's."communityId" = cmty.id')
+      .where('s.id IN (:...spaceIds)', { spaceIds })
       .andWhere('comm."updatesId" IS NOT NULL')
       .getRawMany<CommunicationWithUpdatesRoom>();
 
@@ -184,31 +190,6 @@ export class SpaceMoveRoomsService {
             {
               message: 'Failed to revoke room memberships for actor',
               details: { actorId, roomCount: roomIds.length },
-            },
-            error?.stack,
-            LogContext.COMMUNICATION
-          )
-        );
-    }
-  }
-
-  /**
-   * Revokes Matrix space hierarchy memberships for the given actors.
-   * This is the mechanism that gates access to callout/post rooms.
-   * Fire-and-forget: errors are logged, never thrown.
-   */
-  revokeSpaceMembershipsForActors(
-    actorIds: string[],
-    spaceIds: string[]
-  ): void {
-    for (const actorId of actorIds) {
-      this.communicationAdapter
-        .batchRemoveSpaceMember(actorId, spaceIds, 'cross-L0-move')
-        .catch(error =>
-          this.logger.error?.(
-            {
-              message: 'Failed to revoke space memberships for actor',
-              details: { actorId, spaceCount: spaceIds.length },
             },
             error?.stack,
             LogContext.COMMUNICATION

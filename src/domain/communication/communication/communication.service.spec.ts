@@ -62,9 +62,8 @@ describe('CommunicationService', () => {
       }));
       roomService.createRoom.mockResolvedValue(mockUpdatesRoom);
 
-      const result = await service.createCommunication('TestSpace', 'space-1');
+      const result = await service.createCommunication('TestSpace');
 
-      expect(result.spaceID).toBe('space-1');
       expect(result.authorization).toBeDefined();
       expect(result.updates).toBe(mockUpdatesRoom);
       expect(communicationRepo.save).toHaveBeenCalled();
@@ -200,10 +199,9 @@ describe('CommunicationService', () => {
   });
 
   describe('addContributorToCommunications', () => {
-    it('should add contributor to all room IDs and Matrix space hierarchy', async () => {
+    it('should add contributor to all room IDs', async () => {
       const mockComm = {
         id: 'comm-1',
-        spaceID: 'space-1',
         updates: { id: 'room-1' },
       } as ICommunication;
 
@@ -217,16 +215,11 @@ describe('CommunicationService', () => {
         'actor-1',
         ['room-1']
       );
-      expect(communicationAdapter.batchAddSpaceMember).toHaveBeenCalledWith(
-        'actor-1',
-        ['space-1']
-      );
     });
 
     it('should return true without calling adapter when actorID is empty', async () => {
       const mockComm = {
         id: 'comm-1',
-        spaceID: 'space-1',
         updates: { id: 'room-1' },
       } as ICommunication;
 
@@ -234,7 +227,6 @@ describe('CommunicationService', () => {
 
       expect(result).toBe(true);
       expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
-      expect(communicationAdapter.batchAddSpaceMember).not.toHaveBeenCalled();
     });
   });
 
@@ -284,10 +276,9 @@ describe('CommunicationService', () => {
   });
 
   describe('removeActorFromCommunications', () => {
-    it('should remove actor from all room IDs and space hierarchy', async () => {
+    it('should remove actor from all room IDs', async () => {
       const mockComm = {
         id: 'comm-1',
-        spaceID: 'space-1',
         updates: { id: 'room-1' },
       } as ICommunication;
 
@@ -300,10 +291,6 @@ describe('CommunicationService', () => {
       expect(communicationAdapter.batchRemoveMember).toHaveBeenCalledWith(
         'actor-1',
         ['room-1']
-      );
-      expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalledWith(
-        'actor-1',
-        ['space-1']
       );
     });
   });

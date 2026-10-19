@@ -50,10 +50,7 @@ export class CommunityService {
 
     community.groups = [];
     community.communication =
-      await this.communicationService.createCommunication(
-        communityData.name,
-        ''
-      );
+      await this.communicationService.createCommunication(communityData.name);
     return community;
   }
 

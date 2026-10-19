@@ -5,11 +5,9 @@ import {
   // ID type aliases
   AlkemioRoomID,
   BatchAddMemberRequest,
-  BatchAddSpaceMemberRequest,
   BatchGetLastMessagesRequest,
   BatchGetUnreadCountsRequest,
   BatchRemoveMemberRequest,
-  BatchRemoveSpaceMemberRequest,
   // Type-safe command registry types
   CommandTopic,
   CreateRoomRequest,
@@ -1419,60 +1417,6 @@ export class CommunicationAdapter {
         isSpace: c.is_space,
       })),
     };
-  }
-
-  /**
-   * Add an actor to multiple Matrix spaces.
-   */
-  async batchAddSpaceMember(
-    actorID: AlkemioActorID,
-    contextIds: AlkemioContextID[]
-  ): Promise<boolean> {
-    if (!this.enabled || contextIds.length === 0) return true;
-
-    const response = await this.sendCommand({
-      operation: 'batchAddSpaceMember',
-      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_MEMBER_BATCH_ADD,
-      payload: {
-        actor_id: actorID,
-        alkemio_context_ids: contextIds,
-      } satisfies BatchAddSpaceMemberRequest,
-      errorContext: { actorID, contextCount: contextIds.length },
-      onError: 'boolean',
-    });
-
-    if (!response) {
-      this.logger.warn(
-        'Failed to add actor to spaces - may already be member',
-        LogContext.COMMUNICATION
-      );
-    }
-
-    return response?.success ?? false;
-  }
-
-  /**
-   * Remove an actor from multiple Matrix spaces.
-   */
-  async batchRemoveSpaceMember(
-    actorID: AlkemioActorID,
-    contextIds: AlkemioContextID[],
-    reason?: string
-  ): Promise<boolean> {
-    if (!this.enabled || contextIds.length === 0) return true;
-
-    const response = await this.sendCommand({
-      operation: 'batchRemoveSpaceMember',
-      topic: MatrixAdapterEventType.COMMUNICATION_SPACE_MEMBER_BATCH_REMOVE,
-      payload: {
-        actor_id: actorID,
-        alkemio_context_ids: contextIds,
-        reason,
-      } satisfies BatchRemoveSpaceMemberRequest,
-      errorContext: { actorID, contextCount: contextIds.length },
-    });
-
-    return response?.success ?? false;
   }
 
   // ============================================================================
