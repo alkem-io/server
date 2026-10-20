@@ -50,6 +50,7 @@ export interface McpToolDefinition {
   inputSchema: {
     type: 'object';
     properties: Record<string, unknown>;
+    additionalProperties?: boolean;
     required?: string[];
   };
 }

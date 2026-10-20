@@ -1089,3 +1089,40 @@ describe('FileServiceAdapter', () => {
     });
   });
 });
+
+describe('FileServiceAdapter local transport logging', () => {
+  it('records useful redacted socket diagnostics in the adapter owner', async () => {
+    const error = Object.assign(new Error('http://secret/scene token'), {
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 4003,
+    });
+    const logger = { verbose: vi.fn(), warn: vi.fn() };
+    const adapter = new FileServiceAdapter(
+      { request: () => throwError(() => error) } as any,
+      {
+        get: (key: string) =>
+          key === 'storage.file_service.retries' ? 0 : mockConfigValues[key],
+      } as any,
+      logger as any
+    );
+    await expect(adapter.getDocumentContent('file-id')).rejects.toMatchObject({
+      message: 'File service transport error',
+    });
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'File service transport error',
+        transportCause: {
+          code: 'ECONNREFUSED',
+          syscall: 'connect',
+          address: '127.0.0.1',
+          port: 4003,
+        },
+      }),
+      expect.any(String)
+    );
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('secret');
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('token');
+  });
+});

@@ -563,10 +563,20 @@ export class FileServiceAdapter extends HttpClientBase {
     }
 
     const cause = error instanceof Error ? error : new Error(String(error));
-    return FileServiceAdapterException.fromTransportError(
+    const exception = FileServiceAdapterException.fromTransportError(
       operation,
       cause,
       context
     );
+    this.logger.warn?.(
+      {
+        message: exception.message,
+        operation,
+        errorName: exception.details?.errorName,
+        transportCause: exception.details?.transportCause,
+      },
+      this.logContext
+    );
+    return exception;
   }
 }

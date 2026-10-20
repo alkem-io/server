@@ -53,3 +53,67 @@ describe('McpToolArgsValidator', () => {
     expect(validator.validate('cached_tool', schema, {})).toContain('query');
   });
 });
+
+describe('whiteboard creation definitions through the argument validator', () => {
+  it.each([
+    ['create_whiteboard', 'calloutId'],
+    ['create_whiteboard_in_space', 'spaceId'],
+  ])('rejects retired and unknown arguments before dispatch for %s', async (name, target) => {
+    const { CreateWhiteboardTool } = await import(
+      './tools/create-whiteboard.tool'
+    );
+    const { CreateWhiteboardInSpaceTool } = await import(
+      './tools/create-whiteboard-in-space.tool'
+    );
+    const prototype =
+      name === 'create_whiteboard'
+        ? CreateWhiteboardTool.prototype
+        : CreateWhiteboardInSpaceTool.prototype;
+    const definition = prototype.getDefinition();
+    const validator = new McpToolArgsValidator();
+    const execute = vi.fn();
+    const { McpServerService } = await import('./mcp-server.service');
+    const { ToolRegistry } = await import('./tools/tool.registry');
+    const { ActorContext } = await import('@core/actor-context/actor.context');
+    const logger = { verbose: vi.fn(), warn: vi.fn() };
+    const service = new McpServerService(
+      {} as any,
+      new ToolRegistry(
+        [{ getDefinition: () => definition, execute }],
+        logger as any
+      ),
+      {} as any,
+      {} as any,
+      { checkToolAllowed: vi.fn() } as any,
+      logger as any,
+      {} as any
+    );
+    const server = (service as any).createMcpServer(
+      () => new ActorContext(),
+      () => [{ operations: ['tools'] }]
+    );
+    const handler = server.server._requestHandlers.get('tools/call');
+    const valid = { [target]: 'target', displayName: 'Board' };
+    for (const extra of [{ content: '{}' }, { unexpected: true }]) {
+      const args = { ...valid, ...extra };
+      const error = validator.validate(name, definition.inputSchema, args);
+      const result = await handler(
+        { method: 'tools/call', params: { name, arguments: args } },
+        { signal: new AbortController().signal }
+      );
+      expect(result.isError).toBe(true);
+      expect(error).toContain('must NOT have additional properties');
+    }
+    expect(execute).not.toHaveBeenCalled();
+    expect(
+      validator.validate(name, definition.inputSchema, valid)
+    ).toBeUndefined();
+    expect(
+      validator.validate(name, definition.inputSchema, {
+        ...valid,
+        fromTemplateId: 'template',
+      })
+    ).toBeUndefined();
+    expect(definition.description).toContain('import_whiteboard_scene');
+  });
+});

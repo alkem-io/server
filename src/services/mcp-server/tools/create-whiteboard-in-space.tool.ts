@@ -69,9 +69,11 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
         'search_content), or a TOP-LEVEL space nameID / URL slug; a SUBSPACE requires its UUID. ' +
         'Omit "fromTemplateId" for a BLANK board; set it to a whiteboard TEMPLATE id to fill the ' +
         "board from that template — the server copies the template's stored content, so do NOT " +
-        'generate or paste any scene yourself. Requires CREATE_CALLOUT access on the space.',
+        'pass retired content arguments. After creation, use the forthcoming import_whiteboard_scene ' +
+        'for scene JSON, or edit_whiteboard_elements for edits. Requires CREATE_CALLOUT access on the space.',
       inputSchema: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           spaceId: {
             type: 'string',

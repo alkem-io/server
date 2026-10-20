@@ -27,9 +27,7 @@ interface CreateWhiteboardArgs {
 }
 
 /**
- * Tool for creating a whiteboard on a callout. This is the MCP server's first
- * write/mutation tool: the AI client generates the Excalidraw scene JSON and
- * this tool persists it as a WHITEBOARD contribution.
+ * Creates a blank or template-based whiteboard contribution on a callout.
  *
  * Authorization mirrors the GraphQL mutation exactly — the work is delegated to
  * `CalloutResolverMutations.createContributionOnCallout`, which enforces the
@@ -58,11 +56,12 @@ export class CreateWhiteboardTool implements McpTool {
         'Create a whiteboard on a callout. Omit "fromTemplateId" for a BLANK board; set it to a ' +
         'whiteboard TEMPLATE id to fill the new board from that template — the server copies the ' +
         "template's stored content server-side, so you must NOT generate or paste any scene JSON. " +
-        'There is no raw-content input: edit a board through edit_whiteboard_elements after it ' +
-        'exists. Requires CONTRIBUTE access to the target callout, and the callout must allow ' +
+        'Retired content arguments are rejected. After creation, use the forthcoming import_whiteboard_scene ' +
+        'for scene JSON, or edit_whiteboard_elements for edits. Requires CONTRIBUTE access to the target callout, and the callout must allow ' +
         'whiteboard contributions. Use list_whiteboards / a callout id to pick the target.',
       inputSchema: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           calloutId: {
             type: 'string',
