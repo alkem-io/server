@@ -79,7 +79,11 @@ const setup = (
   const run = (
     purpose: MemoPdfRenderPurpose,
     actorId = 'actor-1',
-    extra: { signal?: AbortSignal; memoId?: string } = {}
+    extra: {
+      signal?: AbortSignal;
+      memoId?: string;
+      state?: () => Promise<Buffer>;
+    } = {}
   ) => {
     const rendering = executor.run({
       purpose,
@@ -259,6 +263,77 @@ describe('MemoPdfExecutor', () => {
 
     expect(error.reason).toBe('busy-global');
     expect(children).toHaveLength(0);
+  });
+
+  it('reads a deferred state only after the render is admitted', async () => {
+    const { run, children } = setup();
+    const read = vi.fn(async () => Buffer.from('live'));
+
+    void run('signing', 'actor-1');
+    const refused = await run('signing', 'actor-1', { state: read }).catch(
+      caught => caught
+    );
+
+    expect(refused.reason).toBe('busy-actor');
+    expect(read).not.toHaveBeenCalled();
+    expect(children).toHaveLength(1);
+  });
+
+  it('holds the slot while a deferred state is read, then starts the worker with it', async () => {
+    const { run, children, executor } = setup();
+    let deliver!: (state: Buffer) => void;
+    const read = vi.fn(
+      () =>
+        new Promise<Buffer>(resolve => {
+          deliver = resolve;
+        })
+    );
+
+    const rendering = run('signing', 'actor-1', { state: read });
+    expect(read).toHaveBeenCalledOnce();
+    expect((executor as any).jobs.size).toBe(1);
+    expect(children).toHaveLength(0);
+
+    deliver(Buffer.from('live'));
+    await flush();
+    expect(children[0].sent[0]).toMatchObject({
+      type: 'START',
+      state: Buffer.from('live'),
+    });
+    children[0].reply({ type: 'DONE', pdf, imageCount: 0 });
+    await expect(rendering).resolves.toBe(pdf);
+  });
+
+  it('frees the slot and rethrows when the deferred state read fails', async () => {
+    const { run, children, executor } = setup();
+    const unavailable = new MemoPdfUnavailableException('source-unavailable');
+
+    const error = await run('signing', 'actor-1', {
+      state: async () => {
+        throw unavailable;
+      },
+    }).catch(caught => caught);
+
+    expect(error).toBe(unavailable);
+    expect(children).toHaveLength(0);
+    expect((executor as any).jobs.size).toBe(0);
+  });
+
+  it('does not fork when the request is aborted while the state is read', async () => {
+    const { run, children, executor } = setup();
+    const abort = new AbortController();
+
+    const rendering = run('signing', 'actor-1', {
+      signal: abort.signal,
+      state: async () => {
+        abort.abort();
+        return Buffer.from('live');
+      },
+    });
+
+    await expect(rendering).rejects.toThrow('Memo PDF render cancelled');
+    expect(children).toHaveLength(0);
+    expect((executor as any).jobs.size).toBe(0);
   });
 
   it('reserves the slot before forking', () => {

@@ -31,7 +31,16 @@ describe('MemoPdfDownloadService', () => {
     const collaborationDocumentService = {
       read: vi.fn(async (_id, _type, _actor, reader) => reader(liveDoc)),
     };
-    const renderer = { render: vi.fn().mockResolvedValue(pdf) };
+    // As the executor does: the deferred state is read only once the render
+    // is admitted.
+    const renderer = {
+      render: vi.fn(
+        async (state: () => Promise<Buffer>, ..._rest: unknown[]) => {
+          await state();
+          return pdf;
+        }
+      ),
+    };
     const logger = { warn: vi.fn() };
     const service = new MemoPdfDownloadService(
       memoService as any,
@@ -88,11 +97,23 @@ describe('MemoPdfDownloadService', () => {
       expect.any(Function)
     );
     expect(renderer.render).toHaveBeenCalledWith(
-      Buffer.from(Y.encodeStateAsUpdateV2(liveDoc)),
+      expect.any(Function),
       'bucket-1',
       actor,
       { signal: abort.signal, memoId: 'memo-1', purpose: 'download' }
     );
+    await expect(renderer.render.mock.calls[0][0]()).resolves.toEqual(
+      Buffer.from(Y.encodeStateAsUpdateV2(liveDoc))
+    );
+  });
+
+  it('does not join the live document when the render is refused before admission', async () => {
+    const { service, collaborationDocumentService, renderer } = setup();
+    const busy = new MemoPdfUnavailableException('busy-global');
+    renderer.render.mockRejectedValue(busy);
+
+    await expect(service.download('memo-1', actor)).rejects.toBe(busy);
+    expect(collaborationDocumentService.read).not.toHaveBeenCalled();
   });
 
   it('passes no bucket when the memo profile has none', async () => {
@@ -140,8 +161,8 @@ describe('MemoPdfDownloadService', () => {
     expect(renderer.render).not.toHaveBeenCalled();
   });
 
-  it('reports an unreadable live document as source-unavailable without rendering', async () => {
-    const { service, collaborationDocumentService, renderer, logger } = setup();
+  it('reports an unreadable live document as source-unavailable', async () => {
+    const { service, collaborationDocumentService, logger } = setup();
     collaborationDocumentService.read.mockRejectedValue(
       Object.assign(new Error('session ended'), {
         name: 'CollaborationSessionEndError',
@@ -152,7 +173,6 @@ describe('MemoPdfDownloadService', () => {
 
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
     expect(error.reason).toBe('source-unavailable');
-    expect(renderer.render).not.toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith(
       {
         message: 'Memo PDF source unavailable',

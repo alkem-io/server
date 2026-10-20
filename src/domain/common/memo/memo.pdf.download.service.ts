@@ -49,31 +49,34 @@ export class MemoPdfDownloadService {
       `download memo pdf: ${memoId}`
     );
 
-    let state: Buffer;
-    try {
-      state = await this.collaborationDocumentService.read(
-        memoId,
-        'memo',
-        actor.actorID,
-        doc => Buffer.from(Y.encodeStateAsUpdateV2(doc))
-      );
-    } catch (error) {
-      this.logger.warn?.(
-        {
-          message: 'Memo PDF source unavailable',
+    // Read only once the executor admits the render: joining the live room
+    // takes one of its connections, which a refused request must not hold.
+    const readState = async () => {
+      try {
+        return await this.collaborationDocumentService.read(
           memoId,
-          actorId: actor.actorID,
-          error: (error as Error)?.name,
-        },
-        LogContext.MEMOS
-      );
-      throw new MemoPdfUnavailableException('source-unavailable');
-    }
+          'memo',
+          actor.actorID,
+          doc => Buffer.from(Y.encodeStateAsUpdateV2(doc))
+        );
+      } catch (error) {
+        this.logger.warn?.(
+          {
+            message: 'Memo PDF source unavailable',
+            memoId,
+            actorId: actor.actorID,
+            error: (error as Error)?.name,
+          },
+          LogContext.MEMOS
+        );
+        throw new MemoPdfUnavailableException('source-unavailable');
+      }
+    };
 
     let pdf: Buffer;
     try {
       pdf = await this.renderer.render(
-        state,
+        readState,
         memo.profile?.storageBucket?.id,
         actor,
         { signal, memoId, purpose: 'download' }

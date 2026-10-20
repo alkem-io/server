@@ -24,6 +24,25 @@ describe('MemoPdfRenderer façade', () => {
     expect(executor.run).not.toHaveBeenCalled();
   });
 
+  it('checks the size of a deferred state once the executor reads it', async () => {
+    executor.run.mockClear();
+    await renderer.render(
+      async () => Buffer.alloc(1_000_001),
+      'bucket-1',
+      actor
+    );
+    const [job] = executor.run.mock.calls[0] as unknown as [
+      { state: () => Promise<Buffer> },
+    ];
+
+    const error = await job.state().catch(caught => caught);
+
+    expect(error).toBeInstanceOf(ValidationException);
+    expect(error.message).toBe(
+      'Memo PDF supports at most 1,000,000 bytes of memo editor content'
+    );
+  });
+
   it('runs the render in the executor with a resolver bound to the bucket and actor', async () => {
     const abort = new AbortController();
     const state = Buffer.from('state');
