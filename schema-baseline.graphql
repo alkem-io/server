@@ -739,6 +739,67 @@ input AdminRevokeMcpApiKeyInput {
   userID: UUID!
 }
 
+input AdminTemplateFileRepairInput {
+  """
+  List the references without copying anything. Set to false to copy the files the template's owner can read.
+  """
+  dryRun: Boolean! = true
+  """The templates to process. When omitted, every template is processed."""
+  templateIDs: [UUID!]
+}
+
+type AdminTemplateFileRepairIssue {
+  entityID: String!
+  location: String!
+  reason: String!
+  templateID: String!
+}
+
+type AdminTemplateFileRepairResult {
+  copiedReferences: Int!
+  dryRun: Boolean!
+  failed: [AdminTemplateFileRepairIssue!]!
+  missingFiles: [AdminTemplateMissingFileReference!]!
+  references: [AdminTemplateForeignFileReference!]!
+  templatesScanned: Int!
+  templatesWithForeignFiles: Int!
+}
+
+"""
+A file a template references that is stored outside the template entity referencing it.
+"""
+type AdminTemplateForeignFileReference {
+  """Whether this run copied the file into the template."""
+  copied: Boolean!
+  """The entity holding the reference."""
+  entityID: String!
+  fileID: String!
+  """
+  Where in the template the reference sits, e.g. profileDescription, visualUri, linkUri, whiteboard.
+  """
+  location: String!
+  """
+  Whether the template's owner can read the file. Only such files are copied; any other stays referenced as written.
+  """
+  ownerCanRead: Boolean!
+  """The bucket the file is stored in today."""
+  storageBucketID: String!
+  templateID: String!
+  templateName: String!
+}
+
+"""
+A reference in a template to a file that no longer exists. It cannot be repaired.
+"""
+type AdminTemplateMissingFileReference {
+  """The entity holding the reference."""
+  entityID: String!
+  fileID: String!
+  location: String!
+  templateID: String!
+  templateName: String!
+}
+
 input AdminUpdateSpaceVisibilityInput {
   """The Space whose visibility is to be updated."""
   spaceID: UUID!
@@ -1271,6 +1332,10 @@ type Callout {
   createdDate: DateTime!
   """The Callout Framing associated with this Callout."""
   framing: CalloutFraming!
+  """
+  Whether this Callout's SPACES collection is hiding at least one manually selected space from the requesting actor because they may not READ it. Always false for a SPACES collection in AUTO mode and for every other callout kind. A selection entry that has left the host space's account is stale, not hidden, and does NOT raise this flag; no count is exposed.
+  """
+  hasHiddenSpaces: Boolean!
   """The ID of the entity"""
   id: UUID!
   """Whether this callout is a Template or not."""
@@ -1291,7 +1356,9 @@ type Callout {
   Cheap always-shown summary (tier-1). Dataloader-batched; safe to select on feeds.
   """
   reactionsSummary: CalloutReactionsSummary!
-  """The Callout Settings associated with this Callout."""
+  """
+  The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned EMPTY to actors without UPDATE on the Callout, so an empty list is AMBIGUOUS by design: it means either that nothing is selected or that the selection is withheld from you, and the two are deliberately indistinguishable, because a viewer must not learn which or how many spaces are hidden from them. Hold UPDATE and the list is exact. `framing.selection.mode` is always accurate.
+  """
   settings: CalloutSettings!
   """The sorting order for this Callout."""
   sortOrder: Float!
@@ -1587,7 +1654,7 @@ type CalloutFraming {
   """The Profile for framing the associated Callout."""
   profile: Profile!
   """
-  The host space's subspaces for a SPACES framing, ordered pinned-first then the space's sortOrder/displayName. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, or for a host with no subspaces.
+  The spaces shown by a SPACES framing's collection, filtered to what the requesting actor may READ. In AUTO mode these are the host space's direct subspaces, ordered pinned-first then the space's sortOrder/displayName. In CUSTOM mode the list is the admin's stored selection, which may contain spaces that are NOT subspaces of the host (any space of the host space's account, at any level) and whose ORDER IS NOT MEANINGFUL — pinned/sortOrder are parent-relative, so the client is authoritative for ordering. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, for a host with no subspaces, and for a CUSTOM selection that is empty or wholly unreadable.
   """
   subspaces: [Space!]!
   """
@@ -2941,6 +3008,10 @@ type CreateCollaboraDocumentData {
   Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
   """
   documentType: CollaboraDocumentType
+  """
+  Copy an existing CollaboraDocument's current content into the new document. The copy owns its own backing file from the moment it is created: editing it never changes the source, and editing the source never changes it. Mutually exclusive with the upload path. documentType, originalMimeType and displayName are inherited from the source. READ on the source is authorized server-side.
+  """
+  sourceCollaboraDocumentID: UUID
 }
 
 input CreateCollaboraDocumentInput {
@@ -2952,6 +3023,10 @@ input CreateCollaboraDocumentInput {
   Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
   """
   documentType: CollaboraDocumentType
+  """
+  Copy an existing CollaboraDocument's current content into the new document. The copy owns its own backing file from the moment it is created: editing it never changes the source, and editing the source never changes it. Mutually exclusive with the upload path. documentType, originalMimeType and displayName are inherited from the source. READ on the source is authorized server-side.
+  """
+  sourceCollaboraDocumentID: UUID
 }
 
 type CreateCollaborationData {
@@ -5424,9 +5499,7 @@ type MemoSigningPrepareResult {
 
 """A message that was sent in a chat room"""
 type Message {
-  """
-  Media attachments; unavailable documents retain their event filename without a download URL.
-  """
+  """Matrix media references and event metadata."""
   attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
@@ -5443,19 +5516,12 @@ type Message {
 }
 
 type MessageAttachment {
-  """The filename / display name of the attachment."""
   displayName: String!
-  """The pixel height of the attachment (images only)."""
+  """The local Matrix media reference."""
+  externalReference: String
   height: Int
-  """The file-service document id of the attachment."""
-  id: UUID
-  """The MIME type of the attachment."""
   mimeType: String
-  """The size of the attachment in bytes."""
   size: Int
-  """The Alkemio document URL (authorized via conversation policy)."""
-  url: String
-  """The pixel width of the attachment (images only)."""
   width: Int
 }
 
@@ -5710,6 +5776,10 @@ type Mutation {
   adminLicensePolicyDeleteCredentialRule(deleteData: DeleteLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
   """Updates a CredentialRule on the LicensePolicy."""
   adminLicensePolicyUpdateCredentialRule(updateData: UpdateLicensePolicyCredentialRuleInput!): LicensingCredentialBasedPolicyCredentialRule!
+  """
+  Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. A dry run by default.
+  """
+  adminRepairTemplateFiles(repairData: AdminTemplateFileRepairInput!): AdminTemplateFileRepairResult!
   """Platform Users Admin: revoke a named user's MCP API key. Idempotent."""
   adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
@@ -5846,8 +5916,10 @@ type Mutation {
   createTagsetOnProfile(tagsetData: CreateTagsetOnProfileInput!): Tagset!
   """Add a column to a Tasks board Callout."""
   createTaskColumnOnCallout(columnData: CreateTaskColumnOnCalloutInput!): Callout!
-  """Creates a new Template on the specified TemplatesSet."""
-  createTemplate(templateData: CreateTemplateOnTemplatesSetInput!): Template!
+  """
+  Creates a new Template on the specified TemplatesSet. When `file` is supplied alongside a COLLABORA_DOCUMENT callout framing, the template is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing behaviour applies.
+  """
+  createTemplate(file: Upload, templateData: CreateTemplateOnTemplatesSetInput!): Template!
   """
   Creates a new Template on the specified TemplatesSet using the provided ContentSpace as content.
   """
@@ -5963,7 +6035,7 @@ type Mutation {
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """
-  Leave a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If Matrix rejects the kick this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
+  Leave a group conversation. Awaits the Matrix removal rather than reporting success merely because the RPC was sent: true means Matrix accepted it (the member leaves the room), and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If the Matrix removal fails (rejected — e.g. the member is no longer in the Matrix room — or the RPC times out) this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
   """
   leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
@@ -6019,7 +6091,7 @@ type Mutation {
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
-  Remove a member from a group conversation. Awaits the Matrix kick rather than reporting success merely because the RPC was sent: true means the kick was accepted, and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If Matrix rejects the kick (e.g. insufficient permissions) this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it.
+  Remove a member from a group conversation. Awaits the Matrix removal rather than reporting success merely because the RPC was sent: true means Matrix accepted it (the member leaves the room), and the membership is then removed asynchronously — observe MEMBER_REMOVED for completion. If the Matrix removal fails (rejected — e.g. the member is no longer in the Matrix room — or the RPC times out) this still returns true, because Alkemio is authoritative for its own membership and applies the removal locally instead; on that path the Matrix-side room membership may diverge until an operator reconciles it.
   """
   removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""
@@ -7665,6 +7737,10 @@ type RelayPaginatedSpace implements ActorFull {
   about: SpaceAbout!
   """The Account that this Space is part of."""
   account: Account!
+  """
+  Spaces of THIS Space's account, at any level, on which the current actor holds READ - candidates for a Spaces callout's manual selection. READ, not READ_ABOUT: for a level-zero Space READ_ABOUT is granted to every actor including anonymous, so a READ_ABOUT filter would return the account's whole level-zero set to anyone. Capped at 500 as an unordered resource bound - no order is guaranteed and the picker sorts by ancestor path. Requires UPDATE on this Space.
+  """
+  accountSpaces: [SpaceSelectionCandidate!]!
   """The "highest" subscription active for this Space."""
   activeSubscription: SpaceSubscription
   """
@@ -8147,6 +8223,8 @@ type RolesResultSpace {
 }
 
 type Room {
+  """The owning bucket for reference-based attachments."""
+  attachmentBucketId: UUID
   """The authorization rules for the entity"""
   authorization: Authorization
   """The avatar URL of the Room (mxc:// or https://). Fetched from Matrix."""
@@ -8214,6 +8292,13 @@ input RoomMarkMessageReadInput {
   threadID: MessageID
 }
 
+input RoomMessageAttachmentInput {
+  """The filename to use in this message."""
+  displayName: String!
+  """The completed local Matrix media reference."""
+  externalReference: String!
+}
+
 """A message event happened in the subscribed room"""
 type RoomMessageEventSubscriptionResult {
   """A message related event."""
@@ -8247,10 +8332,8 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
-  """
-  The file-service document ids of attachments to send with the message (one per event).
-  """
-  attachments: [UUID!]
+  """An already-uploaded Matrix media reference."""
+  attachmentUpload: RoomMessageAttachmentInput
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -8258,10 +8341,8 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
-  """
-  The file-service document ids of attachments to send with the message (one per event).
-  """
-  attachments: [UUID!]
+  """An already-uploaded Matrix media reference."""
+  attachmentUpload: RoomMessageAttachmentInput
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -8570,12 +8651,14 @@ input SetPlatformWellKnownVirtualContributorInput {
 }
 
 """
-The widgets available for the Space sidepanel, per InnovationFlow state (tab).
+The widgets available for the Space sidepanel, per InnovationFlow state (tab/phase).
 """
 enum SidebarWidget {
   ABOUT
+  ACTIVITY
   ADD_USER
   APPLICATION_BUTTON
+  COMMUNITY
   CONTACT_LEADS
   CREATE_POST
   CREATE_SUBSPACE
@@ -8602,6 +8685,10 @@ type Space implements ActorFull {
   about: SpaceAbout!
   """The Account that this Space is part of."""
   account: Account!
+  """
+  Spaces of THIS Space's account, at any level, on which the current actor holds READ - candidates for a Spaces callout's manual selection. READ, not READ_ABOUT: for a level-zero Space READ_ABOUT is granted to every actor including anonymous, so a READ_ABOUT filter would return the account's whole level-zero set to anyone. Capped at 500 as an unordered resource bound - no order is guaranteed and the picker sorts by ancestor path. Requires UPDATE on this Space.
+  """
+  accountSpaces: [SpaceSelectionCandidate!]!
   """The "highest" subscription active for this Space."""
   activeSubscription: SpaceSubscription
   """
@@ -8771,6 +8858,22 @@ type SpacePendingMembershipInfo {
 enum SpacePrivacyMode {
   PRIVATE
   PUBLIC
+}
+
+"""
+A space of an account, reduced to what the Spaces-callout selection picker needs.
+"""
+type SpaceSelectionCandidate {
+  """
+  This Space's current display name, from its About profile (never the actor-level profile, which is a creation-time snapshot that is not re-synced on rename).
+  """
+  displayName: String!
+  """The unique identifier of this Space."""
+  id: UUID!
+  """The level of this Space (L0, L1 or L2)."""
+  level: SpaceLevel!
+  """The parent Space's id; NULL for a level-zero Space."""
+  parentSpaceID: UUID
 }
 
 type SpaceSettings {
