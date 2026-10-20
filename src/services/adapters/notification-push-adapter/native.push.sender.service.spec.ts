@@ -1,6 +1,7 @@
 import { generateKeyPairSync } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import http2 from 'node:http2';
+import { LogContext } from '@common/enums';
 import { DevicePushTokenService } from '@domain/device-push-token/device.push.token.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NativePushSenderService } from './native.push.sender.service';
@@ -140,8 +141,11 @@ describe('NativePushSenderService', () => {
 
       await createService().send(createMessage());
 
-      // Nothing sets `notifications.push.apns.environment` here, which is the
-      // state every current deployment is in: the SANDBOX host.
+      // No `notifications.push.apns.environment` in this mock config, i.e.
+      // the absent-key safety net: the SANDBOX host. (A real deployment that
+      // leaves APNS_ENVIRONMENT unset gets the STRING 'sandbox' from
+      // alkemio.yml's own default — covered below and in
+      // `src/config/push-notifications.config.spec.ts`.)
       expect(connectSpy).toHaveBeenCalledWith(
         'https://api.sandbox.push.apple.com'
       );
@@ -307,7 +311,7 @@ describe('NativePushSenderService', () => {
    * selects the host, so restating the mapping object cannot satisfy them.
    */
   describe('the APNs host (notifications.push.apns.environment)', () => {
-    it('talks to the SANDBOX host when the key is unset — every existing deployment', async () => {
+    it('talks to the SANDBOX host when the key is ABSENT — the safety net for an alkemio.yml predating the key', async () => {
       stubApnsSession(200);
 
       await createService().send(createMessage());
@@ -317,7 +321,7 @@ describe('NativePushSenderService', () => {
       );
     });
 
-    it('talks to the SANDBOX host on an explicit `sandbox`', async () => {
+    it('talks to the SANDBOX host on an explicit `sandbox` — what the YAML default resolves to, so what every existing deployment gets', async () => {
       stubApnsSession(200);
 
       await createService({
@@ -341,17 +345,27 @@ describe('NativePushSenderService', () => {
       expect(connectSpy).toHaveBeenCalledWith('https://api.push.apple.com');
     });
 
-    // The failure mode this enum exists for: a typo must be a LOUD startup
-    // failure, never a silent fall back to sandbox and never an arbitrary URL.
+    // The failure mode this enum exists for: a bad value must be a LOUD
+    // startup failure, never a silent fall back to sandbox and never an
+    // arbitrary URL.
+    //
+    // `0` is in this table on purpose and is the subtlest entry: it is what
+    // the config loader yields for a PRESENT-but-BLANK `APNS_ENVIRONMENT`
+    // (`'' ?? 'sandbox'` keeps `''`, then `!isNaN('')` turns it into
+    // `Number('')`). A blank ConfigMap row is a misconfiguration, so it must
+    // be rejected — a blanket `if (!environment)` guard would send it to
+    // sandbox and silently delete every production iOS token instead.
     it.each([
       ['a typo', 'produciton'],
       ['a near-miss spelling', 'Production'],
       ['an arbitrary URL', 'https://api.push.apple.com'],
+      ['a blank variable, as the loader reads it', 0],
+      ['a blank variable, unconverted', ''],
     ])('REJECTS %s at construction rather than falling back', (_label, value) => {
       expect(() =>
         createService({
           ...FULL_CONFIG,
-          'notifications.push.apns.environment': value,
+          'notifications.push.apns.environment': value as any,
         })
       ).toThrow(/notifications\.push\.apns\.environment/);
 
@@ -375,6 +389,32 @@ describe('NativePushSenderService', () => {
       // House rule: no dynamic data in the message.
       expect(caught.message).not.toContain('produciton');
       expect(caught.details).toEqual({ environment: 'produciton' });
+    });
+
+    /**
+     * The rejection is raised from a provider CONSTRUCTOR, i.e. inside
+     * `NestFactory.create`'s `ExceptionsZone`, whose only reporting is a
+     * `@nestjs/common` `Logger` — and `main.server.ts` passes `logger: false`
+     * under `NODE_ENV=production`, which every deployed image sets. So the
+     * throw alone is MUTE in production: the diagnostic has to go through
+     * winston, which writes via its own transports. Without this assertion a
+     * future edit could drop that line and leave the operator a crash-loop
+     * with an empty log.
+     */
+    it('writes the diagnostic through winston BEFORE throwing, since the throw itself is mute in a deployed image', () => {
+      expect(() =>
+        createService({
+          ...FULL_CONFIG,
+          'notifications.push.apns.environment': 'produciton',
+        })
+      ).toThrow();
+
+      expect(mockLogger.error).toHaveBeenCalledTimes(1);
+      const [message, , context] = mockLogger.error.mock.calls[0];
+      expect(message).toContain('notifications.push.apns.environment');
+      expect(message).toContain('"sandbox"');
+      expect(message).toContain('"production"');
+      expect(context).toBe(LogContext.PUSH_NOTIFICATION);
     });
   });
 

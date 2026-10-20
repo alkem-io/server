@@ -99,7 +99,7 @@ export class NativePushSenderService {
     );
     // Validated HERE, at construction, so a typo fails startup rather than
     // quietly deleting iOS tokens at the first send.
-    this.apnsHost = NativePushSenderService.resolveApnsHost(
+    this.apnsHost = this.resolveApnsHost(
       this.configService.get('notifications.push.apns.environment' as any)
     );
     this.fcmProjectId = this.configService.get(
@@ -319,14 +319,36 @@ export class NativePushSenderService {
    * Maps `notifications.push.apns.environment` onto one of Apple's two hosts,
    * rejecting anything else LOUDLY.
    */
-  private static resolveApnsHost(environment: unknown): string {
-    // An unset variable with an empty default resolves to the NUMBER 0 in this
-    // config loader (see `sendApns`), so treat every falsy reading as "not
-    // configured" and keep the sandbox host every current deployment uses.
-    if (!environment) {
+  private resolveApnsHost(environment: unknown): string {
+    // ONLY a genuinely ABSENT key falls back. This key carries its own YAML
+    // default (`${APNS_ENVIRONMENT}:sandbox`), so an unset variable resolves to
+    // the STRING `'sandbox'` and never reaches this branch — it exists for a
+    // mounted `alkemio.yml` that predates the key.
+    //
+    // A variable that is PRESENT but BLANK is deliberately NOT treated as
+    // "not configured": the loader turns `''` into the NUMBER 0 (its
+    // `!isNaN('')` quirk, which `sendApns` has to tolerate for the credential
+    // keys because those have no YAML default), and a blank setting is a
+    // misconfiguration, not a default. Letting 0 mean sandbox would re-open
+    // the destructive-and-invisible path this closed enum exists to
+    // foreclose, so it falls through to the rejection below.
+    if (environment === undefined || environment === null) {
       return APNS_HOSTS.sandbox;
     }
     if (environment !== 'sandbox' && environment !== 'production') {
+      // Logged BEFORE the throw, and through winston rather than Nest. This
+      // runs inside `NestFactory.create`'s `ExceptionsZone`, whose only
+      // reporting is a `@nestjs/common` `Logger` — and `main.server.ts` passes
+      // `logger: false` whenever `NODE_ENV=production`, which EVERY deployed
+      // image sets (`Dockerfile` `ENV_ARG=production`). `overrideLogger(false)`
+      // clears that static instance, so the report is a silent no-op: without
+      // this line the pod would crash-loop with an EMPTY log, in exactly the
+      // environment the guard exists for.
+      this.logger.error(
+        'notifications.push.apns.environment must be either "sandbox" or "production"',
+        undefined,
+        LogContext.PUSH_NOTIFICATION
+      );
       throw new BaseExceptionInternal(
         'notifications.push.apns.environment must be either "sandbox" or "production"',
         LogContext.PUSH_NOTIFICATION,

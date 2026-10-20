@@ -534,8 +534,10 @@ notifications:
       # answers `400 BadDeviceToken` on the other, which the sender treats as
       # PERMANENT and responds to by DELETING the token row while logging only
       # at `verbose`. A typo'd URL would therefore be both destructive and
-      # invisible; an unrecognised value here fails startup instead. Defaults
-      # to `sandbox`, so every existing deployment keeps today's behaviour.
+      # invisible; an unrecognised value here fails startup instead. Leaving
+      # APNS_ENVIRONMENT unset resolves to `sandbox` below, so every existing
+      # deployment keeps today's behaviour — but setting it BLANK is a
+      # misconfiguration, not a default, and fails startup too.
       environment: ${APNS_ENVIRONMENT}:sandbox
     fcm:
       project_id: ${FCM_PROJECT_ID}
