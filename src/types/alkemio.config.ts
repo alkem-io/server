@@ -264,6 +264,37 @@ export type AlkemioConfig = {
         private_key: string;
         subject: string;
       };
+      /**
+       * 086-app-push-mvp (FR-007). Native app push credentials, supplied per
+       * environment only (human gate HG-1). Absent keys disable the native
+       * transport for that platform; nothing throws at module load. The one
+       * exception is `environment`, which is a closed enum and fails startup
+       * on an unrecognised value.
+       */
+      apns: {
+        /** The APNs auth key `.p8`, base64 single-line. */
+        key_base64: string;
+        key_id: string;
+        team_id: string;
+        bundle_id: string;
+        /**
+         * Which of Apple's two push hosts to use. A closed enum — `sandbox`
+         * (the YAML default) or `production` — never a URL: see the sender for
+         * why a typo'd host would be destructive and invisible.
+         *
+         * This union is the POST-VALIDATION contract, not a claim about the
+         * untyped YAML loader: the loader will hand back whatever the variable
+         * says (including the number 0 for a blank one), which is why
+         * `resolveApnsHost` takes `unknown` and rejects anything else at
+         * startup.
+         */
+        environment: 'sandbox' | 'production';
+      };
+      fcm: {
+        project_id: string;
+        /** The FCM service-account JSON, base64 single-line. */
+        service_account_base64: string;
+      };
       max_subscriptions_per_user: number;
       throttle: {
         max_per_minute: number;
