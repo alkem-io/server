@@ -12,13 +12,14 @@ import { Template } from '@domain/template/template/template.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.create';
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
 import { InnovationFlowState } from './innovation.flow.state.entity';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { SIDEBAR_DEFAULT_GENERIC } from './innovation.flow.state.sidebar.defaults';
 import { normalizeStateSettings } from './normalize.state.settings';
+import { withRawSidebar } from './utils/withRawSidebar';
 
 @Injectable()
 export class InnovationFlowStateService {
@@ -147,6 +148,65 @@ export class InnovationFlowStateService {
     );
     result.id = state.id; // Preserve the ID for consistency
     return result;
+  }
+
+  /**
+   * Deletes a state whose sidebar list must survive on another state: used when the FIRST
+   * state of a subspace (L1/L2) flow is deleted, because the first state's list is the whole
+   * subspace's sidebar. The deleted state's RAW stored list (never read-normalized; an absent
+   * key stays absent) is copied onto the inheritor — and nothing else from its settings — and
+   * the copy and the delete commit in one transaction, so a failed copy never leaves the
+   * subspace showing the next state's list.
+   *
+   * The inheritor is read inside the transaction and only its `settings` column is written,
+   * so every other setting is the value stored at that moment rather than a stale copy taken
+   * before the transaction began. `persistAlongside` runs first in the same transaction, for
+   * writes that must commit or roll back together with the delete.
+   */
+  async deleteWithSidebarInheritance(
+    deletedStateID: string,
+    inheritorStateID: string,
+    persistAlongside?: (entityManager: EntityManager) => Promise<unknown>
+  ): Promise<IInnovationFlowState> {
+    const deleted = await this.getRawInnovationFlowStateOrFail(deletedStateID);
+
+    const removed =
+      await this.innovationFlowStateRepository.manager.transaction(
+        async entityManager => {
+          await persistAlongside?.(entityManager);
+          const inheritor = await entityManager.findOne(InnovationFlowState, {
+            where: { id: inheritorStateID },
+          });
+          if (!inheritor) {
+            throw new EntityNotFoundException(
+              'Unable to find InnovationFlowState to inherit the sidebar',
+              LogContext.INNOVATION_FLOW,
+              { innovationFlowStateID: inheritorStateID }
+            );
+          }
+          await entityManager.update(
+            InnovationFlowState,
+            { id: inheritorStateID },
+            {
+              settings: withRawSidebar(
+                inheritor.settings,
+                deleted.settings?.sidebar
+              ),
+            }
+          );
+          if (deleted.authorization) {
+            await this.authorizationPolicyService.delete(
+              deleted.authorization,
+              entityManager
+            );
+          }
+          return entityManager.remove(InnovationFlowState, deleted);
+        }
+      );
+    removed.id = deletedStateID; // Preserve the ID for consistency
+    // The removed row is detached from the database, so normalizing it for the API
+    // response cannot persist anything.
+    return normalizeStateSettings(removed);
   }
 
   async getInnovationFlowStateOrFail(

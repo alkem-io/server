@@ -108,6 +108,25 @@ describe('normalizeStateSettings — sidebar', () => {
     expect(result.settings.sidebar).toEqual(stored);
   });
 
+  it("keeps 'community' and 'activity' as known values (no drop)", () => {
+    const stored = [
+      SidebarWidget.INTENT,
+      SidebarWidget.COMMUNITY,
+      SidebarWidget.ACTIVITY,
+      SidebarWidget.INDEX,
+    ];
+    const state = buildState({ sidebar: stored });
+
+    const result = normalizeStateSettings(state);
+
+    expect(result.settings.sidebar).toEqual([
+      'intent',
+      'community',
+      'activity',
+      'index',
+    ]);
+  });
+
   it('still defaults the existing four fields alongside sidebar', () => {
     const state = { id: 'state-1' } as IInnovationFlowState;
 
