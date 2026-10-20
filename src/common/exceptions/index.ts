@@ -7,6 +7,7 @@ export * from './forbidden.authorization.policy.exception';
 export * from './forbidden.exception';
 export * from './group.not.initialized.exception';
 export * from './invalid.state.tranistion.exception';
+export * from './memo.pdf.unavailable.exception';
 export * from './not.supported.exception';
 export * from './pagination';
 export * from './registration.exception';

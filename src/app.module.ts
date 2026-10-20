@@ -71,6 +71,7 @@ import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/ca
 import { ContentSigningRestModule } from '@services/api-rest/content-signing/content.signing.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { InternalAdminModule } from '@services/api-rest/internal-admin/internal-admin.module';
+import { MemoPdfRestModule } from '@services/api-rest/memo-pdf/memo.pdf.rest.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { CollaborationIntegrationModule } from '@services/collaboration-integration';
 import { CollaborationMigrationModule } from '@services/collaboration-integration/migration';
@@ -305,6 +306,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     InnovationHubModule,
     CalendarEventIcsModule,
     ContentSigningRestModule,
+    MemoPdfRestModule,
     IdentityResolveModule,
     InternalAdminModule,
     McpServerModule,

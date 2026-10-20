@@ -6,4 +6,5 @@ export enum RestEndpoint {
   CALENDAR_EVENT_ICS = 'event/:id/ics',
   CONTENT_SIGNING_SNAPSHOT = ':attemptId/snapshot',
   CONTENT_SIGNING_COMPLETE = 'complete',
+  MEMO_PDF = ':memoId/pdf',
 }
