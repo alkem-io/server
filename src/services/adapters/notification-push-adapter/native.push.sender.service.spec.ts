@@ -140,7 +140,8 @@ describe('NativePushSenderService', () => {
 
       await createService().send(createMessage());
 
-      // Hard-coded SANDBOX host — FR-014 leaves no entitled production build.
+      // Nothing sets `notifications.push.apns.environment` here, which is the
+      // state every current deployment is in: the SANDBOX host.
       expect(connectSpy).toHaveBeenCalledWith(
         'https://api.sandbox.push.apple.com'
       );
@@ -295,6 +296,85 @@ describe('NativePushSenderService', () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(mockDevicePushTokenService.deleteByToken).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * The host is a two-value enum, NOT a URL, because `sendApns` treats `400
+   * BadDeviceToken` as PERMANENT and DELETES the token row — and an iOS token
+   * minted against one Apple environment answers exactly that way on the
+   * other. These assert through `http2.connect`, the call that actually
+   * selects the host, so restating the mapping object cannot satisfy them.
+   */
+  describe('the APNs host (notifications.push.apns.environment)', () => {
+    it('talks to the SANDBOX host when the key is unset — every existing deployment', async () => {
+      stubApnsSession(200);
+
+      await createService().send(createMessage());
+
+      expect(connectSpy).toHaveBeenCalledWith(
+        'https://api.sandbox.push.apple.com'
+      );
+    });
+
+    it('talks to the SANDBOX host on an explicit `sandbox`', async () => {
+      stubApnsSession(200);
+
+      await createService({
+        ...FULL_CONFIG,
+        'notifications.push.apns.environment': 'sandbox',
+      }).send(createMessage());
+
+      expect(connectSpy).toHaveBeenCalledWith(
+        'https://api.sandbox.push.apple.com'
+      );
+    });
+
+    it('talks to the PRODUCTION host on `production`', async () => {
+      stubApnsSession(200);
+
+      await createService({
+        ...FULL_CONFIG,
+        'notifications.push.apns.environment': 'production',
+      }).send(createMessage());
+
+      expect(connectSpy).toHaveBeenCalledWith('https://api.push.apple.com');
+    });
+
+    // The failure mode this enum exists for: a typo must be a LOUD startup
+    // failure, never a silent fall back to sandbox and never an arbitrary URL.
+    it.each([
+      ['a typo', 'produciton'],
+      ['a near-miss spelling', 'Production'],
+      ['an arbitrary URL', 'https://api.push.apple.com'],
+    ])('REJECTS %s at construction rather than falling back', (_label, value) => {
+      expect(() =>
+        createService({
+          ...FULL_CONFIG,
+          'notifications.push.apns.environment': value,
+        })
+      ).toThrow(/notifications\.push\.apns\.environment/);
+
+      expect(connectSpy).not.toHaveBeenCalled();
+    });
+
+    it('names both accepted values in the rejection, and carries the offending value as structured details only', () => {
+      let caught: any;
+      try {
+        createService({
+          ...FULL_CONFIG,
+          'notifications.push.apns.environment': 'produciton',
+        });
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toBeDefined();
+      expect(caught.message).toContain('"sandbox"');
+      expect(caught.message).toContain('"production"');
+      // House rule: no dynamic data in the message.
+      expect(caught.message).not.toContain('produciton');
+      expect(caught.details).toEqual({ environment: 'produciton' });
     });
   });
 

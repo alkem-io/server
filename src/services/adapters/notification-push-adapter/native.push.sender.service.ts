@@ -1,5 +1,6 @@
 import http2 from 'node:http2';
 import { LogContext } from '@common/enums';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { DevicePushTokenService } from '@domain/device-push-token/device.push.token.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -9,13 +10,24 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NativePushNotificationMessage } from './push.notification.message';
 
 /**
- * The SANDBOX host, hard-coded. FR-014 leaves `Release`/`Release-Sandbox`
- * unentitled, so no build this MVP produces can carry a production
- * `aps-environment` — there is no producer for a production branch. An
- * environment with no APNs credentials has the transport disabled entirely,
- * which is what keeps a sandbox-only host out of acceptance and production.
+ * The only two hosts Apple has, keyed by the only two values
+ * `notifications.push.apns.environment` accepts.
+ *
+ * A CLOSED ENUM rather than a configurable `host:` URL, and that is the whole
+ * point: an iOS token minted against one Apple environment answers `400
+ * BadDeviceToken` on the other, which `sendApns` below treats as PERMANENT and
+ * responds to by DELETING the token row — while logging only at `verbose`,
+ * which production (`LOGGING_LEVEL_CONSOLE: warn`) does not emit. A typo'd URL
+ * would therefore be both destructive and invisible. Two accepted spellings
+ * turn that same typo into a startup failure instead.
+ *
+ * Unset resolves to `sandbox`, so every deployment that never sets it keeps
+ * exactly today's behaviour.
  */
-const APNS_HOST = 'https://api.sandbox.push.apple.com';
+const APNS_HOSTS = {
+  sandbox: 'https://api.sandbox.push.apple.com',
+  production: 'https://api.push.apple.com',
+} as const;
 /**
  * `node:http2` applies NO connect or request timeout of its own, and a hung
  * connect holds one of the shared queue's 10 prefetch slots forever — ten of
@@ -63,6 +75,7 @@ export class NativePushSenderService {
   private readonly apnsKeyId: string;
   private readonly apnsTeamId: string;
   private readonly apnsBundleId: string;
+  private readonly apnsHost: string;
   private readonly fcmProjectId: string;
   private readonly fcmServiceAccountBase64: string;
 
@@ -83,6 +96,11 @@ export class NativePushSenderService {
     );
     this.apnsBundleId = this.configService.get(
       'notifications.push.apns.bundle_id' as any
+    );
+    // Validated HERE, at construction, so a typo fails startup rather than
+    // quietly deleting iOS tokens at the first send.
+    this.apnsHost = NativePushSenderService.resolveApnsHost(
+      this.configService.get('notifications.push.apns.environment' as any)
     );
     this.fcmProjectId = this.configService.get(
       'notifications.push.fcm.project_id' as any
@@ -132,7 +150,7 @@ export class NativePushSenderService {
       .setExpirationTime('1h')
       .sign(privateKey);
 
-    const session = http2.connect(APNS_HOST);
+    const session = http2.connect(this.apnsHost);
     session.setTimeout(APNS_SESSION_TIMEOUT_MS, () =>
       session.destroy(new Error('APNs timeout'))
     );
@@ -295,6 +313,27 @@ export class NativePushSenderService {
     }
 
     this.logDelivered(message);
+  }
+
+  /**
+   * Maps `notifications.push.apns.environment` onto one of Apple's two hosts,
+   * rejecting anything else LOUDLY.
+   */
+  private static resolveApnsHost(environment: unknown): string {
+    // An unset variable with an empty default resolves to the NUMBER 0 in this
+    // config loader (see `sendApns`), so treat every falsy reading as "not
+    // configured" and keep the sandbox host every current deployment uses.
+    if (!environment) {
+      return APNS_HOSTS.sandbox;
+    }
+    if (environment !== 'sandbox' && environment !== 'production') {
+      throw new BaseExceptionInternal(
+        'notifications.push.apns.environment must be either "sandbox" or "production"',
+        LogContext.PUSH_NOTIFICATION,
+        { environment }
+      );
+    }
+    return APNS_HOSTS[environment];
   }
 
   private logDelivered(message: NativePushNotificationMessage): void {

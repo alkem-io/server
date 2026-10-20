@@ -528,6 +528,15 @@ notifications:
       key_id: ${APNS_KEY_ID}
       team_id: ${APNS_TEAM_ID}
       bundle_id: ${APNS_BUNDLE_ID}
+      # Which of Apple's TWO push hosts to talk to: `sandbox` or
+      # `production`, and nothing else. A CLOSED enum rather than a `host:`
+      # URL on purpose — an iOS token minted against one Apple environment
+      # answers `400 BadDeviceToken` on the other, which the sender treats as
+      # PERMANENT and responds to by DELETING the token row while logging only
+      # at `verbose`. A typo'd URL would therefore be both destructive and
+      # invisible; an unrecognised value here fails startup instead. Defaults
+      # to `sandbox`, so every existing deployment keeps today's behaviour.
+      environment: ${APNS_ENVIRONMENT}:sandbox
     fcm:
       project_id: ${FCM_PROJECT_ID}
       service_account_base64: ${FCM_SERVICE_ACCOUNT_BASE64}

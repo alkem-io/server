@@ -267,7 +267,9 @@ export type AlkemioConfig = {
       /**
        * 086-app-push-mvp (FR-007). Native app push credentials, supplied per
        * environment only (human gate HG-1). Absent keys disable the native
-       * transport for that platform; nothing throws at module load.
+       * transport for that platform; nothing throws at module load. The one
+       * exception is `environment`, which is a closed enum and fails startup
+       * on an unrecognised value.
        */
       apns: {
         /** The APNs auth key `.p8`, base64 single-line. */
@@ -275,6 +277,12 @@ export type AlkemioConfig = {
         key_id: string;
         team_id: string;
         bundle_id: string;
+        /**
+         * Which of Apple's two push hosts to use. A closed enum — `sandbox`
+         * (the default) or `production` — never a URL: see the sender for why
+         * a typo'd host would be destructive and invisible.
+         */
+        environment: 'sandbox' | 'production';
       };
       fcm: {
         project_id: string;
