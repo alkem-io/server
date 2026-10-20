@@ -9,7 +9,7 @@ vi.mock('node:child_process', async importOriginal => ({
 describe('memo PDF executor launch', () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it('forks the compiled entry with an explicit heap, binary IPC and an environment allowlist only', async () => {
+  it('forks the compiled entry with an explicit heap, binary IPC, inherited stderr and an environment allowlist only', async () => {
     vi.resetModules();
     const { MemoPdfExecutor } = await import('./memo.pdf.executor');
     vi.stubEnv('DATABASE_PASSWORD', 'must-not-inherit');
@@ -36,7 +36,7 @@ describe('memo PDF executor launch', () => {
       execPath: process.execPath,
       execArgv: ['--max-old-space-size=384'],
       env: { LANG: 'en_US.UTF-8' },
-      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
       serialization: 'advanced',
     });
     expect(options.env).not.toHaveProperty('DATABASE_PASSWORD');

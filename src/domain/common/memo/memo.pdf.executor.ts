@@ -96,7 +96,19 @@ type Outcome =
   | 'launch-failed'
   | 'cancelled';
 
-type Terminal = { outcome: Outcome; pdf?: Buffer; error?: unknown };
+type Terminal = {
+  outcome: Outcome;
+  pdf?: Buffer;
+  error?: unknown;
+  /** The error name a worker reports for a crashed render; never a message. */
+  workerError?: string;
+};
+
+/** How the worker ended, for the log line of a crashed or failed launch. */
+type WorkerExit = {
+  exitCode?: number | null;
+  signal?: NodeJS.Signals | null;
+};
 
 const cancelled = () => new Error('Memo PDF render cancelled');
 
@@ -144,7 +156,9 @@ export class MemoPdfExecutor implements OnModuleDestroy {
       execPath: process.execPath,
       execArgv: [`--max-old-space-size=${this.capacity.heapMb}`],
       env: { LANG: 'en_US.UTF-8' },
-      stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      // stderr is inherited so that a worker's own fatal output (an uncaught
+      // exception, a V8 heap-limit abort) reaches the server's log.
+      stdio: ['ignore', 'ignore', 'inherit', 'ipc'],
       serialization: 'advanced',
     });
   }
@@ -152,13 +166,18 @@ export class MemoPdfExecutor implements OnModuleDestroy {
   async run(job: MemoPdfRenderJob): Promise<Buffer> {
     const jobId = randomUUID();
     const reservedAt = Date.now();
-    const record = (terminal: Terminal, imageCount?: number) =>
+    const record = (
+      terminal: Terminal,
+      imageCount?: number,
+      exit?: WorkerExit
+    ) =>
       this.logOutcome(
         job,
         jobId,
         Date.now() - reservedAt,
         terminal,
-        imageCount
+        imageCount,
+        exit
       );
     // Refusals before any worker exists are logged with a zero duration.
     const refuse = (outcome: Outcome) =>
@@ -197,9 +216,9 @@ export class MemoPdfExecutor implements OnModuleDestroy {
     let child: ChildProcess;
     try {
       child = this.launch();
-    } catch {
+    } catch (error) {
       this.jobs.delete(jobId);
-      refuse('launch-failed');
+      this.logOutcome(job, jobId, 0, { outcome: 'launch-failed', error });
       throw new MemoPdfUnavailableException('launch-failed');
     }
 
@@ -230,7 +249,10 @@ export class MemoPdfExecutor implements OnModuleDestroy {
         Math.max(1, reservedAt + this.capacity.deadlineMs - Date.now())
       );
 
-      const cleanup = () => {
+      const cleanup = (
+        exitCode?: number | null,
+        signal?: NodeJS.Signals | null
+      ) => {
         if (cleanedUp) return;
         cleanedUp = true;
         clearTimeout(timer);
@@ -238,7 +260,7 @@ export class MemoPdfExecutor implements OnModuleDestroy {
         child.removeAllListeners();
         this.jobs.delete(jobId);
         const outcome = terminal ?? { outcome: 'crashed' };
-        record(outcome, imageCount);
+        record(outcome, imageCount, { exitCode, signal });
         if (outcome.outcome === 'ok' && outcome.pdf) resolve(outcome.pdf);
         else reject(this.errorFor(outcome));
       };
@@ -289,12 +311,12 @@ export class MemoPdfExecutor implements OnModuleDestroy {
                       LogContext.MEMOS
                     ),
                   }
-                : { outcome: 'crashed' }
+                : { outcome: 'crashed', workerError: message.message }
             );
         }
       });
-      child.once('error', () => {
-        finish({ outcome: child.pid ? 'crashed' : 'launch-failed' });
+      child.once('error', error => {
+        finish({ outcome: child.pid ? 'crashed' : 'launch-failed', error });
         if (!child.pid) cleanup();
       });
       // 'close', not 'exit': a worker that sends DONE and exits at once can
@@ -336,7 +358,8 @@ export class MemoPdfExecutor implements OnModuleDestroy {
     jobId: string,
     durationMs: number,
     terminal: Terminal,
-    imageCount?: number
+    imageCount?: number,
+    exit?: WorkerExit
   ) {
     const line = {
       message: 'Memo PDF render completed',
@@ -353,12 +376,28 @@ export class MemoPdfExecutor implements OnModuleDestroy {
       case 'ok':
         return this.logger.log(line, LogContext.MEMOS);
       case 'crashed':
-      case 'launch-failed':
+      case 'launch-failed': {
+        // Diagnostics only, never memo content: the exit, the worker's error
+        // name, and the error's code (and, for a failed launch, its message).
+        const error = terminal.error as
+          | { code?: unknown; message?: unknown }
+          | undefined;
         return this.logger.error(
-          line,
+          {
+            ...line,
+            ...exit,
+            workerError: terminal.workerError,
+            errorCode: typeof error?.code === 'string' ? error.code : undefined,
+            errorMessage:
+              terminal.outcome === 'launch-failed' &&
+              typeof error?.message === 'string'
+                ? error.message
+                : undefined,
+          },
           (terminal.error as Error | undefined)?.stack,
           LogContext.MEMOS
         );
+      }
       default:
         return this.logger.warn?.(line, LogContext.MEMOS);
     }

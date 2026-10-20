@@ -521,6 +521,86 @@ describe('MemoPdfExecutor', () => {
     });
   });
 
+  it('logs a worker crash with its exit code and signal', async () => {
+    const { run, children, logger } = setup();
+
+    const rendering = run('signing').catch(caught => caught);
+    children[0].exit(null, 'SIGABRT');
+
+    expect((await rendering).reason).toBe('crashed');
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: 'crashed',
+        exitCode: null,
+        signal: 'SIGABRT',
+      }),
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
+  it('logs the error name a worker reports for a crashed render', async () => {
+    const { run, children, logger } = setup();
+
+    const rendering = run('signing').catch(caught => caught);
+    children[0].reply({
+      type: 'FAILED',
+      kind: 'crashed',
+      message: 'RangeError',
+    });
+
+    expect((await rendering).reason).toBe('crashed');
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: 'crashed',
+        workerError: 'RangeError',
+        signal: 'SIGKILL',
+      }),
+      undefined,
+      LogContext.MEMOS
+    );
+  });
+
+  it('logs the code and message of a synchronous fork failure', async () => {
+    const { run, failLaunch, logger } = setup();
+    failLaunch(Object.assign(new Error('spawn EAGAIN'), { code: 'EAGAIN' }));
+
+    await run('signing').catch(() => undefined);
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: 'launch-failed',
+        errorCode: 'EAGAIN',
+        errorMessage: 'spawn EAGAIN',
+      }),
+      expect.any(String),
+      LogContext.MEMOS
+    );
+  });
+
+  it('logs the code and message of an asynchronous spawn error', async () => {
+    const { run, children, logger } = setup();
+
+    const rendering = run('signing').catch(caught => caught);
+    children[0].pid = undefined;
+    children[0].kill.mockImplementation(() => true);
+    children[0].emit(
+      'error',
+      Object.assign(new Error('spawn ENOMEM'), { code: 'ENOMEM' })
+    );
+
+    expect((await rendering).reason).toBe('launch-failed');
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: 'launch-failed',
+        errorCode: 'ENOMEM',
+        errorMessage: 'spawn ENOMEM',
+      }),
+      expect.any(String),
+      LogContext.MEMOS
+    );
+  });
+
   it('logs refusals and cancellations as warnings and crashes as errors', async () => {
     const { run, children, logger } = setup();
 
