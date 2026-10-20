@@ -227,6 +227,9 @@ export class MemoPdfExecutor implements OnModuleDestroy {
       let imageCount: number | undefined;
       let expectedIndex = 0;
       let resolvingImage = false;
+      // The parent-side image resolve in flight, if any. It does storage and
+      // Sharp work that killing the worker does not stop.
+      let pendingResolve: Promise<void> | undefined;
       let cleanedUp = false;
 
       const finish = (outcome: Terminal) => {
@@ -258,7 +261,12 @@ export class MemoPdfExecutor implements OnModuleDestroy {
         clearTimeout(timer);
         job.signal?.removeEventListener('abort', onAbort);
         child.removeAllListeners();
-        this.jobs.delete(jobId);
+        // The caller is answered now, but the slot stays reserved until a
+        // resolve in flight settles, so that aborting and retrying cannot
+        // stack image work beyond the caps.
+        const release = () => this.jobs.delete(jobId);
+        if (pendingResolve) void pendingResolve.then(release);
+        else release();
         const outcome = terminal ?? { outcome: 'crashed' };
         record(outcome, imageCount, { exitCode, signal });
         if (outcome.outcome === 'ok' && outcome.pdf) resolve(outcome.pdf);
@@ -283,7 +291,12 @@ export class MemoPdfExecutor implements OnModuleDestroy {
               return finish({ outcome: 'crashed' });
             resolvingImage = true;
             const { index, src } = message;
-            job.resolveImage(src, index).then(
+            const resolving = job.resolveImage(src, index);
+            const settled = () => {
+              pendingResolve = undefined;
+            };
+            pendingResolve = resolving.then(settled, settled);
+            resolving.then(
               outcome => {
                 if (terminal) return;
                 resolvingImage = false;

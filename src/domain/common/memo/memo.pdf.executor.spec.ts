@@ -336,6 +336,64 @@ describe('MemoPdfExecutor', () => {
     expect(children).toHaveLength(2);
   });
 
+  it('holds the slot until an image resolve in flight at abort settles', async () => {
+    const { run, children, resolveImage } = setup();
+    let settle!: () => void;
+    resolveImage.mockReturnValue(
+      new Promise(resolve => {
+        settle = () => resolve({ kind: 'link' });
+      })
+    );
+    const abort = new AbortController();
+
+    const rendering = run('signing', 'actor-1', { signal: abort.signal });
+    children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
+    abort.abort();
+
+    // The caller has its answer at once; only the reservation lingers.
+    await expect(rendering).rejects.toThrow('Memo PDF render cancelled');
+    const refusal = run('signing', 'actor-1').catch(caught => caught);
+    expect(children).toHaveLength(1);
+    const refused = await refusal;
+    expect(refused).toBeInstanceOf(MemoPdfUnavailableException);
+    expect(refused.reason).toBe('busy-actor');
+
+    settle();
+    await flush();
+    void run('signing', 'actor-1');
+    expect(children).toHaveLength(2);
+  });
+
+  it('holds the slot until an image resolve that fails after the deadline settles', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { run, children, resolveImage } = setup({
+      max_concurrent_renders: 2,
+      max_concurrent_renders_per_actor: 1,
+      heap_mb: 512,
+      deadline_ms: 5_000,
+    });
+    let fail!: () => void;
+    resolveImage.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        fail = () => reject(new Error('file service timeout'));
+      })
+    );
+
+    const rendering = run('signing', 'actor-1').catch(caught => caught);
+    children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
+    vi.advanceTimersByTime(5_000);
+
+    expect((await rendering).reason).toBe('deadline');
+    const refusal = run('signing', 'actor-1').catch(caught => caught);
+    expect(children).toHaveLength(1);
+    expect((await refusal).reason).toBe('busy-actor');
+
+    fail();
+    await flush();
+    void run('signing', 'actor-1');
+    expect(children).toHaveLength(2);
+  });
+
   it('resolves each requested image in the parent and answers the worker', async () => {
     const { run, children, resolveImage } = setup();
     const outcome = {
