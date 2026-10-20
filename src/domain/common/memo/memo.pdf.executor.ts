@@ -297,7 +297,11 @@ export class MemoPdfExecutor implements OnModuleDestroy {
         finish({ outcome: child.pid ? 'crashed' : 'launch-failed' });
         if (!child.pid) cleanup();
       });
-      child.once('exit', cleanup);
+      // 'close', not 'exit': a worker that sends DONE and exits at once can
+      // have its 'exit' delivered before the IPC message is read, and cleanup
+      // removes the message listener. 'close' fires only after the IPC
+      // channel is drained.
+      child.once('close', cleanup);
 
       send({ type: 'START', jobId, state: job.state });
       if (job.signal?.aborted) onAbort();

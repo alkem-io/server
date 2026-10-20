@@ -14,7 +14,7 @@ class FakeChild extends EventEmitter {
   pid: number | undefined = 4242;
   readonly sent: ParentMessage[] = [];
   readonly kill = vi.fn((_signal?: string) => {
-    queueMicrotask(() => this.emit('exit', null, 'SIGKILL'));
+    queueMicrotask(() => this.exit(null, 'SIGKILL'));
     return true;
   });
   readonly send = vi.fn(
@@ -27,6 +27,13 @@ class FakeChild extends EventEmitter {
 
   get jobId() {
     return this.sent[0]?.jobId;
+  }
+
+  // As Node does: 'exit' when the process ends, 'close' once its stdio and
+  // IPC channel are drained.
+  exit(code: number | null, signal: string | null) {
+    this.emit('exit', code, signal);
+    this.emit('close', code, signal);
   }
 
   reply(message: Record<string, unknown>) {
@@ -425,10 +432,23 @@ describe('MemoPdfExecutor', () => {
     const { run, children, executor } = setup();
 
     const rendering = run('signing').catch(caught => caught);
-    children[0].emit('exit', 1, null);
+    children[0].exit(1, null);
 
     expect((await rendering).reason).toBe('crashed');
     expect((executor as any).jobs.size).toBe(0);
+  });
+
+  it('resolves a DONE whose message arrives after the worker exit event', async () => {
+    const { run, children } = setup();
+
+    const rendering = run('signing');
+    // A worker sends DONE and exits at once; Node may report the exit before
+    // it reads the IPC message, and only 'close' follows the drained channel.
+    children[0].emit('exit', 0, null);
+    children[0].reply({ type: 'DONE', pdf, imageCount: 0 });
+    children[0].emit('close', 0, null);
+
+    await expect(rendering).resolves.toBe(pdf);
   });
 
   it('kills every live worker on module destroy', async () => {
@@ -489,7 +509,7 @@ describe('MemoPdfExecutor', () => {
       LogContext.MEMOS
     );
 
-    children[0].emit('exit', 1, null);
+    children[0].exit(1, null);
     expect((await first).reason).toBe('crashed');
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({ outcome: 'crashed' }),
