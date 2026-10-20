@@ -226,6 +226,9 @@ describe('NativePushSenderService', () => {
           body: 'in “Space — Café ☕”',
         },
       },
+      // The tap target rides alongside `aps`, never inside it — asserted for
+      // its POSITION in the dedicated case below.
+      url: '/spaces/alpha',
     });
 
     stubFcmResponses({ ok: true, status: 200 });
@@ -234,6 +237,44 @@ describe('NativePushSenderService', () => {
     const body = JSON.parse(mockFetch.mock.calls[1][1].body);
     expect(body.message.notification.title).toBe('Alice mentioned you');
     expect(body.message.notification.body).toBe('in “Space — Café ☕”');
+  });
+
+  /**
+   * FR-007. The deep link must arrive under the SAME JS field path on both
+   * platforms, or a client written once works on exactly one of them.
+   * Capacitor's iOS plugin copies the WHOLE APNs `userInfo` dictionary into
+   * the JS event's `data` (`PushNotificationsHandler.swift:90`), so the key
+   * has to be a TOP-LEVEL sibling of `aps`: inside `aps` it would be an
+   * illegal Apple key, and wrapped in a `data` object it would surface as
+   * `notification.data.data.url`.
+   *
+   * The assertions therefore check the key's POSITION, not its presence — a
+   * substring check on the serialized body would pass for every one of those
+   * wrong shapes, which is the exact defect that matters here.
+   */
+  it('carries the tap target at the identical on-device field path on both transports (FR-007)', async () => {
+    const { request } = stubApnsSession(200);
+    await createService().send(createMessage());
+
+    const apnsBody = JSON.parse(request.end.mock.calls[0][0]);
+    // Reaches JS as `notification.data.url`.
+    expect(apnsBody.url).toBe('/spaces/alpha');
+    expect(Object.keys(apnsBody)).toEqual(['aps', 'url']);
+    // The three wrong placements, each named.
+    expect(apnsBody.aps.url).toBeUndefined();
+    expect(apnsBody.aps.alert.url).toBeUndefined();
+    expect(apnsBody.data).toBeUndefined();
+    // Delivery/presentation behaviour is untouched: `alert` and nothing else.
+    // No `content-available`, `mutable-content`, `category` or `thread-id`.
+    expect(Object.keys(apnsBody.aps)).toEqual(['alert']);
+
+    stubFcmResponses({ ok: true, status: 200 });
+    await createService().send(createMessage({ platform: 'android' }));
+
+    const fcmBody = JSON.parse(mockFetch.mock.calls[1][1].body);
+    // Reaches JS as `notification.data.url` as well — the plugin nests the
+    // FCM data map under `data` on both the foreground and the tap path.
+    expect(fcmBody.message.data).toEqual({ url: '/spaces/alpha' });
   });
 
   describe('the error taxonomy (FR-008)', () => {

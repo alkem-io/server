@@ -184,6 +184,26 @@ export class NativePushSenderService {
                 body: message.payload.body,
               },
             },
+            // The tap target, as a TOP-LEVEL sibling of `aps` — deliberately
+            // NOT nested inside `aps`, and NOT wrapped in a `data` object.
+            // Capacitor's iOS plugin copies the WHOLE APNs `userInfo`
+            // dictionary into the JS event's `data`
+            // (`PushNotificationsHandler.swift:90`,
+            // `JSTypes.coerceDictionaryToJSObject`), so a top-level `url`
+            // surfaces as `notification.data.url` — byte-for-byte the field
+            // path Android's FCM `data: { url }` produces in `sendFcm` below.
+            // Wrapping it would instead yield `notification.data.data.url` on
+            // iOS only, and a client written once would work on exactly one
+            // platform.
+            //
+            // Nothing on-device consumes this yet: tap routing is §7-deferred
+            // (E11). It is carried NOW because the consumer is the next slice
+            // of work and the server release window closes first — see the
+            // CMP-208 amendment in the feature spec. No APNs field that
+            // changes delivery or presentation (`content-available`,
+            // `mutable-content`, `category`, `thread-id`) is added with it,
+            // so the notification a device shows is unchanged.
+            url: message.payload.url,
           })
         );
       });
