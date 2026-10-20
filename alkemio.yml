@@ -629,7 +629,8 @@ collaboration:
       # worker may use up to heap_mb.
       max_concurrent_renders: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS}:3
       # Concurrent renders per actor per server instance; a fixed value, not
-      # derived from the global cap.
+      # derived from the global cap. Minimum 1: a lower value falls back to the
+      # default with a warning.
       max_concurrent_renders_per_actor: ${MEMO_PDF_EXPORT_MAX_CONCURRENT_RENDERS_PER_ACTOR}:1
       # V8 old-space limit of each render worker, in MB (--max-old-space-size).
       heap_mb: ${MEMO_PDF_EXPORT_HEAP_MB}:512

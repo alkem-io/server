@@ -64,7 +64,7 @@ export function memoPdfExecutorCapacity(
     maxConcurrent,
     maxConcurrentDownloads:
       maxConcurrent > 1 ? maxConcurrent - 1 : maxConcurrent,
-    maxPerActor: read('max_concurrent_renders_per_actor', 0),
+    maxPerActor: read('max_concurrent_renders_per_actor', 1),
     heapMb: read('heap_mb', 1),
     deadlineMs: read('deadline_ms', 1),
   };

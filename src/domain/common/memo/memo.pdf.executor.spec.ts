@@ -641,20 +641,25 @@ describe('memoPdfExecutorCapacity', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('accepts 0 for the caps', () => {
+  it('accepts 0 for the global cap', () => {
     const warn = vi.fn();
     const capacity = memoPdfExecutorCapacity(
-      {
-        ...valid,
-        max_concurrent_renders: 0,
-        max_concurrent_renders_per_actor: 0,
-      },
+      { ...valid, max_concurrent_renders: 0 },
       warn
     );
     expect(capacity.maxConcurrent).toBe(0);
     expect(capacity.maxConcurrentDownloads).toBe(0);
-    expect(capacity.maxPerActor).toBe(0);
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('rejects 0 for the per-actor cap, which would refuse every render as busy-actor', () => {
+    const warn = vi.fn();
+    const capacity = memoPdfExecutorCapacity(
+      { ...valid, max_concurrent_renders_per_actor: 0 },
+      warn
+    );
+    expect(capacity.maxPerActor).toBe(1);
+    expect(warn.mock.calls).toEqual([['max_concurrent_renders_per_actor']]);
   });
 
   it.each([
