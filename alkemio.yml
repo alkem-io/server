@@ -635,7 +635,7 @@ collaboration:
       # V8 old-space limit of each render worker, in MB (--max-old-space-size).
       heap_mb: ${MEMO_PDF_EXPORT_HEAP_MB}:512
       # Deadline for the whole render in milliseconds, counted from admission:
-      # it includes a download's live document read, image resolution and the
+      # it includes the live document read, image resolution and the
       # worker cold start (~1 s); keep it below the gateway request timeout.
       deadline_ms: ${MEMO_PDF_EXPORT_DEADLINE_MS}:30000
 

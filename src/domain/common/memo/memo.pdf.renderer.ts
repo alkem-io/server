@@ -20,11 +20,11 @@ export class MemoPdfRenderer {
   ) {}
 
   /**
-   * `state` may be a read of the memo's state; it then runs only once the
-   * render is admitted, so a refused request never joins the live document.
+   * `readState` reads the memo's state. It runs only once the render is
+   * admitted, so a refused request never joins the live document.
    */
   async render(
-    state: Buffer | (() => Promise<Buffer>),
+    readState: () => Promise<Buffer>,
     bucketId: string | undefined,
     actor: ActorContext,
     options: {
@@ -33,21 +33,18 @@ export class MemoPdfRenderer {
       purpose?: MemoPdfRenderPurpose;
     } = {}
   ): Promise<Buffer> {
-    // Rejected here, before a worker is spent on it; the worker repeats the
-    // check on the decoded document.
-    const checked = (bytes: Buffer) => {
-      if (bytes.byteLength > MAX_MEMO_EDITOR_CONTENT_BYTES)
-        throw new ValidationException(
-          `Memo PDF supports at most ${MAX_MEMO_EDITOR_CONTENT_BYTES.toLocaleString('en-US')} bytes of memo editor content`,
-          LogContext.MEMOS
-        );
-      return bytes;
-    };
     return this.executor.run({
-      state:
-        typeof state === 'function'
-          ? async () => checked(await state())
-          : checked(state),
+      // Rejected here, before a worker is spent on it; the worker repeats the
+      // check on the decoded document.
+      readState: async () => {
+        const state = await readState();
+        if (state.byteLength > MAX_MEMO_EDITOR_CONTENT_BYTES)
+          throw new ValidationException(
+            `Memo PDF supports at most ${MAX_MEMO_EDITOR_CONTENT_BYTES.toLocaleString('en-US')} bytes of memo editor content`,
+            LogContext.MEMOS
+          );
+        return state;
+      },
       resolveImage: this.imageResolver.bind(bucketId, actor),
       actorId: actor.actorID,
       memoId: options.memoId,

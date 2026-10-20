@@ -82,12 +82,12 @@ const setup = (
     extra: {
       signal?: AbortSignal;
       memoId?: string;
-      state?: () => Promise<Buffer>;
+      readState?: () => Promise<Buffer>;
     } = {}
   ) => {
     const rendering = executor.run({
       purpose,
-      state: Buffer.from('state'),
+      readState: async () => Buffer.from('state'),
       resolveImage,
       actorId,
       memoId: 'memo-1',
@@ -124,6 +124,7 @@ describe('MemoPdfExecutor', () => {
     const { children, run, executor } = setup();
 
     const rendering = run('signing');
+    await flush();
     expect(children).toHaveLength(1);
     expect(children[0].sent[0]).toEqual({
       type: 'START',
@@ -141,7 +142,9 @@ describe('MemoPdfExecutor', () => {
     const { children, run } = setup();
 
     void run('signing', 'actor-1');
+    await flush();
     void run('signing', 'actor-2');
+    await flush();
     const error = await run('signing', 'actor-3').catch(caught => caught);
 
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
@@ -153,6 +156,7 @@ describe('MemoPdfExecutor', () => {
     const { children, run } = setup();
 
     void run('signing', 'actor-1');
+    await flush();
     const error = await run('signing', 'actor-1').catch(caught => caught);
 
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
@@ -164,6 +168,7 @@ describe('MemoPdfExecutor', () => {
     const { children, run } = setup();
 
     void run('download', 'reader-1');
+    await flush();
     const error = await run('download', 'reader-1').catch(caught => caught);
 
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
@@ -175,6 +180,7 @@ describe('MemoPdfExecutor', () => {
     const { children, run } = setup();
 
     void run('signing', 'actor-1');
+    await flush();
     const error = await run('download', 'actor-1').catch(caught => caught);
 
     expect(error.reason).toBe('busy-actor');
@@ -190,13 +196,16 @@ describe('MemoPdfExecutor', () => {
     });
 
     void run('download', 'reader-1');
+    await flush();
     void run('download', 'reader-2');
+    await flush();
     const refused = await run('download', 'reader-3').catch(caught => caught);
     expect(refused).toBeInstanceOf(MemoPdfUnavailableException);
     expect(refused.reason).toBe('busy-global');
     expect(children).toHaveLength(2);
 
     void run('signing', 'signer-1');
+    await flush();
     expect(children).toHaveLength(3);
   });
 
@@ -204,10 +213,12 @@ describe('MemoPdfExecutor', () => {
     const { children, run } = setup();
 
     void run('download', 'reader-1');
+    await flush();
     const refused = await run('download', 'reader-2').catch(caught => caught);
     expect(refused.reason).toBe('busy-global');
 
     void run('signing', 'signer-1');
+    await flush();
     expect(children).toHaveLength(2);
   });
 
@@ -216,13 +227,16 @@ describe('MemoPdfExecutor', () => {
     const { children, run } = setup({});
 
     void run('download', 'actor-a');
+    await flush();
     void run('download', 'actor-b');
+    await flush();
     expect(children).toHaveLength(2);
 
     const refused = await run('download', 'actor-c').catch(caught => caught);
     expect(refused.reason).toBe('busy-global');
 
     void run('signing', 'signer-1');
+    await flush();
     expect(children).toHaveLength(3);
   });
 
@@ -230,10 +244,12 @@ describe('MemoPdfExecutor', () => {
     const { children, run } = setup();
 
     const first = run('download', 'reader-1');
+    await flush();
     children[0].reply({ type: 'DONE', pdf, imageCount: 0 });
     await first;
 
     void run('download', 'reader-2');
+    await flush();
     expect(children).toHaveLength(2);
   });
 
@@ -246,6 +262,7 @@ describe('MemoPdfExecutor', () => {
     });
 
     void run('download', 'reader-1');
+    await flush();
     expect(children).toHaveLength(1);
     const refused = await run('signing', 'signer-1').catch(caught => caught);
     expect(refused.reason).toBe('busy-global');
@@ -270,7 +287,8 @@ describe('MemoPdfExecutor', () => {
     const read = vi.fn(async () => Buffer.from('live'));
 
     void run('signing', 'actor-1');
-    const refused = await run('signing', 'actor-1', { state: read }).catch(
+    await flush();
+    const refused = await run('signing', 'actor-1', { readState: read }).catch(
       caught => caught
     );
 
@@ -289,7 +307,8 @@ describe('MemoPdfExecutor', () => {
         })
     );
 
-    const rendering = run('signing', 'actor-1', { state: read });
+    const rendering = run('signing', 'actor-1', { readState: read });
+    await flush();
     expect(read).toHaveBeenCalledOnce();
     expect((executor as any).jobs.size).toBe(1);
     expect(children).toHaveLength(0);
@@ -309,7 +328,7 @@ describe('MemoPdfExecutor', () => {
     const unavailable = new MemoPdfUnavailableException('source-unavailable');
 
     const error = await run('signing', 'actor-1', {
-      state: async () => {
+      readState: async () => {
         throw unavailable;
       },
     }).catch(caught => caught);
@@ -325,21 +344,23 @@ describe('MemoPdfExecutor', () => {
 
     const rendering = run('signing', 'actor-1', {
       signal: abort.signal,
-      state: async () => {
+      readState: async () => {
         abort.abort();
         return Buffer.from('live');
       },
     });
+    await flush();
 
     await expect(rendering).rejects.toThrow('Memo PDF render cancelled');
     expect(children).toHaveLength(0);
     expect((executor as any).jobs.size).toBe(0);
   });
 
-  it('reserves the slot before forking', () => {
+  it('reserves the slot before forking', async () => {
     const { run, reservedAtLaunch } = setup();
 
     void run('signing');
+    await flush();
 
     expect(reservedAtLaunch).toEqual([1]);
   });
@@ -354,6 +375,7 @@ describe('MemoPdfExecutor', () => {
 
     failLaunch(undefined);
     void run('signing');
+    await flush();
     expect(children).toHaveLength(1);
   });
 
@@ -361,6 +383,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children } = setup();
 
     const rendering = run('signing');
+    await flush();
     children[0].pid = undefined;
     children[0].kill.mockImplementation(() => true);
     children[0].emit('error', new Error('spawn ENOMEM'));
@@ -379,6 +402,7 @@ describe('MemoPdfExecutor', () => {
     });
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     vi.advanceTimersByTime(5_000);
 
     const error = await rendering;
@@ -403,11 +427,13 @@ describe('MemoPdfExecutor', () => {
     const abort = new AbortController();
 
     const rendering = run('signing', 'actor-1', { signal: abort.signal });
+    await flush();
     abort.abort();
 
     await expect(rendering).rejects.toThrow('Memo PDF render cancelled');
     expect(children[0].kill).toHaveBeenCalledWith('SIGKILL');
     void run('signing', 'actor-1');
+    await flush();
     expect(children).toHaveLength(2);
   });
 
@@ -422,12 +448,14 @@ describe('MemoPdfExecutor', () => {
     const abort = new AbortController();
 
     const rendering = run('signing', 'actor-1', { signal: abort.signal });
+    await flush();
     children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
     abort.abort();
 
     // The caller has its answer at once; only the reservation lingers.
     await expect(rendering).rejects.toThrow('Memo PDF render cancelled');
     const refusal = run('signing', 'actor-1').catch(caught => caught);
+    await flush();
     expect(children).toHaveLength(1);
     const refused = await refusal;
     expect(refused).toBeInstanceOf(MemoPdfUnavailableException);
@@ -436,6 +464,7 @@ describe('MemoPdfExecutor', () => {
     settle();
     await flush();
     void run('signing', 'actor-1');
+    await flush();
     expect(children).toHaveLength(2);
   });
 
@@ -455,17 +484,20 @@ describe('MemoPdfExecutor', () => {
     );
 
     const rendering = run('signing', 'actor-1').catch(caught => caught);
+    await flush();
     children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
     vi.advanceTimersByTime(5_000);
 
     expect((await rendering).reason).toBe('deadline');
     const refusal = run('signing', 'actor-1').catch(caught => caught);
+    await flush();
     expect(children).toHaveLength(1);
     expect((await refusal).reason).toBe('busy-actor');
 
     fail();
     await flush();
     void run('signing', 'actor-1');
+    await flush();
     expect(children).toHaveLength(2);
   });
 
@@ -480,6 +512,7 @@ describe('MemoPdfExecutor', () => {
     resolveImage.mockResolvedValue(outcome);
 
     const rendering = run('signing');
+    await flush();
     children[0].reply({
       type: 'RESOLVE_IMAGE',
       index: 0,
@@ -504,6 +537,7 @@ describe('MemoPdfExecutor', () => {
     resolveImage.mockRejectedValue(denied);
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
 
     expect(await rendering).toBe(denied);
@@ -518,6 +552,7 @@ describe('MemoPdfExecutor', () => {
     resolveImage.mockRejectedValue(outage);
 
     const rendering = run('download').catch(caught => caught);
+    await flush();
     children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
 
     const error = await rendering;
@@ -535,6 +570,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children } = setup();
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].reply({
       type: 'FAILED',
       kind: 'invalid',
@@ -561,6 +597,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children } = setup();
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].reply(message);
 
     const error = await rendering;
@@ -573,6 +610,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children } = setup();
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].emit('message', {
       type: 'DONE',
       jobId: 'another-job',
@@ -587,6 +625,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children, executor } = setup();
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].exit(1, null);
 
     expect((await rendering).reason).toBe('crashed');
@@ -597,6 +636,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children } = setup();
 
     const rendering = run('signing');
+    await flush();
     // A worker sends DONE and exits at once; Node may report the exit before
     // it reads the IPC message, and only 'close' follows the drained channel.
     children[0].emit('exit', 0, null);
@@ -610,7 +650,9 @@ describe('MemoPdfExecutor', () => {
     const { run, children, executor } = setup();
 
     const first = run('signing', 'actor-1').catch(caught => caught);
+    await flush();
     const second = run('signing', 'actor-2').catch(caught => caught);
+    await flush();
     executor.onModuleDestroy();
 
     for (const child of children)
@@ -623,6 +665,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children, logger } = setup();
 
     const rendering = run('signing', 'actor-1', { memoId: 'memo-9' });
+    await flush();
     children[0].reply({ type: 'DONE', pdf, imageCount: 3 });
     await rendering;
 
@@ -658,6 +701,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children, logger } = setup();
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].exit(null, 'SIGABRT');
 
     expect((await rendering).reason).toBe('crashed');
@@ -676,6 +720,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children, logger } = setup();
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].reply({
       type: 'FAILED',
       kind: 'crashed',
@@ -715,6 +760,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children, logger } = setup();
 
     const rendering = run('signing').catch(caught => caught);
+    await flush();
     children[0].pid = undefined;
     children[0].kill.mockImplementation(() => true);
     children[0].emit(
@@ -738,6 +784,7 @@ describe('MemoPdfExecutor', () => {
     const { run, children, logger } = setup();
 
     const first = run('signing', 'actor-1').catch(caught => caught);
+    await flush();
     await run('signing', 'actor-1').catch(() => undefined);
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({ outcome: 'busy-actor', durationMs: 0 }),

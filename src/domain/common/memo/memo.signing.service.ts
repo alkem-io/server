@@ -57,13 +57,20 @@ export class MemoSigningService {
       memoId,
       actor.actorID
     );
-    const state = await this.collaborationDocumentService.read(
-      memoId,
-      'memo',
-      actor.actorID,
-      doc => Buffer.from(Y.encodeStateAsUpdateV2(doc))
+    // The renderer reads the live memo only once the render is admitted:
+    // joining the room takes one of its connections, which a request refused
+    // for capacity must not hold.
+    const pdf = await this.renderer.render(
+      () =>
+        this.collaborationDocumentService.read(
+          memoId,
+          'memo',
+          actor.actorID,
+          doc => Buffer.from(Y.encodeStateAsUpdateV2(doc))
+        ),
+      storageBucketId,
+      actor
     );
-    const pdf = await this.renderer.render(state, storageBucketId, actor);
     const snapshot =
       await this.fileServiceAdapter.createInternalDocumentInBucket(
         pdf,

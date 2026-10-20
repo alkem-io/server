@@ -80,10 +80,10 @@ export type MemoPdfRenderPurpose = 'download' | 'signing';
 export type MemoPdfRenderJob = {
   purpose: MemoPdfRenderPurpose;
   /**
-   * The memo's Yjs state, or a read of it that runs only once the render is
-   * admitted, so that a refused request never reaches the source.
+   * Reads the memo's Yjs state. It runs only once the render is admitted, so
+   * that a refused request never reaches the source.
    */
-  state: Buffer | (() => Promise<Buffer>);
+  readState: () => Promise<Buffer>;
   resolveImage: ResolveMemoImage;
   actorId: string;
   memoId?: string;
@@ -218,20 +218,16 @@ export class MemoPdfExecutor implements OnModuleDestroy {
       stop: () => {},
     });
     let state: Buffer;
-    if (typeof job.state === 'function') {
-      try {
-        state = await job.state();
-      } catch (error) {
-        this.jobs.delete(jobId);
-        throw error;
-      }
-      if (job.signal?.aborted) {
-        this.jobs.delete(jobId);
-        record({ outcome: 'cancelled' });
-        throw cancelled();
-      }
-    } else {
-      state = job.state;
+    try {
+      state = await job.readState();
+    } catch (error) {
+      this.jobs.delete(jobId);
+      throw error;
+    }
+    if (job.signal?.aborted) {
+      this.jobs.delete(jobId);
+      record({ outcome: 'cancelled' });
+      throw cancelled();
     }
     let child: ChildProcess;
     try {

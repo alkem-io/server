@@ -12,19 +12,9 @@ describe('MemoPdfRenderer façade', () => {
   const executor = { run: vi.fn(async () => pdf) };
   const renderer = new MemoPdfRenderer(imageResolver as any, executor as any);
 
-  it('rejects oversized editor state before any worker is used', async () => {
-    const error = await renderer
-      .render(Buffer.alloc(1_000_001), 'bucket-1', actor)
-      .catch(caught => caught);
-
-    expect(error).toBeInstanceOf(ValidationException);
-    expect(error.message).toBe(
-      'Memo PDF supports at most 1,000,000 bytes of memo editor content'
-    );
-    expect(executor.run).not.toHaveBeenCalled();
-  });
-
-  it('checks the size of a deferred state once the executor reads it', async () => {
+  // The executor reads the state after admission and before forking, so an
+  // oversized memo is rejected before any worker is used.
+  it('rejects oversized editor state when the executor reads it', async () => {
     executor.run.mockClear();
     await renderer.render(
       async () => Buffer.alloc(1_000_001),
@@ -32,10 +22,10 @@ describe('MemoPdfRenderer façade', () => {
       actor
     );
     const [job] = executor.run.mock.calls[0] as unknown as [
-      { state: () => Promise<Buffer> },
+      { readState: () => Promise<Buffer> },
     ];
 
-    const error = await job.state().catch(caught => caught);
+    const error = await job.readState().catch(caught => caught);
 
     expect(error).toBeInstanceOf(ValidationException);
     expect(error.message).toBe(
@@ -48,7 +38,7 @@ describe('MemoPdfRenderer façade', () => {
     const state = Buffer.from('state');
 
     await expect(
-      renderer.render(state, 'bucket-1', actor, {
+      renderer.render(async () => state, 'bucket-1', actor, {
         signal: abort.signal,
         memoId: 'memo-1',
       })
@@ -57,17 +47,21 @@ describe('MemoPdfRenderer façade', () => {
     expect(imageResolver.bind).toHaveBeenCalledWith('bucket-1', actor);
     expect(executor.run).toHaveBeenCalledOnce();
     expect(executor.run).toHaveBeenCalledWith({
-      state,
+      readState: expect.any(Function),
       resolveImage,
       actorId: 'actor-1',
       memoId: 'memo-1',
       signal: abort.signal,
       purpose: 'signing',
     });
+    const [job] = executor.run.mock.calls.at(-1) as unknown as [
+      { readState: () => Promise<Buffer> },
+    ];
+    await expect(job.readState()).resolves.toBe(state);
   });
 
   it('passes the download purpose through to the executor', async () => {
-    await renderer.render(Buffer.from('state'), 'bucket-1', actor, {
+    await renderer.render(async () => Buffer.from('state'), 'bucket-1', actor, {
       purpose: 'download',
     });
 
@@ -77,7 +71,7 @@ describe('MemoPdfRenderer façade', () => {
   });
 
   it('keeps the signing call shape: three arguments, no options', async () => {
-    await renderer.render(Buffer.from('state'), 'bucket-1', actor);
+    await renderer.render(async () => Buffer.from('state'), 'bucket-1', actor);
 
     expect(executor.run).toHaveBeenCalledWith(
       expect.objectContaining({
