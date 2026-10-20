@@ -94,7 +94,7 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
       !validOperations(operations)
     )
       return { outcome: 'invalid' };
-    if (!this.capacity) return { outcome: 'forbidden' };
+    if (!this.capacity) return { outcome: 'unavailable' };
     if (signal?.aborted) return { outcome: 'cancelled-before-go' };
     const owned = [...this.jobs.values()].filter(
       job => job.actorId === actorId

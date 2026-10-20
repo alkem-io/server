@@ -6,6 +6,7 @@ import Ajv from 'ajv';
 
 export type ExecutorOutcome =
   | 'invalid'
+  | 'unavailable'
   | 'unauthorized'
   | 'forbidden'
   | 'busy'
@@ -90,7 +91,14 @@ export const operationsSchema = {
       ),
       operation(
         'addText',
-        { text: string, fontSize: number, strokeColor: string, ...placement },
+        {
+          text: string,
+          fontSize: number,
+          strokeColor: string,
+          x: number,
+          y: number,
+          width: number,
+        },
         ['text']
       ),
       operation(

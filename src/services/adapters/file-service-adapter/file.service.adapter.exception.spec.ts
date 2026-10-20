@@ -1,8 +1,111 @@
-import { AxiosError } from 'axios';
+import { Agent, createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
+import axios, { AxiosError } from 'axios';
 import { firstValueFrom, NEVER, timeout } from 'rxjs';
 import { FileServiceAdapterException } from './file.service.adapter.exception';
 
 describe('FileServiceAdapterException transport diagnostics', () => {
+  it('retains a real refused socket cause without serializing the request', async () => {
+    const server = createServer();
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    await new Promise<void>((resolve, reject) =>
+      server.close(error => (error ? reject(error) : resolve()))
+    );
+    const error = await axios
+      .get(`http://127.0.0.1:${port}/private-file`, {
+        proxy: false,
+        timeout: 1000,
+        headers: { Authorization: 'Bearer fixture-private-token' },
+      })
+      .catch(error => error);
+    expect(error).toBeInstanceOf(AxiosError);
+    const exception = FileServiceAdapterException.fromTransportError(
+      'read',
+      error
+    );
+    expect(exception.details?.transportCause).toMatchObject({
+      code: 'ECONNREFUSED',
+      cause: { syscall: 'connect', address: '127.0.0.1', port },
+    });
+    expect(JSON.stringify(exception)).not.toMatch(
+      /fixture-private-token|private-file|Authorization|http:\/\//
+    );
+  });
+
+  it('distinguishes an actual HTTP timeout and closes its owned listener', async () => {
+    const server = createServer(() => {});
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    try {
+      const { port } = server.address() as AddressInfo;
+      const error = await axios
+        .get(`http://127.0.0.1:${port}/private-file`, {
+          proxy: false,
+          timeout: 25,
+          headers: { Authorization: 'Bearer fixture-private-token' },
+        })
+        .catch(error => error);
+      expect(error).toBeInstanceOf(AxiosError);
+      const exception = FileServiceAdapterException.fromTransportError(
+        'read',
+        error
+      );
+      expect(exception.details?.transportCause).toMatchObject({
+        code: 'ECONNABORTED',
+      });
+      expect(JSON.stringify(exception)).not.toMatch(
+        /fixture-private-token|private-file|Authorization|http:\/\//
+      );
+    } finally {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close(error => (error ? reject(error) : resolve()))
+      );
+    }
+  });
+
+  it('retains both real socket failures from Axios address-family fallback', async () => {
+    const server = createServer();
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as AddressInfo;
+    await new Promise<void>((resolve, reject) =>
+      server.close(error => (error ? reject(error) : resolve()))
+    );
+    const agent = new Agent({
+      autoSelectFamily: true,
+      lookup: (_hostname, _options, callback) =>
+        callback(null, [
+          { address: '::1', family: 6 },
+          { address: '127.0.0.1', family: 4 },
+        ]),
+    });
+    try {
+      const error = await axios
+        .get(`http://fixture.invalid:${port}/private-file`, {
+          proxy: false,
+          timeout: 1000,
+          httpAgent: agent,
+        })
+        .catch(error => error);
+      expect(error.cause).toBeInstanceOf(AggregateError);
+      const exception = FileServiceAdapterException.fromTransportError(
+        'read',
+        error
+      );
+      expect(exception.details?.transportCause).toMatchObject({
+        cause: {
+          errors: [
+            { code: 'ECONNREFUSED', address: '::1', port },
+            { code: 'ECONNREFUSED', address: '127.0.0.1', port },
+          ],
+        },
+      });
+      expect(JSON.stringify(exception)).not.toContain('private-file');
+    } finally {
+      agent.destroy();
+    }
+  });
+
   it('retains Axios-wrapped refused connection socket details without Axios payloads', async () => {
     const socket = Object.assign(
       new Error('connect ECONNREFUSED 127.0.0.1:4003'),

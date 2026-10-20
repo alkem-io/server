@@ -162,7 +162,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_ENABLED', 'false');
     const h = new Parent({} as any, { log: vi.fn() } as any);
     expect(await h.execute(randomUUID(), randomUUID(), operations)).toEqual({
-      outcome: 'forbidden',
+      outcome: 'unavailable',
     });
     expect(await h.execute('', randomUUID(), operations)).toEqual({
       outcome: 'invalid',
