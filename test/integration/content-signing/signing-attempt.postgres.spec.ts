@@ -860,7 +860,11 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
       { read } as any,
       {
-        render: vi.fn().mockResolvedValue(Buffer.from('%PDF-live-read')),
+        // The renderer runs the deferred live read once the render is admitted.
+        render: vi.fn(async (readState: () => Promise<Buffer>) => {
+          await readState();
+          return Buffer.from('%PDF-live-read');
+        }),
       } as any,
       services.fileAdapter,
       { start: vi.fn() } as any,
@@ -1290,7 +1294,14 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
           project(liveDocument)
         ),
       } as any,
-      renderer as any,
+      {
+        // The signing service hands the renderer a deferred live read.
+        render: async (
+          readState: () => Promise<Buffer>,
+          bucketId: string | undefined,
+          actor: ActorContext
+        ) => renderer.render(await readState(), bucketId, actor),
+      } as any,
       services.fileAdapter,
       { start: vi.fn() } as any,
       urlGenerator as any,
