@@ -41,13 +41,11 @@ describe('MemoPdfDownloadService', () => {
         }
       ),
     };
-    const logger = { warn: vi.fn() };
     const service = new MemoPdfDownloadService(
       memoService as any,
       authorizationService as any,
       collaborationDocumentService as any,
-      renderer as any,
-      logger as any
+      renderer as any
     );
     return {
       service,
@@ -55,7 +53,6 @@ describe('MemoPdfDownloadService', () => {
       authorizationService,
       collaborationDocumentService,
       renderer,
-      logger,
     };
   };
 
@@ -162,26 +159,18 @@ describe('MemoPdfDownloadService', () => {
   });
 
   it('reports an unreadable live document as source-unavailable', async () => {
-    const { service, collaborationDocumentService, logger } = setup();
-    collaborationDocumentService.read.mockRejectedValue(
-      Object.assign(new Error('session ended'), {
-        name: 'CollaborationSessionEndError',
-      })
-    );
+    const { service, collaborationDocumentService } = setup();
+    const readFailure = Object.assign(new Error('session ended'), {
+      name: 'CollaborationSessionEndError',
+    });
+    collaborationDocumentService.read.mockRejectedValue(readFailure);
 
     const error = await service.download('memo-1', actor).catch(e => e);
 
     expect(error).toBeInstanceOf(MemoPdfUnavailableException);
     expect(error.reason).toBe('source-unavailable');
-    expect(logger.warn).toHaveBeenCalledWith(
-      {
-        message: 'Memo PDF source unavailable',
-        memoId: 'memo-1',
-        actorId: 'actor-1',
-        error: 'CollaborationSessionEndError',
-      },
-      LogContext.MEMOS
-    );
+    // The executor logs the job and names this cause.
+    expect(error.cause).toBe(readFailure);
   });
 
   it.each([

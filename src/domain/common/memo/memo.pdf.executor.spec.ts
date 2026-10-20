@@ -338,6 +338,68 @@ describe('MemoPdfExecutor', () => {
     expect((executor as any).jobs.size).toBe(0);
   });
 
+  it('logs a job that fails in its deferred read exactly once, naming the cause', async () => {
+    const { run, logger } = setup();
+    const cause = Object.assign(new Error('session ended'), {
+      name: 'DocumentPurgingError',
+    });
+
+    await run('download', 'actor-1', {
+      readState: async () => {
+        throw Object.assign(
+          new MemoPdfUnavailableException('source-unavailable'),
+          { cause }
+        );
+      },
+    }).catch(() => undefined);
+    await run('signing', 'actor-2', {
+      readState: async () => {
+        throw cause;
+      },
+    }).catch(() => undefined);
+
+    expect(logger.warn).toHaveBeenCalledTimes(2);
+    expect(logger.warn).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        outcome: 'source-unavailable',
+        purpose: 'download',
+        sourceError: 'DocumentPurgingError',
+      }),
+      LogContext.MEMOS
+    );
+    expect(logger.warn).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        outcome: 'source-unavailable',
+        purpose: 'signing',
+        sourceError: 'DocumentPurgingError',
+      }),
+      LogContext.MEMOS
+    );
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain(
+      'session ended'
+    );
+  });
+
+  it('logs an over-size deferred read as invalid', async () => {
+    const { run, logger } = setup();
+    const tooLarge = new ValidationException('too large', LogContext.MEMOS);
+
+    const error = await run('download', 'actor-1', {
+      readState: async () => {
+        throw tooLarge;
+      },
+    }).catch(caught => caught);
+
+    expect(error).toBe(tooLarge);
+    expect(logger.warn).toHaveBeenCalledOnce();
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'invalid', purpose: 'download' }),
+      LogContext.MEMOS
+    );
+  });
+
   it('does not fork when the request is aborted while the state is read', async () => {
     const { run, children, executor } = setup();
     const abort = new AbortController();

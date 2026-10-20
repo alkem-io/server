@@ -9,9 +9,8 @@ import {
 import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavailable.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import * as Y from 'yjs';
 import { memoPdfFilename } from './memo.pdf.filename';
 import { MemoPdfRenderer } from './memo.pdf.renderer';
@@ -29,9 +28,7 @@ export class MemoPdfDownloadService {
     private readonly memoService: MemoService,
     private readonly authorizationService: AuthorizationService,
     private readonly collaborationDocumentService: CollaborationDocumentService,
-    private readonly renderer: MemoPdfRenderer,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly renderer: MemoPdfRenderer
   ) {}
 
   async download(
@@ -60,16 +57,11 @@ export class MemoPdfDownloadService {
           doc => Buffer.from(Y.encodeStateAsUpdateV2(doc))
         );
       } catch (error) {
-        this.logger.warn?.(
-          {
-            message: 'Memo PDF source unavailable',
-            memoId,
-            actorId: actor.actorID,
-            error: (error as Error)?.name,
-          },
-          LogContext.MEMOS
+        // The executor logs the job, naming this cause.
+        throw Object.assign(
+          new MemoPdfUnavailableException('source-unavailable'),
+          { cause: error }
         );
-        throw new MemoPdfUnavailableException('source-unavailable');
       }
     };
 

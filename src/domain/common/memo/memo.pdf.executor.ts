@@ -98,6 +98,7 @@ type Outcome =
   | 'deadline'
   | 'crashed'
   | 'launch-failed'
+  | 'source-unavailable'
   | 'cancelled';
 
 type Terminal = {
@@ -221,7 +222,13 @@ export class MemoPdfExecutor implements OnModuleDestroy {
     try {
       state = await job.readState();
     } catch (error) {
+      // The job ends before any worker exists; it still gets its one line.
       this.jobs.delete(jobId);
+      record(
+        isRenderInputFailure(error)
+          ? { outcome: 'invalid', error }
+          : { outcome: 'source-unavailable', error }
+      );
       throw error;
     }
     if (job.signal?.aborted) {
@@ -424,6 +431,16 @@ export class MemoPdfExecutor implements OnModuleDestroy {
                 : undefined,
           },
           (terminal.error as Error | undefined)?.stack,
+          LogContext.MEMOS
+        );
+      }
+      case 'source-unavailable': {
+        // The name of the read failure (or of its cause, when the caller
+        // wrapped it), never its message.
+        const error = terminal.error as { cause?: unknown } | undefined;
+        const source = (error?.cause ?? error) as Error | undefined;
+        return this.logger.warn?.(
+          { ...line, sourceError: source?.name },
           LogContext.MEMOS
         );
       }
