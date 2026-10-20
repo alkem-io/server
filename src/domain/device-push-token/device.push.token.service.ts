@@ -41,7 +41,16 @@ export class DevicePushTokenService {
     { token, platform }: RegisterDevicePushTokenInput
   ): Promise<void> {
     await this.devicePushTokenRepository.upsert(
-      { token, platform, userId },
+      // `updatedDate` is written EXPLICITLY, and the cap below is why. TypeORM's
+      // `DO UPDATE SET` only touches the columns named in this literal, and the
+      // migration gives both date columns `DEFAULT now()` — written once, by
+      // Postgres, at insert. So without this line a REBOUND row keeps the
+      // timestamp of whoever inserted it first, and the eviction below orders
+      // `updatedDate DESC`, i.e. by first-ever insert. On the rebind branch —
+      // the shared-device case this entity's UNIQUE(token) exists for — a caller
+      // at the cap could have the row they just registered evicted in the same
+      // call, while the mutation returned success.
+      { token, platform, userId, updatedDate: new Date() },
       { conflictPaths: ['token'] }
     );
 

@@ -51,7 +51,12 @@ describe('DevicePushTokenService', () => {
 
       expect(repository.upsert).toHaveBeenCalledTimes(1);
       expect(repository.upsert).toHaveBeenCalledWith(
-        { token: 'tok-1', platform: 'android', userId: 'user-1' },
+        {
+          token: 'tok-1',
+          platform: 'android',
+          userId: 'user-1',
+          updatedDate: expect.any(Date),
+        },
         { conflictPaths: ['token'] }
       );
       // A findOne+save rewrite reintroduces the live defect X-3.
@@ -75,6 +80,23 @@ describe('DevicePushTokenService', () => {
         expect.objectContaining({ userId: 'user-2' }),
         { conflictPaths: ['token'] }
       );
+    });
+
+    // The rebind must REFRESH the timestamp, or the cap evicts the row it just
+    // wrote. `DO UPDATE SET` only touches columns named in the upsert literal,
+    // and the migration defaults both date columns to `now()` at insert — so a
+    // rebound row would otherwise carry the FIRST owner's timestamp while the
+    // eviction orders `updatedDate DESC`. Drop `updatedDate` from the literal
+    // and this case goes red; it is the only thing standing between the
+    // shared-device rebind and a success response that deleted its own row.
+    it('refreshes updatedDate on the rebind, so the cap cannot evict the row it just wrote', async () => {
+      repository.upsert!.mockResolvedValue({ identifiers: [] });
+
+      await service.register('user-2', { token: 'shared', platform: 'ios' });
+
+      const [payload] = repository.upsert!.mock.calls[0];
+      expect(payload).toHaveProperty('updatedDate');
+      expect(payload.updatedDate).toBeInstanceOf(Date);
     });
   });
 
