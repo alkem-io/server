@@ -72,7 +72,10 @@ const createMessage = (
   payload: {
     title: 'Alice mentioned you',
     body: 'in “Space — Café ☕”',
-    url: '/spaces/alpha',
+    // A realistic value: `urlGeneratorService` emits an ABSOLUTE url rooted at
+    // `hosting.endpoint_cluster` for every deep link. A relative fixture would
+    // have had the on-device consumer written against a shape that never occurs.
+    url: 'https://alkem.io/spaces/alpha',
     eventType: 'USER_MENTIONED',
     timestamp: '2026-10-16T10:00:00.000Z',
   },
@@ -228,7 +231,7 @@ describe('NativePushSenderService', () => {
       },
       // The tap target rides alongside `aps`, never inside it — asserted for
       // its POSITION in the dedicated case below.
-      url: '/spaces/alpha',
+      url: 'https://alkem.io/spaces/alpha',
     });
 
     stubFcmResponses({ ok: true, status: 200 });
@@ -258,8 +261,10 @@ describe('NativePushSenderService', () => {
 
     const apnsBody = JSON.parse(request.end.mock.calls[0][0]);
     // Reaches JS as `notification.data.url`.
-    expect(apnsBody.url).toBe('/spaces/alpha');
-    expect(Object.keys(apnsBody)).toEqual(['aps', 'url']);
+    expect(apnsBody.url).toBe('https://alkem.io/spaces/alpha');
+    // Sorted: `no extra keys` is the guarantee, not the emission order. Without
+    // the sort, reordering the object literal — a pure no-op — turns this red.
+    expect(Object.keys(apnsBody).sort()).toEqual(['aps', 'url']);
     // The three wrong placements, each named.
     expect(apnsBody.aps.url).toBeUndefined();
     expect(apnsBody.aps.alert.url).toBeUndefined();
@@ -274,7 +279,41 @@ describe('NativePushSenderService', () => {
     const fcmBody = JSON.parse(mockFetch.mock.calls[1][1].body);
     // Reaches JS as `notification.data.url` as well — the plugin nests the
     // FCM data map under `data` on both the foreground and the tap path.
-    expect(fcmBody.message.data).toEqual({ url: '/spaces/alpha' });
+    expect(fcmBody.message.data).toEqual({
+      url: 'https://alkem.io/spaces/alpha',
+    });
+  });
+
+  /**
+   * FR-007, the value's FORM. `url` is NOT one shape: `urlGeneratorService`
+   * returns an absolute `hosting.endpoint_cluster`-rooted url for a deep link
+   * (`url.generator.service.ts:44,54`) but the bare string `'/'` for the
+   * home-link events (`:1435`). The transport must pass BOTH through
+   * untouched — no normalization, no prefixing, no trailing-slash tidying —
+   * because the on-device consumer is what resolves them, and a transport
+   * that "helpfully" rewrote one of these would move that bug out of reach of
+   * every server test.
+   */
+  it.each([
+    ['an absolute deep link', 'https://alkem.io/spaces/alpha/callouts/7'],
+    ['the bare home link', '/'],
+  ])('passes %s through to both transports verbatim (FR-007)', async (_label, url) => {
+    const { request } = stubApnsSession(200);
+    await createService().send(
+      createMessage({ payload: { ...createMessage().payload, url } })
+    );
+    expect(JSON.parse(request.end.mock.calls[0][0]).url).toBe(url);
+
+    stubFcmResponses({ ok: true, status: 200 });
+    await createService().send(
+      createMessage({
+        platform: 'android',
+        payload: { ...createMessage().payload, url },
+      })
+    );
+    expect(JSON.parse(mockFetch.mock.calls[1][1].body).message.data).toEqual({
+      url,
+    });
   });
 
   describe('the error taxonomy (FR-008)', () => {
