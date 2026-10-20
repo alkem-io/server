@@ -320,9 +320,10 @@ export class MemoPdfExecutor implements OnModuleDestroy {
         return cancelled();
       case 'crashed':
         // A resolver failure that is not about the memo's content (e.g. the
-        // file service is down) is surfaced unchanged, as the in-process
-        // renderer did.
-        return terminal.error ?? new MemoPdfUnavailableException('crashed');
+        // file service is down) is a retryable unavailability, never the raw
+        // error: a GraphQLError-derived exception would bypass the REST
+        // controller's mapping and leave the request unanswered.
+        return new MemoPdfUnavailableException('crashed');
       default:
         return new MemoPdfUnavailableException(
           terminal.outcome as 'deadline' | 'launch-failed'
@@ -353,7 +354,11 @@ export class MemoPdfExecutor implements OnModuleDestroy {
         return this.logger.log(line, LogContext.MEMOS);
       case 'crashed':
       case 'launch-failed':
-        return this.logger.error(line, undefined, LogContext.MEMOS);
+        return this.logger.error(
+          line,
+          (terminal.error as Error | undefined)?.stack,
+          LogContext.MEMOS
+        );
       default:
         return this.logger.warn?.(line, LogContext.MEMOS);
     }

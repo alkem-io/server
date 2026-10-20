@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
+import { LogContext } from '@common/enums/logging.context';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
 import {
   EntityNotFoundException,
@@ -14,18 +15,25 @@ import { MemoPdfDownloadService } from '@domain/common/memo/memo.pdf.download.se
 import {
   Controller,
   Get,
+  Inject,
+  LoggerService,
   Param,
   ParseUUIDPipe,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 const RETRY_AFTER_SECONDS = '5';
 
 @Controller('rest/memo')
 export class MemoPdfController {
-  constructor(private readonly downloads: MemoPdfDownloadService) {}
+  constructor(
+    private readonly downloads: MemoPdfDownloadService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
+  ) {}
 
   /**
    * The memo's current content as a PDF attachment. The whole PDF is rendered
@@ -79,6 +87,14 @@ export class MemoPdfController {
       return response
         .set('Retry-After', RETRY_AFTER_SECONDS)
         .sendStatus(error.reason === 'busy-actor' ? 429 : 503);
-    throw error;
+    // Never rethrow: the global GraphQL exception filter catches every
+    // GraphQLError (so every BaseException) and writes no HTTP response,
+    // which would leave this request hanging.
+    this.logger.error(
+      { message: 'Memo PDF download failed unexpectedly' },
+      (error as Error | undefined)?.stack,
+      LogContext.MEMOS
+    );
+    return response.sendStatus(500);
   }
 }

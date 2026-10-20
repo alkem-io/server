@@ -12,6 +12,7 @@ import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavail
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RestGuard } from '@core/authorization/rest.guard';
 import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { StorageServiceUnavailableException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { MemoPdfController } from './memo.pdf.controller';
 
 class FakeResponse extends EventEmitter {
@@ -30,9 +31,10 @@ describe('MemoPdfController', () => {
 
   const setup = (download: (...args: any[]) => Promise<unknown>) => {
     const downloads = { download: vi.fn(download) };
-    const controller = new MemoPdfController(downloads as any);
+    const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
+    const controller = new MemoPdfController(downloads as any, logger as any);
     const response = new FakeResponse();
-    return { downloads, controller, response };
+    return { downloads, controller, response, logger };
   };
 
   it('uses the private REST route under rest/memo with the REST guard', () => {
@@ -154,13 +156,28 @@ describe('MemoPdfController', () => {
     expect(response.sendStatus).toHaveBeenCalledWith(503);
   });
 
-  it('does not hide an unexpected failure', async () => {
-    const failure = new Error('unexpected');
-    const { controller, response } = setup(() => Promise.reject(failure));
+  it.each([
+    ['a plain error', new Error('unexpected')],
+    [
+      'an unmapped BaseException',
+      new StorageServiceUnavailableException('File service unavailable'),
+    ],
+  ])('answers 500 and logs %s instead of rethrowing it', async (_label, failure) => {
+    const { controller, response, logger } = setup(() =>
+      Promise.reject(failure)
+    );
 
     await expect(
       controller.download(memoId, actor, response as any)
-    ).rejects.toBe(failure);
+    ).resolves.toBe(response);
+
+    expect(response.sendStatus).toHaveBeenCalledWith(500);
+    expect(response.send).not.toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.any(Object),
+      failure.stack,
+      LogContext.MEMOS
+    );
   });
 
   it('cancels the render when the client disconnects before the response finished', async () => {

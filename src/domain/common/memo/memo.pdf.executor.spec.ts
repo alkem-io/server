@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavailable.exception';
+import { StorageServiceUnavailableException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import {
   MemoPdfExecutor,
   MemoPdfRenderPurpose,
@@ -374,6 +375,27 @@ describe('MemoPdfExecutor', () => {
 
     expect(await rendering).toBe(denied);
     expect(children[0].kill).toHaveBeenCalledWith('SIGKILL');
+  });
+
+  it('reports crashed, not the raw error, when the file service fails an image read', async () => {
+    const { run, children, resolveImage, logger } = setup();
+    const outage = new StorageServiceUnavailableException(
+      'File service unavailable'
+    );
+    resolveImage.mockRejectedValue(outage);
+
+    const rendering = run('download').catch(caught => caught);
+    children[0].reply({ type: 'RESOLVE_IMAGE', index: 0, src: 'https://x' });
+
+    const error = await rendering;
+    expect(error).toBeInstanceOf(MemoPdfUnavailableException);
+    expect(error.reason).toBe('crashed');
+    expect(children[0].kill).toHaveBeenCalledWith('SIGKILL');
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ outcome: 'crashed' }),
+      outage.stack,
+      LogContext.MEMOS
+    );
   });
 
   it('turns FAILED invalid into a ValidationException with the worker message', async () => {
