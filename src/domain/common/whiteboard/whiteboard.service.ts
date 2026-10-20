@@ -4,6 +4,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
@@ -32,6 +33,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CollaborationDocumentService } from '@services/collaboration-client/collaboration-document.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import type * as Yjs from 'yjs';
@@ -70,6 +72,23 @@ export interface ResolvedWhiteboardContentSource {
 
 export interface MaterializedWhiteboardContent {
   content: string;
+  createdDocumentIDs: string[];
+}
+
+export interface WhiteboardImportAssetInput {
+  elements: readonly {
+    type: string;
+    isDeleted?: boolean;
+    fileId?: string | null;
+  }[];
+  files?: Record<string, { id: string; mimeType: string; dataURL?: string }>;
+}
+
+export interface WhiteboardImportAssetContext {
+  actorContext: ActorContext;
+  signal: AbortSignal;
+  deadlineAt: number;
+  /** Execution-owned accumulator, also populated when materialization rejects. */
   createdDocumentIDs: string[];
 }
 
@@ -353,6 +372,151 @@ export class WhiteboardService {
       content: result.snapshot.toString('base64'),
       createdDocumentIDs: result.createdTargetLocators,
     };
+  }
+
+  /**
+   * Strict caller-scene media resolution; graph validation stays with the fork.
+   * The admitted execution owns cleanup and must retain this context through GO.
+   */
+  public async materializeImportAssetsIntoBucket(
+    scene: WhiteboardImportAssetInput,
+    targetBucketID: string,
+    sourceFiles: Record<string, { fileID: string }>,
+    context: WhiteboardImportAssetContext
+  ): Promise<{ targetFileIDs: Record<string, string> }> {
+    const checkCancellation = () => {
+      context.signal.throwIfAborted();
+      if (
+        !Number.isFinite(context.deadlineAt) ||
+        Date.now() >= context.deadlineAt
+      ) {
+        throw new DOMException(
+          'Whiteboard asset preparation deadline exceeded',
+          'TimeoutError'
+        );
+      }
+    };
+    const invalid = () =>
+      new ValidationException(
+        'Whiteboard import image source is missing, ambiguous or invalid',
+        LogContext.WHITEBOARDS
+      );
+    const imageMimes = Object.values(MimeTypeVisual) as string[];
+    checkCancellation();
+    const referenced = new Set<string>();
+    for (const element of scene.elements) {
+      if (element.type !== 'image' || element.isDeleted === true) continue;
+      if (typeof element.fileId !== 'string' || !element.fileId)
+        throw invalid();
+      referenced.add(element.fileId);
+    }
+    if (Object.keys(sourceFiles).some(id => !referenced.has(id)))
+      throw invalid();
+
+    // Resolve the source shape for the whole request before the first storage write.
+    const sources = new Map<
+      string,
+      { fileID: string } | { buffer: Buffer; mimeType: string }
+    >();
+    for (const id of referenced) {
+      const embedded = Object.hasOwn(scene.files ?? {}, id)
+        ? scene.files?.[id]
+        : undefined;
+      const hasEmbedded =
+        embedded != null && Object.hasOwn(embedded, 'dataURL');
+      const hasLogical = Object.hasOwn(sourceFiles, id);
+      if (hasEmbedded === hasLogical) throw invalid();
+      if (hasLogical) {
+        const source = sourceFiles[id];
+        if (
+          !source ||
+          Object.keys(source).length !== 1 ||
+          !isUUID(source.fileID)
+        )
+          throw invalid();
+        sources.set(id, { fileID: source.fileID });
+      } else {
+        if (
+          embedded?.id !== id ||
+          !imageMimes.includes(embedded.mimeType) ||
+          typeof embedded.dataURL !== 'string'
+        )
+          throw invalid();
+        const prefix = `data:${embedded.mimeType};base64,`;
+        if (!embedded.dataURL.startsWith(prefix)) throw invalid();
+        const encoded = embedded.dataURL.slice(prefix.length);
+        const buffer = Buffer.from(encoded, 'base64');
+        // Buffer's decoder tolerates malformed base64; standard exports must round-trip.
+        if (!buffer.length || buffer.toString('base64') !== encoded)
+          throw invalid();
+        sources.set(id, { buffer, mimeType: embedded.mimeType });
+      }
+    }
+
+    const targetFileIDs: Record<string, string> = Object.create(null);
+    const onCreated = (fileID: string) => {
+      if (!context.createdDocumentIDs.includes(fileID))
+        context.createdDocumentIDs.push(fileID);
+    };
+    for (const [id, source] of sources) {
+      checkCancellation();
+      let targetDocument;
+      if ('fileID' in source) {
+        const document = await this.documentService.getDocumentOrFail(
+          source.fileID,
+          {
+            loadEagerRelations: false,
+            relations: { authorization: true, storageBucket: true },
+          }
+        );
+        checkCancellation();
+        this.authorizationService.grantAccessOrFail(
+          context.actorContext,
+          document.authorization,
+          AuthorizationPrivilege.READ,
+          'read whiteboard import image source'
+        );
+        if (
+          !document.storageBucket?.id ||
+          !imageMimes.includes(document.mimeType)
+        )
+          throw invalid();
+        targetDocument =
+          document.storageBucket.id === targetBucketID
+            ? document
+            : await this.storageBucketService.copyDocumentToBucket(
+                targetBucketID,
+                document,
+                context.actorContext.actorID || undefined,
+                false,
+                { onCreated }
+              );
+      } else {
+        // Await uncancellable storage work to completion. Its response callback records
+        // fresh IDs even if the storage owner's subsequent document reload fails.
+        targetDocument =
+          await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+            targetBucketID,
+            source.buffer,
+            'whiteboard-image',
+            source.mimeType,
+            context.actorContext.actorID || undefined,
+            false,
+            false,
+            undefined,
+            { onCreated }
+          );
+      }
+      checkCancellation();
+      if (
+        targetDocument.storageBucket?.id !== targetBucketID ||
+        !imageMimes.includes(targetDocument.mimeType)
+      )
+        throw invalid();
+      targetFileIDs[id] = targetDocument.id;
+    }
+    checkCancellation();
+    return { targetFileIDs };
   }
 
   /** Returns only a non-binary availability signal for persisted defaults/UI cards. */

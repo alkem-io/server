@@ -525,6 +525,104 @@ describe('StorageBucketService', () => {
 
   // ── uploadFileAsDocumentFromBuffer ──────────────────────────────
 
+  describe('fresh materialization reporting', () => {
+    it.each([
+      'upload',
+      'copy',
+    ])('reports a fresh %s before a failed post-response reload', async operation => {
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+        mockStorageBucket()
+      );
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset' });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'fresh',
+        reused: false,
+      });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'fresh',
+        reused: false,
+      });
+      const onCreated = vi.fn();
+      (documentService.getDocumentOrFail as Mock).mockImplementation(
+        async () => {
+          expect(onCreated).toHaveBeenCalledExactlyOnceWith('fresh');
+          throw new Error('reload failed');
+        }
+      );
+      const work =
+        operation === 'upload'
+          ? service.uploadFileAsDocumentFromBuffer(
+              'target',
+              Buffer.from('bytes'),
+              'image',
+              MimeTypeVisual.PNG,
+              'actor',
+              false,
+              false,
+              undefined,
+              { onCreated }
+            )
+          : service.copyDocumentToBucket(
+              'target',
+              mockDocument(),
+              'actor',
+              false,
+              { onCreated }
+            );
+      await expect(work).rejects.toThrow('reload failed');
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      'upload',
+      'copy',
+    ])('does not report deduplicated %s as fresh', async operation => {
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+        mockStorageBucket()
+      );
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset' });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'shared',
+        reused: true,
+      });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'shared',
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument({ id: 'shared' })
+      );
+      const onCreated = vi.fn();
+      if (operation === 'upload')
+        await service.uploadFileAsDocumentFromBuffer(
+          'target',
+          Buffer.from('bytes'),
+          'image',
+          MimeTypeVisual.PNG,
+          'actor',
+          false,
+          false,
+          undefined,
+          { onCreated }
+        );
+      else
+        await service.copyDocumentToBucket(
+          'target',
+          mockDocument(),
+          'actor',
+          false,
+          { onCreated }
+        );
+      expect(onCreated).not.toHaveBeenCalled();
+    });
+  });
+
   describe('uploadFileAsDocumentFromBuffer', () => {
     it('should upload file via file-service adapter and return the created document when MIME type and size are valid', async () => {
       const bucket = mockStorageBucket({ id: 'bucket-upload' });

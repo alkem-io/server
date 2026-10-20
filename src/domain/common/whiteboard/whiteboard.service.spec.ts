@@ -258,6 +258,428 @@ describe('WhiteboardService', () => {
     collaborationDocumentService = module.get(CollaborationDocumentService);
   });
 
+  describe('strict import asset materialization', () => {
+    const sourceID = 'b9bfe50b-3653-4dc1-b068-cfba75e436db';
+    const targetID = '3088b767-915e-461e-8ea1-9beca09f64fa';
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const dataURL = `data:image/png;base64,${pngBase64}`;
+    const image = { type: 'image', fileId: 'asset' };
+    const embedded = { asset: { id: 'asset', mimeType: 'image/png', dataURL } };
+    let context: {
+      actorContext: ActorContext;
+      signal: AbortSignal;
+      deadlineAt: number;
+      createdDocumentIDs: string[];
+    };
+    let controller: AbortController;
+    const resolve = (
+      files: Record<string, any> = {},
+      sourceFiles: Record<string, any> = {},
+      elements = [image]
+    ) =>
+      service.materializeImportAssetsIntoBucket(
+        { elements, files },
+        'target-bucket',
+        sourceFiles,
+        context
+      );
+
+    beforeEach(() => {
+      controller = new AbortController();
+      context = {
+        actorContext,
+        signal: controller.signal,
+        deadlineAt: Date.now() + 60000,
+        createdDocumentIDs: [],
+      };
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: sourceID,
+        mimeType: 'image/png',
+        authorization: { id: 'source-auth' },
+        storageBucket: { id: 'foreign-bucket' },
+      } as any);
+      vi.mocked(storageBucketService.copyDocumentToBucket).mockImplementation(
+        async (_bucket, _source, _actor, _skip, options) => {
+          options?.onCreated?.(targetID);
+          return {
+            id: targetID,
+            mimeType: 'image/png',
+            storageBucket: { id: 'target-bucket' },
+            reused: false,
+          } as any;
+        }
+      );
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockImplementation(async (...args) => {
+        args[8]?.onCreated?.(targetID);
+        return {
+          id: targetID,
+          mimeType: 'image/png',
+          storageBucket: { id: 'target-bucket' },
+          reused: false,
+        } as any;
+      });
+    });
+
+    it('copies an actor-readable foreign logical file and returns only target bindings', async () => {
+      const result = await resolve({}, { asset: { fileID: sourceID } });
+      expect(result).toEqual({ targetFileIDs: { asset: targetID } });
+      expect(documentService.getDocumentOrFail).toHaveBeenCalledWith(sourceID, {
+        loadEagerRelations: false,
+        relations: { authorization: true, storageBucket: true },
+      });
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        { id: 'source-auth' },
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+      expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+        'target-bucket',
+        expect.objectContaining({ id: sourceID }),
+        actorContext.actorID,
+        false,
+        { onCreated: expect.any(Function) }
+      );
+      expect(context.createdDocumentIDs).toEqual([targetID]);
+    });
+
+    it.each([
+      'target-bucket',
+      'foreign-bucket',
+    ])('requires source READ for a file in %s', async bucketID => {
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: sourceID,
+        mimeType: 'image/png',
+        authorization: { id: 'auth' },
+        storageBucket: { id: bucketID },
+      } as any);
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new ForbiddenException('unreadable', LogContext.WHITEBOARDS);
+        }
+      );
+      await expect(
+        resolve({}, { asset: { fileID: sourceID } })
+      ).rejects.toThrow('unreadable');
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('reuses a readable target-owned file without marking it fresh', async () => {
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: sourceID,
+        mimeType: 'image/png',
+        authorization: {},
+        storageBucket: { id: 'target-bucket' },
+      } as any);
+      expect(await resolve({}, { asset: { fileID: sourceID } })).toEqual({
+        targetFileIDs: { asset: sourceID },
+      });
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+      expect(context.createdDocumentIDs).toEqual([]);
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('decodes locally and uses the existing validated upload owner once per live asset', async () => {
+      const files = structuredClone(embedded);
+      await resolve(files, {}, [
+        image,
+        image,
+        { ...image, isDeleted: true } as any,
+      ]);
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).toHaveBeenCalledExactlyOnceWith(
+        'target-bucket',
+        Buffer.from(pngBase64, 'base64'),
+        'whiteboard-image',
+        'image/png',
+        actorContext.actorID,
+        false,
+        false,
+        undefined,
+        { onCreated: expect.any(Function) }
+      );
+      expect(context.createdDocumentIDs).toEqual([targetID]);
+      expect(files).toEqual(embedded);
+      expect(storageBucketService.uploadFileFromURI).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['missing', {}, {}],
+      ['dual', embedded, { asset: { fileID: sourceID } }],
+      ['mistaken source key', embedded, { typo: { fileID: sourceID } }],
+      [
+        'URL',
+        {
+          asset: {
+            id: 'asset',
+            mimeType: 'image/png',
+            dataURL: 'https://caller.invalid/image',
+          },
+        },
+        {},
+      ],
+      [
+        'bad base64',
+        {
+          asset: {
+            id: 'asset',
+            mimeType: 'image/png',
+            dataURL: 'data:image/png;base64,!!!!',
+          },
+        },
+        {},
+      ],
+      [
+        'empty bytes',
+        {
+          asset: {
+            id: 'asset',
+            mimeType: 'image/png',
+            dataURL: 'data:image/png;base64,',
+          },
+        },
+        {},
+      ],
+      ['mismatched id', { asset: { ...embedded.asset, id: 'other' } }, {}],
+      [
+        'mismatched MIME',
+        { asset: { ...embedded.asset, mimeType: 'image/jpeg' } },
+        {},
+      ],
+      [
+        'nonimage MIME',
+        {
+          asset: {
+            id: 'asset',
+            mimeType: 'text/plain',
+            dataURL: 'data:text/plain;base64,aA==',
+          },
+        },
+        {},
+      ],
+      ['URL fileID', {}, { asset: { fileID: 'https://caller.invalid/file' } }],
+      ['private identity field', {}, { asset: { externalID: sourceID } }],
+    ])('rejects %s before any storage work', async (_name, files, sourceFiles) => {
+      await expect(resolve(files, sourceFiles)).rejects.toThrow(
+        ValidationException
+      );
+      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+      expect(storageBucketService.uploadFileFromURI).not.toHaveBeenCalled();
+    });
+
+    it('propagates canonical byte/sniff validation failure without falling back', async () => {
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockRejectedValue(
+        new ValidationException('invalid image bytes', LogContext.WHITEBOARDS)
+      );
+      await expect(resolve(embedded)).rejects.toThrow('invalid image bytes');
+      expect(context.createdDocumentIDs).toEqual([]);
+    });
+
+    it('fails on missing logical source instead of retaining its locator', async () => {
+      vi.mocked(documentService.getDocumentOrFail).mockRejectedValue(
+        new EntityNotFoundException('missing file', LogContext.STORAGE_BUCKET)
+      );
+      await expect(
+        resolve({}, { asset: { fileID: sourceID } })
+      ).rejects.toThrow('missing file');
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('ignores unreferenced export bytes and deleted image history', async () => {
+      expect(
+        await resolve(embedded, {}, [{ ...image, isDeleted: true } as any])
+      ).toEqual({ targetFileIDs: {} });
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      'abort',
+      'deadline',
+    ])('checks %s before asynchronous work', async kind => {
+      if (kind === 'abort') controller.abort(new Error('cancelled'));
+      else context.deadlineAt = 0;
+      await expect(resolve(embedded)).rejects.toThrow();
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      'upload',
+      'copy',
+    ])('settles an uncancellable %s and records its fresh file before rejecting cancellation', async kind => {
+      let finish!: (value: any) => void;
+      let started!: () => void;
+      const entered = new Promise<void>(resolve => {
+        started = resolve;
+      });
+      const pending = new Promise<any>(resolve => {
+        finish = resolve;
+      });
+      const operation = async (...args: any[]) => {
+        started();
+        const result = await pending;
+        (kind === 'upload' ? args[8] : args[4]).onCreated(result.id);
+        return result;
+      };
+      if (kind === 'upload')
+        vi.mocked(
+          storageBucketService.uploadFileAsDocumentFromBuffer
+        ).mockImplementation(operation);
+      else
+        vi.mocked(storageBucketService.copyDocumentToBucket).mockImplementation(
+          operation
+        );
+      const settled = vi.fn();
+      const work = resolve(
+        kind === 'upload' ? embedded : {},
+        kind === 'copy' ? { asset: { fileID: sourceID } } : {}
+      );
+      const rejection = expect(work).rejects.toThrow('cancelled');
+      void work.then(settled, settled);
+      await entered;
+      controller.abort(new Error('cancelled'));
+      await Promise.resolve();
+      expect(settled).not.toHaveBeenCalled();
+      finish({
+        id: targetID,
+        reused: false,
+        mimeType: 'image/png',
+        storageBucket: { id: 'target-bucket' },
+      });
+      await rejection;
+      expect(context.createdDocumentIDs).toEqual([targetID]);
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      'upload',
+      'copy',
+    ])('never includes a deduplicated %s in the cleanup list', async kind => {
+      const reused = {
+        id: targetID,
+        reused: true,
+        mimeType: 'image/png',
+        storageBucket: { id: 'target-bucket' },
+      } as any;
+      if (kind === 'upload')
+        vi.mocked(
+          storageBucketService.uploadFileAsDocumentFromBuffer
+        ).mockResolvedValue(reused);
+      else
+        vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue(
+          reused
+        );
+      await resolve(
+        kind === 'upload' ? embedded : {},
+        kind === 'copy' ? { asset: { fileID: sourceID } } : {}
+      );
+      expect(context.createdDocumentIDs).toEqual([]);
+    });
+
+    it('retains fresh IDs if storage fails after receiving a committed upload response', async () => {
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockImplementation(async (...args) => {
+        args[8]?.onCreated?.(targetID);
+        throw new Error('post-upload load failed');
+      });
+      await expect(resolve(embedded)).rejects.toThrow(
+        'post-upload load failed'
+      );
+      expect(context.createdDocumentIDs).toEqual([targetID]);
+    });
+
+    it('stops after source lookup if the existing execution was cancelled', async () => {
+      vi.mocked(documentService.getDocumentOrFail).mockImplementation(
+        async () => {
+          controller.abort(new Error('cancelled during lookup'));
+          return { id: sourceID } as any;
+        }
+      );
+      await expect(
+        resolve({}, { asset: { fileID: sourceID } })
+      ).rejects.toThrow('cancelled during lookup');
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { mimeType: 'application/pdf', storageBucket: { id: 'target-bucket' } },
+      { mimeType: 'image/png', storageBucket: { id: 'foreign-bucket' } },
+    ])('rejects a nonimage or foreign materialization result while retaining its fresh ID', async invalidResult => {
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockImplementation(async (...args) => {
+        args[8]?.onCreated?.(targetID);
+        return { id: targetID, reused: false, ...invalidResult } as any;
+      });
+      await expect(resolve(embedded)).rejects.toThrow(ValidationException);
+      expect(context.createdDocumentIDs).toEqual([targetID]);
+    });
+
+    it('rejects a nonimage logical source before copying', async () => {
+      vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
+        id: sourceID,
+        mimeType: 'application/pdf',
+        authorization: {},
+        storageBucket: { id: 'foreign-bucket' },
+      } as any);
+      await expect(
+        resolve({}, { asset: { fileID: sourceID } })
+      ).rejects.toThrow(ValidationException);
+      expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
+    });
+
+    it('retains earlier fresh files for execution-owned cleanup when a later asset fails', async () => {
+      const later = { ...image, fileId: 'later' };
+      vi.mocked(storageBucketService.uploadFileAsDocumentFromBuffer)
+        .mockImplementationOnce(async (...args) => {
+          args[8]?.onCreated?.(targetID);
+          return {
+            id: targetID,
+            reused: false,
+            mimeType: 'image/png',
+            storageBucket: { id: 'target-bucket' },
+          } as any;
+        })
+        .mockRejectedValueOnce(new Error('later upload failed'));
+      await expect(
+        resolve(
+          { ...embedded, later: { ...embedded.asset, id: 'later' } },
+          {},
+          [image, later]
+        )
+      ).rejects.toThrow('later upload failed');
+      expect(context.createdDocumentIDs).toEqual([targetID]);
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('rechecks the existing deadline after settling storage work', async () => {
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockImplementation(async (...args) => {
+        args[8]?.onCreated?.(targetID);
+        context.deadlineAt = 0;
+        return { id: targetID } as any;
+      });
+      await expect(resolve(embedded)).rejects.toThrow('deadline exceeded');
+      expect(context.createdDocumentIDs).toEqual([targetID]);
+    });
+  });
+
   describe('createWhiteboard', () => {
     const mockStorageAggregator = {} as IStorageAggregator;
     const mockProfile = {

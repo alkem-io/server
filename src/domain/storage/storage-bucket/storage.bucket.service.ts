@@ -364,7 +364,8 @@ export class StorageBucketService {
     userID?: string,
     temporaryLocation = false,
     skipDedup = false,
-    allowedMimeTypesOverride?: string[]
+    allowedMimeTypesOverride?: string[],
+    options?: { onCreated?: (fileID: string) => void }
   ): Promise<IDocument> {
     const storage = await this.getStorageBucketOrFail(storageBucketId);
 
@@ -395,7 +396,10 @@ export class StorageBucketService {
           allowedMimeTypes: effectiveAllowedMimes.join(','),
           maxFileSize: storage.maxFileSize,
           skipDedup: effectiveSkipDedup || undefined,
-        })
+        }),
+      undefined,
+      undefined,
+      options?.onCreated
     );
   }
 
@@ -414,7 +418,11 @@ export class StorageBucketService {
     sourceDocument: IDocument,
     userID?: string,
     skipDedup = false,
-    options?: { externalReference?: string; displayName?: string }
+    options?: {
+      externalReference?: string;
+      displayName?: string;
+      onCreated?: (fileID: string) => void;
+    }
   ): Promise<IDocument> {
     const destination = await this.getStorageBucketOrFail(destinationBucketId, {
       // The direct owner scopes the document creator rule; see
@@ -441,7 +449,8 @@ export class StorageBucketService {
           displayName: options?.displayName,
         }),
       destination.authorization,
-      { createdBy, destinationBucket: destination }
+      { createdBy, destinationBucket: destination },
+      options?.onCreated
     );
   }
 
@@ -504,7 +513,8 @@ export class StorageBucketService {
       createdBy?: string;
       destinationBucket?: IStorageBucket;
       conditionalMove?: boolean;
-    }
+    },
+    onCreated?: (fileID: string) => void
   ): Promise<IDocument> {
     let savedAuth;
     let savedTagset;
@@ -543,6 +553,10 @@ export class StorageBucketService {
 
       goInvoked = true;
       result = await goCall(savedAuth.id, savedTagset.id);
+
+      // Report before reload: a later failure must not hide a fresh committed file
+      // from the execution owner's definite pre-publication compensation list.
+      if (result.reused === false) onCreated?.(result.id);
 
       // Load with relations needed for auth/tagset consumers. On dedup
       // reuse this is an existing row; otherwise the freshly-inserted one.
