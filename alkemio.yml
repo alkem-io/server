@@ -512,6 +512,36 @@ notifications:
       public_key: ${VAPID_PUBLIC_KEY}:BKqdDhb3qBD7lNiqe-sxXQQqmxdMNfBjLPcj9kypfXfxv1LT_c4JS5gukL0Np3lhdd_jqqlZNR714gr2SGT-V44
       private_key: ${VAPID_PRIVATE_KEY}:KGcZQvup8fMXYxkK1HZTfYJRqvnAOZ6x_F85dqiYcq8
       subject: ${VAPID_SUBJECT}:mailto:notifications@alkem.io
+    # 086-app-push-mvp (FR-007). Native app push credentials. Both the APNs
+    # `.p8` and the FCM service-account JSON are multi-line, so both travel
+    # base64 single-line and are decoded in code.
+    #
+    # Supplied PER ENVIRONMENT ONLY, from dev-orchestration
+    # `01-alkemio-platform/overlays/sandbox/alkemio/config/02-secrets-overlay.yml`
+    # (human gate HG-1). NEVER commit a fallback keypair here: a committed
+    # fallback has leaked from this file before and had to be rotated. With any
+    # key of a platform absent the native transport for that platform is simply
+    # disabled (a falsy conjunction in the sender), so an unprovisioned
+    # environment is inert rather than broken.
+    apns:
+      key_base64: ${APNS_KEY_BASE64}
+      key_id: ${APNS_KEY_ID}
+      team_id: ${APNS_TEAM_ID}
+      bundle_id: ${APNS_BUNDLE_ID}
+      # Which of Apple's TWO push hosts to talk to: `sandbox` or
+      # `production`, and nothing else. A CLOSED enum rather than a `host:`
+      # URL on purpose — an iOS token minted against one Apple environment
+      # answers `400 BadDeviceToken` on the other, which the sender treats as
+      # PERMANENT and responds to by DELETING the token row while logging only
+      # at `verbose`. A typo'd URL would therefore be both destructive and
+      # invisible; an unrecognised value here fails startup instead. Leaving
+      # APNS_ENVIRONMENT unset resolves to `sandbox` below, so every existing
+      # deployment keeps today's behaviour — but setting it BLANK is a
+      # misconfiguration, not a default, and fails startup too.
+      environment: ${APNS_ENVIRONMENT}:sandbox
+    fcm:
+      project_id: ${FCM_PROJECT_ID}
+      service_account_base64: ${FCM_SERVICE_ACCOUNT_BASE64}
     max_subscriptions_per_user: ${PUSH_MAX_SUBSCRIPTIONS_PER_USER}:10
     throttle:
       max_per_minute: ${PUSH_THROTTLE_MAX_PER_MINUTE}:10
