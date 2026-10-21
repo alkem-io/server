@@ -433,24 +433,34 @@ services:
       # same thing on the host and inside lk-jwt-service (see below).
       # Single UDP port (mux) + TCP fallback. No external-IP discovery:
       # Docker Desktop does not route a STUN-found address back to the
-      # container.
+      # container. node_ip is the address advertised to browsers as the ICE
+      # candidate; 127.0.0.1 reaches the published ports from the host.
+      # Set LIVEKIT_NODE_IP (and LIVEKIT_BIND_IP) to a LAN address to test
+      # from another device.
+      # room.auto_create is off: lk-jwt-service creates rooms for
+      # full-access users, so a join token alone cannot create one.
       LIVEKIT_CONFIG: |
         port: ${LIVEKIT_HTTP_PORT:-7880}
         rtc:
           tcp_port: ${LIVEKIT_TCP_PORT:-7881}
           udp_port: ${LIVEKIT_UDP_PORT:-7882}
           use_external_ip: false
+          node_ip: ${LIVEKIT_NODE_IP:-127.0.0.1}
+        room:
+          auto_create: false
         keys:
           ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
         logging:
           level: info
+    # Published on the loopback interface only: the dev key pair is
+    # committed. Set LIVEKIT_BIND_IP=0.0.0.0 to reach it from the LAN.
     ports:
-      - '${LIVEKIT_HTTP_PORT:-7880}:${LIVEKIT_HTTP_PORT:-7880}'
-      - '${LIVEKIT_TCP_PORT:-7881}:${LIVEKIT_TCP_PORT:-7881}'
-      - '${LIVEKIT_UDP_PORT:-7882}:${LIVEKIT_UDP_PORT:-7882}/udp'
+      - '${LIVEKIT_BIND_IP:-127.0.0.1}:${LIVEKIT_HTTP_PORT:-7880}:${LIVEKIT_HTTP_PORT:-7880}'
+      - '${LIVEKIT_BIND_IP:-127.0.0.1}:${LIVEKIT_TCP_PORT:-7881}:${LIVEKIT_TCP_PORT:-7881}'
+      - '${LIVEKIT_BIND_IP:-127.0.0.1}:${LIVEKIT_UDP_PORT:-7882}:${LIVEKIT_UDP_PORT:-7882}/udp'
       # lk-jwt-service's port: it runs in this service's network namespace,
       # so its port is published here.
-      - '${LK_JWT_PORT:-8880}:8080'
+      - '${LIVEKIT_BIND_IP:-127.0.0.1}:${LK_JWT_PORT:-8880}:8080'
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:${LIVEKIT_HTTP_PORT:-7880}/']
       interval: 10s
@@ -468,8 +478,13 @@ services:
     # namespace makes ws://localhost:<port> correct for both, and keeps it on
     # alkemio_dev_net for the Synapse TLS front.
     network_mode: service:livekit
+    # A restart of livekit gives it a new network namespace; restart: true
+    # recreates lk-jwt-service with it (compose-driven restarts). After a
+    # runtime crash-restart of livekit, run: docker compose up -d lk-jwt-service
     depends_on:
-      - livekit
+      livekit:
+        condition: service_healthy
+        restart: true
     environment:
       - LIVEKIT_URL=ws://localhost:${LIVEKIT_HTTP_PORT:-7880}
       - LIVEKIT_KEY=${LIVEKIT_API_KEY}
