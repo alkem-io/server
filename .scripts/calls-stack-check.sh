@@ -296,7 +296,7 @@ sfu_get() {
 expected_livekit_ws() {
   local hostport="${LIVEKIT_URL#*://}"
   hostport="${hostport%%/*}"
-  printf 'ws://localhost:%s' "${hostport##*:}"
+  printf 'ws://%s:%s' "${LIVEKIT_NODE_IP:-127.0.0.1}" "${hostport##*:}"
 }
 
 token_exchange_succeeds() {
