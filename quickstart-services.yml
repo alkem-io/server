@@ -393,6 +393,91 @@ services:
     ports:
       - 80
 
+  # ---------------------------------------------------------------------------
+  # Matrix group calls — local development only. Nothing here deploys.
+  # LiveKit is the media server, lk-jwt-service turns a Synapse OpenID token
+  # into a LiveKit join token, and the Caddy proxy gives lk-jwt-service an
+  # HTTPS federation endpoint for the local server_name on :8448 so it can
+  # verify those tokens. None of the three pins a container_name, so a second
+  # compose project (e.g. an isolated verification stack) can run them too.
+  # Host ports are overridable: LIVEKIT_HTTP_PORT, LIVEKIT_TCP_PORT,
+  # LIVEKIT_UDP_PORT, LK_JWT_PORT (defaults 7880, 7881, 7882/udp, 8880).
+  # ---------------------------------------------------------------------------
+  synapse-tls-proxy:
+    image: caddy:2.11.7-alpine
+    restart: always
+    depends_on:
+      - synapse
+    # Self-issued certificate from Caddy's internal CA; only lk-jwt-service
+    # trusts it (via its explicit skip-verify opt-in). No host port.
+    command:
+      - caddy
+      - reverse-proxy
+      - --from
+      - https://alkemio.matrix.host:8448
+      - --to
+      - synapse:8008
+      - --internal-certs
+      - --disable-redirects
+    networks:
+      alkemio_dev_net:
+        aliases:
+          - alkemio.matrix.host
+
+  livekit:
+    image: livekit/livekit-server:v1.13.10
+    restart: always
+    environment:
+      # Single UDP port (mux) + TCP fallback; the container port equals the
+      # published host port so the advertised ICE port stays correct.
+      # No external-IP discovery: Docker Desktop does not route a STUN-found
+      # address back to the container.
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          tcp_port: ${LIVEKIT_TCP_PORT:-7881}
+          udp_port: ${LIVEKIT_UDP_PORT:-7882}
+          use_external_ip: false
+        keys:
+          ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+        logging:
+          level: info
+    ports:
+      - '${LIVEKIT_HTTP_PORT:-7880}:7880'
+      - '${LIVEKIT_TCP_PORT:-7881}:${LIVEKIT_TCP_PORT:-7881}'
+      - '${LIVEKIT_UDP_PORT:-7882}:${LIVEKIT_UDP_PORT:-7882}/udp'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:7880/']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+    networks:
+      - alkemio_dev_net
+
+  lk-jwt-service:
+    image: ghcr.io/element-hq/lk-jwt-service:0.9.0
+    restart: always
+    environment:
+      # Handed to clients as the LiveKit signalling URL: host-reachable.
+      - LIVEKIT_URL=ws://localhost:${LIVEKIT_HTTP_PORT:-7880}
+      - LIVEKIT_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_SECRET=${LIVEKIT_API_SECRET}
+      # Only the local Synapse gets full-access (publishing) tokens.
+      - LIVEKIT_FULL_ACCESS_HOMESERVERS=alkemio.matrix.host
+      # LOCAL DEV ONLY: trust the proxy's self-issued certificate.
+      - LIVEKIT_INSECURE_SKIP_VERIFY_TLS=YES_I_KNOW_WHAT_I_AM_DOING
+    ports:
+      - '${LK_JWT_PORT:-8880}:8080'
+    healthcheck:
+      test: ['CMD', '/lk-jwt-service-healthcheck']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    networks:
+      - alkemio_dev_net
+
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
     # The Erlang node name is derived from the hostname, and the node name is
