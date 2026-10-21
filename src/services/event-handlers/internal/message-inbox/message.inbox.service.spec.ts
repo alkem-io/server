@@ -281,6 +281,141 @@ describe('MessageInboxService', () => {
         'msg-1'
       );
     });
+
+    describe('attachment-only messages', () => {
+      const imageAttachment = {
+        display_name: 'shot.png',
+        mime_type: 'image/png',
+        size: 10,
+      };
+
+      const mockNonConversationRoom = (room: any) => {
+        roomLookupService.getRoomOrFail.mockResolvedValue(room);
+        roomLookupService.incrementMessagesCount.mockResolvedValue(
+          undefined as any
+        );
+        actorContextService.buildForActor.mockResolvedValue({} as any);
+        messageNotificationService.processMessageNotifications.mockResolvedValue(
+          undefined
+        );
+      };
+
+      it('does not invoke the thread VC for an attachment-only reply', async () => {
+        const vcData = { virtualContributorActorID: 'vc-actor-1' };
+        const room = makeRoom({
+          type: RoomType.CALLOUT,
+          vcInteractionsByThread: { 'thread-1': vcData } as any,
+        });
+        const payload = {
+          ...basePayload,
+          message: {
+            ...basePayload.message,
+            message: 'shot.png',
+            threadID: 'thread-1',
+            attachments: [imageAttachment],
+          },
+        };
+        mockNonConversationRoom(room);
+
+        await service.handleMessageReceived(
+          new MessageReceivedEvent(payload as any)
+        );
+
+        expect(
+          vcInvocationService.processExistingThread
+        ).not.toHaveBeenCalled();
+        expect(vcInvocationService.processNewThread).not.toHaveBeenCalled();
+        expect(
+          messageNotificationService.processMessageNotifications
+        ).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not start a new VC thread for an attachment-only top-level message', async () => {
+        const room = makeRoom({ type: RoomType.CALLOUT });
+        const payload = {
+          ...basePayload,
+          message: {
+            ...basePayload.message,
+            message: '',
+            attachments: [imageAttachment],
+          },
+        };
+        mockNonConversationRoom(room);
+
+        await service.handleMessageReceived(
+          new MessageReceivedEvent(payload as any)
+        );
+
+        expect(vcInvocationService.processNewThread).not.toHaveBeenCalled();
+        expect(
+          vcInvocationService.processExistingThread
+        ).not.toHaveBeenCalled();
+      });
+
+      it('does not invoke the conversation VC for an attachment-only chat message', async () => {
+        const room = makeRoom({ type: RoomType.CONVERSATION_DIRECT });
+        roomLookupService.getRoomOrFail.mockResolvedValue(room);
+        roomLookupService.incrementMessagesCount.mockResolvedValue(
+          undefined as any
+        );
+        conversationService.findConversationByRoomId.mockResolvedValue({
+          id: 'conv-1',
+        } as any);
+        conversationService.getConversationMemberActorIds.mockResolvedValue([
+          'agent-a',
+          'agent-b',
+        ]);
+        const payload = {
+          ...basePayload,
+          message: {
+            ...basePayload.message,
+            message: 'shot.png',
+            attachments: [imageAttachment],
+          },
+        };
+
+        await service.handleMessageReceived(
+          new MessageReceivedEvent(payload as any)
+        );
+
+        expect(
+          vcInvocationService.processDirectConversation
+        ).not.toHaveBeenCalled();
+        expect(
+          subscriptionPublishService.publishConversationEvent
+        ).toHaveBeenCalled();
+      });
+
+      it('still invokes the VC for a captioned media message', async () => {
+        const vcData = { virtualContributorActorID: 'vc-actor-1' };
+        const room = makeRoom({
+          type: RoomType.CALLOUT,
+          vcInteractionsByThread: { 'thread-1': vcData } as any,
+        });
+        const payload = {
+          ...basePayload,
+          message: {
+            ...basePayload.message,
+            message: 'look at this',
+            threadID: 'thread-1',
+            attachments: [imageAttachment],
+          },
+        };
+        mockNonConversationRoom(room);
+        vcInvocationService.processExistingThread.mockResolvedValue(undefined);
+
+        await service.handleMessageReceived(
+          new MessageReceivedEvent(payload as any)
+        );
+
+        expect(vcInvocationService.processExistingThread).toHaveBeenCalledWith(
+          payload,
+          room,
+          'thread-1',
+          vcData
+        );
+      });
+    });
   });
 
   describe('handleMessageEdited', () => {
