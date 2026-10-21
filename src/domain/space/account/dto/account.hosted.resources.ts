@@ -28,7 +28,7 @@ export type HostedResourcesViewerScope =
  */
 @ObjectType('AccountHostedVirtualContributor', {
   description:
-    'A Virtual Contributor hosted by an Account, as a card: its identity and public profile only.',
+    'A hosted Virtual Contributor card: its identity and profile only.',
 })
 export class IAccountHostedVirtualContributor {
   @Field(() => UUID, {
@@ -40,20 +40,20 @@ export class IAccountHostedVirtualContributor {
 
 @ObjectType('AccountHostedResources', {
   description:
-    'The resources hosted by an Account, as the current viewer may see them.',
+    'Resources hosted by an Account, as the current viewer may see them.',
 })
 export class IAccountHostedResources {
   @Field(() => [IAccountHostedVirtualContributor], {
     nullable: false,
     description:
-      'The Virtual Contributors hosted by the Account that the current viewer may see.',
+      'Virtual Contributors of the Account that the current viewer may see.',
   })
   virtualContributors!: IAccountHostedVirtualContributor[];
 
   @Field(() => [IInnovationPack], {
     nullable: false,
     description:
-      'The Innovation Packs hosted by the Account that the current viewer may see.',
+      'Innovation Packs of the Account that the current viewer may see.',
   })
   innovationPacks!: IInnovationPack[];
 

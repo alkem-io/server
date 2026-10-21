@@ -20,8 +20,7 @@ import { IAccountHostedVirtualContributor } from './dto/account.hosted.resources
 export class AccountHostedResourcesResolverFields {
   @ResolveField('profile', () => IProfile, {
     nullable: false,
-    description:
-      "The profile of this Virtual Contributor, resolved under the profile's own read rule (world-readable by design) so a viewer of the host's profile without READ on the Virtual Contributor itself can still render the card.",
+    description: 'The public profile of this Virtual Contributor.',
   })
   async profile(
     @Parent() parent: IAccountHostedVirtualContributor,
@@ -31,6 +30,10 @@ export class AccountHostedResourcesResolverFields {
     })
     loader: ILoader<IProfile>
   ): Promise<IProfile> {
+    // Resolved under the profile's own READ rule (Virtual Contributor profiles
+    // are world-readable by design), not the Virtual Contributor's: a viewer of
+    // the host's profile may render the card without READ on the Virtual
+    // Contributor itself.
     return loader.load(parent.id);
   }
 }

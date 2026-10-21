@@ -334,6 +334,142 @@ describe('OrganizationResolverFields', () => {
     });
   });
 
+  describe('hostedResources', () => {
+    const hosted = {
+      virtualContributors: [{ id: 'vc-1' }],
+      innovationPacks: [],
+      innovationHubs: [],
+    };
+    const org = { id: 'org-1', authorization: { id: 'auth-1' } } as any;
+    const account = { id: 'acc-1', authorization: { id: 'account-auth' } };
+    let accountLookupService: { getHostedResourcesForViewer: Mock };
+
+    beforeEach(() => {
+      accountLookupService = (resolver as any).accountLookupService;
+      accountLookupService.getHostedResourcesForViewer.mockResolvedValue(
+        hosted
+      );
+      organizationService.getAccount.mockResolvedValue(account);
+    });
+
+    it.each([
+      ['an empty actorID', { actorID: '', credentials: [] }],
+      [
+        'an anonymous actor',
+        { actorID: 'anon', isAnonymous: true, credentials: [] },
+      ],
+    ])('resolves %s to null without loading the account', async (_label, actorContext) => {
+      const result = await resolver.hostedResources(org, actorContext as any);
+
+      expect(result).toBeNull();
+      expect(organizationService.getAccount).not.toHaveBeenCalled();
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).not.toHaveBeenCalled();
+    });
+
+    it('gives a holder of UPDATE on the organization the FULL scope', async () => {
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'auth-1' && privilege === AuthorizationPrivilege.UPDATE
+      );
+
+      const result = await resolver.hostedResources(org, {
+        actorID: 'viewer-1',
+        credentials: [],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'FULL');
+      expect(result).toBe(hosted);
+    });
+
+    it('gives a license manager on the account (without UPDATE) the FULL scope', async () => {
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'account-auth' &&
+          privilege === AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE
+      );
+
+      await resolver.hostedResources(org, {
+        actorID: 'viewer-1',
+        credentials: [],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'FULL');
+    });
+
+    it.each([
+      AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+      AuthorizationCredential.ORGANIZATION_ADMIN,
+      AuthorizationCredential.ORGANIZATION_OWNER,
+    ])('gives a %s of this organization without UPDATE the ORGANIZATION_ASSOCIATE scope', async type => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      await resolver.hostedResources(org, {
+        actorID: 'viewer-1',
+        credentials: [{ type, resourceID: 'org-1' }],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'ORGANIZATION_ASSOCIATE');
+    });
+
+    it('gives an associate of ANOTHER organization the REGISTERED scope', async () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      await resolver.hostedResources(org, {
+        actorID: 'viewer-1',
+        credentials: [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+            resourceID: 'org-2',
+          },
+        ],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'REGISTERED');
+    });
+
+    it('does not treat an unrelated credential scoped to this organization as association', async () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      await resolver.hostedResources(org, {
+        actorID: 'viewer-1',
+        credentials: [
+          {
+            type: AuthorizationCredential.GLOBAL_REGISTERED,
+            resourceID: 'org-1',
+          },
+        ],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'REGISTERED');
+    });
+
+    it('gives a registered viewer with no relationship the REGISTERED scope', async () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = await resolver.hostedResources(org, {
+        actorID: 'viewer-1',
+        credentials: [],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'REGISTERED');
+      expect(result).toBe(hosted);
+    });
+  });
+
   describe('authorization', () => {
     it('should reload organization and return its authorization', async () => {
       const mockAuth = { id: 'auth-1' };
