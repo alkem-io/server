@@ -428,12 +428,14 @@ services:
     image: livekit/livekit-server:v1.13.10
     restart: always
     environment:
-      # Single UDP port (mux) + TCP fallback; the container port equals the
-      # published host port so the advertised ICE port stays correct.
-      # No external-IP discovery: Docker Desktop does not route a STUN-found
-      # address back to the container.
+      # Every container port equals its published host port: the advertised
+      # ICE ports stay correct, and ws://localhost:<signalling port> means the
+      # same thing on the host and inside lk-jwt-service (see below).
+      # Single UDP port (mux) + TCP fallback. No external-IP discovery:
+      # Docker Desktop does not route a STUN-found address back to the
+      # container.
       LIVEKIT_CONFIG: |
-        port: 7880
+        port: ${LIVEKIT_HTTP_PORT:-7880}
         rtc:
           tcp_port: ${LIVEKIT_TCP_PORT:-7881}
           udp_port: ${LIVEKIT_UDP_PORT:-7882}
@@ -443,11 +445,14 @@ services:
         logging:
           level: info
     ports:
-      - '${LIVEKIT_HTTP_PORT:-7880}:7880'
+      - '${LIVEKIT_HTTP_PORT:-7880}:${LIVEKIT_HTTP_PORT:-7880}'
       - '${LIVEKIT_TCP_PORT:-7881}:${LIVEKIT_TCP_PORT:-7881}'
       - '${LIVEKIT_UDP_PORT:-7882}:${LIVEKIT_UDP_PORT:-7882}/udp'
+      # lk-jwt-service's port: it runs in this service's network namespace,
+      # so its port is published here.
+      - '${LK_JWT_PORT:-8880}:8080'
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:7880/']
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:${LIVEKIT_HTTP_PORT:-7880}/']
       interval: 10s
       timeout: 3s
       retries: 6
@@ -458,8 +463,14 @@ services:
   lk-jwt-service:
     image: ghcr.io/element-hq/lk-jwt-service:0.9.0
     restart: always
+    # lk-jwt-service uses LIVEKIT_URL both as the signalling URL it hands to
+    # clients and for its own LiveKit API calls. Sharing LiveKit's network
+    # namespace makes ws://localhost:<port> correct for both, and keeps it on
+    # alkemio_dev_net for the Synapse TLS front.
+    network_mode: service:livekit
+    depends_on:
+      - livekit
     environment:
-      # Handed to clients as the LiveKit signalling URL: host-reachable.
       - LIVEKIT_URL=ws://localhost:${LIVEKIT_HTTP_PORT:-7880}
       - LIVEKIT_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_SECRET=${LIVEKIT_API_SECRET}
@@ -467,16 +478,12 @@ services:
       - LIVEKIT_FULL_ACCESS_HOMESERVERS=alkemio.matrix.host
       # LOCAL DEV ONLY: trust the proxy's self-issued certificate.
       - LIVEKIT_INSECURE_SKIP_VERIFY_TLS=YES_I_KNOW_WHAT_I_AM_DOING
-    ports:
-      - '${LK_JWT_PORT:-8880}:8080'
     healthcheck:
       test: ['CMD', '/lk-jwt-service-healthcheck']
       interval: 10s
       timeout: 3s
       retries: 6
       start_period: 5s
-    networks:
-      - alkemio_dev_net
 
   rabbitmq:
     container_name: alkemio_dev_rabbitmq
