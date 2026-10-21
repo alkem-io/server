@@ -27,6 +27,11 @@ import {
   IInvitation,
   InvitationEventInput,
 } from '@domain/access/invitation';
+import {
+  isAcceptedByAccountAdmins,
+  SPACE_INVITATION_ACCEPTORS_CHANGED,
+  SpaceInvitationAcceptorsChanged,
+} from '@domain/access/invitation/invitation.space.acceptors.event';
 import { ResendPlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.resend';
 import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
@@ -43,6 +48,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationInputOrganizationAssociatePlatformInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.associate.platform.invitation';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.invitation';
@@ -117,6 +123,7 @@ export class RoleSetResolverMutationsMembership {
     private lifecycleService: LifecycleService,
     private roleSetCacheService: RoleSetCacheService,
     private eligibleLanguageGuard: RoleSetEligibleLanguageGuard,
+    private readonly eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -531,6 +538,22 @@ export class RoleSetResolverMutationsMembership {
 
     // Reset all authorizations on the invitations and applications because it's easier
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
+
+    // Before the notifications go out, so the admins they reach can already
+    // see the Space.
+    const invitedActorAcceptedByAccountAdmins = invitationResults.some(
+      result =>
+        result.invitation &&
+        isAcceptedByAccountAdmins(
+          actorTypes.get(result.invitation.invitedActorID)
+        )
+    );
+    if (
+      roleSet.type === RoleSetType.SPACE &&
+      invitedActorAcceptedByAccountAdmins
+    ) {
+      await this.emitSpaceInvitationAcceptorsChanged(roleSet.id);
+    }
 
     // Reload the invitations to get the latest authorizations
     const invitationsReloaded =
@@ -1259,6 +1282,13 @@ export class RoleSetResolverMutationsMembership {
       );
     }
 
+    if (
+      invitation.roleSet?.type === RoleSetType.SPACE &&
+      isAcceptedByAccountAdmins(invitedActorType)
+    ) {
+      await this.emitSpaceInvitationAcceptorsChanged(invitation.roleSet.id);
+    }
+
     const reloadedInvitation = await this.invitationService.getInvitationOrFail(
       invitation.id
     );
@@ -1731,6 +1761,16 @@ export class RoleSetResolverMutationsMembership {
       pushResultForActor(actorID, invitationResult);
     }
     return invitationResults;
+  }
+
+  private async emitSpaceInvitationAcceptorsChanged(
+    roleSetID: string
+  ): Promise<void> {
+    const event: SpaceInvitationAcceptorsChanged = { roleSetID };
+    await this.eventEmitter.emitAsync(
+      SPACE_INVITATION_ACCEPTORS_CHANGED,
+      event
+    );
   }
 
   private getPrivilegesOnParentRoleSets(
