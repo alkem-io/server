@@ -72,11 +72,17 @@ export class MeResolverFields {
       } as PaginatedInAppNotifications;
     }
 
-    return await this.inAppNotificationService.getPaginatedNotifications(
+    const page = await this.inAppNotificationService.getPaginatedNotifications(
       actorContext.actorID,
       pagination,
       filter
     );
+    page.items =
+      await this.inAppNotificationService.filterNotificationsWithUnreadableSpace(
+        actorContext,
+        page.items
+      );
+    return page;
   }
 
   @ResolveField('notificationsUnreadCount', () => Number, {
