@@ -315,6 +315,45 @@ describe('RoomResolverMutations', () => {
         expect.any(String)
       );
     });
+
+    it('checks an attached file against the reply thread', async () => {
+      const mockRoom = {
+        id: 'room-1',
+        type: RoomType.CALLOUT,
+        authorization: { id: 'auth-1' },
+      } as unknown as IRoom;
+      const input = {
+        roomID: 'room-1',
+        message: '',
+        threadID: 'msg-1',
+        attachmentUpload: {
+          externalReference: 'media',
+          displayName: 'pic.png',
+        },
+      };
+      roomService.getRoomOrFail.mockResolvedValue(mockRoom as any);
+      roomResolverService.getCalloutForRoom.mockResolvedValue({
+        settings: { framing: { commentsEnabled: true } },
+      } as any);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+      (resolver as any).roomAttachments.existingMedia.mockResolvedValue({
+        media_id: 'media',
+      });
+      roomLookupService.sendMessageReply.mockResolvedValue({
+        id: 'reply-1',
+      } as any);
+
+      await resolver.sendMessageReplyToRoom(input, actorContext);
+
+      expect(
+        (resolver as any).roomAttachments.existingMedia
+      ).toHaveBeenCalledWith(
+        mockRoom,
+        actorContext,
+        input.attachmentUpload,
+        'msg-1'
+      );
+    });
   });
 
   describe('addReactionToMessageInRoom', () => {

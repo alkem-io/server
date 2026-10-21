@@ -101,7 +101,8 @@ export class RoomResolverMutations {
         ? await this.roomAttachments.existingMedia(
             room,
             actorContext,
-            messageData.attachmentUpload
+            messageData.attachmentUpload,
+            messageData.threadID
           )
         : undefined;
 

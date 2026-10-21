@@ -7,6 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomMessageAttachmentInput } from '../room/dto/room.dto.attachment';
 import { IRoom } from '../room/room.interface';
+import { isConversationRoom } from '../room/room.utils';
 import {
   MessageAttachmentService,
   sanitizeAttachmentDisplayName,
@@ -24,9 +25,10 @@ export class RoomAttachmentSendService {
   async existingMedia(
     room: IRoom,
     actor: ActorContext,
-    input: RoomMessageAttachmentInput
+    input: RoomMessageAttachmentInput,
+    threadID?: string
   ): Promise<ExistingMediaRef> {
-    const bucket = await this.targetBucket(room, actor);
+    const bucket = await this.targetBucket(room, actor, threadID);
     const metadata = await this.files.getReferenceMetadata(
       input.externalReference
     );
@@ -49,15 +51,37 @@ export class RoomAttachmentSendService {
     };
   }
 
-  private async targetBucket(room: IRoom, actor: ActorContext) {
+  private async targetBucket(
+    room: IRoom,
+    actor: ActorContext,
+    threadID?: string
+  ) {
     const bucket = await this.attachments.getTargetBucketForRoom(room);
     if (!bucket) this.invalid();
-    this.authorization.grantAccessOrFail(
-      actor,
-      bucket.authorization,
-      AuthorizationPrivilege.FILE_UPLOAD,
-      `send room attachment: ${room.id}`
-    );
+    if (isConversationRoom(room)) {
+      // A conversation owns its bucket; its participants hold the upload
+      // right on it.
+      this.authorization.grantAccessOrFail(
+        actor,
+        bucket.authorization,
+        AuthorizationPrivilege.FILE_UPLOAD,
+        `send room attachment: ${room.id}`
+      );
+    } else {
+      // A comment room stores attachments in the space's shared bucket, on
+      // which ordinary members hold no upload right, so attaching follows the
+      // right to post in this room instead. Attachments arriving from Matrix
+      // are placed in the same bucket on that same right. The bucket still
+      // sets the accepted file types and size.
+      this.authorization.grantAccessOrFail(
+        actor,
+        room.authorization,
+        threadID
+          ? AuthorizationPrivilege.CREATE_MESSAGE_REPLY
+          : AuthorizationPrivilege.CREATE_MESSAGE,
+        `send room attachment: ${room.id}`
+      );
+    }
     return bucket;
   }
 
