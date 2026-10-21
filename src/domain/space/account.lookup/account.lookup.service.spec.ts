@@ -1,3 +1,4 @@
+import { SearchVisibility } from '@common/enums/search.visibility';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -8,6 +9,7 @@ import { EntityManager } from 'typeorm';
 import { vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
+import { HostedResourcesViewerScope } from '../account/dto/account.hosted.resources';
 import { AccountLookupService } from './account.lookup.service';
 
 describe('AccountLookupService', () => {
@@ -310,6 +312,212 @@ describe('AccountLookupService', () => {
       });
 
       expect(result.blockers[0].displayName).toBe('space-one');
+    });
+  });
+  describe('getHostedResourcesForViewer', () => {
+    const { PUBLIC, ACCOUNT, HIDDEN } = SearchVisibility;
+    const vc = (
+      id: string,
+      searchVisibility: SearchVisibility,
+      extra = {}
+    ) => ({
+      id,
+      nameID: `${id}-name`,
+      searchVisibility,
+      listedInStore: false,
+      profile: { id: `${id}-profile` },
+      ...extra,
+    });
+    const pack = (id: string, searchVisibility: SearchVisibility) => ({
+      id,
+      nameID: `${id}-name`,
+      searchVisibility,
+      listedInStore: true,
+    });
+    const hub = (id: string, searchVisibility: SearchVisibility) => ({
+      id,
+      nameID: `${id}-name`,
+      searchVisibility,
+    });
+
+    const mockAccountWith = (resources: {
+      virtualContributors?: unknown[];
+      innovationPacks?: unknown[];
+      innovationHubs?: unknown[];
+    }) =>
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue({
+        id: 'account-1',
+        virtualContributors: [],
+        innovationPacks: [],
+        innovationHubs: [],
+        ...resources,
+      } as unknown as IAccount);
+
+    // One row per cell of the tier table: scope × visibility → listed?
+    const tierTable: [HostedResourcesViewerScope, SearchVisibility, boolean][] =
+      [
+        ['FULL', PUBLIC, true],
+        ['FULL', ACCOUNT, true],
+        ['FULL', HIDDEN, true],
+        ['ORGANIZATION_ASSOCIATE', PUBLIC, true],
+        ['ORGANIZATION_ASSOCIATE', ACCOUNT, true],
+        ['ORGANIZATION_ASSOCIATE', HIDDEN, false],
+        ['REGISTERED', PUBLIC, true],
+        ['REGISTERED', ACCOUNT, false],
+        ['REGISTERED', HIDDEN, false],
+      ];
+
+    it.each(
+      tierTable
+    )('Virtual Contributor: scope %s × visibility %s → listed=%s', async (scope, visibility, listed) => {
+      mockAccountWith({ virtualContributors: [vc('vc-1', visibility)] });
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        scope
+      );
+
+      expect(result.virtualContributors).toEqual(
+        listed ? [{ id: 'vc-1' }] : []
+      );
+    });
+
+    it.each(
+      tierTable
+    )('Innovation Pack: scope %s × visibility %s → listed=%s', async (scope, visibility, listed) => {
+      const innovationPack = pack('pack-1', visibility);
+      mockAccountWith({ innovationPacks: [innovationPack] });
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        scope
+      );
+
+      expect(result.innovationPacks).toEqual(listed ? [innovationPack] : []);
+    });
+
+    it.each([
+      ['FULL', PUBLIC],
+      ['FULL', ACCOUNT],
+      ['FULL', HIDDEN],
+      ['ORGANIZATION_ASSOCIATE', PUBLIC],
+      ['ORGANIZATION_ASSOCIATE', ACCOUNT],
+      ['ORGANIZATION_ASSOCIATE', HIDDEN],
+      ['REGISTERED', PUBLIC],
+      ['REGISTERED', ACCOUNT],
+      ['REGISTERED', HIDDEN],
+    ] as [
+      HostedResourcesViewerScope,
+      SearchVisibility,
+    ][])('Innovation Hub: scope %s × visibility %s → always listed', async (scope, visibility) => {
+      const innovationHub = hub('hub-1', visibility);
+      mockAccountWith({ innovationHubs: [innovationHub] });
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        scope
+      );
+
+      expect(result.innovationHubs).toEqual([innovationHub]);
+    });
+
+    it('ignores the library listing flag: an ACCOUNT Virtual Contributor listed in the store stays hidden from a REGISTERED viewer', async () => {
+      mockAccountWith({
+        virtualContributors: [
+          vc('vc-account-listed', ACCOUNT, { listedInStore: true }),
+          vc('vc-public-unlisted', PUBLIC, { listedInStore: false }),
+        ],
+        innovationPacks: [pack('pack-account-listed', ACCOUNT)],
+      });
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        'REGISTERED'
+      );
+
+      expect(result.virtualContributors).toEqual([
+        { id: 'vc-public-unlisted' },
+      ]);
+      expect(result.innovationPacks).toEqual([]);
+    });
+
+    it('returns Virtual Contributors as closed { id } cards only', async () => {
+      mockAccountWith({
+        virtualContributors: [vc('vc-1', PUBLIC), vc('vc-2', HIDDEN)],
+      });
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        'FULL'
+      );
+
+      expect(result.virtualContributors).toEqual([
+        { id: 'vc-1' },
+        { id: 'vc-2' },
+      ]);
+      for (const card of result.virtualContributors) {
+        expect(Object.keys(card)).toEqual(['id']);
+      }
+    });
+
+    it('keeps the stored order of a mixed list and filters per item', async () => {
+      const packs = [
+        pack('p-hidden', HIDDEN),
+        pack('p-public', PUBLIC),
+        pack('p-account', ACCOUNT),
+      ];
+      mockAccountWith({ innovationPacks: packs });
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        'ORGANIZATION_ASSOCIATE'
+      );
+
+      expect(result.innovationPacks.map(p => p.id)).toEqual([
+        'p-public',
+        'p-account',
+      ]);
+    });
+
+    it('loads the account once with exactly the three resource relations', async () => {
+      const findOneSpy = mockAccountWith({});
+
+      await service.getHostedResourcesForViewer('account-1', 'REGISTERED');
+
+      expect(findOneSpy).toHaveBeenCalledTimes(1);
+      expect(findOneSpy).toHaveBeenCalledWith(Account, {
+        relations: {
+          virtualContributors: true,
+          innovationPacks: true,
+          innovationHubs: true,
+        },
+        where: { id: 'account-1' },
+      });
+    });
+
+    it('returns three empty lists when the account hosts nothing', async () => {
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue({
+        id: 'account-1',
+      } as unknown as IAccount);
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        'FULL'
+      );
+
+      expect(result).toEqual({
+        virtualContributors: [],
+        innovationPacks: [],
+        innovationHubs: [],
+      });
+    });
+
+    it('throws when the account does not exist', async () => {
+      vi.spyOn(entityManager, 'findOne').mockResolvedValue(null);
+
+      await expect(
+        service.getHostedResourcesForViewer('missing-id', 'FULL')
+      ).rejects.toThrow('Unable to find Account on Host with ID: missing-id');
     });
   });
 });

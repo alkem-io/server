@@ -27,6 +27,7 @@ import { AccountHostModule } from '../account.host/account.host.module';
 import { AccountLicensePlanModule } from '../account.license.plan/account.license.plan.module';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { SpaceModule } from '../space/space.module';
+import { AccountHostedResourcesResolverFields } from './account.hosted.resources.resolver.fields';
 import { AccountResolverMutations } from './account.resolver.mutations';
 
 import { AccountLicenseService } from './account.service.license';
@@ -62,6 +63,7 @@ import { AccountLicenseService } from './account.service.license';
     AccountService,
     AccountAuthorizationService,
     AccountResolverFields,
+    AccountHostedResourcesResolverFields,
     AccountResolverMutations,
 
     AccountLicenseService,

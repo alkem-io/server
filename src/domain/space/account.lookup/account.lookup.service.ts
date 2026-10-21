@@ -1,4 +1,5 @@
 import { AccountDeletionBlockerKind, LogContext } from '@common/enums';
+import { SearchVisibility } from '@common/enums/search.visibility';
 import { EntityNotFoundException } from '@common/exceptions';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { Organization } from '@domain/community/organization';
@@ -9,6 +10,10 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions } from 'typeorm';
 import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
+import {
+  HostedResourcesViewerScope,
+  IAccountHostedResources,
+} from '../account/dto/account.hosted.resources';
 
 export interface AccountResourceBlocker {
   kind: AccountDeletionBlockerKind;
@@ -101,6 +106,45 @@ export class AccountLookupService {
       LogContext.ACCOUNT
     );
     return null;
+  }
+
+  /**
+   * The resources an account hosts, as a viewer of the host's profile may
+   * see them. The only place that decides this visibility: list membership
+   * is a pure function of each resource's stored `searchVisibility` and the
+   * viewer's scope. Authorization policies are deliberately not consulted —
+   * Innovation Packs inherit the account's world-readable policy, so a READ
+   * check would expose ACCOUNT/HIDDEN packs, and READ cannot express the
+   * organization-associate tier. The library listing flag plays no role.
+   * Innovation Hubs are listed for every scope, whatever their visibility.
+   * Virtual Contributors are returned as closed `{ id }` cards.
+   */
+  public async getHostedResourcesForViewer(
+    accountID: string,
+    scope: HostedResourcesViewerScope
+  ): Promise<IAccountHostedResources> {
+    const account = await this.getAccountOrFail(accountID, {
+      relations: {
+        virtualContributors: true,
+        innovationPacks: true,
+        innovationHubs: true,
+      },
+    });
+    const allowed: SearchVisibility[] | null =
+      scope === 'FULL'
+        ? null
+        : scope === 'ORGANIZATION_ASSOCIATE'
+          ? [SearchVisibility.PUBLIC, SearchVisibility.ACCOUNT]
+          : [SearchVisibility.PUBLIC];
+    const keep = (resource: { searchVisibility: SearchVisibility }) =>
+      allowed === null || allowed.includes(resource.searchVisibility);
+    return {
+      virtualContributors: (account.virtualContributors ?? [])
+        .filter(keep)
+        .map(vc => ({ id: vc.id })),
+      innovationPacks: (account.innovationPacks ?? []).filter(keep),
+      innovationHubs: account.innovationHubs ?? [],
+    };
   }
 
   public async areResourcesInAccount(accountID: string): Promise<boolean> {
