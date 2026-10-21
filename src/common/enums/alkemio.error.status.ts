@@ -86,6 +86,9 @@ export enum AlkemioErrorStatus {
   // 027-platform-role-redesign: fail-closed role-assignment audit write
   // failure — the grant/revoke does not take effect (FR-027).
   PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED = 'PLATFORM_ROLE_ASSIGNMENT_AUDIT_FAILED',
+  // Memo PDF render capacity or worker unavailable — retryable. Distinct from
+  // BAD_USER_INPUT so no REST mapping can present it as a validation failure.
+  MEMO_PDF_UNAVAILABLE = 'MEMO_PDF_UNAVAILABLE',
   // Self-account deletion: the calling session is older than the privileged
   // window (or its issue time is missing/unparseable — fail closed). Distinct
   // from SESSION_EXPIRED so the client can route specifically to the

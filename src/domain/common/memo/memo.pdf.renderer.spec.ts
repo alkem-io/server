@@ -14,7 +14,7 @@ import { markdownToYjsV2State } from './conversion';
 import { markdownSchema } from './conversion/markdown.schema';
 import { memoSchema } from './conversion/memo.extensions';
 import { memoFontFiles } from './memo.pdf.fonts';
-import { MemoPdfRenderer } from './memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from './memo.pdf.test-helper';
 
 const pdfjsRequire = createRequire(require.resolve('pdfjs-dist/package.json'));
 const { createCanvas } = pdfjsRequire(
@@ -184,20 +184,15 @@ describe('MemoPdfRenderer', () => {
   };
   const authorizationService = { grantAccessOrFail: vi.fn() };
   const fileServiceAdapter = { getDocumentContent: vi.fn() };
-  class TestableMemoPdfRenderer extends MemoPdfRenderer {
-    renderSanitizerFixture(
-      html: string,
-      bucketId: string,
-      actorContext: ActorContext
-    ) {
-      return this.renderHtml(html, bucketId, actorContext);
-    }
-  }
-  const renderer = new TestableMemoPdfRenderer(
-    documentService as any,
-    authorizationService as any,
-    fileServiceAdapter as any
-  );
+  const helper = inProcessMemoPdfRenderer({
+    documentService,
+    authorizationService,
+    fileServiceAdapter,
+  });
+  const renderer = {
+    render: helper.render,
+    renderSanitizerFixture: helper.renderHtml,
+  };
   const renderMarkdown = (markdown: string, bucketId = 'bucket-1') =>
     renderer.render(
       Buffer.from(markdownToYjsV2State(markdown)),
@@ -273,7 +268,7 @@ describe('MemoPdfRenderer', () => {
   });
 
   it('preserves editor block structure through direct editor HTML', async () => {
-    const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
+    const convertHtml = vi.spyOn(helper.spyTarget as any, 'convertHtml');
 
     try {
       await renderer.render(structuredMemoState(), 'bucket-1', actor);
@@ -334,7 +329,7 @@ describe('MemoPdfRenderer', () => {
   });
 
   it('preserves accumulated indentation through mixed nested list types', async () => {
-    const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
+    const convertHtml = vi.spyOn(helper.spyTarget as any, 'convertHtml');
 
     try {
       await renderer.render(mixedNestedListsState(), 'bucket-1', actor);
@@ -482,7 +477,7 @@ describe('MemoPdfRenderer', () => {
       actor,
       { id: 'image-auth' },
       AuthorizationPrivilege.READ,
-      'read signing image'
+      'read memo PDF image'
     );
     expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
       'image-1'
@@ -490,7 +485,7 @@ describe('MemoPdfRenderer', () => {
   });
 
   it('normalizes an authorized image to bounded opaque JPEG for PDF pass-through', async () => {
-    const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
+    const convertHtml = vi.spyOn(helper.spyTarget as any, 'convertHtml');
     documentService.getDocumentFromURL.mockResolvedValue({
       id: 'image-1',
       authorization: { id: 'image-auth' },

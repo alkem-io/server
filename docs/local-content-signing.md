@@ -22,6 +22,9 @@ pnpm migration:run
 pnpm start:dev
 ```
 
+Use `pnpm start:dev` (or `pnpm start`), not the ts-node scripts: the signing preview forks the
+compiled memo PDF worker from `dist/` (see [Developing](./Developing.md)).
+
 In a second terminal, from the client-web feature checkout, start the host client on port 3001:
 
 ```bash

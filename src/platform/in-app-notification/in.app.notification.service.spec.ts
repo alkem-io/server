@@ -1,7 +1,11 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -22,6 +26,7 @@ describe('InAppNotificationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InAppNotificationService,
+        AuthorizationService,
         repositoryProviderMockFactory(InAppNotification),
         MockWinstonProvider,
       ],
@@ -1036,6 +1041,88 @@ describe('InAppNotificationService', () => {
         })
       );
       expect(updateCall[0].type).toBeUndefined();
+    });
+  });
+
+  describe('filterNotificationsWithUnreadableSpace', () => {
+    const readAboutForInvitee = (spaceID: string) => ({
+      id: `auth-${spaceID}`,
+      type: 'space',
+      credentialRules: [
+        {
+          name: 'invitee-read-about',
+          grantedPrivileges: [AuthorizationPrivilege.READ_ABOUT],
+          criterias: [
+            {
+              type: AuthorizationCredential.SPACE_MEMBER_INVITEE,
+              resourceID: spaceID,
+            },
+          ],
+          cascade: false,
+        },
+      ],
+      privilegeRules: [],
+    });
+
+    const receiver = (spaceID: string): ActorContext =>
+      ({
+        actorID: 'receiver-1',
+        credentials: [
+          {
+            type: AuthorizationCredential.SPACE_MEMBER_INVITEE,
+            resourceID: spaceID,
+          },
+        ],
+      }) as ActorContext;
+
+    let findBy: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      findBy = vi.fn().mockResolvedValue([
+        { id: 'readable', authorization: readAboutForInvitee('readable') },
+        { id: 'private', authorization: readAboutForInvitee('private') },
+      ]);
+      (notificationRepo as any).manager = { findBy };
+    });
+
+    it('drops only the notifications whose Space the receiver cannot READ_ABOUT', async () => {
+      const notifications = [
+        { id: 'n1', spaceID: 'readable' },
+        { id: 'n2', spaceID: 'private' },
+        { id: 'n3', spaceID: undefined },
+      ] as any[];
+
+      const result = await service.filterNotificationsWithUnreadableSpace(
+        receiver('readable'),
+        notifications
+      );
+
+      expect(result.map(n => n.id)).toEqual(['n1', 'n3']);
+    });
+
+    it('loads every referenced Space in a single query', async () => {
+      await service.filterNotificationsWithUnreadableSpace(
+        receiver('readable'),
+        [
+          { id: 'n1', spaceID: 'readable' },
+          { id: 'n2', spaceID: 'private' },
+          { id: 'n3', spaceID: 'readable' },
+        ] as any[]
+      );
+
+      expect(findBy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not query when no notification references a Space', async () => {
+      const notifications = [{ id: 'n1', spaceID: undefined }] as any[];
+
+      const result = await service.filterNotificationsWithUnreadableSpace(
+        receiver('readable'),
+        notifications
+      );
+
+      expect(result).toBe(notifications);
+      expect(findBy).not.toHaveBeenCalled();
     });
   });
 });

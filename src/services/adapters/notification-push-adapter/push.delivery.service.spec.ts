@@ -2,8 +2,12 @@ import { PushSubscriptionService } from '@domain/push-subscription/push.subscrip
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import webpush from 'web-push';
+import { NativePushSenderService } from './native.push.sender.service';
 import { PushDeliveryService } from './push.delivery.service';
-import { PushNotificationMessage } from './push.notification.message';
+import {
+  NativePushNotificationMessage,
+  PushNotificationMessage,
+} from './push.notification.message';
 
 const mockLogger = {
   verbose: vi.fn(),
@@ -15,6 +19,10 @@ const mockLogger = {
 const mockPushSubscriptionService = {
   markActive: vi.fn(),
   markExpired: vi.fn(),
+};
+
+const mockNativeSender = {
+  send: vi.fn(),
 };
 
 const mockConfigService = {
@@ -47,6 +55,19 @@ const createMessage = (
   ...overrides,
 });
 
+const createNativeMessage = (): NativePushNotificationMessage => ({
+  userId: 'user-1',
+  platform: 'ios',
+  token: 'device-token-1',
+  payload: {
+    title: 'Test',
+    body: 'Test body',
+    url: '/test',
+    eventType: 'TEST_EVENT',
+    timestamp: new Date().toISOString(),
+  },
+});
+
 describe('PushDeliveryService', () => {
   let service: PushDeliveryService;
   let sendNotificationSpy: ReturnType<typeof vi.spyOn>;
@@ -63,6 +84,7 @@ describe('PushDeliveryService', () => {
     service = new PushDeliveryService(
       mockPushSubscriptionService as unknown as PushSubscriptionService,
       mockConfigService as any,
+      mockNativeSender as unknown as NativePushSenderService,
       mockLogger as any
     );
   });
@@ -120,6 +142,53 @@ describe('PushDeliveryService', () => {
       expect(mockPushSubscriptionService.markExpired).toHaveBeenCalledWith(
         'sub-1'
       );
+    });
+
+    // SC-006. A 429 is transient: expiring the subscription on it is defect
+    // X-4, and `cleanupStale` then deletes the row permanently. The existing
+    // 404 case above pins the narrowing from the other side.
+    it('should NOT mark expired on a 429 (SC-006)', async () => {
+      const error = new Error('Too Many Requests') as any;
+      error.statusCode = 429;
+      sendNotificationSpy.mockRejectedValue(error);
+
+      const result = await service.handlePushMessage(createMessage());
+
+      expect(result).toBeUndefined();
+      expect(mockPushSubscriptionService.markExpired).not.toHaveBeenCalled();
+    });
+
+    // SC-014.
+    it('should route a message carrying `platform` to the native sender only', async () => {
+      mockNativeSender.send.mockResolvedValue(undefined);
+      const message = createNativeMessage();
+
+      const result = await service.handlePushMessage(message);
+
+      expect(result).toBeUndefined();
+      expect(mockNativeSender.send).toHaveBeenCalledWith(message);
+      expect(sendNotificationSpy).not.toHaveBeenCalled();
+    });
+
+    // SC-014. The branch sits OUTSIDE the web `try`, whose catch is written
+    // around `message.subscriptionId` — inside it, a rejecting native send
+    // would call markExpired(undefined) against the live web-push table. And
+    // the handler must still ACK: an escaping throw is nacked with
+    // requeue = true and hot-loops the shared queue forever.
+    it('should swallow a native send failure without touching any web subscription', async () => {
+      // A statusCode-carrying error is the discriminating shape: evaluated by
+      // the WEB catch it would call markExpired(undefined) — a TypeORM update
+      // with an undefined id against the live web-push table.
+      const error = new Error('bad .p8') as any;
+      error.statusCode = 404;
+      mockNativeSender.send.mockRejectedValue(error);
+
+      await expect(
+        service.handlePushMessage(createNativeMessage())
+      ).resolves.toBeUndefined();
+
+      expect(mockPushSubscriptionService.markExpired).not.toHaveBeenCalled();
+      expect(mockPushSubscriptionService.markActive).not.toHaveBeenCalled();
     });
 
     it('should abandon and ack when retry count exceeds max', async () => {

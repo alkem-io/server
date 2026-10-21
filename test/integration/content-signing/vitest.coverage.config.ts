@@ -26,6 +26,8 @@ export default defineConfig({
         'src/domain/common/memo/conversion/memo.extensions.ts',
         'src/domain/common/memo/conversion/yjs.state.to.tiptap.html.ts',
         'src/domain/common/memo/memo.pdf.fonts.ts',
+        'src/domain/common/memo/memo.pdf.image.resolver.ts',
+        'src/domain/common/memo/memo.pdf.render.core.ts',
         'src/domain/common/memo/memo.pdf.renderer.ts',
         'src/domain/common/memo/memo.resolver.fields.ts',
         'src/domain/common/memo/memo.resolver.mutations.ts',
@@ -58,6 +60,18 @@ export default defineConfig({
           branches: 95,
         },
         'src/domain/common/memo/memo.pdf.renderer.ts': {
+          lines: 95,
+          statements: 95,
+          functions: 95,
+          branches: 95,
+        },
+        'src/domain/common/memo/memo.pdf.render.core.ts': {
+          lines: 95,
+          statements: 95,
+          functions: 95,
+          branches: 95,
+        },
+        'src/domain/common/memo/memo.pdf.image.resolver.ts': {
           lines: 95,
           statements: 95,
           functions: 95,

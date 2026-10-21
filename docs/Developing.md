@@ -32,6 +32,12 @@ pnpm start
 
 There should now be a [running Alkemio server](http://localhost:4000/graphql)!
 
+Memo PDF downloads and the memo signing preview render in a worker process forked from the
+compiled `dist/` output (`memo.pdf.executor.entry.js`). Run the server with `pnpm start` or
+`pnpm start:dev`, which build `dist/`. The ts-node paths (`pnpm start-nodemon`,
+`pnpm start-nodemon-local` and the ts-node configurations in `.vscode/launch.json`) cannot fork the
+worker, so every memo PDF render fails there.
+
 ## Authentication
 
 Authentication and SSO are handled by the `Ory Kratos` + `Ory Hydra` stack. Hydra issues OAuth2/OIDC challenges that are served by the NestJS controllers, and Synapse consumes the resulting tokens for Matrix access.

@@ -497,6 +497,20 @@ http:
         - 'web'
       priority: 150
 
+    # Memo PDF download (GET /rest/memo/<memoId>/pdf). The cluster ingress
+    # routes all of /api/private/rest to the server; without this local route
+    # the request falls through to the web client, which answers every call
+    # with the SPA index.html (200 text/html) and the browser saves it as the
+    # PDF. The server authenticates the session cookie or bearer token itself.
+    memo-pdf-download:
+      rule: 'Method(`GET`) && PathPrefix(`/api/private/rest/memo/`)'
+      service: 'alkemio-server'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+      priority: 150
+
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'
       service: 'kratos-public'
