@@ -1,5 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { HostedVirtualContributorProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -24,7 +24,7 @@ export class AccountHostedResourcesResolverFields {
   })
   async profile(
     @Parent() parent: IAccountHostedVirtualContributor,
-    @Loader(ProfileLoaderCreator, {
+    @Loader(HostedVirtualContributorProfileLoaderCreator, {
       parentClassRef: VirtualContributor,
       checkResultPrivilege: AuthorizationPrivilege.READ,
     })

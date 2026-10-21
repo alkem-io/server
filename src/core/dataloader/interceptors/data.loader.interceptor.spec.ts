@@ -1,3 +1,9 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import {
+  HostedVirtualContributorProfileLoaderCreator,
+  ProfileLoaderCreator,
+} from '@core/dataloader/creators';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -142,5 +148,68 @@ describe('DataLoaderInterceptor', () => {
     expect(entry).toBeDefined();
     expect(entry.contextId).toBeDefined();
     expect(typeof entry.get).toBe('function');
+  });
+});
+
+describe('DataLoaderInterceptor loader keying per request', () => {
+  const injectContext = () => {
+    const moduleRef = {
+      resolve: vi.fn(async (creatorRef: any) => ({
+        create: (options: any) => ({ creatorRef, options }),
+      })),
+    };
+    const interceptor = new DataLoaderInterceptor(moduleRef as any, {} as any);
+    const gqlCtx: Record<string, any> = { req: { headers: {} } };
+
+    const { GqlExecutionContext } = require('@nestjs/graphql');
+    vi.spyOn(GqlExecutionContext, 'create').mockReturnValue({
+      getContext: () => gqlCtx,
+    } as any);
+
+    interceptor.intercept(
+      { getType: () => 'graphql' } as any,
+      {
+        handle: vi.fn(),
+      } as any
+    );
+
+    return gqlCtx[DATA_LOADER_CTX_INJECT_TOKEN];
+  };
+
+  it('ignores privilege options in the cache key, so one creator and parent share a loader', async () => {
+    const entry = injectContext();
+
+    const first = await entry.get(ProfileLoaderCreator, {
+      parentClassRef: VirtualContributor,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    });
+    const second = await entry.get(ProfileLoaderCreator, {
+      parentClassRef: VirtualContributor,
+      checkResultPrivilege: AuthorizationPrivilege.READ,
+    });
+
+    expect(second).toBe(first);
+  });
+
+  it('gives the hosted Virtual Contributor card its own loader after VirtualContributor.profile has created one', async () => {
+    const entry = injectContext();
+
+    const vcProfileLoader = await entry.get(ProfileLoaderCreator, {
+      parentClassRef: VirtualContributor,
+      checkParentPrivilege: AuthorizationPrivilege.READ,
+    });
+    const cardLoader = await entry.get(
+      HostedVirtualContributorProfileLoaderCreator,
+      {
+        parentClassRef: VirtualContributor,
+        checkResultPrivilege: AuthorizationPrivilege.READ,
+      }
+    );
+
+    expect(cardLoader).not.toBe(vcProfileLoader);
+    expect(cardLoader.options.checkResultPrivilege).toBe(
+      AuthorizationPrivilege.READ
+    );
+    expect(cardLoader.options.checkParentPrivilege).toBeUndefined();
   });
 });
