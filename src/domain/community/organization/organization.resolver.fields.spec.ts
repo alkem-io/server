@@ -402,6 +402,27 @@ describe('OrganizationResolverFields', () => {
       ).toHaveBeenCalledWith('acc-1', 'FULL');
     });
 
+    it('gives FULL, not the associate scope, to an admin of this organization who also holds UPDATE', async () => {
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'auth-1' && privilege === AuthorizationPrivilege.UPDATE
+      );
+
+      await resolver.hostedResources(org, {
+        actorID: 'viewer-1',
+        credentials: [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ADMIN,
+            resourceID: 'org-1',
+          },
+        ],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'FULL');
+    });
+
     it.each([
       AuthorizationCredential.ORGANIZATION_ASSOCIATE,
       AuthorizationCredential.ORGANIZATION_ADMIN,
