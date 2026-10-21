@@ -11,9 +11,8 @@ import { DeleteInvitationInput } from './dto/invitation.dto.delete';
 import { IInvitation } from './invitation.interface';
 import { InvitationService } from './invitation.service';
 import {
+  emitSpaceInvitationAcceptorsChanged,
   isAcceptedByAccountAdmins,
-  SPACE_INVITATION_ACCEPTORS_CHANGED,
-  SpaceInvitationAcceptorsChanged,
 } from './invitation.space.acceptors.event';
 
 @InstrumentResolver()
@@ -52,13 +51,9 @@ export class InvitationResolverMutations {
       invitation.roleSet?.type === RoleSetType.SPACE &&
       isAcceptedByAccountAdmins(invitedActorType)
     ) {
-      const event: SpaceInvitationAcceptorsChanged = {
-        roleSetID: invitation.roleSet.id,
-      };
-      await this.eventEmitter.emitAsync(
-        SPACE_INVITATION_ACCEPTORS_CHANGED,
-        event
-      );
+      await emitSpaceInvitationAcceptorsChanged(this.eventEmitter, [
+        invitation.roleSet.id,
+      ]);
     }
     return deleted;
   }

@@ -19,7 +19,9 @@ export class SpaceInvitationAcceptorsEventHandler {
     private readonly authorizationPolicyService: AuthorizationPolicyService
   ) {}
 
-  @OnEvent(SPACE_INVITATION_ACCEPTORS_CHANGED)
+  // Not suppressed (the library default): a failed reset must fail the
+  // mutation rather than report success while the Space policy is stale.
+  @OnEvent(SPACE_INVITATION_ACCEPTORS_CHANGED, { suppressErrors: false })
   public async handle({
     roleSetID,
   }: SpaceInvitationAcceptorsChanged): Promise<void> {

@@ -1,6 +1,7 @@
 import { parseSupportedEligibleLanguages } from '@common/constants/supported.languages';
 import { LogContext } from '@common/enums/logging.context';
 import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
 import { getEmailDomain } from '@common/utils';
@@ -14,6 +15,7 @@ import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
+import { emitSpaceInvitationAcceptorsChanged } from '@domain/access/invitation/invitation.space.acceptors.event';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -35,6 +37,7 @@ import { AccountAuthorizationService } from '@domain/space/account/account.servi
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
@@ -63,6 +66,7 @@ export class RegistrationService {
     private storageBucketService: StorageBucketService,
     private configService: ConfigService<AlkemioConfig, true>,
     @InjectEntityManager('default') private entityManager: EntityManager,
+    private readonly eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -638,6 +642,16 @@ export class RegistrationService {
     for (const invitation of invitations) {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }
+    // The organization's account admins keep their credential on the account
+    // ID, so the Spaces it was invited to must drop the visibility they had.
+    await emitSpaceInvitationAcceptorsChanged(
+      this.eventEmitter,
+      invitations.flatMap(invitation =>
+        invitation.roleSet?.type === RoleSetType.SPACE
+          ? [invitation.roleSet.id]
+          : []
+      )
+    );
 
     let organization =
       await this.organizationLookupService.getOrganizationByIdOrFail(

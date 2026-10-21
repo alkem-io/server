@@ -28,9 +28,8 @@ import {
   InvitationEventInput,
 } from '@domain/access/invitation';
 import {
+  emitSpaceInvitationAcceptorsChanged,
   isAcceptedByAccountAdmins,
-  SPACE_INVITATION_ACCEPTORS_CHANGED,
-  SpaceInvitationAcceptorsChanged,
 } from '@domain/access/invitation/invitation.space.acceptors.event';
 import { ResendPlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.resend';
 import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
@@ -543,6 +542,7 @@ export class RoleSetResolverMutationsMembership {
     // see the Space.
     const invitedActorAcceptedByAccountAdmins = invitationResults.some(
       result =>
+        result.type === RoleSetInvitationResultType.INVITED_TO_ROLE_SET &&
         result.invitation &&
         isAcceptedByAccountAdmins(
           actorTypes.get(result.invitation.invitedActorID)
@@ -552,7 +552,9 @@ export class RoleSetResolverMutationsMembership {
       roleSet.type === RoleSetType.SPACE &&
       invitedActorAcceptedByAccountAdmins
     ) {
-      await this.emitSpaceInvitationAcceptorsChanged(roleSet.id);
+      await emitSpaceInvitationAcceptorsChanged(this.eventEmitter, [
+        roleSet.id,
+      ]);
     }
 
     // Reload the invitations to get the latest authorizations
@@ -1286,7 +1288,9 @@ export class RoleSetResolverMutationsMembership {
       invitation.roleSet?.type === RoleSetType.SPACE &&
       isAcceptedByAccountAdmins(invitedActorType)
     ) {
-      await this.emitSpaceInvitationAcceptorsChanged(invitation.roleSet.id);
+      await emitSpaceInvitationAcceptorsChanged(this.eventEmitter, [
+        invitation.roleSet.id,
+      ]);
     }
 
     const reloadedInvitation = await this.invitationService.getInvitationOrFail(
@@ -1761,16 +1765,6 @@ export class RoleSetResolverMutationsMembership {
       pushResultForActor(actorID, invitationResult);
     }
     return invitationResults;
-  }
-
-  private async emitSpaceInvitationAcceptorsChanged(
-    roleSetID: string
-  ): Promise<void> {
-    const event: SpaceInvitationAcceptorsChanged = { roleSetID };
-    await this.eventEmitter.emitAsync(
-      SPACE_INVITATION_ACCEPTORS_CHANGED,
-      event
-    );
   }
 
   private getPrivilegesOnParentRoleSets(
