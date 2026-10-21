@@ -1,4 +1,5 @@
 import { SidebarWidget } from '@common/enums/sidebar.widget';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -9,6 +10,8 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
+import { Space } from '@domain/space/space/space.entity';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -61,6 +64,40 @@ describe('InnovationFlowService', () => {
     innovationFlowStateService = module.get(InnovationFlowStateService);
     _calloutsSetService = module.get(CalloutsSetService);
   });
+
+  // Stubs the owner lookups behind the flow-level resolver: the owning Space (if any) and,
+  // failing that, the owning TemplateContentSpace (if any). `undefined` = no owner of that kind.
+  const mockFlowOwners = (owners: {
+    spaceLevel?: number;
+    templateLevel?: number;
+  }) => {
+    const spaceFindOne = vi
+      .fn()
+      .mockResolvedValue(
+        owners.spaceLevel === undefined
+          ? null
+          : { id: 'space-1', level: owners.spaceLevel }
+      );
+    const templateFindOne = vi
+      .fn()
+      .mockResolvedValue(
+        owners.templateLevel === undefined
+          ? null
+          : { id: 'tcs-1', level: owners.templateLevel }
+      );
+    (repository as any).manager = {
+      getRepository: vi.fn((entity: unknown) => {
+        if (entity === Space) return { findOne: spaceFindOne };
+        if (entity === TemplateContentSpace)
+          return { findOne: templateFindOne };
+        // the collaboration lookup of the delete path: no callouts set to move
+        return {
+          findOne: vi.fn().mockResolvedValue({ id: 'collab-1' }),
+        };
+      }),
+    };
+    return { spaceFindOne, templateFindOne };
+  };
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -806,6 +843,10 @@ describe('InnovationFlowService', () => {
   });
 
   describe('updateStatesSortOrder', () => {
+    beforeEach(() => {
+      mockFlowOwners({ spaceLevel: 0 });
+    });
+
     it('should reorder states based on provided IDs', async () => {
       const states = [
         { id: 's-1', sortOrder: 10 },
@@ -852,6 +893,351 @@ describe('InnovationFlowService', () => {
           stateIDs: ['s-1', 'nonexistent'],
         } as any)
       ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
+  describe('positional sidebars on subspace flows', () => {
+    const A = 'a1000000-0000-4000-8000-000000000001';
+    const B = 'b2000000-0000-4000-8000-000000000002';
+    const C = 'c3000000-0000-4000-8000-000000000003';
+    const la = [SidebarWidget.INTENT, 'zzz' as SidebarWidget];
+    const lb = [SidebarWidget.ABOUT];
+    const lc = [SidebarWidget.EVENTS];
+
+    const buildFlow = () => ({
+      id: 'flow-1',
+      settings: { minimumNumberOfStates: 1, maximumNumberOfStates: 8 },
+      states: [
+        {
+          id: A,
+          sortOrder: 10,
+          settings: { visible: true, allowNewCallouts: true, sidebar: [...la] },
+        },
+        {
+          id: B,
+          sortOrder: 20,
+          settings: {
+            visible: false,
+            allowNewCallouts: true,
+            sidebar: [...lb],
+          },
+        },
+        {
+          id: C,
+          sortOrder: 30,
+          settings: { visible: true, allowNewCallouts: true, sidebar: [...lc] },
+        },
+      ],
+    });
+
+    const savedStates = () =>
+      vi.mocked(innovationFlowStateService.saveAll).mock.calls[0][0] as any[];
+    const byRank = (states: any[]) =>
+      [...states].sort(
+        (x, y) => x.sortOrder - y.sortOrder || (x.id < y.id ? -1 : 1)
+      );
+
+    const reorder = async (flow: any, stateIDs: string[]) => {
+      vi.mocked(repository.findOne).mockResolvedValue(flow);
+      vi.mocked(innovationFlowStateService.saveAll).mockResolvedValue(
+        undefined as any
+      );
+      return service.updateStatesSortOrder('flow-1', { stateIDs } as any);
+    };
+
+    describe('resolveInnovationFlowLevel', () => {
+      const resolve = (flowId: string) =>
+        (service as any).resolveInnovationFlowLevel(flowId);
+
+      it.each([
+        [{ spaceLevel: 1 }, 1],
+        [{ spaceLevel: 0 }, 0],
+        [{ templateLevel: 2 }, 2],
+        [{ templateLevel: 0 }, 0],
+        [{}, undefined],
+      ])('owners %j resolve to level %s', async (owners, expected) => {
+        mockFlowOwners(owners);
+        await expect(resolve('flow-1')).resolves.toBe(expected);
+      });
+
+      it('prefers the owning Space and never looks at templates then', async () => {
+        const { templateFindOne } = mockFlowOwners({
+          spaceLevel: 2,
+          templateLevel: 0,
+        });
+        await expect(resolve('flow-1')).resolves.toBe(2);
+        expect(templateFindOne).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('updateStatesSortOrder', () => {
+      it('L1: lists stay by position, visibility stays with its state, every state is returned', async () => {
+        mockFlowOwners({ spaceLevel: 1 });
+        const result = await reorder(buildFlow(), [C, A, B]);
+
+        const ranked = byRank(savedStates());
+        expect(ranked.map(s => s.id)).toEqual([C, A, B]);
+        expect(ranked.map(s => s.settings.sidebar)).toEqual([la, lb, lc]);
+        expect(ranked.find(s => s.id === B).settings.visible).toBe(false);
+        expect(ranked.find(s => s.id === C).settings.visible).toBe(true);
+
+        expect(result.map(s => s.id)).toEqual([C, A, B]);
+        // the response is normalized: the unknown value is filtered there only
+        expect(result[0].settings.sidebar).toEqual([SidebarWidget.INTENT]);
+      });
+
+      it('L1: the raw unknown value moves verbatim in what is saved', async () => {
+        mockFlowOwners({ spaceLevel: 1 });
+        await reorder(buildFlow(), [C, A, B]);
+        expect(byRank(savedStates())[0].settings.sidebar).toEqual([
+          SidebarWidget.INTENT,
+          'zzz',
+        ]);
+      });
+
+      it('L0 control: lists travel with their states', async () => {
+        mockFlowOwners({ spaceLevel: 0 });
+        const result = await reorder(buildFlow(), [C, A, B]);
+        const saved = savedStates();
+        expect(saved.find(s => s.id === C).settings.sidebar).toEqual(lc);
+        expect(saved.find(s => s.id === A).settings.sidebar).toEqual(la);
+        expect(result.map(s => s.id)).toEqual([C, A, B]);
+        expect(result[0].settings.sidebar).toEqual(lc);
+      });
+
+      it('L1 template flow is positional; L0 template flow is not; orphan is not', async () => {
+        mockFlowOwners({ templateLevel: 1 });
+        await reorder(buildFlow(), [C, A, B]);
+        expect(byRank(savedStates())[0].settings.sidebar).toEqual(la);
+
+        vi.mocked(innovationFlowStateService.saveAll).mockClear();
+        mockFlowOwners({ templateLevel: 0 });
+        await reorder(buildFlow(), [C, A, B]);
+        expect(byRank(savedStates())[0].settings.sidebar).toEqual(lc);
+
+        vi.mocked(innovationFlowStateService.saveAll).mockClear();
+        mockFlowOwners({});
+        await reorder(buildFlow(), [C, A, B]);
+        expect(byRank(savedStates())[0].settings.sidebar).toEqual(lc);
+      });
+
+      it('partial id list: ranks are computed over the whole flow', async () => {
+        mockFlowOwners({ spaceLevel: 1 });
+        // C gets 20, A gets 30 (min of [30, 10] + 10 steps); B keeps 20 and ties with C
+        const result = await reorder(buildFlow(), [C, A]);
+        const ranked = byRank(savedStates());
+        expect(savedStates()).toHaveLength(3);
+        expect(ranked.map(s => s.id)).toEqual([B, C, A]);
+        expect(ranked.map(s => s.settings.sidebar)).toEqual([la, lb, lc]);
+        expect(result).toHaveLength(3);
+      });
+
+      it('an absent list stays absent at its position', async () => {
+        mockFlowOwners({ spaceLevel: 2 });
+        const flow = buildFlow();
+        delete (flow.states[0].settings as any).sidebar;
+        await reorder(flow, [C, A, B]);
+        const ranked = byRank(savedStates());
+        expect('sidebar' in ranked[0].settings).toBe(false);
+        expect(ranked[0].id).toBe(C);
+        expect(ranked[0].settings.visible).toBe(true);
+        expect(ranked[1].settings.sidebar).toEqual(lb);
+      });
+
+      it('identity order leaves every saved list unchanged', async () => {
+        mockFlowOwners({ spaceLevel: 1 });
+        await reorder(buildFlow(), [A, B, C]);
+        expect(byRank(savedStates()).map(s => s.settings.sidebar)).toEqual([
+          la,
+          lb,
+          lc,
+        ]);
+      });
+    });
+
+    describe('deleteStateOnInnovationFlow', () => {
+      beforeEach(() => {
+        vi.mocked(
+          innovationFlowStateService.deleteWithSidebarInheritance
+        ).mockResolvedValue({ id: 'removed' } as any);
+        vi.mocked(
+          innovationFlowStateService.getInnovationFlowStateOrFail
+        ).mockResolvedValue({ id: 'loaded' } as any);
+        vi.mocked(innovationFlowStateService.delete).mockResolvedValue({
+          id: 'removed',
+        } as any);
+      });
+
+      it('L1 first state: the new first state inherits its list', async () => {
+        mockFlowOwners({ spaceLevel: 1 });
+        const result = await service.deleteStateOnInnovationFlow(
+          buildFlow() as any,
+          { ID: A } as any
+        );
+        expect(
+          innovationFlowStateService.deleteWithSidebarInheritance
+        ).toHaveBeenCalledWith(A, B, undefined);
+        expect(innovationFlowStateService.delete).not.toHaveBeenCalled();
+        expect(result.id).toBe(A);
+      });
+
+      it('L1 first state is ranked by (sortOrder, id), never array order', async () => {
+        mockFlowOwners({ spaceLevel: 1 });
+        const flow = buildFlow();
+        flow.states.reverse();
+        flow.states.forEach(state => {
+          state.sortOrder = 5;
+        });
+        await service.deleteStateOnInnovationFlow(
+          flow as any,
+          { ID: A } as any
+        );
+        expect(
+          innovationFlowStateService.deleteWithSidebarInheritance
+        ).toHaveBeenCalledWith(A, B, undefined);
+      });
+
+      it('L1 non-first state: plain delete, no inheritance', async () => {
+        mockFlowOwners({ spaceLevel: 1 });
+        await service.deleteStateOnInnovationFlow(
+          buildFlow() as any,
+          { ID: B } as any
+        );
+        expect(
+          innovationFlowStateService.deleteWithSidebarInheritance
+        ).not.toHaveBeenCalled();
+        expect(innovationFlowStateService.delete).toHaveBeenCalled();
+      });
+
+      it('L0 first state: plain delete, no inheritance', async () => {
+        mockFlowOwners({ spaceLevel: 0 });
+        await service.deleteStateOnInnovationFlow(
+          buildFlow() as any,
+          { ID: A } as any
+        );
+        expect(
+          innovationFlowStateService.deleteWithSidebarInheritance
+        ).not.toHaveBeenCalled();
+        expect(innovationFlowStateService.delete).toHaveBeenCalled();
+      });
+
+      describe('callouts on the deleted state', () => {
+        const calloutOn = (stateName: string) => ({
+          id: 'callout-1',
+          classification: {
+            tagsets: [
+              { name: TagsetReservedName.FLOW_STATE, tags: [stateName] },
+            ],
+          },
+        });
+        const calloutsSet = { id: 'cs-1', callouts: [calloutOn('Alpha')] };
+
+        const buildNamedFlow = () => {
+          const flow = buildFlow() as any;
+          ['Alpha', 'Beta', 'Gamma'].forEach((name, index) => {
+            flow.states[index].displayName = name;
+          });
+          return flow;
+        };
+
+        const mockCalloutsSet = (spaceLevel: number) => {
+          mockFlowOwners({ spaceLevel });
+          const getRepository = (repository as any).manager.getRepository;
+          (repository as any).manager.getRepository = vi.fn(
+            (entity: unknown) =>
+              entity === Space || entity === TemplateContentSpace
+                ? getRepository(entity)
+                : {
+                    findOne: vi.fn().mockResolvedValue({
+                      id: 'collab-1',
+                      calloutsSet: { id: 'cs-1' },
+                    }),
+                  }
+          );
+          vi.mocked(_calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+            calloutsSet as any
+          );
+          vi.mocked(_calloutsSetService.save).mockResolvedValue(
+            calloutsSet as any
+          );
+        };
+
+        it('L1 first state: the callout move is saved inside the delete transaction', async () => {
+          mockCalloutsSet(1);
+          await service.deleteStateOnInnovationFlow(buildNamedFlow(), {
+            ID: A,
+          } as any);
+
+          expect(
+            _calloutsSetService.moveCalloutsToDefaultFlowState
+          ).toHaveBeenCalledWith(['Beta', 'Gamma'], [calloutsSet.callouts[0]]);
+          // nothing persisted before the transaction
+          expect(_calloutsSetService.save).not.toHaveBeenCalled();
+          const persistAlongside = vi.mocked(
+            innovationFlowStateService.deleteWithSidebarInheritance
+          ).mock.calls[0][2];
+          expect(persistAlongside).toBeTypeOf('function');
+
+          const entityManager = { marker: 'tx' } as any;
+          await persistAlongside?.(entityManager);
+          expect(_calloutsSetService.save).toHaveBeenCalledWith(
+            calloutsSet,
+            entityManager
+          );
+        });
+
+        it('L1 first state: a failing callout save inside the transaction surfaces as the move failure', async () => {
+          mockCalloutsSet(1);
+          vi.mocked(_calloutsSetService.save).mockRejectedValue(
+            new Error('callouts write failed')
+          );
+          await service.deleteStateOnInnovationFlow(buildNamedFlow(), {
+            ID: A,
+          } as any);
+          const persistAlongside = vi.mocked(
+            innovationFlowStateService.deleteWithSidebarInheritance
+          ).mock.calls[0][2];
+
+          await expect(persistAlongside?.({} as any)).rejects.toThrow(
+            ValidationException
+          );
+        });
+
+        it('L1 non-first state: the callout move is saved before the plain delete', async () => {
+          mockCalloutsSet(1);
+          const flow = buildNamedFlow();
+          calloutsSet.callouts = [calloutOn('Beta')];
+          await service.deleteStateOnInnovationFlow(flow, { ID: B } as any);
+          calloutsSet.callouts = [calloutOn('Alpha')];
+
+          expect(_calloutsSetService.save).toHaveBeenCalledWith(calloutsSet);
+          expect(
+            innovationFlowStateService.deleteWithSidebarInheritance
+          ).not.toHaveBeenCalled();
+          expect(innovationFlowStateService.delete).toHaveBeenCalled();
+        });
+      });
+
+      it('L2 template first state inherits; orphan first state does not', async () => {
+        mockFlowOwners({ templateLevel: 2 });
+        await service.deleteStateOnInnovationFlow(
+          buildFlow() as any,
+          { ID: A } as any
+        );
+        expect(
+          innovationFlowStateService.deleteWithSidebarInheritance
+        ).toHaveBeenCalledTimes(1);
+
+        mockFlowOwners({});
+        await service.deleteStateOnInnovationFlow(
+          buildFlow() as any,
+          { ID: A } as any
+        );
+        expect(
+          innovationFlowStateService.deleteWithSidebarInheritance
+        ).toHaveBeenCalledTimes(1);
+        expect(innovationFlowStateService.delete).toHaveBeenCalledTimes(1);
+      });
     });
   });
 

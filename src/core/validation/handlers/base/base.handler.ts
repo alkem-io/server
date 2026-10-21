@@ -91,6 +91,8 @@ import { UpdateUserSettingsPrivacyInput } from '@domain/community/user-settings/
 import { UpdateVirtualContributorSettingsInput } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.update.settings';
 import { UpdateVirtualContributorSettingsEntityInput } from '@domain/community/virtual-contributor-settings';
 import { UpdateVirtualContributorSettingsPrivacyInput } from '@domain/community/virtual-contributor-settings/dto/virtual.contributor.settings.privacy.dto.update';
+import { RegisterDevicePushTokenInput } from '@domain/device-push-token/dto/device.push.token.dto.register.input';
+import { UnregisterDevicePushTokenInput } from '@domain/device-push-token/dto/device.push.token.dto.unregister.input';
 import { UpdateBaselineLicensePlanOnAccount } from '@domain/space/account/dto/account.dto.update.baseline.license.plan';
 import { AddClassificationEntryFromTemplateInput } from '@domain/space/classification.entry/dto/classification.entry.dto.add.from.template';
 import { CreateClassificationEntryInput } from '@domain/space/classification.entry/dto/classification.entry.dto.create';
@@ -251,6 +253,8 @@ export class BaseHandler extends AbstractHandler {
       UpdateCalloutFormInput,
       SubmitCalloutFormResponseInput,
       DeleteCalloutFormResponseInput,
+      RegisterDevicePushTokenInput,
+      UnregisterDevicePushTokenInput,
     ];
 
     if (types.includes(metatype)) {

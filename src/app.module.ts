@@ -36,6 +36,7 @@ import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { DevicePushTokenModule } from '@domain/device-push-token/device.push.token.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { PushSubscriptionModule } from '@domain/push-subscription/push.subscription.module';
 import { SpaceModule } from '@domain/space/space/space.module';
@@ -70,6 +71,7 @@ import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/ca
 import { ContentSigningRestModule } from '@services/api-rest/content-signing/content.signing.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { InternalAdminModule } from '@services/api-rest/internal-admin/internal-admin.module';
+import { MemoPdfRestModule } from '@services/api-rest/memo-pdf/memo.pdf.rest.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { CollaborationIntegrationModule } from '@services/collaboration-integration';
 import { CollaborationMigrationModule } from '@services/collaboration-integration/migration';
@@ -304,6 +306,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     InnovationHubModule,
     CalendarEventIcsModule,
     ContentSigningRestModule,
+    MemoPdfRestModule,
     IdentityResolveModule,
     InternalAdminModule,
     McpServerModule,
@@ -316,6 +319,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     AuthResetSubscriberModule,
     TaskGraphqlModule,
     PushSubscriptionModule,
+    DevicePushTokenModule,
     ActivityFeedModule,
     EventBusModule,
     CollaborationIntegrationModule,

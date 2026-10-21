@@ -9,7 +9,7 @@ import sharp from 'sharp';
 import * as Y from 'yjs';
 import { markdownSchema } from './conversion/markdown.schema';
 import { memoSchema } from './conversion/memo.extensions';
-import { MemoPdfRenderer } from './memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from './memo.pdf.test-helper';
 
 type PdfMakeNode = Record<string, unknown>;
 
@@ -332,17 +332,17 @@ describe('Memo PDF editor fidelity contract', () => {
   };
   const authorizationService = { grantAccessOrFail: vi.fn() };
   const fileServiceAdapter = { getDocumentContent: vi.fn() };
-  const renderer = new MemoPdfRenderer(
-    documentService as never,
-    authorizationService as never,
-    fileServiceAdapter as never
-  );
+  const renderer = inProcessMemoPdfRenderer({
+    documentService,
+    authorizationService,
+    fileServiceAdapter,
+  });
 
   const renderSigningState = async (state: Buffer) => {
-    const originalConvertHtml = (renderer as any).convertHtml;
+    const originalConvertHtml = (renderer.spyTarget as any).convertHtml;
     let definition: unknown;
     const convertHtml = vi
-      .spyOn(renderer as any, 'convertHtml')
+      .spyOn(renderer.spyTarget as any, 'convertHtml')
       .mockImplementation((...args: unknown[]) => {
         const result = originalConvertHtml(...args);
         definition = structuredClone(result);

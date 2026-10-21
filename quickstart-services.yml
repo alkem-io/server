@@ -473,7 +473,7 @@ services:
     hostname: matrix-adapter
     # The 082 upload capability requires a reviewed published image; the default
     # remains the actual released baseline until artifact gate A is satisfied.
-    image: ${MATRIX_ADAPTER_IMAGE:-alkemio/matrix-adapter:v0.8.23}
+    image: ${MATRIX_ADAPTER_IMAGE:-alkemio/matrix-adapter:v0.8.24}
     depends_on:
       - rabbitmq
     environment:

@@ -6,7 +6,11 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import webpush from 'web-push';
-import { PushNotificationMessage } from './push.notification.message';
+import { NativePushSenderService } from './native.push.sender.service';
+import {
+  NativePushNotificationMessage,
+  PushNotificationMessage,
+} from './push.notification.message';
 
 @Injectable()
 export class PushDeliveryService {
@@ -15,6 +19,7 @@ export class PushDeliveryService {
   constructor(
     private pushSubscriptionService: PushSubscriptionService,
     private configService: ConfigService<AlkemioConfig, true>,
+    private nativeSender: NativePushSenderService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -44,8 +49,35 @@ export class PushDeliveryService {
     queueOptions: { durable: true },
   })
   async handlePushMessage(
-    message: PushNotificationMessage
+    message: PushNotificationMessage | NativePushNotificationMessage
   ): Promise<void | Nack> {
+    // 086-app-push-mvp (FR-006). A native push is a TOTAL branch, taken before
+    // the retry check and OUTSIDE the web `try` below: that catch is written
+    // entirely around `message.subscriptionId`, so a native failure evaluated
+    // there would call `markExpired(undefined)` against the live web-push
+    // table. This catch is the ONE owner of "a throw must not escape the
+    // handler" — an escaping throw is nacked with requeue = true by the
+    // library's default REQUEUE behaviour and hot-loops the SHARED queue
+    // forever, starving live web push at prefetchCount 10.
+    if ('platform' in message) {
+      try {
+        await this.nativeSender.send(message);
+      } catch (error: any) {
+        this.logger.error?.(
+          {
+            message: 'Native push notification delivery failed, dropping',
+            platform: message.platform,
+            tokenTail: message.token.slice(-6),
+            userId: message.userId,
+            error: error?.message,
+          },
+          error?.stack,
+          LogContext.PUSH_NOTIFICATION
+        );
+      }
+      return;
+    }
+
     try {
       // Check retry count
       if (message.retryCount >= this.maxAttempts) {
@@ -112,9 +144,12 @@ export class PushDeliveryService {
         LogContext.PUSH_NOTIFICATION
       );
 
-      // Mark subscription as expired on persistent failures (e.g. 404, 401)
+      // Mark subscription as expired only when the subscription is GONE.
+      // RFC 8030 §7.3 treats 404 like the 410 handled above; every other 4xx
+      // (a 429, a VAPID-misconfiguration 401) is transient and must NOT
+      // permanently expire a live subscription.
       const statusCode = error?.statusCode;
-      if (statusCode && statusCode >= 400 && statusCode < 500) {
+      if (statusCode === 404) {
         await this.pushSubscriptionService.markExpired(message.subscriptionId);
       }
 

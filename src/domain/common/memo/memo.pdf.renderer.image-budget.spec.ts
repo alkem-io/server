@@ -3,7 +3,7 @@ import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import sharp from 'sharp';
 import * as Y from 'yjs';
 import { memoSchema } from './conversion/memo.extensions';
-import { MemoPdfRenderer } from './memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from './memo.pdf.test-helper';
 
 describe('MemoPdfRenderer normalized image budget', () => {
   it('rejects more than 16 MiB before PDF layout', async () => {
@@ -30,19 +30,19 @@ describe('MemoPdfRenderer normalized image budget', () => {
       .jpeg({ quality: 80 })
       .toBuffer();
     expect(normalized.length * 20).toBeGreaterThan(16 * 1024 * 1024);
-    const renderer = new MemoPdfRenderer(
-      {
+    const renderer = inProcessMemoPdfRenderer({
+      documentService: {
         isAlkemioDocumentURL: () => true,
         getDocumentFromURL: async () => ({
           id: 'image-1',
           authorization: { id: 'image-auth' },
           storageBucket: { id: 'bucket-1' },
         }),
-      } as any,
-      { grantAccessOrFail: () => undefined } as any,
-      { getDocumentContent: async () => source } as any
-    );
-    const convertHtml = vi.spyOn(renderer as any, 'convertHtml');
+      },
+      authorizationService: { grantAccessOrFail: () => undefined },
+      fileServiceAdapter: { getDocumentContent: async () => source },
+    });
+    const convertHtml = vi.spyOn(renderer.spyTarget as any, 'convertHtml');
 
     let failure: unknown;
     const ydoc = prosemirrorToYDoc(

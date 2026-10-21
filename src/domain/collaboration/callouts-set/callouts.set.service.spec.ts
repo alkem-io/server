@@ -618,6 +618,17 @@ describe('CalloutsSetService', () => {
       expect(result).toBe(calloutsSet);
       expect(repository.save).toHaveBeenCalledWith(calloutsSet);
     });
+
+    it('should save through the given entity manager, not the repository', async () => {
+      const calloutsSet = { id: 'cs-1' } as any;
+      const entityManager = { save: vi.fn().mockResolvedValue(calloutsSet) };
+
+      const result = await service.save(calloutsSet, entityManager as any);
+
+      expect(result).toBe(calloutsSet);
+      expect(entityManager.save).toHaveBeenCalledWith(CalloutsSet, calloutsSet);
+      expect(repository.save).not.toHaveBeenCalled();
+    });
   });
 
   describe('getCalloutsFromCollaboration', () => {

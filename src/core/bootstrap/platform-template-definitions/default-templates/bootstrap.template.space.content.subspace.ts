@@ -1,6 +1,7 @@
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { resolveSubspaceDefaultSidebar } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.sidebar.defaults';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 
 export enum FlowState {
@@ -11,6 +12,9 @@ export enum FlowState {
   EVALUATE = 'Evaluate',
 }
 
+// Each state declares its positional subspace sidebar explicitly: the first state's list is
+// the sidebar every phase of a subspace created from this template shows, and the create
+// funnel copies explicit lists verbatim, so new subspaces need no migration to look right.
 export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceInput =
   {
     level: 1,
@@ -29,26 +33,46 @@ export const bootstrapTemplateSpaceContentSubspace: CreateTemplateContentSpaceIn
             displayName: FlowState.EXPLORE,
             description:
               '🔍 A journey of discovery! Gather insights through research and observation.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...resolveSubspaceDefaultSidebar(1)],
+            },
           },
           {
             displayName: FlowState.DEFINE,
             description:
               '🎯 Sharpen your focus. Define the challenge with precision and set a clear direction.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...resolveSubspaceDefaultSidebar(2)],
+            },
           },
           {
             displayName: FlowState.BRAINSTORM,
             description:
               '🎨 Ignite creativity. Generate a constellation of ideas, using concepts from diverse perspectives to get inspired.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...resolveSubspaceDefaultSidebar(3)],
+            },
           },
           {
             displayName: FlowState.VALIDATE,
             description:
               '🛠️ Test assumptions. Build prototypes, seek feedback, and validate your concepts. Adapt based on real-world insights.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...resolveSubspaceDefaultSidebar(4)],
+            },
           },
           {
             displayName: FlowState.EVALUATE,
             description:
               '✅ Assess impact, feasibility, and alignment to make informed choices.',
+            settings: {
+              allowNewCallouts: true,
+              sidebar: [...resolveSubspaceDefaultSidebar(5)],
+            },
           },
         ],
       },

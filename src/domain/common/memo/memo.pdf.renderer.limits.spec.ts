@@ -9,7 +9,7 @@ import * as Y from 'yjs';
 import { markdownToYjsV2State } from './conversion';
 import { memoSchema } from './conversion/memo.extensions';
 import { MAX_MEMO_EDITOR_CONTENT_BYTES } from './conversion/yjs.state.to.tiptap.html';
-import { MemoPdfRenderer } from './memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from './memo.pdf.test-helper';
 
 const MAX_IMAGES = 20;
 const PATHOLOGICAL_RENDER_TIMEOUT_MS = 120_000;
@@ -81,11 +81,11 @@ describe('MemoPdfRenderer input bounds', () => {
   };
   const authorizationService = { grantAccessOrFail: vi.fn() };
   const fileServiceAdapter = { getDocumentContent: vi.fn() };
-  const renderer = new MemoPdfRenderer(
-    documentService as any,
-    authorizationService as any,
-    fileServiceAdapter as any
-  );
+  const renderer = inProcessMemoPdfRenderer({
+    documentService,
+    authorizationService,
+    fileServiceAdapter,
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();

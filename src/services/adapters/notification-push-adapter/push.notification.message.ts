@@ -23,3 +23,21 @@ export interface PushNotificationMessage {
   };
   retryCount: number;
 }
+
+/**
+ * 086-app-push-mvp (FR-005). A native app push, for one device token bound to
+ * one user, on the SAME `alkemio-push-notifications` queue as the web shape
+ * above — no new queue, no new exchange, no envelope version.
+ *
+ * `PushDeliveryService.handlePushMessage` discriminates on the presence of
+ * `platform`, so the web interface stays untouched. `payload` is deliberately
+ * the web shape's own type: the server has already rendered `title`/`body`,
+ * and the native transports reuse them verbatim.
+ */
+export interface NativePushNotificationMessage {
+  userId: string;
+  /** `ios` | `android` — validated on registration, picks APNs vs FCM. */
+  platform: string;
+  token: string;
+  payload: PushNotificationMessage['payload'];
+}
