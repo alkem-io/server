@@ -102,8 +102,10 @@ class FileServiceStorageProvider(StorageProvider):
                     spool.close()
                     return None
                 raise HttpResponseException(response.code, "Content download failed", b"")
+            # Synapse fails a body once it reaches max_size, but accepts uploads of
+            # exactly max_upload_size; allow one byte more to read those back.
             await make_deferred_yieldable(timeout_deferred(
-                read_body_with_max_size(response, spool, self.max_size),
+                read_body_with_max_size(response, spool, self.max_size + 1),
                 30, self.reactor,
             ))
             spool.seek(0)
