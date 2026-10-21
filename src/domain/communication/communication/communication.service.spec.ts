@@ -3,6 +3,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -19,6 +20,7 @@ import { CommunicationService } from './communication.service';
 
 describe('CommunicationService', () => {
   let service: CommunicationService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let roomService: Mocked<RoomService>;
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let communicationRepo: Mocked<Repository<Communication>>;
@@ -37,6 +39,7 @@ describe('CommunicationService', () => {
       .compile();
 
     service = module.get<CommunicationService>(CommunicationService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     roomService = module.get(RoomService);
     communicationAdapter = module.get(CommunicationAdapter);
     communicationRepo = module.get(getRepositoryToken(Communication));
@@ -157,6 +160,22 @@ describe('CommunicationService', () => {
         roomID: 'room-1',
       });
       expect(communicationRepo.remove).toHaveBeenCalledWith(mockComm);
+    });
+
+    it('should delete the authorization policy', async () => {
+      const mockComm = {
+        id: 'comm-1',
+        updates: { id: 'room-1' },
+        authorization: { id: 'auth-1' },
+      } as Communication;
+      communicationRepo.findOne.mockResolvedValue(mockComm);
+      communicationRepo.remove.mockResolvedValue(mockComm);
+
+      await service.removeCommunication('comm-1');
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        mockComm.authorization
+      );
     });
 
     it('should throw when communication not found', async () => {

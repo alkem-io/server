@@ -8,8 +8,10 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
@@ -36,6 +38,7 @@ import { IInnovationPack } from './innovation.pack.interface';
 @Injectable()
 export class InnovationPackService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private templatesSetService: TemplatesSetService,
     private accountLookupService: AccountLookupService,
@@ -58,7 +61,8 @@ export class InnovationPackService {
 
   async createInnovationPack(
     innovationPackData: CreateInnovationPackInput,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    actorContext?: ActorContext
   ): Promise<IInnovationPack> {
     if (innovationPackData.nameID) {
       // Convert nameID to lower case
@@ -104,9 +108,10 @@ export class InnovationPackService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        innovationPackData.profileData?.visuals,
+        innovationPackData.profileData,
         [VisualType.AVATAR, VisualType.CARD],
-        () => this.deleteInnovationPack({ ID: saved.id })
+        () => this.deleteInnovationPack({ ID: saved.id }),
+        actorContext
       );
     return saved;
   }
@@ -174,6 +179,12 @@ export class InnovationPackService {
 
     if (innovationPack.profile) {
       await this.profileService.deleteProfile(innovationPack.profile.id);
+    }
+
+    if (innovationPack.authorization) {
+      await this.authorizationPolicyService.delete(
+        innovationPack.authorization
+      );
     }
 
     const result = await this.innovationPackRepository.remove(

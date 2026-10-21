@@ -24,6 +24,7 @@ export class CalendarEventLoaderCreator
       name: this.constructor.name,
       loadedTypeName: CalendarEvent.name,
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 

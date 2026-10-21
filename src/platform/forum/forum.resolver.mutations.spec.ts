@@ -127,7 +127,8 @@ describe('ForumResolverMutations', () => {
       expect(forumService.createDiscussion).toHaveBeenCalledWith(
         createData,
         'user-1',
-        'user-1'
+        'user-1',
+        expect.objectContaining({ actorID: 'user-1' })
       );
       expect(discussionService.save).toHaveBeenCalledWith(discussion);
       expect(

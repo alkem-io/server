@@ -1,6 +1,7 @@
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 
 @InputType()
 @ObjectType('CreateCollaboraDocumentData')
@@ -22,6 +23,19 @@ export class CreateCollaboraDocumentInput {
   @IsOptional()
   @IsEnum(CollaboraDocumentType)
   documentType?: CollaboraDocumentType;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      "Copy an existing CollaboraDocument's current content into the new document. " +
+      'The copy owns its own backing file from the moment it is created: editing it never ' +
+      'changes the source, and editing the source never changes it. Mutually exclusive with ' +
+      'the upload path. documentType, originalMimeType and displayName are inherited from ' +
+      'the source. READ on the source is authorized server-side.',
+  })
+  @IsOptional()
+  @IsUUID()
+  sourceCollaboraDocumentID?: string;
 
   // Not exposed in the GraphQL schema. Used by createCalloutOnCalloutsSet's
   // resolver to plumb a buffered Upload from the multipart request through to

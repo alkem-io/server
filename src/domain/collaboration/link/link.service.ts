@@ -2,11 +2,14 @@ import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
@@ -20,6 +23,7 @@ export class LinkService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
+    private profileDocumentsService: ProfileDocumentsService,
     @InjectRepository(Link)
     private linkRepository: Repository<Link>
   ) {}
@@ -45,20 +49,54 @@ export class LinkService {
    * Phase-2 materialization for a Link. Composed under callout-framing or
    * callout-contribution; the parent entity's save persists the bucket
    * before this is called. Re-homes any markdown URLs/references in
-   * `link.profile` and lets the supplied `rollback` cascade to the
-   * top-level parent on failure.
+   * `link.profile`, and the file the link itself points at, under the same
+   * copy rule as every other file, and lets the supplied `rollback` cascade to
+   * the top-level parent on failure.
+   *
+   * The linked file belongs in `fileStorage`: by default the link's own
+   * profile bucket (a contribution link is authorized down to it). A callout
+   * framing link is not authorized below the framing, so its file belongs in
+   * the framing's bucket, where the callout's uploads already land.
    */
   public async materializeLinkContent(
     link: ILink,
     linkData: CreateLinkInput | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext,
+    fileStorage?: { bucket?: IStorageBucket; sourceStorageBucketID?: string }
   ): Promise<void> {
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       link.profile,
-      linkData?.profile?.visuals,
+      linkData?.profile,
       [],
-      rollback
+      rollback,
+      actorContext
     );
+    const storageBucket = fileStorage
+      ? fileStorage.bucket
+      : link.profile?.storageBucket;
+    const sourceStorageBucketID = fileStorage
+      ? fileStorage.sourceStorageBucketID
+      : linkData?.profile?.sourceStorageBucketID;
+    if (!link.uri || !storageBucket) {
+      return;
+    }
+    try {
+      const uri =
+        await this.profileDocumentsService.reuploadFileOnStorageBucket(
+          link.uri,
+          storageBucket,
+          false,
+          { sourceStorageBucketID, actorContext }
+        );
+      if (uri && uri !== link.uri) {
+        link.uri = uri;
+        await this.linkRepository.update({ id: link.id }, { uri });
+      }
+    } catch (error) {
+      await rollback();
+      throw error;
+    }
   }
 
   public async updateLink(linkData: UpdateLinkInput): Promise<ILink> {

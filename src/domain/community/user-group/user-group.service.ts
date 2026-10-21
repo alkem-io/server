@@ -65,7 +65,7 @@ export class UserGroupService {
     const savedUserGroup = await this.userGroupRepository.save(group);
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       profile,
-      userGroupData.profile?.visuals,
+      userGroupData.profile,
       [],
       () => this.removeUserGroup({ ID: savedUserGroup.id })
     );

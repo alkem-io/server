@@ -155,9 +155,10 @@ export class CalloutFramingResolverFields {
   @ResolveField('subspaces', () => [ISpace], {
     nullable: false,
     description:
-      "The host space's subspaces for a SPACES framing, ordered pinned-first then the space's sortOrder/displayName. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, or for a host with no subspaces.",
+      "The spaces shown by a SPACES framing's collection, filtered to what the requesting actor may READ. In AUTO mode these are the host space's direct subspaces, ordered pinned-first then the space's sortOrder/displayName. In CUSTOM mode the list is the admin's stored selection, which may contain spaces that are NOT subspaces of the host (any space of the host space's account, at any level) and whose ORDER IS NOT MEANINGFUL — pinned/sortOrder are parent-relative, so the client is authoritative for ordering. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, for a host with no subspaces, and for a CUSTOM selection that is empty or wholly unreadable.",
   })
   async subspaces(
+    @CurrentActor() actorContext: ActorContext,
     @Parent() calloutFraming: ICalloutFraming
   ): Promise<ISpace[]> {
     // Config-free + host-space-generic (workspace#013-spaces-collection-callout,
@@ -171,6 +172,6 @@ export class CalloutFramingResolverFields {
     if (!callout) {
       return [];
     }
-    return this.spaceCollectionService.getSubspaces(callout);
+    return this.spaceCollectionService.getSubspaces(callout, actorContext);
   }
 }

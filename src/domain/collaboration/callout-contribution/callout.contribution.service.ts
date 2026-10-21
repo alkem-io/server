@@ -23,8 +23,9 @@ import { IWhiteboard } from '@domain/common/whiteboard/types';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
 import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
 import { ILink } from '../link/link.interface';
@@ -46,8 +47,33 @@ export class CalloutContributionService {
     private collaboraDocumentService: CollaboraDocumentService,
     private classificationService: ClassificationService,
     @InjectRepository(CalloutContribution)
-    private contributionRepository: Repository<CalloutContribution>
+    private contributionRepository: Repository<CalloutContribution>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
+
+  /**
+   * Compensation for a contribution built by createCalloutContributions whose
+   * callout was never saved: the contribution row does not exist, but its
+   * Whiteboard and Memo persisted themselves and a CollaboraDocument's
+   * document and profile already exist (server#6614). Posts and links are
+   * still unsaved and are discarded with the in-memory callout.
+   */
+  public async deletePersistedChildrenOfUnsavedContribution(
+    contribution: ICalloutContribution
+  ): Promise<void> {
+    if (contribution.whiteboard?.id) {
+      await this.whiteboardService.deleteWhiteboard(contribution.whiteboard.id);
+    }
+    if (contribution.memo?.id) {
+      await this.memoService.deleteMemo(contribution.memo.id);
+    }
+    if (contribution.collaboraDocument) {
+      await this.collaboraDocumentService.deleteUnsavedCollaboraDocument(
+        contribution.collaboraDocument
+      );
+    }
+  }
 
   public async createCalloutContributions(
     calloutContributionsData: CreateCalloutContributionInput[],
@@ -60,17 +86,45 @@ export class CalloutContributionService {
   ): Promise<ICalloutContribution[]> {
     const contributions: ICalloutContribution[] = [];
 
-    for (const calloutContributionData of calloutContributionsData) {
-      const contribution = await this.createCalloutContribution(
-        calloutContributionData,
-        storageAggregator,
-        contributionSettings,
-        parentSpaceId,
-        actorContext,
-        userID,
-        boardTemplate
-      );
-      contributions.push(contribution);
+    try {
+      for (const calloutContributionData of calloutContributionsData) {
+        const contribution = await this.createCalloutContribution(
+          calloutContributionData,
+          storageAggregator,
+          contributionSettings,
+          parentSpaceId,
+          actorContext,
+          userID,
+          boardTemplate
+        );
+        contributions.push(contribution);
+      }
+    } catch (error) {
+      // A later input failed (e.g. a disallowed type or an unknown task
+      // column): the caller never receives the contributions built so far, so
+      // their self-persisted children must be removed here (server#6614).
+      // A cleanup failure is logged, not thrown, so the original error
+      // surfaces; the log names the child left behind.
+      for (const contribution of contributions) {
+        try {
+          await this.deletePersistedChildrenOfUnsavedContribution(contribution);
+        } catch (cleanupError: unknown) {
+          this.logger.error?.(
+            {
+              message:
+                'Failed to delete contribution child after contribution creation failed',
+              whiteboardId: contribution.whiteboard?.id,
+              memoId: contribution.memo?.id,
+              collaboraDocumentId: contribution.collaboraDocument?.document?.id,
+            },
+            cleanupError instanceof Error
+              ? (cleanupError.stack ?? '')
+              : String(cleanupError),
+            LogContext.COLLABORATION
+          );
+        }
+      }
+      throw error;
     }
 
     return contributions;
@@ -85,7 +139,8 @@ export class CalloutContributionService {
   public async materializeCalloutContributionContent(
     contribution: ICalloutContribution,
     contributionData: CreateCalloutContributionInput | undefined,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<void> {
     if (contribution.type === CalloutContributionType.LINK) {
       if (!contribution.link) {
@@ -101,7 +156,8 @@ export class CalloutContributionService {
       await this.linkService.materializeLinkContent(
         contribution.link,
         contributionData?.link,
-        rollback
+        rollback,
+        actorContext
       );
     }
   }
@@ -157,7 +213,8 @@ export class CalloutContributionService {
         post,
         storageAggregator,
         userID,
-        parentSpaceId
+        parentSpaceId,
+        actorContext
       );
     }
 
@@ -172,7 +229,9 @@ export class CalloutContributionService {
       contribution.memo = await this.memoService.createMemo(
         memo,
         storageAggregator,
-        userID
+        userID,
+        undefined,
+        actorContext
       );
     }
 
@@ -181,6 +240,7 @@ export class CalloutContributionService {
         await this.collaboraDocumentService.createCollaboraDocument(
           collaboraDocument,
           storageAggregator,
+          actorContext,
           userID
         );
     }

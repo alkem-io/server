@@ -103,7 +103,6 @@ export class InnovationPackResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [],
         {
           resourceKind: 'innovation-pack',
           resourceId: innovationPack.id,

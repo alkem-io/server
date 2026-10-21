@@ -1,15 +1,32 @@
 import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { EntityManager } from 'typeorm';
 import { SpaceCollectionService } from './space.collection.service';
 
-// Covers the SPACES callout collection (workspace#013-spaces-collection-callout,
-// US1/US2): host-space resolution, pinned-first ordering, and empty results.
-describe('SpaceCollectionService', () => {
+/**
+ * Covers the SPACES callout collection's AUTO mode
+ * (workspace#013-spaces-collection-callout, US1/US2): host-space resolution,
+ * pinned-first ordering, and empty results.
+ *
+ * AUTO ONLY. The CUSTOM cases this suite used to carry were moved to
+ * `space.collection.service.account-scope.spec.ts` by workspace#084, because
+ * the CUSTOM branch no longer resolves its spaces through
+ * `CommunityResolverService` at all — it goes through the shared account-scope
+ * predicate and a per-viewer READ filter — so driving CUSTOM through the
+ * resolver mock here would assert a path the service is forbidden to take.
+ * See that file's header for the per-case disposition of the ones that moved,
+ * were replaced, or were retired.
+ */
+describe('SpaceCollectionService (AUTO)', () => {
   let service: SpaceCollectionService;
   let communityResolver: CommunityResolverService;
 
+  const actorContext = { credentials: [] } as unknown as ActorContext;
   const callout = { id: 'callout-1' } as ICallout;
 
   const calloutWithSelection = (
@@ -44,6 +61,17 @@ describe('SpaceCollectionService', () => {
             getSpaceWithSubspacesFromCollaborationCallout: vi.fn(),
           },
         },
+        {
+          provide: AuthorizationService,
+          useValue: { isAccessGranted: vi.fn() },
+        },
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: {
+            findOne: vi.fn(),
+            createQueryBuilder: vi.fn(),
+          } as unknown as EntityManager,
+        },
       ],
     }).compile();
 
@@ -63,7 +91,7 @@ describe('SpaceCollectionService', () => {
       ],
     } as any);
 
-    const result = await service.getSubspaces(callout);
+    const result = await service.getSubspaces(callout, actorContext);
 
     expect(result.map(s => s.id)).toEqual(['c', 'b', 'a']);
   });
@@ -73,7 +101,7 @@ describe('SpaceCollectionService', () => {
       communityResolver.getSpaceWithSubspacesFromCollaborationCallout
     ).mockResolvedValue(null);
 
-    const result = await service.getSubspaces(callout);
+    const result = await service.getSubspaces(callout, actorContext);
 
     expect(result).toEqual([]);
   });
@@ -83,13 +111,13 @@ describe('SpaceCollectionService', () => {
       communityResolver.getSpaceWithSubspacesFromCollaborationCallout
     ).mockResolvedValue({ id: 'host-space', subspaces: [] } as any);
 
-    const result = await service.getSubspaces(callout);
+    const result = await service.getSubspaces(callout, actorContext);
 
     expect(result).toEqual([]);
   });
 
-  // --- CUSTOM selection mode (workspace#025, T011) ---
-  describe('CUSTOM selection mode intersection (T011 / FR-007)', () => {
+  // --- selection-mode defaulting (workspace#025, T011) ---
+  describe('selection mode defaulting (T011 / FR-007)', () => {
     const hostSpaceWithSubs = () => ({
       id: 'host-space',
       subspaces: [
@@ -104,7 +132,7 @@ describe('SpaceCollectionService', () => {
         communityResolver.getSpaceWithSubspacesFromCollaborationCallout
       ).mockResolvedValue(hostSpaceWithSubs() as any);
 
-      const result = await service.getSubspaces(callout); // no selection in callout
+      const result = await service.getSubspaces(callout, actorContext); // no selection in callout
       expect(result).toHaveLength(3);
     });
 
@@ -114,62 +142,25 @@ describe('SpaceCollectionService', () => {
       ).mockResolvedValue(hostSpaceWithSubs() as any);
 
       const result = await service.getSubspaces(
-        calloutWithSelection(CalloutSelectionMode.AUTO, ['a'])
+        calloutWithSelection(CalloutSelectionMode.AUTO, ['a']),
+        actorContext
       );
       expect(result).toHaveLength(3);
     });
 
-    it('CUSTOM + selected subset ⇒ only selected subspaces returned (pinned-first order)', async () => {
-      vi.mocked(
-        communityResolver.getSpaceWithSubspacesFromCollaborationCallout
-      ).mockResolvedValue(hostSpaceWithSubs() as any);
-
-      const result = await service.getSubspaces(
-        calloutWithSelection(CalloutSelectionMode.CUSTOM, ['c', 'a'])
-      );
-      expect(result.map(s => s.id)).toEqual(['c', 'a']); // c is pinned → first
-    });
-
-    it('[S4] CUSTOM + foreign persisted id ⇒ silently dropped (never in subspaces list)', async () => {
-      vi.mocked(
-        communityResolver.getSpaceWithSubspacesFromCollaborationCallout
-      ).mockResolvedValue(hostSpaceWithSubs() as any);
-
-      const result = await service.getSubspaces(
-        calloutWithSelection(CalloutSelectionMode.CUSTOM, [
-          'foreign-id-from-another-space',
-        ])
-      );
-      expect(result).toEqual([]);
-    });
-
-    it('CUSTOM + all selected subspaces deleted ⇒ empty (existing empty state)', async () => {
-      vi.mocked(
-        communityResolver.getSpaceWithSubspacesFromCollaborationCallout
-      ).mockResolvedValue({ id: 'host-space', subspaces: [] } as any);
-
-      const result = await service.getSubspaces(
-        calloutWithSelection(CalloutSelectionMode.CUSTOM, ['a', 'b'])
-      );
-      expect(result).toEqual([]);
-    });
-
-    it('[S7-read] selected subset returned in pinned-first then sortOrder', async () => {
-      vi.mocked(
-        communityResolver.getSpaceWithSubspacesFromCollaborationCallout
-      ).mockResolvedValue({
-        id: 'host-space',
-        subspaces: [
-          subspace('x', 5, 'X'),
-          subspace('y', 1, 'Y'),
-          subspace('z', 10, 'Z', true), // pinned
-        ],
-      } as any);
-
-      const result = await service.getSubspaces(
-        calloutWithSelection(CalloutSelectionMode.CUSTOM, ['x', 'y', 'z'])
-      );
-      expect(result.map(s => s.id)).toEqual(['z', 'y', 'x']);
-    });
+    // MOVED to space.collection.service.account-scope.spec.ts (workspace#084):
+    //  - 'CUSTOM + selected subset'            → moved, MINUS its pinned-first
+    //    order assertion, which FR-019 retires: pinned/sortOrder are
+    //    parent-relative and a CUSTOM selection spans parents, so the server
+    //    no longer orders that list at all.
+    //  - '[S4] CUSTOM + foreign persisted id'  → REPLACED, because its
+    //    semantics genuinely invert. A same-account NON-SUBSPACE is now
+    //    RETURNED; what gets dropped is a space that has LEFT the account.
+    //  - 'CUSTOM + all selected deleted'       → moved, now paired with
+    //    hasHiddenSpaces === false (a deleted/departed entry is stale, not
+    //    hidden).
+    //  - '[S7-read] CUSTOM ordering'           → RETIRED by FR-019, not
+    //    silently dropped: server-side ordering of a CUSTOM result is now
+    //    forbidden, and the new spec asserts no ordering helper is called.
   });
 });

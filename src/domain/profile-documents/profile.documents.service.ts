@@ -1,11 +1,14 @@
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IDocument } from '@domain/storage/document';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { DocumentCopyAuthority } from './document.copy.authority';
 
 @Injectable()
 export class ProfileDocumentsService {
@@ -13,6 +16,7 @@ export class ProfileDocumentsService {
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
     private fileServiceAdapter: FileServiceAdapter,
+    private authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -26,6 +30,9 @@ export class ProfileDocumentsService {
    * @param internalUrlRequired If true, the file must be inside Alkemio:
    *   non-Alkemio URLs return undefined.
    *   If false, non-Alkemio URLs pass through unchanged.
+   * @param copyAuthority Who may cause a file stored in another bucket to be
+   *   copied in; see {@link DocumentCopyAuthority}. A file nobody is entitled
+   *   to copy keeps its URL exactly as written.
    *
    * Return values:
    * - `string` — the resolved URL (may be the same as input if already
@@ -53,7 +60,8 @@ export class ProfileDocumentsService {
   public async reuploadFileOnStorageBucket(
     fileUrl: string,
     storageBucket: IStorageBucket,
-    internalUrlRequired: boolean = false
+    internalUrlRequired: boolean = false,
+    copyAuthority: DocumentCopyAuthority = {}
   ): Promise<string | undefined> {
     if (!this.documentService.isAlkemioDocumentURL(fileUrl)) {
       // If image is not inside Alkemio just return url (or undefined if image needs to be inside Alkemio, but never refetch it)
@@ -86,7 +94,7 @@ export class ProfileDocumentsService {
     const docInContent = await this.documentService.getDocumentFromURL(
       fileUrl,
       {
-        relations: { storageBucket: true },
+        relations: { storageBucket: true, authorization: true },
       }
     );
 
@@ -114,8 +122,11 @@ export class ProfileDocumentsService {
     if (docInThisBucket) {
       // It should be just `fileUrl` but rewrite it just in case
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
-    } else if (docInContent.temporaryLocation) {
-      // Move temporary document to the new bucket via Go file-service-go.
+    } else if (
+      docInContent.temporaryLocation &&
+      this.isOwnTemporaryUpload(docInContent, copyAuthority)
+    ) {
+      // Move the creator's own temporary upload to the new bucket via Go file-service-go.
       // file-service-go updates the row's `storageBucketId` and clears
       // `temporaryLocation` in the DB.
       await this.fileServiceAdapter.updateDocument(docInContent.id, {
@@ -130,6 +141,20 @@ export class ProfileDocumentsService {
       // rejects (file table is owned by file-service-go). The DB state
       // is already correct after the updateDocument call above.
       return this.documentService.getPubliclyAccessibleURL(docInContent);
+    } else if (!this.isCopyAllowed(docInContent, copyAuthority)) {
+      // Nobody in this flow is entitled to the file: leave the reference
+      // exactly as written. It resolves for whoever can already read the
+      // original, and for no one else.
+      this.logger.verbose?.(
+        {
+          message:
+            'Reupload skipped: file is stored elsewhere and may not be copied here',
+          documentId: docInContent.id,
+          storageBucketId: storageBucket.id,
+        },
+        LogContext.PROFILE
+      );
+      return fileUrl;
     } else {
       // Different bucket: COPY the doc into the destination bucket.
       // Source is left intact — never delete it from the helper. The
@@ -182,6 +207,39 @@ export class ProfileDocumentsService {
     }
   }
 
+  /**
+   * A temporary upload is claimed (moved) only by the person who uploaded it.
+   * Anyone else's, such as one a template still points at, is copied under the
+   * copy rule instead: moving it would take it away from wherever else it is
+   * referenced, and would skip the read check. Flows with no actor keep moving.
+   */
+  private isOwnTemporaryUpload(
+    document: IDocument,
+    { actorContext }: DocumentCopyAuthority
+  ): boolean {
+    return !actorContext || document.createdBy === actorContext.actorID;
+  }
+
+  private isCopyAllowed(
+    document: IDocument,
+    { sourceStorageBucketID, actorContext }: DocumentCopyAuthority
+  ): boolean {
+    if (
+      sourceStorageBucketID &&
+      document.storageBucket?.id === sourceStorageBucketID
+    ) {
+      return true;
+    }
+    if (!actorContext || !document.authorization) {
+      return false;
+    }
+    return this.authorizationService.isAccessGranted(
+      actorContext,
+      document.authorization,
+      AuthorizationPrivilege.READ
+    );
+  }
+
   /***
    * Walks every Alkemio document URL in the markdown and re-homes it
    * into `storageBucket` via {@link reuploadFileOnStorageBucket}.
@@ -193,7 +251,8 @@ export class ProfileDocumentsService {
    */
   public async reuploadDocumentsInMarkdownToStorageBucket(
     markdown: string,
-    storageBucket: IStorageBucket
+    storageBucket: IStorageBucket,
+    copyAuthority: DocumentCopyAuthority = {}
   ): Promise<string> {
     const baseUrl = this.documentService.getDocumentsBaseUrlPath() + '/';
     const escapedBaseUrl = this.escapeRegExp(baseUrl);
@@ -208,7 +267,8 @@ export class ProfileDocumentsService {
         const newUrl = await this.reuploadFileOnStorageBucket(
           match,
           storageBucket,
-          false
+          false,
+          copyAuthority
         );
         if (newUrl && newUrl !== match) {
           markdown = this.replaceAll(markdown, match, newUrl);

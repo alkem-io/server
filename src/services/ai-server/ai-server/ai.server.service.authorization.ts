@@ -82,15 +82,12 @@ export class AiServerAuthorizationService {
           AuthorizationPrivilege.READ,
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
-          AuthorizationPrivilege.GRANT,
-          // Kept here (and cascading) so the content role retains the
-          // inherited AUTHORIZATION_RESET Global Admin had on aiServer child
-          // policies. Operations Admin also holds it, non-cascading, below.
-          AuthorizationPrivilege.AUTHORIZATION_RESET,
         ],
         // 027-platform-role-redesign (T076): re-anchored off `global-admin`
         // onto Platform Content Full Access — the AI server's personas and
-        // engine config are platform content (spec row 2).
+        // engine config are platform content (spec row 2). CRUD only: the
+        // content role holds no GRANT, and the A3 reset belongs to
+        // Operations Admin alone (server#6619).
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
         CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS
       );

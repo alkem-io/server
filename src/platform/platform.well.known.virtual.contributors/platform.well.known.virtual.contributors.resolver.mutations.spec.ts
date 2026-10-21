@@ -14,24 +14,15 @@ import { PlatformWellKnownVirtualContributorsResolverMutations } from './platfor
 import { PlatformWellKnownVirtualContributorsService } from './platform.well.known.virtual.contributors.service';
 
 /**
- * 027-platform-role-redesign (sec-server-23 fix, 2026-07-31).
- *
- * A10 consolidated a family of platform-settings mutations onto ONE
- * `PLATFORM_SETTINGS_ADMIN` privilege — but the family did not share a
- * pre-feature gate. Most members were already on PLATFORM_SETTINGS_ADMIN
- * (pre-feature reachers {GLOBAL_ADMIN, GLOBAL_PLATFORM_MANAGER});
- * `setPlatformWellKnownVirtualContributor` was on the PLATFORM_ADMIN
- * catch-all (pre-feature reachers {GLOBAL_ADMIN, GLOBAL_SUPPORT,
- * GLOBAL_LICENSE_MANAGER}). Consolidation therefore grants each member the
- * UNION, and GLOBAL_PLATFORM_MANAGER gains a mutation it never held.
- *
- * The resolver pins its own check to this surface's own pre-feature set plus
- * the owning role. These tests wire the REAL AuthorizationPolicyService +
+ * `setPlatformWellKnownVirtualContributor` belongs to A10, the
+ * platform-settings family, and the resolver pins its own check to the
+ * owning role (`platform-settings-admin`) alone rather than the shared
+ * platform policy. These tests wire the REAL AuthorizationPolicyService +
  * AuthorizationService so the constructor builds a genuine policy — a mocked
  * `grantAccessOrFail` would assert nothing about who the pin actually admits.
  *
  * Same shape as `emailChangePolicy — real-engine integration`
- * (admin.user.email.change.resolver.mutations.spec.ts, sec-server-7).
+ * (admin.user.email.change.resolver.mutations.spec.ts).
  */
 describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
   let resolver: PlatformWellKnownVirtualContributorsResolverMutations;
@@ -81,19 +72,8 @@ describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
   });
 
   describe('wellKnownVirtualContributorSetPolicy — real-engine integration', () => {
-    // 027-platform-role-redesign (T076/T077, Slice B): the sec-server-23 pin
-    // that stood here is gone, and so are both tests that expressed it.
-    //
-    // The pin existed because `global-platform-manager` did NOT reach this
-    // mutation pre-feature while the three legacy broad credentials did, so the
-    // additive slice had to keep those three in and that one out. All four are
-    // retired. `platform-settings-admin` — which the substitution would have
-    // aimed the denial at — is now the OWNING role (spec row 4 owns the
-    // well-known VC), so asserting a denial for it would invert the intent.
-    //
-    // What survives is the positive case below plus the audit-attribution test,
-    // which is now asserting an EMPTY legacy-reacher list rather than a
-    // three-element one.
+    // `platform-settings-admin` is the OWNING role (spec row 4 owns the
+    // well-known VC); an actor holding no platform role is denied.
     it('DENIES an actor holding no platform role at all', async () => {
       const actor = buildActorContext(
         AuthorizationCredential.GLOBAL_REGISTERED
@@ -113,23 +93,18 @@ describe('PlatformWellKnownVirtualContributorsResolverMutations', () => {
       await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
 
       expect(wellKnownService.setMapping).toHaveBeenCalled();
-    });
-
-    // T077 (Slice B): the reacher list is now EMPTY, and that is the assertion.
-    // A non-empty legacy list would let `resolveInitiatorRole` attribute a write
-    // to the retired `platform_admin` coarse tier — an audit trail naming a
-    // caller that can no longer exist. This is the executable form of T018's
-    // "the carve-out expires by construction".
-    it('records the configuration change with an EMPTY legacy-reacher list — the carve-out has expired', async () => {
-      const actor = buildActorContext(
-        AuthorizationCredential.PLATFORM_SETTINGS_ADMIN
+      // The configuration audit row is attributed to the owning role.
+      expect(
+        configurationAuditService.recordChangeForActor
+      ).toHaveBeenCalledWith(
+        actor,
+        [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+        expect.objectContaining({
+          setting: `wellKnownVirtualContributor:${mappingData.wellKnown}`,
+          newValue: mappingData.virtualContributorID,
+          outcome: 'success',
+        })
       );
-
-      await resolver.setPlatformWellKnownVirtualContributor(actor, mappingData);
-
-      const [, , legacyReachers] =
-        configurationAuditService.recordChangeForActor.mock.calls[0];
-      expect(legacyReachers).toEqual([]);
     });
   });
 });

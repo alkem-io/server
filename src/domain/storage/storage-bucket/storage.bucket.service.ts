@@ -28,11 +28,17 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import type { CreateDocumentResult } from '@services/adapters/file-service-adapter/dto';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { FileServiceAdapterException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityManager,
+  EntityNotFoundError,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
@@ -215,25 +221,33 @@ export class StorageBucketService {
   ): Promise<IStorageBucket> {
     if (!storageBucketID) {
       throw new EntityNotFoundException(
-        `StorageBucket not found: ${storageBucketID}`,
-        LogContext.STORAGE_BUCKET
+        'StorageBucket not found',
+        LogContext.STORAGE_BUCKET,
+        { storageBucketId: storageBucketID }
       );
     }
-    const storageBucket = em
-      ? await em.findOneOrFail(StorageBucket, {
-          ...options,
-          where: { ...options?.where, id: storageBucketID },
-        })
-      : await this.storageBucketRepository.findOneOrFail({
-          where: { id: storageBucketID },
-          ...options,
-        });
-    if (!storageBucket)
-      throw new EntityNotFoundException(
-        `StorageBucket not found: ${storageBucketID}`,
-        LogContext.STORAGE_BUCKET
-      );
-    return storageBucket;
+    try {
+      return em
+        ? await em.findOneOrFail(StorageBucket, {
+            ...options,
+            where: { ...options?.where, id: storageBucketID },
+          })
+        : await this.storageBucketRepository.findOneOrFail({
+            where: { id: storageBucketID },
+            ...options,
+          });
+    } catch (error) {
+      // TypeORM's EntityNotFoundError would surface to GraphQL as UNSPECIFIED
+      // with its raw message; every other lookup answers ENTITY_NOT_FOUND.
+      if (error instanceof EntityNotFoundError) {
+        throw new EntityNotFoundException(
+          'StorageBucket not found',
+          LogContext.STORAGE_BUCKET,
+          { storageBucketId: storageBucketID }
+        );
+      }
+      throw error;
+    }
   }
 
   public async getDocuments(
@@ -431,6 +445,42 @@ export class StorageBucketService {
     );
   }
 
+  /** Prepare destination metadata before conditionally relocating the same file. */
+  public async moveDocumentToBucket(
+    destinationBucketId: string,
+    sourceDocument: IDocument,
+    userID: string,
+    expectedStorageBucketId: string,
+    options?: { displayName?: string }
+  ): Promise<IDocument> {
+    const destination = await this.getStorageBucketOrFail(destinationBucketId, {
+      relations: { authorization: true, directStorageOwner: true },
+    });
+    this.validateMimeTypes(destination, sourceDocument.mimeType);
+    this.validateSize(destination, sourceDocument.size);
+    return this.persistDocumentWithPreparedAuth(
+      destinationBucketId,
+      async (authorizationId, tagsetId) => ({
+        ...(await this.fileServiceAdapter.moveDocument(sourceDocument.id, {
+          storageBucketId: destinationBucketId,
+          expectedStorageBucketId,
+          authorizationId,
+          tagsetId,
+          createdBy: userID,
+          displayName: options?.displayName,
+          temporaryLocation: false,
+        })),
+        reused: false,
+      }),
+      destination.authorization,
+      {
+        createdBy: userID,
+        destinationBucket: destination,
+        conditionalMove: true,
+      }
+    );
+  }
+
   /**
    * Materializes a new `Document` row in `bucketId`: pre-create and fully
    * compose its auth-policy + tagset, then run the caller's file-service-go
@@ -443,9 +493,18 @@ export class StorageBucketService {
    */
   private async persistDocumentWithPreparedAuth(
     bucketId: string,
-    goCall: (authId: string, tagsetId: string) => Promise<CreateDocumentResult>,
+    goCall: (
+      authId: string,
+      tagsetId: string
+    ) => Promise<
+      Pick<CreateDocumentResult, 'id' | 'reused' | 'imageWidth' | 'imageHeight'>
+    >,
     parentAuthorization?: IAuthorizationPolicy,
-    prepared?: { createdBy?: string; destinationBucket?: IStorageBucket }
+    prepared?: {
+      createdBy?: string;
+      destinationBucket?: IStorageBucket;
+      conditionalMove?: boolean;
+    }
   ): Promise<IDocument> {
     let savedAuth;
     let savedTagset;
@@ -501,7 +560,15 @@ export class StorageBucketService {
       // Release only if the call never started: once invoked, a committed row
       // may reference these even on rejection. No Go-side delete either — an
       // unreferenced row is recoverable, a deleted referenced one is not.
-      const createdAuth = goInvoked ? undefined : savedAuth;
+      // Only the single conditional MOVE's explicit rejection proves that it
+      // did not commit. A timeout/transport failure or failed post-commit load
+      // must retain metadata that the file may already reference.
+      const definiteRejection =
+        prepared?.conditionalMove &&
+        error instanceof FileServiceAdapterException &&
+        [400, 404, 409, 413, 415, 422].includes(error.httpStatus ?? 0);
+      const canRelease = !goInvoked || definiteRejection;
+      const createdAuth = canRelease ? savedAuth : undefined;
       if (createdAuth) {
         await tryRollback(
           () => this.authorizationPolicyService.delete(createdAuth),
@@ -510,7 +577,7 @@ export class StorageBucketService {
           LogContext.STORAGE_BUCKET
         );
       }
-      const createdTagset = goInvoked ? undefined : savedTagset;
+      const createdTagset = canRelease ? savedTagset : undefined;
       if (createdTagset) {
         await tryRollback(
           () => this.tagsetService.removeTagset(createdTagset.id),
@@ -522,11 +589,12 @@ export class StorageBucketService {
       throw error;
     }
 
-    // Dedup-reuse: caller-supplied authorizationId / tagsetId were ignored
-    // by Go (existing row authoritative). Release our pre-created rows so
-    // they don't become DB orphans.
+    // Reuse keeps the returned row authoritative. A transport retry may have
+    // committed THIS invocation's metadata on its earlier attempt, so release
+    // only each prepared entity that the loaded row does not actually reference.
     if (result.reused) {
-      const reusedAuth = savedAuth;
+      const reusedAuth =
+        document.authorization?.id === savedAuth?.id ? undefined : savedAuth;
       if (reusedAuth) {
         await tryRollback(
           () => this.authorizationPolicyService.delete(reusedAuth),
@@ -535,7 +603,8 @@ export class StorageBucketService {
           LogContext.STORAGE_BUCKET
         );
       }
-      const reusedTagset = savedTagset;
+      const reusedTagset =
+        document.tagset?.id === savedTagset?.id ? undefined : savedTagset;
       if (reusedTagset) {
         await tryRollback(
           () => this.tagsetService.removeTagset(reusedTagset.id),
@@ -561,7 +630,7 @@ export class StorageBucketService {
     document.reused = result.reused;
 
     this.logger.verbose?.(
-      `Materialized document '${result.externalID}' via file-service on storage bucket: ${bucketId}`,
+      `Materialized document '${result.id}' via file-service on storage bucket: ${bucketId}`,
       LogContext.STORAGE_BUCKET
     );
     return document;
@@ -582,8 +651,10 @@ export class StorageBucketService {
         LogContext.DOCUMENT
       );
 
-    const documentForReference =
-      await this.documentService.getDocumentFromURL(uri);
+    const documentForReference = await this.documentService.getDocumentFromURL(
+      uri,
+      { relations: { storageBucket: true } }
+    );
 
     try {
       const newDocument = await this.uploadFileAsDocument(
@@ -593,9 +664,12 @@ export class StorageBucketService {
         mimetype,
         userID
       );
-      // Delete the old document, if any. Do not delete the same doc.
+      // Delete the old document, if any and only if this bucket owns it: the
+      // uri may name a file stored elsewhere, which is never ours to delete.
+      // Do not delete the same doc.
       if (
         documentForReference &&
+        documentForReference.storageBucket?.id === storageBucket.id &&
         newDocument.externalID != documentForReference.externalID
       ) {
         await this.documentService.deleteDocument({

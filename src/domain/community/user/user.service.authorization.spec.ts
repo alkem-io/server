@@ -400,10 +400,9 @@ describe('UserAuthorizationService', () => {
     });
   });
 
-  // 027-platform-role-redesign (T060, A4/A5, T070f): PLATFORM_USERS_ADMIN on
-  // the per-USER authorization tree — the union of A4's legacy reachers
-  // (today's PLATFORM_ADMIN) and A5's (today's PLATFORM_SETTINGS_ADMIN).
-  describe('027-platform-role-redesign — PLATFORM_USERS_ADMIN grant-set widening (T060, T070f)', () => {
+  // PLATFORM_USERS_ADMIN on the per-USER authorization tree (A4/A5) is held
+  // by the owning `platform-users-admin` role alone.
+  describe('PLATFORM_USERS_ADMIN grant set on the per-user tree', () => {
     const arrange = () => {
       const authorization = { credentialRules: [] };
       const user = {
@@ -461,7 +460,7 @@ describe('UserAuthorizationService', () => {
       );
     };
 
-    it('grants PLATFORM_USERS_ADMIN EXACTLY {platform-users-admin} plus the union of A4 and A5 legacy reachers, non-cascading', async () => {
+    it('grants PLATFORM_USERS_ADMIN EXACTLY {platform-users-admin}, non-cascading', async () => {
       arrange();
       await service.applyAuthorizationPolicy('user-1');
 
@@ -480,7 +479,7 @@ describe('UserAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
-    it('extends READ_USER_SETTINGS additively to platform-users-admin, keeping the pre-existing legacy reach (cascading)', async () => {
+    it('grants READ_USER_SETTINGS EXACTLY {platform-users-admin}, cascading', async () => {
       arrange();
       await service.applyAuthorizationPolicy('user-1');
 

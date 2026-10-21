@@ -52,6 +52,95 @@ describe('SpaceAboutService', () => {
     ) as Mocked<SpaceLookupService>;
   });
 
+  describe('materializeSpaceAboutContent', () => {
+    const profile = { id: 'profile-1', storageBucket: { id: 'about-bucket' } };
+    const aboutData = {
+      profileData: {
+        displayName: 'About',
+        sourceStorageBucketID: 'template-about-bucket',
+      },
+    } as any;
+
+    beforeEach(() => {
+      profileService.materializeProfileContentAndVisualsOrRollback.mockResolvedValue(
+        profile as any
+      );
+      communityGuidelinesService.materializeCommunityGuidelinesContent.mockResolvedValue(
+        {} as any
+      );
+    });
+
+    it('re-homes the file URLs in who and why into the about profile bucket', async () => {
+      const about = {
+        id: 'about-1',
+        profile,
+        guidelines: {},
+        who: 'who ![a](old-a)',
+        why: 'why ![b](old-b)',
+      } as unknown as ISpaceAbout;
+      profileService.materializeMarkdownIntoProfileBucket.mockImplementation(
+        async (markdown: string) => markdown.replace('old', 'new')
+      );
+      const actor = { actorID: 'creator' } as any;
+
+      await service.materializeSpaceAboutContent(
+        about,
+        aboutData,
+        vi.fn(),
+        actor
+      );
+
+      expect(
+        profileService.materializeMarkdownIntoProfileBucket
+      ).toHaveBeenCalledWith(
+        'who ![a](old-a)',
+        profile,
+        aboutData.profileData,
+        actor
+      );
+      expect(spaceAboutRepository.update).toHaveBeenCalledWith('about-1', {
+        who: 'who ![a](new-a)',
+        why: 'why ![b](new-b)',
+      });
+    });
+
+    it('writes nothing when who and why hold no file to re-home', async () => {
+      const about = {
+        id: 'about-1',
+        profile,
+        guidelines: {},
+        who: 'plain',
+        why: '',
+      } as unknown as ISpaceAbout;
+      profileService.materializeMarkdownIntoProfileBucket.mockImplementation(
+        async (markdown: string) => markdown
+      );
+
+      await service.materializeSpaceAboutContent(about, aboutData, vi.fn());
+
+      expect(spaceAboutRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('rolls back when re-homing who or why fails', async () => {
+      const about = {
+        id: 'about-1',
+        profile,
+        guidelines: {},
+        who: 'who',
+        why: 'why',
+      } as unknown as ISpaceAbout;
+      profileService.materializeMarkdownIntoProfileBucket.mockRejectedValue(
+        new Error('copy failed')
+      );
+      const rollback = vi.fn().mockResolvedValue(undefined);
+
+      await expect(
+        service.materializeSpaceAboutContent(about, aboutData, rollback)
+      ).rejects.toThrow('copy failed');
+      expect(rollback).toHaveBeenCalled();
+    });
+  });
+
   describe('getSpaceAboutOrFail', () => {
     it('should return space about when found', async () => {
       // Arrange

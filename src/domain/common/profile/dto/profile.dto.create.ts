@@ -67,4 +67,12 @@ export class CreateProfileInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
+
+  /**
+   * Server-internal, never a GraphQL field: the bucket of the profile this
+   * input was built from (template use, template save, duplicate). Files stored
+   * there may be copied into the new profile's bucket without a per-file check;
+   * see DocumentCopyAuthority.
+   */
+  sourceStorageBucketID?: string;
 }

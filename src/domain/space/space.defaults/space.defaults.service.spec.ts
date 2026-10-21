@@ -1,5 +1,8 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { SpaceLevel } from '@common/enums/space.level';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { TemplateService } from '@domain/template/template/template.service';
@@ -23,6 +26,8 @@ describe('SpaceDefaultsService', () => {
   let calloutsSetService: Mocked<CalloutsSetService>;
   let platformTemplatesService: Mocked<PlatformTemplatesService>;
   let templatesManagerService: Mocked<TemplatesManagerService>;
+  let authorizationService: Mocked<AuthorizationService>;
+  const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -47,6 +52,9 @@ describe('SpaceDefaultsService', () => {
     templatesManagerService = module.get(
       TemplatesManagerService
     ) as Mocked<TemplatesManagerService>;
+    authorizationService = module.get(
+      AuthorizationService
+    ) as Mocked<AuthorizationService>;
   });
 
   describe('getRoleSetCommunityRoles', () => {
@@ -525,13 +533,15 @@ describe('SpaceDefaultsService', () => {
       // Act
       const result = await service.getTemplateSpaceContentToAugmentFrom(
         SpaceLevel.L0,
+        actor,
         'template-1'
       );
 
       // Assert
       expect(result).toBe('content-1');
       expect(templateService.getTemplateOrFail).toHaveBeenCalledWith(
-        'template-1'
+        'template-1',
+        { relations: { authorization: true } }
       );
     });
 
@@ -551,6 +561,7 @@ describe('SpaceDefaultsService', () => {
       await expect(
         service.getTemplateSpaceContentToAugmentFrom(
           SpaceLevel.L0,
+          actor,
           'template-1'
         )
       ).rejects.toThrow('Have template without template content space to use');
@@ -577,7 +588,8 @@ describe('SpaceDefaultsService', () => {
 
       // Act
       const result = await service.getTemplateSpaceContentToAugmentFrom(
-        SpaceLevel.L0
+        SpaceLevel.L0,
+        actor
       );
 
       // Assert
@@ -592,7 +604,7 @@ describe('SpaceDefaultsService', () => {
 
       // Act & Assert
       await expect(
-        service.getTemplateSpaceContentToAugmentFrom(SpaceLevel.L0)
+        service.getTemplateSpaceContentToAugmentFrom(SpaceLevel.L0, actor)
       ).rejects.toThrow('Unable to get template content space to use');
     });
 
@@ -623,10 +635,11 @@ describe('SpaceDefaultsService', () => {
       // Act
       const result = await service.getTemplateSpaceContentToAugmentFrom(
         SpaceLevel.L1,
+        actor,
         undefined,
         mockTemplatesManager as unknown as Parameters<
           SpaceDefaultsService['getTemplateSpaceContentToAugmentFrom']
-        >[2]
+        >[3]
       );
 
       // Assert
@@ -634,6 +647,53 @@ describe('SpaceDefaultsService', () => {
       expect(
         templatesManagerService.getTemplateFromTemplateDefault
       ).toHaveBeenCalled();
+      expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
+    });
+
+    it('authorizes READ on a caller-chosen template against the creating actor', async () => {
+      const templateAuthorization = { id: 'template-auth' };
+      templateService.getTemplateOrFail.mockResolvedValue({
+        id: 'template-1',
+        authorization: templateAuthorization,
+        contentSpace: { id: 'content-1' },
+      } as unknown as Awaited<
+        ReturnType<TemplateService['getTemplateOrFail']>
+      >);
+
+      await service.getTemplateSpaceContentToAugmentFrom(
+        SpaceLevel.L1,
+        actor,
+        'template-1'
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actor,
+        templateAuthorization,
+        AuthorizationPrivilege.READ,
+        expect.any(String)
+      );
+    });
+
+    it('refuses a template the actor cannot read before using its content', async () => {
+      templateService.getTemplateOrFail.mockResolvedValue({
+        id: 'template-1',
+        authorization: { id: 'template-auth' },
+        contentSpace: { id: 'content-1' },
+      } as unknown as Awaited<
+        ReturnType<TemplateService['getTemplateOrFail']>
+      >);
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('forbidden');
+      });
+
+      await expect(
+        service.getTemplateSpaceContentToAugmentFrom(
+          SpaceLevel.L0,
+          actor,
+          'template-1'
+        )
+      ).rejects.toThrow('forbidden');
+      expect(templateService.getTemplateOrFail).toHaveBeenCalledTimes(1);
     });
   });
 });

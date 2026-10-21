@@ -5,7 +5,9 @@ import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -24,6 +26,7 @@ import { UpdateDiscussionInput } from './dto/discussion.dto.update';
 @Injectable()
 export class DiscussionService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(Discussion)
     private readonly discussionRepository: Repository<Discussion>,
     private readonly profileService: ProfileService,
@@ -36,7 +39,8 @@ export class DiscussionService {
     userID: string,
     communicationDisplayName: string,
     roomType: RoomType,
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    actorContext?: ActorContext
   ): Promise<IDiscussion> {
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const discussion: IDiscussion = Discussion.create(discussionData);
@@ -82,9 +86,10 @@ export class DiscussionService {
     }
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
-      discussionData.profile?.visuals,
+      discussionData.profile,
       [],
-      () => this.removeDiscussion({ ID: saved.id })
+      () => this.removeDiscussion({ ID: saved.id }),
+      actorContext
     );
     return saved;
   }
@@ -128,6 +133,10 @@ export class DiscussionService {
       await this.roomService.deleteRoom({
         roomID: discussion.comments.id,
       });
+    }
+
+    if (discussion.authorization) {
+      await this.authorizationPolicyService.delete(discussion.authorization);
     }
 
     const result = await this.discussionRepository.remove(

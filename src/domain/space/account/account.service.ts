@@ -523,7 +523,8 @@ export class AccountService {
   }
 
   public async createInnovationPackOnAccount(
-    ipData: CreateInnovationPackOnAccountInput
+    ipData: CreateInnovationPackOnAccountInput,
+    actorContext?: ActorContext
   ): Promise<IInnovationPack> {
     const accountID = ipData.accountID;
     const account = await this.getAccountOrFail(accountID, {
@@ -538,7 +539,8 @@ export class AccountService {
     }
     let ip = await this.innovationPackService.createInnovationPack(
       ipData,
-      account.storageAggregator
+      account.storageAggregator,
+      actorContext
     );
     ip.account = account;
     ip = await this.innovationPackService.save(ip);

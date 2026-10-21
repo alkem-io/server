@@ -5,6 +5,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
@@ -22,6 +23,7 @@ import { InnovationFlowService } from './innovation.flow.service';
 
 describe('InnovationFlowService', () => {
   let service: InnovationFlowService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let repository: Repository<InnovationFlow>;
   let profileService: ProfileService;
   let tagsetService: TagsetService;
@@ -51,6 +53,7 @@ describe('InnovationFlowService', () => {
       .compile();
 
     service = module.get<InnovationFlowService>(InnovationFlowService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     repository = module.get(getRepositoryToken(InnovationFlow));
     profileService = module.get(ProfileService);
     tagsetService = module.get(TagsetService);
@@ -201,6 +204,65 @@ describe('InnovationFlowService', () => {
       await expect(
         service.getInnovationFlowOrFail('nonexistent')
       ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
+  describe('state description materialization', () => {
+    it('re-homes each state description into the flow profile bucket and saves changed states', async () => {
+      const profile = {
+        id: 'flow-profile',
+        storageBucket: { id: 'flow-bucket' },
+      };
+      const changed = { id: 's1', description: '![a](old)' };
+      const unchanged = { id: 's2', description: 'plain' };
+      const flow = { id: 'flow-1', profile, states: [changed, unchanged] };
+      const flowData = {
+        profile: { displayName: 'Flow', sourceStorageBucketID: 'tpl-bucket' },
+      };
+      const profileService = (service as any).profileService;
+      profileService.materializeMarkdownIntoProfileBucket = vi.fn(
+        async (markdown: string) => markdown.replace('old', 'new')
+      );
+      const actor = { actorID: 'creator' };
+
+      await (service as any).materializeStateDescriptions(
+        flow,
+        flowData,
+        actor
+      );
+
+      expect(
+        profileService.materializeMarkdownIntoProfileBucket
+      ).toHaveBeenCalledWith('![a](old)', profile, flowData.profile, actor);
+      expect(changed.description).toBe('![a](new)');
+      expect(innovationFlowStateService.save).toHaveBeenCalledTimes(1);
+      expect(innovationFlowStateService.save).toHaveBeenCalledWith(changed);
+    });
+
+    it('re-homes the states of an existing flow as the given actor, trusting no source bucket', async () => {
+      const profile = {
+        id: 'flow-profile',
+        storageBucket: { id: 'flow-bucket', documents: [] },
+      };
+      const state = { id: 's1', description: '![a](old)' };
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'flow-1',
+        profile,
+        states: [state],
+      } as any);
+      const profileService = (service as any).profileService;
+      profileService.materializeMarkdownIntoProfileBucket = vi.fn(
+        async (markdown: string) => markdown.replace('old', 'new')
+      );
+      const actor = { actorID: 'saver' } as any;
+
+      await service.copyStateDescriptionFiles('flow-1', actor);
+
+      expect(
+        profileService.materializeMarkdownIntoProfileBucket
+      ).toHaveBeenCalledWith('![a](old)', profile, undefined, actor);
+      expect(innovationFlowStateService.save).toHaveBeenCalledWith(state);
+      expect(state.description).toBe('![a](new)');
     });
   });
 
@@ -709,6 +771,23 @@ describe('InnovationFlowService', () => {
       expect(innovationFlowStateService.delete).toHaveBeenCalledTimes(2);
       expect(repository.remove).toHaveBeenCalled();
       expect(result.id).toBe('flow-1');
+    });
+
+    it('should delete the authorization policy', async () => {
+      const flow = {
+        id: 'flow-1',
+        profile: { id: 'p-1' },
+        states: [{ id: 's-1' }],
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(flow);
+      vi.mocked(repository.remove).mockResolvedValue({ id: undefined } as any);
+
+      await service.deleteInnovationFlow('flow-1');
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        flow.authorization
+      );
     });
 
     it('should throw RelationshipNotFoundException when profile or states are missing', async () => {

@@ -10,7 +10,9 @@ import {
 } from '@common/exceptions';
 import { ForumDiscussionCategoryNotEmptyException } from '@common/exceptions/forum.discussion.category.not.empty.exception';
 import { getForumCategoryContextId } from '@constants/forum.constants';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,6 +36,7 @@ const INVISIBLE_STATE = { 'io.alkemio.visibility': { visible: false } };
 @Injectable()
 export class ForumService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private discussionService: DiscussionService,
     private communicationAdapter: CommunicationAdapter,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
@@ -111,7 +114,8 @@ export class ForumService {
   async createDiscussion(
     discussionData: ForumCreateDiscussionInput,
     userID: string,
-    userForumID: string
+    userForumID: string,
+    actorContext?: ActorContext
   ): Promise<IDiscussion> {
     const displayName = discussionData.profile.displayName;
     const forumID = discussionData.forumID;
@@ -146,7 +150,8 @@ export class ForumService {
       userID,
       'platform-forum',
       RoomType.DISCUSSION_FORUM,
-      storageAggregator
+      storageAggregator,
+      actorContext
     );
     this.logger.verbose?.(
       `[Discussion] Room created (${displayName}) and membership replicated from Updates (${forumID})`,
@@ -377,6 +382,10 @@ export class ForumService {
       await this.discussionService.removeDiscussion({
         ID: discussion.id,
       });
+    }
+
+    if (forum.authorization) {
+      await this.authorizationPolicyService.delete(forum.authorization);
     }
 
     await this.forumRepository.remove(forum as Forum);

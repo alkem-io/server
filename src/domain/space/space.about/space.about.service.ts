@@ -7,6 +7,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -112,7 +113,8 @@ export class SpaceAboutService {
   public async materializeSpaceAboutContent(
     spaceAbout: ISpaceAbout,
     spaceAboutData: CreateSpaceAboutInput,
-    rollback: () => Promise<unknown>
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
   ): Promise<ISpaceAbout> {
     if (!spaceAbout.profile) {
       throw new RelationshipNotFoundException(
@@ -124,10 +126,17 @@ export class SpaceAboutService {
     spaceAbout.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         spaceAbout.profile,
-        spaceAboutData.profileData.visuals,
+        spaceAboutData.profileData,
         [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD],
-        rollback
+        rollback,
+        actorContext
       );
+    await this.materializeWhoAndWhy(
+      spaceAbout,
+      spaceAboutData,
+      rollback,
+      actorContext
+    );
     // createSpaceAbout always populates `spaceAbout.guidelines` (auto-creating
     // an empty one if `spaceAboutData.guidelines` wasn't supplied), so a
     // missing relation here is a programmer error or a bad caller load —
@@ -142,7 +151,8 @@ export class SpaceAboutService {
     try {
       await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
         spaceAbout.guidelines,
-        spaceAboutData.guidelines
+        spaceAboutData.guidelines,
+        actorContext
       );
     } catch (error) {
       // Same convention as the OrRollback helper: rollback-failure is
@@ -165,6 +175,52 @@ export class SpaceAboutService {
       throw error;
     }
     return spaceAbout;
+  }
+
+  /**
+   * Re-homes the file URLs in `who` and `why` into the about profile's bucket.
+   * They are markdown on the about itself, so the profile pass never sees them.
+   */
+  private async materializeWhoAndWhy(
+    spaceAbout: ISpaceAbout,
+    spaceAboutData: CreateSpaceAboutInput,
+    rollback: () => Promise<unknown>,
+    actorContext?: ActorContext
+  ): Promise<void> {
+    try {
+      const [who, why] = await Promise.all(
+        [spaceAbout.who, spaceAbout.why].map(markdown =>
+          this.profileService.materializeMarkdownIntoProfileBucket(
+            markdown ?? '',
+            spaceAbout.profile,
+            spaceAboutData.profileData,
+            actorContext
+          )
+        )
+      );
+      if (who === (spaceAbout.who ?? '') && why === (spaceAbout.why ?? '')) {
+        return;
+      }
+      spaceAbout.who = who;
+      spaceAbout.why = why;
+      await this.spaceAboutRepository.update(spaceAbout.id, { who, why });
+    } catch (error) {
+      await rollback().catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after SpaceAbout who/why materialization failure also failed',
+            spaceAboutId: spaceAbout.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.SPACES
+        );
+      });
+      throw error;
+    }
   }
 
   async getSpaceAboutOrFail(

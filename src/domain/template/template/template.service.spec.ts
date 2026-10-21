@@ -8,6 +8,7 @@ import { CalloutContributionDefaultSourceService } from '@domain/collaboration/c
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
@@ -29,6 +30,7 @@ import { TemplateService } from './template.service';
 
 describe('TemplateService', () => {
   let service: TemplateService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let templateRepository: Mocked<Repository<Template>>;
   let entityManager: Mocked<EntityManager>;
   let profileService: Mocked<ProfileService>;
@@ -70,6 +72,7 @@ describe('TemplateService', () => {
       .compile();
 
     service = module.get(TemplateService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     templateRepository = module.get(getRepositoryToken(Template)) as Mocked<
       Repository<Template>
     >;
@@ -357,7 +360,8 @@ describe('TemplateService', () => {
       expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'co-1' }),
         calloutData,
-        expect.any(Function)
+        expect.any(Function),
+        expect.anything()
       );
     });
 
@@ -387,7 +391,8 @@ describe('TemplateService', () => {
       ).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'tcs-1' }),
         contentSpaceData,
-        expect.any(Function)
+        expect.any(Function),
+        expect.anything()
       );
     });
 
@@ -775,6 +780,17 @@ describe('TemplateService', () => {
 
       expect(result.id).toBe('tpl-1');
     });
+
+    it('should delete the authorization policy', async () => {
+      const template = makeTemplate(TemplateType.POST);
+      templateRepository.find.mockResolvedValue([template]);
+
+      await service.delete({ id: 'tpl-1' } as ITemplate);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        template.authorization
+      );
+    });
   });
 
   describe('updateTemplateContentSpaceFromSpace', () => {
@@ -831,6 +847,9 @@ describe('TemplateService', () => {
       inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
         [{ framing: { type: 'form' } }, { framing: { type: 'poll' } }] as any
       );
+      inputCreatorService.withoutSourceBuckets.mockImplementation(
+        input => input
+      );
       calloutsSetService.addCallouts.mockResolvedValue([]);
       templateContentSpaceService.save.mockImplementation(
         async (entity: any) => entity
@@ -860,6 +879,114 @@ describe('TemplateService', () => {
       const inputs = calloutsSetService.addCallouts.mock.lastCall?.[1] as any[];
       expect(inputs).toHaveLength(2);
       expect(inputs.every(input => input.isTemplate === true)).toBe(true);
+    });
+
+    const updateFromSpace = async () => {
+      const innovationFlowService = (service as any)
+        .innovationFlowService as Mocked<InnovationFlowService>;
+      const inputCreatorService = (service as any)
+        .inputCreatorService as Mocked<InputCreatorService>;
+      innovationFlowService.updateInnovationFlowStates.mockResolvedValue({
+        id: 'flow-1',
+        states: [],
+      } as any);
+      inputCreatorService.buildCreateCalloutInputsFromCallouts.mockResolvedValue(
+        [{ nameID: 'first' }, { nameID: 'second' }] as any
+      );
+      inputCreatorService.buildCreateSpaceAboutInputFromSpaceAbout.mockReturnValue(
+        { profileData: { displayName: 'About' } } as any
+      );
+      inputCreatorService.withoutSourceBuckets.mockImplementation(
+        input => input
+      );
+      calloutsSetService.addCallouts.mockResolvedValue([
+        { id: 'c-2', nameID: 'second' },
+        { id: 'c-1', nameID: 'first' },
+      ] as any);
+
+      return (service as any).updateTemplateContentSpaceFromSpace(
+        {
+          id: 'space-1',
+          about: { id: 'about-src' },
+          collaboration: {
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [{ id: 'c' }] },
+          },
+        },
+        {
+          id: 'tcs-1',
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: { states: [] },
+            calloutsSet: { callouts: [] },
+          },
+        },
+        true,
+        actorContextData.actorContext,
+        'user-1'
+      );
+    };
+
+    it('copies the files of the new about and callouts as the saver, after the save', async () => {
+      const order: string[] = [];
+      templateContentSpaceService.save.mockImplementation(async (e: any) => {
+        order.push('save');
+        return e;
+      });
+      templateContentSpaceService.materializeAboutContent.mockImplementation(
+        async () => {
+          order.push('about');
+        }
+      );
+
+      await updateFromSpace();
+
+      expect(
+        templateContentSpaceService.materializeAboutContent
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'tcs-1' }),
+        { profileData: { displayName: 'About' } },
+        expect.any(Function),
+        actorContextData.actorContext
+      );
+      // Each callout is paired with its own input, whatever the order.
+      expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
+        { id: 'c-1', nameID: 'first' },
+        expect.objectContaining({ nameID: 'first' }),
+        expect.any(Function),
+        actorContextData.actorContext
+      );
+      expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
+        { id: 'c-2', nameID: 'second' },
+        expect.objectContaining({ nameID: 'second' }),
+        expect.any(Function),
+        actorContextData.actorContext
+      );
+      expect(
+        (service as any).innovationFlowService.copyStateDescriptionFiles
+      ).toHaveBeenCalledWith('flow-1', actorContextData.actorContext);
+      expect(order[0]).toBe('save');
+    });
+
+    it('keeps the update when a copy fails, leaving those references as written', async () => {
+      templateContentSpaceService.materializeAboutContent.mockRejectedValue(
+        new Error('file-service down')
+      );
+      templateContentSpaceService.save.mockImplementation(
+        async (entity: any) => entity
+      );
+
+      const result = await updateFromSpace();
+
+      expect(result).toEqual(expect.objectContaining({ id: 'tcs-1' }));
+      // The other parts are still copied.
+      expect(calloutService.materializeCalloutContent).toHaveBeenCalledTimes(2);
+      expect(
+        (service as any).innovationFlowService.copyStateDescriptionFiles
+      ).toHaveBeenCalledWith('flow-1', actorContextData.actorContext);
+      expect(
+        templateContentSpaceService.deleteTemplateContentSpaceOrFail
+      ).not.toHaveBeenCalled();
     });
   });
 

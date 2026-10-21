@@ -5,6 +5,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -20,6 +21,7 @@ import { TemplateDefaultService } from './template.default.service';
 
 describe('TemplateDefaultService', () => {
   let service: TemplateDefaultService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let templateDefaultRepository: Mocked<Repository<TemplateDefault>>;
   let templateService: Mocked<TemplateService>;
 
@@ -38,6 +40,7 @@ describe('TemplateDefaultService', () => {
       .compile();
 
     service = module.get(TemplateDefaultService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     templateDefaultRepository = module.get(
       getRepositoryToken(TemplateDefault)
     ) as Mocked<Repository<TemplateDefault>>;
@@ -199,6 +202,22 @@ describe('TemplateDefaultService', () => {
       expect(result).toBe(true);
       expect(templateDefaultRepository.remove).toHaveBeenCalledWith(
         templateDefault
+      );
+    });
+
+    it('should delete the authorization policy', async () => {
+      const templateDefault = {
+        id: 'td-1',
+        authorization: { id: 'auth-1' },
+      } as ITemplateDefault;
+      templateDefaultRepository.remove.mockResolvedValue(
+        templateDefault as TemplateDefault
+      );
+
+      await service.removeTemplateDefault(templateDefault);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        templateDefault.authorization
       );
     });
   });

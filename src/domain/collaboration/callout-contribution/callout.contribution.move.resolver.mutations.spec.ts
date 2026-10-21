@@ -83,7 +83,6 @@ describe('CalloutContributionMoveResolverMutations', () => {
       ).toHaveBeenCalledWith(
         platformActorContext,
         expect.any(Array),
-        expect.any(Array),
         expect.objectContaining({ outcome: 'moved' })
       );
     });
@@ -160,7 +159,6 @@ describe('CalloutContributionMoveResolverMutations', () => {
         platformResourceAuditService.recordEventForActor
       ).toHaveBeenCalledWith(
         actorContext,
-        expect.any(Array),
         expect.any(Array),
         expect.objectContaining({ outcome: 'deleted' })
       );

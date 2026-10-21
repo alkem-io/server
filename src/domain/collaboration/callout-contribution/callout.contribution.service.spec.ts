@@ -16,6 +16,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { LinkService } from '../link/link.service';
@@ -25,6 +26,7 @@ import { CalloutContributionService } from './callout.contribution.service';
 
 describe('CalloutContributionService', () => {
   let service: CalloutContributionService;
+  let logger: { error: ReturnType<typeof vi.fn> };
   let repository: Repository<CalloutContribution>;
   let postService: PostService;
   let whiteboardService: WhiteboardService;
@@ -58,6 +60,7 @@ describe('CalloutContributionService', () => {
     repository = module.get(getRepositoryToken(CalloutContribution));
     postService = module.get(PostService);
     whiteboardService = module.get(WhiteboardService);
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
     linkService = module.get(LinkService);
     memoService = module.get(MemoService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
@@ -98,7 +101,8 @@ describe('CalloutContributionService', () => {
         contributionData.post,
         storageAggregator,
         userID,
-        undefined
+        undefined,
+        actorContextData.actorContext
       );
     });
 
@@ -318,6 +322,71 @@ describe('CalloutContributionService', () => {
       );
 
       expect(results).toHaveLength(2);
+    });
+
+    it('deletes the children of contributions already created when a later one throws (server#6614)', async () => {
+      vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue({
+        id: 'wb-1',
+      } as any);
+      vi.mocked(whiteboardService.deleteWhiteboard).mockResolvedValue(
+        {} as any
+      );
+
+      await expect(
+        service.createCalloutContributions(
+          [
+            {
+              type: CalloutContributionType.WHITEBOARD,
+              whiteboard: { profile: { displayName: 'Board' } },
+            },
+            // Not in allowedTypes: rejected after the whiteboard persisted.
+            {
+              type: CalloutContributionType.POST,
+              post: { profileData: { displayName: 'Post' } },
+            },
+          ] as any[],
+          { id: 'agg-1' } as any,
+          { allowedTypes: [CalloutContributionType.WHITEBOARD] } as any,
+          actorContextData.actorContext,
+          'user-1'
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
+    });
+
+    it('logs a failed cleanup and still surfaces the original error', async () => {
+      vi.mocked(whiteboardService.createWhiteboard).mockResolvedValue({
+        id: 'wb-1',
+      } as any);
+      vi.mocked(whiteboardService.deleteWhiteboard).mockRejectedValue(
+        new Error('broker unavailable')
+      );
+
+      await expect(
+        service.createCalloutContributions(
+          [
+            {
+              type: CalloutContributionType.WHITEBOARD,
+              whiteboard: { profile: { displayName: 'Board' } },
+            },
+            {
+              type: CalloutContributionType.POST,
+              post: { profileData: { displayName: 'Post' } },
+            },
+          ] as any[],
+          { id: 'agg-1' } as any,
+          { allowedTypes: [CalloutContributionType.WHITEBOARD] } as any,
+          actorContextData.actorContext,
+          'user-1'
+        )
+      ).rejects.toThrow(ValidationException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ whiteboardId: 'wb-1' }),
+        expect.any(String),
+        expect.any(String)
+      );
     });
   });
 
@@ -830,6 +899,32 @@ describe('CalloutContributionService', () => {
 
       expect(result.classification).toBeUndefined();
       expect(classificationService.createClassification).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deletePersistedChildrenOfUnsavedContribution', () => {
+    it('deletes the self-persisted whiteboard and memo of an unsaved contribution (server#6614)', async () => {
+      vi.mocked(whiteboardService.deleteWhiteboard).mockResolvedValue(
+        {} as any
+      );
+      vi.mocked(memoService.deleteMemo).mockResolvedValue({} as any);
+
+      await service.deletePersistedChildrenOfUnsavedContribution({
+        whiteboard: { id: 'wb-1' },
+        memo: { id: 'memo-1' },
+      } as any);
+
+      expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
+      expect(memoService.deleteMemo).toHaveBeenCalledWith('memo-1');
+    });
+
+    it('deletes nothing for a post contribution, which is still unsaved', async () => {
+      await service.deletePersistedChildrenOfUnsavedContribution({
+        post: { id: undefined },
+      } as any);
+
+      expect(whiteboardService.deleteWhiteboard).not.toHaveBeenCalled();
+      expect(memoService.deleteMemo).not.toHaveBeenCalled();
     });
   });
 });

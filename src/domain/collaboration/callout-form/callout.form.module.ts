@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { CalloutFormService } from './callout.form.service';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    PlatformRolesAccessModule,
     RoleSetModule,
     NotificationAdapterModule,
     ContributionReporterModule,

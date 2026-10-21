@@ -56,3 +56,56 @@ describe('MessageResolverFields', () => {
     });
   });
 });
+
+describe('reference-only attachment projection', () => {
+  it('projects native media metadata without a file ID, URL or storage lookup', async () => {
+    const resolver = new MessageResolverFields(undefined as any);
+    const attachment = {
+      media_id: 'native-ref',
+      display_name: 'résumé.png',
+      mime_type: 'image/png',
+      size: 7,
+      width: 2,
+      height: 3,
+    };
+    Object.defineProperty(attachment, 'document_id', {
+      get: () => {
+        throw new Error('legacy hint must not be read');
+      },
+    });
+    const result = await resolver.attachments({
+      rawAttachments: [attachment],
+    } as any);
+    expect(result).toEqual([
+      {
+        externalReference: 'native-ref',
+        displayName: 'résumé.png',
+        mimeType: 'image/png',
+        size: 7,
+        width: 2,
+        height: 3,
+      },
+    ]);
+    expect(result[0]).not.toHaveProperty('id');
+    expect(result[0]).not.toHaveProperty('url');
+  });
+  it('keeps missing local references unavailable without querying storage', async () => {
+    const resolver = new MessageResolverFields(undefined as any);
+    expect(
+      await resolver.attachments({
+        rawAttachments: [
+          { display_name: 'remote.pdf', mime_type: 'application/pdf', size: 2 },
+        ],
+      } as any)
+    ).toEqual([
+      {
+        externalReference: undefined,
+        displayName: 'remote.pdf',
+        mimeType: 'application/pdf',
+        size: 2,
+        width: undefined,
+        height: undefined,
+      },
+    ]);
+  });
+});

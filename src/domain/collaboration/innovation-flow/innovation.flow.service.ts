@@ -9,7 +9,10 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { CreateProfileInput } from '@domain/common/profile/dto';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -47,6 +50,7 @@ import { IInnovationFlow } from './innovation.flow.interface';
 @Injectable()
 export class InnovationFlowService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private tagsetService: TagsetService,
     private tagsetTemplateService: TagsetTemplateService,
@@ -60,7 +64,8 @@ export class InnovationFlowService {
   async createInnovationFlow(
     innovationFlowData: CreateInnovationFlowInput,
     storageAggregator: IStorageAggregator,
-    flowTagsetTemplate: ITagsetTemplate
+    flowTagsetTemplate: ITagsetTemplate,
+    actorContext?: ActorContext
   ): Promise<IInnovationFlow> {
     const innovationFlow: IInnovationFlow = InnovationFlow.create({
       settings: innovationFlowData.settings,
@@ -121,11 +126,92 @@ export class InnovationFlowService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        innovationFlowData.profile?.visuals,
+        innovationFlowData.profile,
         [VisualType.CARD],
-        () => this.deleteInnovationFlow(saved.id)
+        () => this.deleteInnovationFlow(saved.id),
+        actorContext
       );
+    await this.materializeStateDescriptions(
+      saved,
+      innovationFlowData,
+      actorContext
+    );
     return saved;
+  }
+
+  /**
+   * Re-homes the file URLs in each state's description into the flow
+   * profile's bucket; states have no profile of their own.
+   */
+  private async materializeStateDescriptions(
+    innovationFlow: IInnovationFlow,
+    innovationFlowData: CreateInnovationFlowInput,
+    actorContext?: ActorContext
+  ): Promise<void> {
+    try {
+      await this.rehomeStateDescriptions(
+        innovationFlow,
+        innovationFlowData.profile,
+        actorContext
+      );
+    } catch (error) {
+      await this.deleteInnovationFlow(innovationFlow.id).catch(
+        rollbackError => {
+          this.logger.error?.(
+            {
+              message:
+                'Rollback after InnovationFlow state materialization failure also failed',
+              innovationFlowId: innovationFlow.id,
+              rollbackError: String(rollbackError),
+            },
+            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '',
+            LogContext.INNOVATION_FLOW
+          );
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * The same re-homing for states replaced on an existing flow, as when a
+   * template is updated from a space. No rollback: the caller decides what a
+   * failure means.
+   */
+  public async copyStateDescriptionFiles(
+    innovationFlowID: string,
+    actorContext: ActorContext
+  ): Promise<void> {
+    const innovationFlow = await this.getInnovationFlowOrFail(
+      innovationFlowID,
+      {
+        relations: {
+          states: true,
+          profile: { storageBucket: { documents: true } },
+        },
+      }
+    );
+    await this.rehomeStateDescriptions(innovationFlow, undefined, actorContext);
+  }
+
+  private async rehomeStateDescriptions(
+    innovationFlow: IInnovationFlow,
+    profileData: CreateProfileInput | undefined,
+    actorContext?: ActorContext
+  ): Promise<void> {
+    for (const state of innovationFlow.states ?? []) {
+      const description =
+        await this.profileService.materializeMarkdownIntoProfileBucket(
+          state.description ?? '',
+          innovationFlow.profile,
+          profileData,
+          actorContext
+        );
+      if (description !== (state.description ?? '')) {
+        state.description = description;
+        await this.innovationFlowStateService.save(state);
+      }
+    }
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {
@@ -794,6 +880,11 @@ export class InnovationFlowService {
     await this.profileService.deleteProfile(innovationFlow.profile.id);
     for (const state of innovationFlow.states) {
       await this.innovationFlowStateService.delete(state);
+    }
+    if (innovationFlow.authorization) {
+      await this.authorizationPolicyService.delete(
+        innovationFlow.authorization
+      );
     }
 
     const result = await this.innovationFlowRepository.remove(

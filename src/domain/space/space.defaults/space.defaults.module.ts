@@ -1,3 +1,4 @@
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
@@ -8,6 +9,7 @@ import { SpaceDefaultsService } from './space.defaults.service';
 
 @Module({
   imports: [
+    AuthorizationModule,
     TemplateModule,
     TemplatesManagerModule,
     InputCreatorModule,

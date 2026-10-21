@@ -32,13 +32,6 @@ import { SpaceLicenseService } from './space.service.license';
 @InstrumentResolver()
 @Resolver()
 export class SpaceResolverMutations {
-  // 027-platform-role-redesign (T078, Slice B): corr-server-6's
-  // `legacySpaceNameIdRenamePolicy` is gone. It existed to stop T048's
-  // re-anchor handing entity renames to platform-license-manager while
-  // `nameID` still rode the platform-settings mutation. `nameID` no longer
-  // rides it — the protected section of `updateSpace` owns the rename now,
-  // on a privilege NO global role holds — so the pin has nothing left to pin.
-
   constructor(
     private contributionReporter: ContributionReporterService,
     private activityAdapter: ActivityAdapter,
@@ -144,7 +137,6 @@ export class SpaceResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [],
         {
           resourceKind: 'space',
           resourceId: deletedSpaceId,
@@ -236,7 +228,6 @@ export class SpaceResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
-        [],
         {
           resourceKind: 'space-visibility',
           resourceId: space.id,

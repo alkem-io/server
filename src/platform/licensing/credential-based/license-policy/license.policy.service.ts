@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine';
@@ -14,6 +15,7 @@ import { ILicensePolicy } from './license.policy.interface';
 @Injectable()
 export class LicensePolicyService {
   constructor(
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
     @InjectRepository(LicensePolicy)
     private licensePolicyRepository: Repository<LicensePolicy>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -122,6 +124,9 @@ export class LicensePolicyService {
   }
 
   async delete(licensePolicy: ILicensePolicy): Promise<ILicensePolicy> {
+    if (licensePolicy.authorization) {
+      await this.authorizationPolicyService.delete(licensePolicy.authorization);
+    }
     return await this.licensePolicyRepository.remove(
       licensePolicy as LicensePolicy
     );

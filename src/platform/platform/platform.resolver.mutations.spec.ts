@@ -256,7 +256,6 @@ describe('PlatformResolverMutations', () => {
       expect(configurationAudit.recordChangeForActor).toHaveBeenCalledWith(
         mockActorContext,
         expect.any(Array),
-        expect.any(Array),
         expect.objectContaining({
           setting: 'platformSettings',
           outcome: 'success',
@@ -309,7 +308,6 @@ describe('PlatformResolverMutations', () => {
 
       expect(configurationAudit.recordChangeForActor).toHaveBeenCalledWith(
         mockActorContext,
-        expect.any(Array),
         expect.any(Array),
         expect.objectContaining({
           setting,

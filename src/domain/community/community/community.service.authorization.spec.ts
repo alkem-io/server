@@ -714,5 +714,112 @@ describe('CommunityAuthorizationService', () => {
 
       expect(roleSetService.getCredentialForRole).toHaveBeenCalled();
     });
+
+    // server#6623 (ruling 2026-10-08): users enter an L0 Space by invitation,
+    // application or join only — nobody gets direct user add there. On L1/L2
+    // it stays with subspace/ancestor admins plus flag-on Platform Support.
+    describe('server#6623 — ROLESET_ENTRY_ROLE_ASSIGN is subspace-only', () => {
+      const adminCredential = { type: 'space-admin', resourceID: 'space-id' };
+      const supportCredential = {
+        type: AuthorizationCredential.PLATFORM_SUPPORT,
+        resourceID: '',
+      };
+      const assignRulesFor = async (
+        policy: CommunityMembershipPolicy,
+        isSubspace: boolean
+      ) => {
+        const authorization = { credentialRules: [] as any[] };
+        communityService.getCommunityOrFail.mockResolvedValue({
+          id: 'comm-1',
+          communication: { id: 'comms-1', updates: { id: 'upd-1' } },
+          roleSet: { id: 'rs-1', type: RoleSetType.SPACE },
+          groups: [],
+          authorization,
+        });
+        authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+          authorization
+        );
+        // Real rule construction, so any restored rule surfaces with its grants.
+        authorizationPolicyService.createCredentialRule.mockImplementation(
+          AuthorizationPolicyService.prototype.createCredentialRule
+        );
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+          AuthorizationPolicyService.prototype
+            .createCredentialRuleUsingTypesOnly
+        );
+        authorizationPolicyService.appendCredentialAuthorizationRules.mockImplementation(
+          (auth: any, rules: any[]) => {
+            auth.credentialRules.push(...rules);
+            return auth;
+          }
+        );
+        communicationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+          []
+        );
+        roleSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+          []
+        );
+        // Space admins and flag-on Platform Support are both present, so a
+        // rule built from them would show up on L0 too.
+        roleSetService.getCredentialsForRoleWithParents.mockImplementation(
+          async () => [{ ...adminCredential }]
+        );
+        roleSetService.getCredentialForRole.mockResolvedValue({
+          type: 'space-member',
+          resourceID: 'space-id',
+        });
+        roleSetService.getDirectParentCredentialForRole.mockResolvedValue({
+          type: 'space-member',
+          resourceID: 'parent-space-id',
+        });
+        platformRolesAccessService.getCredentialsForRolesWithAccess.mockImplementation(
+          () => [{ ...supportCredential }]
+        );
+
+        await service.applyAuthorizationPolicy(
+          'comm-1',
+          {} as any,
+          { roles: [] } as any,
+          true,
+          {
+            privacy: { mode: 'public' },
+            membership: {
+              policy,
+              trustedOrganizations: ['org-1'],
+              allowSubspaceAdminsToInviteMembers: true,
+            },
+          } as any,
+          isSubspace
+        );
+
+        const roleSetRules =
+          roleSetAuthorizationService.applyAuthorizationPolicy.mock.calls[0][2];
+        return [...authorization.credentialRules, ...roleSetRules].filter(
+          (rule: any) =>
+            rule.grantedPrivileges.includes(
+              AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN
+            )
+        );
+      };
+
+      it.each([
+        CommunityMembershipPolicy.APPLICATIONS,
+        CommunityMembershipPolicy.OPEN,
+      ])('grants it to nobody on an L0 Space (%s)', async policy => {
+        expect(await assignRulesFor(policy, false)).toEqual([]);
+      });
+
+      it('grants it to space admins and flag-on Platform Support on a subspace', async () => {
+        const rules = await assignRulesFor(
+          CommunityMembershipPolicy.APPLICATIONS,
+          true
+        );
+        expect(rules).toHaveLength(1);
+        expect(rules[0].criterias).toEqual([
+          adminCredential,
+          supportCredential,
+        ]);
+      });
+    });
   });
 });

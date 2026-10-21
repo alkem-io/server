@@ -8,6 +8,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -40,7 +41,8 @@ export class InnovationHubService {
 
   public async createInnovationHub(
     createData: CreateInnovationHubInput,
-    account: IAccount
+    account: IAccount,
+    actorContext?: ActorContext
   ): Promise<IInnovationHub | never> {
     try {
       await this.validateCreateInput(createData);
@@ -116,9 +118,10 @@ export class InnovationHubService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        createData.profileData.visuals,
+        createData.profileData,
         [VisualType.BANNER_WIDE],
-        () => this.delete(saved.id)
+        () => this.delete(saved.id),
+        actorContext
       );
     return saved;
   }

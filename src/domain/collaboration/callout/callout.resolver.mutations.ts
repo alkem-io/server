@@ -64,6 +64,10 @@ import { ILink } from '../link/link.interface';
 import { CalloutContributionDefaultSourceService } from './callout.contribution.default.source.service';
 import { ICallout } from './callout.interface';
 import { getCalloutPublisherPlatformCredentialTypes } from './callout.platform.read.credentials';
+import {
+  assertAdminOnlyCollaborationFraming,
+  isRestrictedCollaborationFraming,
+} from './callout.restricted.framing.guard';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
@@ -177,7 +181,6 @@ export class CalloutResolverMutations {
       await this.platformResourceAuditService.recordEventForActor(
         actorContext,
         [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-        [],
         {
           resourceKind: 'callout',
           resourceId: deleteData.ID,
@@ -255,14 +258,15 @@ export class CalloutResolverMutations {
     }
     await this.contributionDefaultSourceService.prepare(defaults, actorContext);
 
-    // CONTRIBUTORS framing is admin-only and collaboration-only for LIVE callouts
-    // (FR-004a/FR-004f, R5). Mirror the create guard on the update path so the
-    // restriction can't be bypassed by converting an existing callout — or one
-    // living in a non-COLLABORATION callouts set (e.g. a VC knowledge base) — to
-    // CONTRIBUTORS via updateCallout, which otherwise only checks the generic
-    // UPDATE privilege. The resulting type is the incoming framing type when
-    // provided, else the stored one (so editing an existing CONTRIBUTORS callout
-    // is gated too).
+    // The restricted framings (CONTRIBUTORS, SPACES, FORM) are admin-only and
+    // collaboration-only for LIVE callouts (FR-004a/FR-004d/FR-004f, R5). The
+    // create and update paths share ONE guard so the restriction can't be
+    // bypassed by converting an existing callout — or one living in a
+    // non-COLLABORATION callouts set (e.g. a VC knowledge base) — via
+    // updateCallout, which otherwise only checks the generic UPDATE privilege
+    // that a callout's own creator already holds (SEC-084-01). The resulting
+    // type is the incoming framing type when provided, else the stored one (so
+    // editing an existing restricted callout is gated too).
     //
     // Template callouts (callout.isTemplate) are EXEMPT: a standalone callout
     // template has no calloutsSet at all (calloutsSet is null), and template
@@ -274,19 +278,13 @@ export class CalloutResolverMutations {
       calloutData.framing?.type ?? callout.framing?.type;
     if (
       !callout.isTemplate &&
-      resultingFramingType === CalloutFramingType.CONTRIBUTORS
+      isRestrictedCollaborationFraming(resultingFramingType)
     ) {
-      if (callout.calloutsSet?.type !== CalloutsSetType.COLLABORATION) {
-        throw new ValidationException(
-          'CONTRIBUTORS framing is only available on COLLABORATION callouts sets.',
-          LogContext.COLLABORATION
-        );
-      }
-      this.authorizationService.grantAccessOrFail(
+      assertAdminOnlyCollaborationFraming(
+        this.authorizationService,
         actorContext,
-        callout.calloutsSet.authorization,
-        AuthorizationPrivilege.CREATE,
-        `update CONTRIBUTORS callout (admin-only) on callouts Set: ${callout.calloutsSet.id}`
+        callout.calloutsSet,
+        resultingFramingType
       );
     }
 
@@ -533,7 +531,6 @@ export class CalloutResolverMutations {
     await this.platformResourceAuditService.recordEventForActor(
       actorContext,
       getCalloutPublisherPlatformCredentialTypes(),
-      [],
       {
         resourceKind: 'callout-publisher',
         resourceId: callout.id,
@@ -644,7 +641,8 @@ export class CalloutResolverMutations {
     await this.calloutContributionService.materializeCalloutContributionContent(
       contribution,
       contributionData,
-      () => this.calloutContributionService.delete(contribution.id)
+      () => this.calloutContributionService.delete(contribution.id),
+      actorContext
     );
 
     const destinationStorageBucket =
@@ -897,6 +895,7 @@ export class CalloutResolverMutations {
       await this.calloutService.importCollaboraDocumentToCallout(
         uploadData,
         { buffer, filename, mimetype },
+        actorContext,
         actorContext.actorID
       );
 

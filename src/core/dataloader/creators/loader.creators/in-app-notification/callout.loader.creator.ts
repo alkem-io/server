@@ -22,6 +22,7 @@ export class CalloutLoaderCreator implements DataLoaderCreator<ICallout> {
       name: this.constructor.name,
       loadedTypeName: Callout.name,
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 

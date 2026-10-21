@@ -1,5 +1,8 @@
 import { SYSTEM_ACTOR_IDS } from '@common/constants/system.actor.ids';
-import { DataLoaderCreator } from '@core/dataloader/creators/base';
+import {
+  DataLoaderCreator,
+  DataLoaderCreatorOptions,
+} from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { Organization } from '@domain/community/organization';
@@ -22,10 +25,12 @@ export class ContributorByAgentIdLoaderCreator
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<IActor | null> {
+  public create(
+    options?: DataLoaderCreatorOptions<IActor | null>
+  ): ILoader<IActor | null> {
     return new DataLoader<string, IActor | null>(
       async agentIds => this.batchLoadByAgentIds(agentIds),
-      { cache: true, name: 'ContributorByAgentIdLoader' }
+      { cache: options?.cache, name: 'ContributorByAgentIdLoader' }
     );
   }
 

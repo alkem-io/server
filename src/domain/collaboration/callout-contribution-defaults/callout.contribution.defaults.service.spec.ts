@@ -114,7 +114,8 @@ describe('CalloutContributionDefaultsService', () => {
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
       ).toHaveBeenCalledWith(
         'markdown with ![image](http://old-url)',
-        storageBucket
+        storageBucket,
+        { sourceStorageBucketID: undefined, actorContext: undefined }
       );
       expect(defaults.postDescription).toBe(reuploaded);
       expect(repository.save).toHaveBeenCalledWith(defaults);
@@ -141,11 +142,10 @@ describe('CalloutContributionDefaultsService', () => {
 
       expect(
         whiteboardService.materializeContentIntoBucket
-      ).toHaveBeenCalledWith(
-        'source-canonical',
-        storageBucket.id,
-        'source-bucket'
-      );
+      ).toHaveBeenCalledWith('source-canonical', storageBucket.id, {
+        sourceBucketId: 'source-bucket',
+        actorContext: undefined,
+      });
       expect(defaults.whiteboardContent).toBe('target-owned-canonical');
       expect(repository.save).toHaveBeenCalledWith(defaults);
     });

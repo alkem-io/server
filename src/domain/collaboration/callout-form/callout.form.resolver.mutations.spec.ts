@@ -478,7 +478,6 @@ describe('CalloutFormResolverMutations', () => {
         ).toHaveBeenCalledWith(
           platformActor,
           [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
-          [],
           {
             resourceKind: 'callout-form-response',
             resourceId: 'response-1',
@@ -498,7 +497,7 @@ describe('CalloutFormResolverMutations', () => {
           order.push('delete');
         });
         platformResourceAuditService.recordEventForActor.mockImplementation(
-          async (_a: unknown, _o: unknown, _l: unknown, input: any) => {
+          async (_a: unknown, _o: unknown, input: any) => {
             order.push('audit');
             expect(input.respondentUserId).toBeUndefined();
           }

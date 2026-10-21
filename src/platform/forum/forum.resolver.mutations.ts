@@ -88,7 +88,8 @@ export class ForumResolverMutations {
     let discussion = await this.forumService.createDiscussion(
       createData,
       actorContext.actorID,
-      actorContext.actorID
+      actorContext.actorID,
+      actorContext
     );
     discussion = await this.discussionService.save(discussion);
 

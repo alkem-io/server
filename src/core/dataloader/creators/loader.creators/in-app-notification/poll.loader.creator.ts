@@ -22,6 +22,7 @@ export class PollLoaderCreator implements DataLoaderCreator<IPoll> {
       name: this.constructor.name,
       loadedTypeName: Poll.name,
       resolveToNull: options?.resolveToNull,
+      cache: options?.cache,
     });
   }
 

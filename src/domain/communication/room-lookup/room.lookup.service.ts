@@ -1,9 +1,9 @@
+import { ExistingMediaRef } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IMessage } from '../message/message.interface';
@@ -98,14 +98,21 @@ export class RoomLookupService {
     }));
   }
 
+  async getRoom(
+    roomID: string,
+    options?: FindOneOptions<Room>
+  ): Promise<Room | null> {
+    return this.roomRepository.findOne({
+      where: { id: roomID },
+      ...options,
+    });
+  }
+
   async getRoomOrFail(
     roomID: string,
     options?: FindOneOptions<Room>
   ): Promise<Room> {
-    const room = await this.roomRepository.findOne({
-      where: { id: roomID },
-      ...options,
-    });
+    const room = await this.getRoom(roomID, options);
     if (!room)
       throw new EntityNotFoundException(
         `Not able to locate Room with the specified ID: ${roomID}`,
@@ -154,14 +161,14 @@ export class RoomLookupService {
     room: IRoom,
     actorID: string,
     messageData: RoomSendMessageInput,
-    attachments?: CommunicationMessageAttachment[]
+    existingMedia?: ExistingMediaRef
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
     return this.communicationAdapter.sendMessage({
       actorID: actorID,
       message: messageData.message,
       roomID: room.id,
-      attachments,
+      existingMedia,
     });
   }
 
@@ -169,7 +176,7 @@ export class RoomLookupService {
     room: IRoom,
     actorID: string,
     messageData: RoomSendMessageReplyInput,
-    attachments?: CommunicationMessageAttachment[]
+    existingMedia?: ExistingMediaRef
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
     return this.communicationAdapter.sendMessageReply({
@@ -177,7 +184,7 @@ export class RoomLookupService {
       message: messageData.message,
       roomID: room.id,
       threadID: messageData.threadID,
-      attachments,
+      existingMedia,
     });
   }
 }
