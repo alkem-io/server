@@ -117,7 +117,9 @@ export class AccountLookupService {
    * check would expose ACCOUNT/HIDDEN packs, and READ cannot express the
    * organization-associate tier. The library listing flag plays no role.
    * Innovation Hubs are listed for every scope, whatever their visibility.
-   * Virtual Contributors are returned as closed `{ id }` cards.
+   * Virtual Contributors are returned as closed `{ id }` cards and Innovation
+   * Hubs as closed `{ id, nameID }` cards: the full hub type reaches back to
+   * this account's unfiltered lists.
    */
   public async getHostedResourcesForViewer(
     accountID: string,
@@ -143,7 +145,10 @@ export class AccountLookupService {
         .filter(keep)
         .map(vc => ({ id: vc.id })),
       innovationPacks: (account.innovationPacks ?? []).filter(keep),
-      innovationHubs: account.innovationHubs ?? [],
+      innovationHubs: (account.innovationHubs ?? []).map(hub => ({
+        id: hub.id,
+        nameID: hub.nameID,
+      })),
     };
   }
 

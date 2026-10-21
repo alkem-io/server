@@ -1350,10 +1350,20 @@ type AccountDeletionBlockerTotal {
   total: Int!
 }
 
+"""A hosted Innovation Hub card: its identity, nameID and profile only."""
+type AccountHostedInnovationHub {
+  """The ID of the Innovation Hub."""
+  id: UUID!
+  """The nameID of the Innovation Hub."""
+  nameID: NameID!
+  """The profile of this Innovation Hub."""
+  profile: Profile!
+}
+
 """Resources hosted by an Account, as the current viewer may see them."""
 type AccountHostedResources {
   """The Innovation Hubs hosted by the Account."""
-  innovationHubs: [InnovationHub!]!
+  innovationHubs: [AccountHostedInnovationHub!]!
   """Innovation Packs of the Account that the current viewer may see."""
   innovationPacks: [InnovationPack!]!
   """Virtual Contributors of the Account that the current viewer may see."""

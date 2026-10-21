@@ -410,15 +410,40 @@ describe('AccountLookupService', () => {
       HostedResourcesViewerScope,
       SearchVisibility,
     ][])('Innovation Hub: scope %s × visibility %s → always listed', async (scope, visibility) => {
-      const innovationHub = hub('hub-1', visibility);
-      mockAccountWith({ innovationHubs: [innovationHub] });
+      mockAccountWith({ innovationHubs: [hub('hub-1', visibility)] });
 
       const result = await service.getHostedResourcesForViewer(
         'account-1',
         scope
       );
 
-      expect(result.innovationHubs).toEqual([innovationHub]);
+      expect(result.innovationHubs).toEqual([
+        { id: 'hub-1', nameID: 'hub-1-name' },
+      ]);
+    });
+
+    it('returns Innovation Hubs as closed { id, nameID } cards only — never the entity with its account', async () => {
+      mockAccountWith({
+        innovationHubs: [
+          {
+            ...hub('hub-1', HIDDEN),
+            account: { id: 'account-1', innovationPacks: [] },
+            profile: { id: 'profile-1' },
+          },
+        ],
+      });
+
+      const result = await service.getHostedResourcesForViewer(
+        'account-1',
+        'REGISTERED'
+      );
+
+      expect(result.innovationHubs).toEqual([
+        { id: 'hub-1', nameID: 'hub-1-name' },
+      ]);
+      for (const card of result.innovationHubs) {
+        expect(Object.keys(card).sort()).toEqual(['id', 'nameID']);
+      }
     });
 
     it('ignores the library listing flag: an ACCOUNT Virtual Contributor listed in the store stays hidden from a REGISTERED viewer', async () => {

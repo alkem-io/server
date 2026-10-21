@@ -1,5 +1,4 @@
-import { UUID } from '@domain/common/scalars';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { NameID, UUID } from '@domain/common/scalars';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -38,6 +37,37 @@ export class IAccountHostedVirtualContributor {
   id!: string;
 }
 
+/**
+ * Closed card projection of an Innovation Hub hosted by an account.
+ *
+ * It carries the hub's identity, its nameID and, through its single field
+ * resolver, its profile — nothing else, ever. Every Innovation Hub of the
+ * account is listed to every signed-in viewer, whatever its visibility, and
+ * the full `InnovationHub` type reaches back to the hosting account
+ * (`InnovationHub.account`), whose lists are not filtered by visibility.
+ * Returning the full type here would therefore hand any viewer the account's
+ * Account- and Hidden-visibility packs and Virtual Contributors inside the
+ * same response, undoing the filter of the sibling lists. Adding any further
+ * field to this card risks reopening that path.
+ */
+@ObjectType('AccountHostedInnovationHub', {
+  description:
+    'A hosted Innovation Hub card: its identity, nameID and profile only.',
+})
+export class IAccountHostedInnovationHub {
+  @Field(() => UUID, {
+    nullable: false,
+    description: 'The ID of the Innovation Hub.',
+  })
+  id!: string;
+
+  @Field(() => NameID, {
+    nullable: false,
+    description: 'The nameID of the Innovation Hub.',
+  })
+  nameID!: string;
+}
+
 @ObjectType('AccountHostedResources', {
   description:
     'Resources hosted by an Account, as the current viewer may see them.',
@@ -57,9 +87,9 @@ export class IAccountHostedResources {
   })
   innovationPacks!: IInnovationPack[];
 
-  @Field(() => [IInnovationHub], {
+  @Field(() => [IAccountHostedInnovationHub], {
     nullable: false,
     description: 'The Innovation Hubs hosted by the Account.',
   })
-  innovationHubs!: IInnovationHub[];
+  innovationHubs!: IAccountHostedInnovationHub[];
 }
