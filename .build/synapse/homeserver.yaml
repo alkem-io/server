@@ -350,6 +350,14 @@ rc_invites:
   per_user:
     per_second: 5
     burst_count: 5
+# Delayed events: call participants publish a membership state event with a
+# delayed "leave" that Synapse sends on their behalf if the client vanishes.
+# Each device restarts its delayed event every few seconds, so the management
+# burst must sit well above Synapse's default of 5.
+max_event_delay_duration: 24h
+rc_delayed_event_mgmt:
+  per_second: 1
+  burst_count: 20
 # Ratelimiting settings for incoming federation
 #
 # The rc_federation configuration is made up of the following settings:
