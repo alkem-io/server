@@ -22,6 +22,11 @@ import {
 } from '@domain/community/user/account-deletion/deleted.user.sentinel';
 import { IUser } from '@domain/community/user/user.interface';
 import { IAccount } from '@domain/space/account/account.interface';
+import {
+  HostedResourcesViewerScope,
+  IAccountHostedResources,
+} from '@domain/space/account/dto/account.hosted.resources';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -42,6 +47,7 @@ export class UserResolverFields {
     private userService: UserService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private kratosService: KratosService,
+    private accountLookupService: AccountLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -167,34 +173,81 @@ export class UserResolverFields {
     if (user.id === DELETED_USER_SENTINEL_ID) {
       return undefined;
     }
-    const accountVisible =
+    const account = await this.userService.getAccount(user);
+    return (await this.canSeeFullAccount(user, actorContext, account))
+      ? account
+      : undefined;
+  }
+
+  // The resources hosted by this User's account as the current viewer may see
+  // them: PUBLIC Virtual Contributors and Innovation Packs to every registered
+  // viewer, ACCOUNT and HIDDEN ones only to the user and to the viewers who
+  // can see the account itself, and every Innovation Hub. Null for anonymous
+  // viewers. Intended for single-profile reads only.
+  @ResolveField('hostedResources', () => IAccountHostedResources, {
+    nullable: true,
+    description:
+      'Viewer-scoped hosted resources, null if anonymous. Single-profile use.',
+  })
+  async hostedResources(
+    @Parent() user: User,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IAccountHostedResources | null> {
+    // No privilege decorator on purpose: every registered viewer must get an
+    // answer, scoped to what they may see. The enforcement point is the
+    // domain filter in AccountLookupService, driven by the scope computed
+    // here; anonymous viewers and the deleted-user sentinel get nothing.
+    if (user.id === DELETED_USER_SENTINEL_ID) {
+      return null;
+    }
+    if (!actorContext.actorID || actorContext.isAnonymous) {
+      return null;
+    }
+    const account = await this.userService.getAccount(user);
+    const scope: HostedResourcesViewerScope = (await this.canSeeFullAccount(
+      user,
+      actorContext,
+      account
+    ))
+      ? 'FULL'
+      : 'REGISTERED';
+    return this.accountLookupService.getHostedResourcesForViewer(
+      account.id,
+      scope
+    );
+  }
+
+  /**
+   * Whether the actor may see this user's account itself: the user, holders
+   * of READ_USER_PII on the user, or a platform role holding its own
+   * privilege on the account (see `accountOpenToPlatformRole`).
+   */
+  private async canSeeFullAccount(
+    user: User,
+    actorContext: ActorContext,
+    account: IAccount
+  ): Promise<boolean> {
+    return (
       user.id === actorContext.actorID || // user can see their own account
       (await this.isAccessGranted(
         user,
         actorContext,
         AuthorizationPrivilege.READ_USER_PII
-      ));
-    if (accountVisible) {
-      return await this.userService.getAccount(user);
-    }
-    // 027 R-F.3 (2026-09-18, server-C2-b advocate/skeptic debate): the
-    // Platform License Manager assigns plans to accounts (A12) but holds no
-    // READ_USER_PII, and Resource Admin accepts account-transfer targets
-    // (A9) but holds no READ_USER_PII either — this field, the only place
-    // the console learns the account id, was closed to both. Open the
-    // account when the actor holds ACCOUNT_LICENSE_MANAGE or
-    // TRANSFER_RESOURCE_ACCEPT on the account's OWN policy: each role's
-    // real privilege on the real resource. No PII crosses here; the
-    // email/phone fields keep their own gate. READ is deliberately
-    // excluded: accounts grant READ to anonymous and registered users, so
-    // checking it here would expose every account id to anyone.
-    const account = await this.userService.getAccount(user);
-    if (this.accountOpenToPlatformRole(actorContext, account)) {
-      return account;
-    }
-    return undefined;
+      )) ||
+      this.accountOpenToPlatformRole(actorContext, account)
+    );
   }
 
+  // The Platform License Manager assigns plans to accounts but holds no
+  // READ_USER_PII, and the Resource Admin accepts account-transfer targets
+  // but holds no READ_USER_PII either — the account field, the only place
+  // the console learns the account id, was closed to both. Open the account
+  // when the actor holds ACCOUNT_LICENSE_MANAGE or TRANSFER_RESOURCE_ACCEPT
+  // on the account's OWN policy: each role's real privilege on the real
+  // resource. No PII crosses here; the email/phone fields keep their own
+  // gate. READ is deliberately excluded: accounts grant READ to anonymous
+  // and registered users, so checking it here would expose every account id
+  // to anyone.
   private accountOpenToPlatformRole(
     actorContext: ActorContext,
     account: IAccount
