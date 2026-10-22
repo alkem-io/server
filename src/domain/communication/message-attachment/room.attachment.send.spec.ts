@@ -268,6 +268,18 @@ describe('which bucket right an attachment send requires', () => {
     ).resolves.toMatchObject({ mime_type: 'application/pdf' });
   });
 
+  it.each([
+    RoomType.UPDATES,
+    RoomType.CALENDAR_EVENT,
+    RoomType.DISCUSSION_FORUM,
+  ])('refuses an attachment in a %s room even when a bucket is returned', async type => {
+    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
+    await expect(
+      service.existingMedia(roomOf(type), member, reference as any)
+    ).rejects.toThrow(ValidationException);
+    expect(files.getReferenceMetadata).not.toHaveBeenCalled();
+  });
+
   it('rejects a room without a target bucket as invalid', async () => {
     attachments.getTargetBucketForRoom.mockResolvedValue(undefined);
     await expect(

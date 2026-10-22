@@ -7,7 +7,7 @@ import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomMessageAttachmentInput } from '../room/dto/room.dto.attachment';
 import { IRoom } from '../room/room.interface';
-import { isConversationRoom } from '../room/room.utils';
+import { isCommentRoom, isConversationRoom } from '../room/room.utils';
 import {
   MessageAttachmentService,
   sanitizeAttachmentDisplayName,
@@ -54,7 +54,7 @@ export class RoomAttachmentSendService {
     // Comment rooms accept JPEG, PNG, GIF and WebP images only, whatever else
     // the space bucket allows; conversations keep every type their bucket
     // allows.
-    if (!isConversationRoom(room) && !isCommentImageMimeType(metadata.mimeType))
+    if (isCommentRoom(room) && !isCommentImageMimeType(metadata.mimeType))
       this.invalid();
     return {
       media_id: input.externalReference,
@@ -70,6 +70,8 @@ export class RoomAttachmentSendService {
   }
 
   private async targetBucket(room: IRoom, actor: ActorContext) {
+    // Only conversation and comment rooms take attachments.
+    if (!isConversationRoom(room) && !isCommentRoom(room)) this.invalid();
     const bucket = await this.attachments.getTargetBucketForRoom(room);
     if (!bucket) this.invalid();
     if (isConversationRoom(room)) {
@@ -80,7 +82,7 @@ export class RoomAttachmentSendService {
         `send room attachment: ${room.id}`
       );
     }
-    // Other rooms: the caller's message gate already authorizes posting in
+    // Comment rooms: the caller's message gate already authorizes posting in
     // the room; the bucket only sets the accepted file types and size.
     return bucket;
   }

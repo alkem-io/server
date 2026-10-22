@@ -7,7 +7,10 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { isConversationRoom } from '@domain/communication/room/room.utils';
+import {
+  isCommentRoom,
+  isConversationRoom,
+} from '@domain/communication/room/room.utils';
 import { Document } from '@domain/storage/document/document.entity';
 import { IDocument } from '@domain/storage/document/document.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -243,7 +246,7 @@ export class MessageAttachmentService {
       return conversation?.storageAggregator?.directStorage ?? undefined;
     }
 
-    if (this.isCommentRoom(room)) {
+    if (isCommentRoom(room)) {
       return this.getCommentRoomParentBucket(room);
     }
 
@@ -315,9 +318,5 @@ export class MessageAttachmentService {
       }
       throw e;
     }
-  }
-
-  private isCommentRoom(room: IRoom): boolean {
-    return room.type === RoomType.CALLOUT || room.type === RoomType.POST;
   }
 }
