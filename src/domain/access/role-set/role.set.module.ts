@@ -24,7 +24,9 @@ import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.s
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
+import { OrganizationAdministrationAuditModule } from '@src/platform-admin/organization-administration-audit/organization.administration.audit.module';
 import { RoleModule } from '../role/role.module';
+import { OrgCommunityGateModule } from './org.community.gate.module';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { RoleSetActorRolesDataLoader } from './role.set.data.loaders.actor.roles';
 import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
@@ -70,6 +72,8 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     InAppNotificationModule,
     TypeOrmModule.forFeature([RoleSet]),
     RoleSetCacheModule,
+    OrgCommunityGateModule,
+    OrganizationAdministrationAuditModule,
   ],
   providers: [
     RoleSetService,

@@ -1,10 +1,17 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import {
+  contentFullAccessActor,
+  orgRoleSetPolicy,
+  realAuthorizationService,
+  supportActor,
+} from '@test/utils/org.community.policy.fixture';
 import { type Mock } from 'vitest';
 import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
 import { OrganizationResolverMutations } from './organization.resolver.mutations';
@@ -184,6 +191,51 @@ describe('OrganizationResolverMutations', () => {
         expect.any(String)
       );
       expect(result).toBe(resetOrg);
+    });
+  });
+
+  describe('Platform Support beyond the Community tab', () => {
+    // The real AuthorizationService over a policy carrying even the
+    // role-set Support rules: neither gives UPDATE on the organization.
+    let realResolver: OrganizationResolverMutations;
+    let orgService: { getOrganizationOrFail: Mock; updateOrganization: Mock };
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [
+          OrganizationResolverMutations,
+          {
+            provide: AuthorizationService,
+            useValue: realAuthorizationService(),
+          },
+          MockCacheManager,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+      realResolver = module.get(OrganizationResolverMutations);
+      orgService = module.get(OrganizationService) as any;
+      orgService.getOrganizationOrFail.mockResolvedValue({
+        id: 'org-1',
+        authorization: orgRoleSetPolicy(),
+      });
+    });
+
+    it.each([
+      ['Platform Support', supportActor()],
+      ['Content Full Access', contentFullAccessActor()],
+    ])('%s cannot update the organization profile or settings', async (_label, actor) => {
+      await expect(
+        realResolver.updateOrganization(actor, { ID: 'org-1' } as any)
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      await expect(
+        realResolver.updateOrganizationSettings(actor, {
+          organizationID: 'org-1',
+          settings: {},
+        } as any)
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      expect(orgService.updateOrganization).not.toHaveBeenCalled();
     });
   });
 });

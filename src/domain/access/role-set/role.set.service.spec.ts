@@ -12,6 +12,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
@@ -25,9 +26,18 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import {
+  contentFullAccessActor,
+  orgAdminActor,
+  orgRoleSetPolicy,
+  realAuthorizationService,
+  registeredActor,
+  supportActor,
+} from '@test/utils/org.community.policy.fixture';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
 import { Mock, type Mocked, vi } from 'vitest';
+import { OrgCommunityGateService } from './org.community.gate.service';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
@@ -3069,16 +3079,40 @@ describe('RoleSetService', () => {
       expect(grantedIds).not.toContain('root');
     });
 
-    describe('extra roles offered by someone who has since lost their standing', () => {
-      const orgRoleSet = (id: string): IRoleSet =>
+    describe('extra roles offered on an organization invitation — accept-time standing', () => {
+      // Standing is decided by the real Community-tab gate over a real-shaped
+      // stored policy: the organization's admins pass on the entity-admin
+      // path, Platform Support on its own path, anyone else is withheld.
+      let buildForActor: Mock;
+      let audit: { record: Mock; wasOfferedOnSupportPath: Mock };
+
+      const orgTarget = (): IRoleSet =>
         ({
-          id,
+          id: 'org-rs',
           type: RoleSetType.ORGANIZATION,
           entryRoleName: RoleName.ASSOCIATE,
+          authorization: orgRoleSetPolicy(),
         }) as unknown as IRoleSet;
 
-      const acceptWithOfferer = async (offererStillAdmin: boolean) => {
-        const target = orgRoleSet('org-rs');
+      const arrange = (
+        offerer: ActorContext | 'deleted',
+        assignImpl?: (role: RoleName) => void
+      ) => {
+        const target = orgTarget();
+        (service as any).orgCommunityGate = new OrgCommunityGateService(
+          realAuthorizationService()
+        );
+        buildForActor = vi.fn(async () =>
+          offerer === 'deleted'
+            ? Object.assign(new ActorContext(), { isAnonymous: true })
+            : offerer
+        );
+        (service as any).actorContextService = { buildForActor };
+        audit = {
+          record: vi.fn().mockResolvedValue(undefined),
+          wasOfferedOnSupportPath: vi.fn().mockResolvedValue(false),
+        };
+        (service as any).organizationAdministrationAuditService = audit;
         vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
           target,
         ]);
@@ -3089,168 +3123,182 @@ describe('RoleSetService', () => {
         vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
           undefined
         );
-        vi.spyOn(service, 'isInRole').mockResolvedValue(offererStillAdmin);
-        // No platform-admin standing either (the other arm of the re-check).
-        (actorService.hasValidCredential as Mock).mockResolvedValue(false);
         const assignSpy = vi
           .spyOn(service, 'assignActorToRole')
-          .mockResolvedValue('user-1');
+          .mockImplementation(async (_rs, role) => {
+            assignImpl?.(role);
+            return 'invitee-1';
+          });
         passthroughTransaction();
-
-        const result = await service.ensureMemberOfRoleSetAndAncestors(
-          target,
-          'user-1',
-          { actorID: 'user-1' } as any,
-          {
-            source: 'invitation',
-            extraRoles: [RoleName.OWNER],
-            extraRolesOfferedBy: 'offerer-1',
-          }
-        );
-        return { result, assignSpy };
+        return { target, assignSpy };
       };
 
-      it('withholds the offered role when the offerer no longer administers the organization', async () => {
+      const accept = (
+        target: IRoleSet,
+        extraRoles: RoleName[],
+        offeredBy: string | undefined,
+        inviteeID = 'invitee-1'
+      ) =>
+        service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          inviteeID,
+          { actorID: inviteeID } as any,
+          {
+            source: 'invitation',
+            extraRoles,
+            extraRolesOfferedBy: offeredBy,
+            invitationID: 'inv-1',
+          }
+        );
+
+      const extraRoleGranted = (assignSpy: Mock | any, role: RoleName) =>
+        assignSpy.mock.calls.some(
+          (call: unknown[]) => call[1] === role && call[4] === false
+        );
+
+      it('honours an admin-offered role and writes no row', async () => {
+        const { target, assignSpy } = arrange(orgAdminActor('offerer-1'));
+
+        const result = await accept(target, [RoleName.OWNER], 'offerer-1');
+
+        expect(result.extraRolesWithheld).toEqual([]);
+        expect(extraRoleGranted(assignSpy, RoleName.OWNER)).toBe(true);
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it('withholds an offer from a former admin and writes no row', async () => {
         // An invitation never expires and the accept path only checks the
         // invitee's own privilege, so without this an administrator who has
         // been offboarded still confers OWNER — and with it account-admin
         // standing — whenever the recipient chooses to accept.
-        const { result, assignSpy } = await acceptWithOfferer(false);
+        const { target, assignSpy } = arrange(registeredActor('offerer-1'));
+
+        const result = await accept(target, [RoleName.OWNER], 'offerer-1');
 
         expect(result.extraRolesWithheld).toEqual([RoleName.OWNER]);
-        // The entry role still goes through assignActorToRole; what must not
-        // happen is the elevated role being granted.
-        expect(assignSpy).not.toHaveBeenCalledWith(
-          expect.anything(),
-          RoleName.OWNER,
-          expect.anything(),
-          expect.anything(),
-          expect.anything()
-        );
+        expect(extraRoleGranted(assignSpy, RoleName.OWNER)).toBe(false);
+        expect(audit.record).not.toHaveBeenCalled();
       });
 
-      it('grants the offered role while the offerer still administers the organization', async () => {
-        const { result, assignSpy } = await acceptWithOfferer(true);
+      it('honours a Support-offered role and writes one honoured row (initiator = offerer, subject = invitee)', async () => {
+        const offerer = supportActor('support-1');
+        const { target, assignSpy } = arrange(offerer);
+
+        const result = await accept(target, [RoleName.ADMIN], 'support-1');
 
         expect(result.extraRolesWithheld).toEqual([]);
-        expect(assignSpy).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'org-rs' }),
-          RoleName.OWNER,
-          'user-1',
-          expect.anything(),
-          false
-        );
+        expect(extraRoleGranted(assignSpy, RoleName.ADMIN)).toBe(true);
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        expect(audit.record).toHaveBeenCalledWith({
+          actorContext: offerer,
+          roleSetId: 'org-rs',
+          action: 'extra_role_honoured',
+          targetUserId: 'invitee-1',
+          roles: [RoleName.ADMIN],
+          withheldRoles: [],
+          reason: undefined,
+          invitationId: 'inv-1',
+        });
       });
 
-      it('withholds the offered role when the offerer holds only a platform credential — no platform role confers organization standing (T076)', async () => {
-        // 027-platform-role-redesign (T076, Slice B): the legacy
-        // `{global-admin, global-support}` direct-assign rule on organization
-        // role sets is gone and no target role inherits it, so a platform
-        // credential alone is not standing to offer ADMIN / OWNER.
-        const target = orgRoleSet('org-rs');
-        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
-          target,
-        ]);
-        vi.spyOn(service, 'isMember').mockResolvedValue(false);
-        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
-          undefined
-        );
-        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
-          undefined
-        );
-        vi.spyOn(service, 'isInRole').mockResolvedValue(false);
-        (actorService.hasValidCredential as Mock).mockImplementation(
-          async (_actorID: string, criteria: { type: string }) =>
-            criteria.type === AuthorizationCredential.PLATFORM_SUPPORT
-        );
-        const assignSpy = vi
-          .spyOn(service, 'assignActorToRole')
-          .mockResolvedValue('user-1');
-        passthroughTransaction();
+      it('withholds a Support offer whose offerer lost the credential, and still records it', async () => {
+        const { target, assignSpy } = arrange(registeredActor('support-1'));
+        audit.wasOfferedOnSupportPath.mockResolvedValue(true);
 
-        const result = await service.ensureMemberOfRoleSetAndAncestors(
-          target,
-          'user-1',
-          { actorID: 'user-1' } as any,
-          {
-            source: 'invitation',
-            extraRoles: [RoleName.OWNER],
-            extraRolesOfferedBy: 'support-1',
+        const result = await accept(target, [RoleName.ADMIN], 'support-1');
+
+        expect(result.extraRolesWithheld).toEqual([RoleName.ADMIN]);
+        expect(extraRoleGranted(assignSpy, RoleName.ADMIN)).toBe(false);
+        expect(audit.wasOfferedOnSupportPath).toHaveBeenCalledWith(
+          'support-1',
+          'invitee-1',
+          'org-rs'
+        );
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        expect(audit.record.mock.calls[0][0]).toMatchObject({
+          action: 'extra_role_withheld',
+          withheldRoles: [RoleName.ADMIN],
+          reason: 'standing_lost',
+        });
+      });
+
+      it('withholds a Support-offered Owner the role limits reject, records it, and still grants the entry role', async () => {
+        const { target, assignSpy } = arrange(
+          supportActor('support-1'),
+          role => {
+            if (role === RoleName.OWNER) throw new Error('owner cap reached');
           }
         );
 
+        const result = await accept(target, [RoleName.OWNER], 'support-1');
+
         expect(result.extraRolesWithheld).toEqual([RoleName.OWNER]);
-        expect(assignSpy).not.toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'org-rs' }),
-          RoleName.OWNER,
-          'user-1',
-          expect.anything(),
-          false
-        );
+        expect(
+          assignSpy.mock.calls.some(call => call[1] === RoleName.ASSOCIATE)
+        ).toBe(true);
+        expect(audit.record).toHaveBeenCalledTimes(1);
+        expect(audit.record.mock.calls[0][0]).toMatchObject({
+          action: 'extra_role_withheld',
+          withheldRoles: [RoleName.OWNER],
+          reason: 'role_limits',
+        });
       });
 
-      it('withholds the offered role when the offerer is gone entirely', async () => {
-        const target = orgRoleSet('org-rs');
-        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
-          target,
-        ]);
-        vi.spyOn(service, 'isMember').mockResolvedValue(false);
-        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
-          undefined
-        );
-        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
-          undefined
-        );
-        const assignSpy = vi
-          .spyOn(service, 'assignActorToRole')
-          .mockResolvedValue('user-1');
-        passthroughTransaction();
+      it('withholds a Support offer to the offerer themself (self_offer), and records it', async () => {
+        const { target, assignSpy } = arrange(supportActor('support-1'));
 
-        const result = await service.ensureMemberOfRoleSetAndAncestors(
+        const result = await accept(
           target,
-          'user-1',
-          { actorID: 'user-1' } as any,
-          { source: 'invitation', extraRoles: [RoleName.ADMIN] }
+          [RoleName.OWNER],
+          'support-1',
+          'support-1'
         );
+
+        expect(result.extraRolesWithheld).toEqual([RoleName.OWNER]);
+        expect(extraRoleGranted(assignSpy, RoleName.OWNER)).toBe(false);
+        expect(audit.record.mock.calls[0][0]).toMatchObject({
+          action: 'extra_role_withheld',
+          reason: 'self_offer',
+        });
+      });
+
+      it('withholds when nobody vouches for the offer any more (no offerer, or a deleted account)', async () => {
+        const first = arrange(orgAdminActor('offerer-1'));
+        const noOfferer = await accept(
+          first.target,
+          [RoleName.ADMIN],
+          undefined
+        );
+        expect(noOfferer.extraRolesWithheld).toEqual([RoleName.ADMIN]);
+        expect(buildForActor).not.toHaveBeenCalled();
+
+        const second = arrange('deleted');
+        const deleted = await accept(second.target, [RoleName.ADMIN], 'gone-1');
+        expect(deleted.extraRolesWithheld).toEqual([RoleName.ADMIN]);
+        expect(extraRoleGranted(second.assignSpy, RoleName.ADMIN)).toBe(false);
+        expect(audit.record).not.toHaveBeenCalled();
+      });
+
+      it('gives Content Full Access no standing to offer', async () => {
+        const { target } = arrange(contentFullAccessActor('cfa-1'));
+
+        const result = await accept(target, [RoleName.ADMIN], 'cfa-1');
 
         expect(result.extraRolesWithheld).toEqual([RoleName.ADMIN]);
-        expect(assignSpy).not.toHaveBeenCalledWith(
-          expect.anything(),
-          RoleName.ADMIN,
-          expect.anything(),
-          expect.anything(),
-          expect.anything()
-        );
       });
 
       it('leaves a SPACE role set alone — the re-check is organization-scoped', async () => {
+        arrange(supportActor('support-1'));
         const target = spaceRoleSet('space-rs');
         vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
           target,
         ]);
-        vi.spyOn(service, 'isMember').mockResolvedValue(false);
-        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
-          undefined
-        );
-        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
-          undefined
-        );
-        const isInRoleSpy = vi.spyOn(service, 'isInRole');
-        const assignSpy = vi
-          .spyOn(service, 'assignActorToRole')
-          .mockResolvedValue('user-1');
-        passthroughTransaction();
 
-        const result = await service.ensureMemberOfRoleSetAndAncestors(
-          target,
-          'user-1',
-          { actorID: 'user-1' } as any,
-          { source: 'invitation', extraRoles: [RoleName.LEAD] }
-        );
+        const result = await accept(target, [RoleName.LEAD], 'support-1');
 
-        expect(isInRoleSpy).not.toHaveBeenCalled();
-        expect(assignSpy).toHaveBeenCalled();
+        expect(buildForActor).not.toHaveBeenCalled();
         expect(result.extraRolesWithheld).toEqual([]);
+        expect(audit.record).not.toHaveBeenCalled();
       });
     });
 
@@ -3392,7 +3440,13 @@ describe('RoleSetService', () => {
 
       // The offerer still administers the organization, so the accept-time
       // re-check passes and this exercises the cap path it is about.
-      vi.spyOn(service, 'isInRole').mockResolvedValue(true);
+      (target as any).authorization = orgRoleSetPolicy();
+      (service as any).orgCommunityGate = new OrgCommunityGateService(
+        realAuthorizationService()
+      );
+      (service as any).actorContextService = {
+        buildForActor: vi.fn(async () => orgAdminActor('offerer-1')),
+      };
 
       const result = await service.ensureMemberOfRoleSetAndAncestors(
         target,

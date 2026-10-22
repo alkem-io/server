@@ -11,12 +11,14 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { createMock } from '@golevelup/ts-vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockNotificationsService } from '@test/mocks/notifications.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
+import { OrgCommunityGateService } from './org.community.gate.service';
 import { RoleSetResolverMutations } from './role.set.resolver.mutations';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
@@ -40,6 +42,13 @@ describe('RoleSetResolverMutations', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoleSetResolverMutations,
+        // The real gate over the SAME mocked AuthorizationService the resolver
+        // gets, so these specs keep asserting the privileges actually checked.
+        {
+          provide: AuthorizationService,
+          useValue: createMock<AuthorizationService>(),
+        },
+        OrgCommunityGateService,
         MockCacheManager,
         MockWinstonProvider,
         MockNotificationsService,
@@ -71,6 +80,9 @@ describe('RoleSetResolverMutations', () => {
       AuthorizationPolicyService
     );
     licenseService = module.get<LicenseService>(LicenseService);
+    // Unless a test says otherwise, no privilege is granted by evaluation, so
+    // the gate falls through to the asserting `grantAccessOrFail`.
+    (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
   });
 
   it('should be defined', () => {
@@ -83,6 +95,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
       const mockUser = { id: 'user-1' } as any;
@@ -112,6 +125,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -269,6 +283,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
         license: { id: 'lic-1' },
       } as any;
@@ -308,6 +323,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
       const mockUser = { id: 'user-1' } as any;
@@ -337,6 +353,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
       const extendedAuth = { id: 'extended-auth' } as any;
@@ -381,6 +398,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
       const mockOrg = { id: 'org-1' } as any;
@@ -427,6 +445,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -456,6 +475,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -490,6 +510,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -517,6 +538,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -551,6 +573,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -578,6 +601,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
       const mockVC = { id: 'vc-1' } as any;
@@ -615,6 +639,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -646,6 +671,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -673,6 +699,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -697,6 +724,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.ORGANIZATION,
+        entryRoleName: RoleName.ASSOCIATE,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -734,6 +762,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
         license: { id: 'lic-1' },
       } as any;
@@ -774,6 +803,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.ORGANIZATION,
+        entryRoleName: RoleName.ASSOCIATE,
         authorization: { id: 'auth-1' },
       } as any;
       const extendedAuth = { id: 'extended-auth' } as any;
@@ -813,6 +843,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -847,6 +878,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
       const extendedAuth = { id: 'ext-auth' } as any;
@@ -878,6 +910,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
       const extendedAuth = { id: 'extended-auth' } as any;
@@ -928,6 +961,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -961,6 +995,7 @@ describe('RoleSetResolverMutations', () => {
       const mockRoleSet = {
         id: 'rs-1',
         type: RoleSetType.SPACE,
+        entryRoleName: RoleName.MEMBER,
         authorization: { id: 'auth-1' },
       } as any;
 

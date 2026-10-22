@@ -1,6 +1,7 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleName } from '@common/enums/role.name';
 import { ValidationException } from '@common/exceptions';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
@@ -9,7 +10,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import {
+  contentFullAccessActor,
+  orgAdminActor,
+  orgRoleSetPolicy,
+  realAuthorizationService,
+  registeredActor,
+  spaceRoleSetPolicy,
+  supportActor,
+} from '@test/utils/org.community.policy.fixture';
 import { type Mock } from 'vitest';
+import { OrgCommunityGateService } from './org.community.gate.service';
 import { RoleSetResolverFields } from './role.set.resolver.fields';
 import { RoleSetService } from './role.set.service';
 
@@ -750,25 +761,73 @@ describe('RoleSetResolverFields', () => {
   });
 
   describe('applications', () => {
-    it('should delegate to roleSetService.getApplications', async () => {
-      const mockApps = [{ id: 'app-1' }] as any[];
-      const mockRoleSet = { id: 'rs-1' } as any;
+    // Evaluated by the real AuthorizationService against real-shaped stored
+    // policies, so a widened read surfaces here.
+    let fieldsResolver: RoleSetResolverFields;
+    beforeEach(() => {
+      fieldsResolver = new RoleSetResolverFields(
+        roleSetService,
+        userService,
+        virtualActorLookupService,
+        authorizationService,
+        new OrgCommunityGateService(realAuthorizationService())
+      );
+    });
 
+    const orgRoleSet = () =>
+      ({ id: 'rs-org', authorization: orgRoleSetPolicy() }) as any;
+
+    it('returns the list to the organization admin', async () => {
+      const mockApps = [{ id: 'app-1' }] as any[];
       (roleSetService.getApplications as Mock).mockResolvedValue(mockApps);
 
-      const result = await resolver.applications(mockRoleSet);
+      const result = await fieldsResolver.applications(
+        orgAdminActor(),
+        orgRoleSet()
+      );
 
       expect(result).toEqual(mockApps);
     });
 
-    it('should return empty array when getApplications returns null', async () => {
-      const mockRoleSet = { id: 'rs-1' } as any;
+    it('returns the list to a Support-only viewer on an organization', async () => {
+      const mockApps = [{ id: 'app-1' }] as any[];
+      (roleSetService.getApplications as Mock).mockResolvedValue(mockApps);
 
+      const result = await fieldsResolver.applications(
+        supportActor(),
+        orgRoleSet()
+      );
+
+      expect(result).toEqual(mockApps);
+    });
+
+    it('returns an empty array when getApplications returns null', async () => {
       (roleSetService.getApplications as Mock).mockResolvedValue(null);
 
-      const result = await resolver.applications(mockRoleSet);
+      const result = await fieldsResolver.applications(
+        orgAdminActor(),
+        orgRoleSet()
+      );
 
       expect(result).toEqual([]);
+    });
+
+    it('throws — never an empty list — for a viewer who may only invite or read', async () => {
+      for (const viewer of [registeredActor(), contentFullAccessActor()]) {
+        await expect(
+          fieldsResolver.applications(viewer, orgRoleSet())
+        ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      }
+      expect(roleSetService.getApplications).not.toHaveBeenCalled();
+    });
+
+    it('throws for Support on a Space role set', async () => {
+      await expect(
+        fieldsResolver.applications(supportActor(), {
+          id: 'rs-space',
+          authorization: spaceRoleSetPolicy(),
+        } as any)
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
     });
   });
 
@@ -791,11 +850,18 @@ describe('RoleSetResolverFields', () => {
   // applicant's PII, so only deciders (GRANT) read them; invitations and
   // platform invitations are readable by whoever may create one
   // (ROLESET_ENTRY_ROLE_INVITE), which the invite dialog's dedupe needs.
+  // `applications` is checked inside the resolver (GRANT, or Platform Support
+  // on an organization) — see its own describe above.
   describe('pending-list confidentiality', () => {
+    it('applications carries no static privilege: its gate runs in the resolver', () => {
+      expect(
+        Reflect.getMetadata('privilege', (resolver as any).applications)
+      ).toBeUndefined();
+    });
+
     it.each([
       ['inivitations', AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
       ['platformInvitations', AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
-      ['applications', AuthorizationPrivilege.GRANT],
     ])('%s is gated on %s, not READ', (methodName, expectedPrivilege) => {
       const privilege = Reflect.getMetadata(
         'privilege',
