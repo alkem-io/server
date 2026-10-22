@@ -125,12 +125,15 @@ export class AccountLookupService {
     accountID: string,
     scope: HostedResourcesViewerScope
   ): Promise<IAccountHostedResources> {
+    // One query per collection: joining three independent one-to-many
+    // relations multiplies the rows before they are filtered.
     const account = await this.getAccountOrFail(accountID, {
       relations: {
         virtualContributors: true,
         innovationPacks: true,
         innovationHubs: true,
       },
+      relationLoadStrategy: 'query',
     });
     const allowed: SearchVisibility[] | null =
       scope === 'FULL'

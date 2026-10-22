@@ -504,7 +504,7 @@ describe('AccountLookupService', () => {
       ]);
     });
 
-    it('loads the account once with exactly the three resource relations', async () => {
+    it('loads the account once with exactly the three resource relations, each by its own query', async () => {
       const findOneSpy = mockAccountWith({});
 
       await service.getHostedResourcesForViewer('account-1', 'REGISTERED');
@@ -516,6 +516,7 @@ describe('AccountLookupService', () => {
           innovationPacks: true,
           innovationHubs: true,
         },
+        relationLoadStrategy: 'query',
         where: { id: 'account-1' },
       });
     });
