@@ -365,9 +365,17 @@ export class StorageBucketService {
     temporaryLocation = false,
     skipDedup = false,
     allowedMimeTypesOverride?: string[],
-    options?: { onCreated?: (fileID: string) => void }
+    options?: {
+      onCreated?: (fileID: string) => void;
+      composeAuthorization?: boolean;
+    }
   ): Promise<IDocument> {
-    const storage = await this.getStorageBucketOrFail(storageBucketId);
+    const storage = await this.getStorageBucketOrFail(
+      storageBucketId,
+      options?.composeAuthorization
+        ? { relations: { authorization: true, directStorageOwner: true } }
+        : undefined
+    );
 
     const effectiveAllowedMimes =
       allowedMimeTypesOverride ?? storage.allowedMimeTypes;
@@ -397,8 +405,10 @@ export class StorageBucketService {
           maxFileSize: storage.maxFileSize,
           skipDedup: effectiveSkipDedup || undefined,
         }),
-      undefined,
-      undefined,
+      options?.composeAuthorization ? storage.authorization : undefined,
+      options?.composeAuthorization
+        ? { createdBy: userID, destinationBucket: storage }
+        : undefined,
       options?.onCreated
     );
   }

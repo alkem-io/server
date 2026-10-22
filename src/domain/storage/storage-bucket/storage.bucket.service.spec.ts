@@ -624,6 +624,205 @@ describe('StorageBucketService', () => {
   });
 
   describe('uploadFileAsDocumentFromBuffer', () => {
+    describe('opted destination authorization', () => {
+      const inheritedRead = {
+        name: 'destination-read',
+        grantedPrivileges: [AuthorizationPrivilege.READ],
+        criterias: [],
+        cascade: true,
+      };
+      let policies: Map<string, any>;
+      let bucket: IStorageBucket;
+      let existing: IDocument;
+
+      beforeEach(() => {
+        policies = new Map();
+        bucket = mockStorageBucket({
+          id: 'destination',
+          authorization: { credentialRules: [inheritedRead] } as any,
+          directStorageOwner: { type: StorageAggregatorType.USER } as any,
+        });
+        existing = mockDocument({
+          id: 'existing',
+          createdBy: 'original-actor',
+        });
+        (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
+          bucket
+        );
+        (authorizationPolicyService.save as Mock).mockImplementation(
+          async policy => {
+            policy.id = 'prepared-auth';
+            policies.set(policy.id, structuredClone(policy));
+            return policy;
+          }
+        );
+        (tagsetService.save as Mock).mockResolvedValue({
+          id: 'prepared-tags',
+          authorization: { id: 'prepared-tags-auth', credentialRules: [] },
+        });
+        // Use the real compositor and policy primitives; only persistence is mocked.
+        for (const method of [
+          'inheritParentAuthorization',
+          'createCredentialRule',
+          'appendCredentialAuthorizationRules',
+          'validateAuthorization',
+          'reset',
+        ] as const) {
+          (authorizationPolicyService[method] as Mock).mockImplementation(
+            AuthorizationPolicyService.prototype[method].bind(
+              authorizationPolicyService
+            )
+          );
+        }
+        (authorizationPolicyService.saveAll as Mock).mockImplementation(
+          async saved => {
+            for (const policy of saved)
+              policies.set(policy.id, structuredClone(policy));
+          }
+        );
+        const compositor = new DocumentAuthorizationService(
+          authorizationPolicyService
+        );
+        (
+          documentAuthorizationService.applyAuthorizationPolicy as Mock
+        ).mockImplementation(
+          compositor.applyAuthorizationPolicy.bind(compositor)
+        );
+        (documentService.getDocumentOrFail as Mock).mockImplementation(
+          async id =>
+            id === existing.id
+              ? existing
+              : mockDocument({
+                  id,
+                  createdBy: 'actor',
+                  authorization: policies.get('prepared-auth'),
+                  tagset: {
+                    authorization: policies.get('prepared-tags-auth'),
+                  } as any,
+                })
+        );
+      });
+
+      it.each([
+        [StorageAggregatorType.USER, true, false],
+        [StorageAggregatorType.CONVERSATION, true, false],
+        [StorageAggregatorType.USER, false, false],
+        [StorageAggregatorType.USER, undefined, false],
+        [StorageAggregatorType.USER, true, true],
+      ])('persists rules before insertion (owner=%s, compose=%s, reused=%s)', async (owner, composeAuthorization, reused) => {
+        bucket.directStorageOwner!.type = owner;
+        const onCreated = vi.fn();
+        const original = structuredClone(existing);
+        const expectedRules = composeAuthorization
+          ? [
+              inheritedRead,
+              ...(owner === StorageAggregatorType.CONVERSATION
+                ? []
+                : [
+                    expect.objectContaining({
+                      grantedPrivileges: [
+                        AuthorizationPrivilege.CREATE,
+                        AuthorizationPrivilege.READ,
+                        AuthorizationPrivilege.UPDATE,
+                        AuthorizationPrivilege.DELETE,
+                      ],
+                      criterias: [
+                        expect.objectContaining({ resourceID: 'actor' }),
+                      ],
+                    }),
+                  ]),
+            ]
+          : [];
+        (fileServiceAdapter.createDocument as Mock).mockImplementation(
+          async (_buffer, metadata) => {
+            // Inspect saved policies at the insertion boundary, not just compositor calls.
+            expect(
+              policies.get(metadata.authorizationId).credentialRules
+            ).toEqual(expectedRules);
+            expect(policies.get('prepared-tags-auth')?.credentialRules).toEqual(
+              composeAuthorization ? expectedRules : undefined
+            );
+            expect(metadata).toMatchObject({
+              createdBy: 'actor',
+              tagsetId: 'prepared-tags',
+            });
+            expect(onCreated).not.toHaveBeenCalled();
+            return { id: reused ? existing.id : 'fresh', reused };
+          }
+        );
+        const result = await service.uploadFileAsDocumentFromBuffer(
+          bucket.id,
+          Buffer.from('png'),
+          'image.png',
+          MimeTypeVisual.PNG,
+          'actor',
+          false,
+          false,
+          undefined,
+          { composeAuthorization, onCreated }
+        );
+        expect(storageBucketRepository.findOneOrFail).toHaveBeenCalledWith({
+          where: { id: bucket.id },
+          ...(composeAuthorization
+            ? { relations: { authorization: true, directStorageOwner: true } }
+            : {}),
+        });
+        expect(onCreated.mock.calls).toEqual(reused ? [] : [['fresh']]);
+        if (reused) {
+          expect(result).toBe(existing);
+          expect(existing).toEqual({ ...original, reused: true });
+          expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+            expect.objectContaining({ id: 'prepared-auth' })
+          );
+          expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+            'prepared-tags'
+          );
+        } else {
+          expect(result.authorization!.credentialRules).toEqual(expectedRules);
+          expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+          if (composeAuthorization)
+            expect(result.tagset!.authorization!.credentialRules).toEqual(
+              expectedRules
+            );
+        }
+        if (!composeAuthorization)
+          expect(authorizationPolicyService.saveAll).not.toHaveBeenCalled();
+      });
+
+      it('releases prepared metadata and stops before upload when composition fails', async () => {
+        (authorizationPolicyService.saveAll as Mock).mockRejectedValue(
+          new Error('composition failed')
+        );
+        (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+          id: 'fresh',
+          reused: false,
+        });
+        const onCreated = vi.fn();
+        await expect(
+          service.uploadFileAsDocumentFromBuffer(
+            bucket.id,
+            Buffer.from('png'),
+            'image.png',
+            MimeTypeVisual.PNG,
+            'actor',
+            false,
+            false,
+            undefined,
+            { composeAuthorization: true, onCreated }
+          )
+        ).rejects.toThrow('composition failed');
+        expect(fileServiceAdapter.createDocument).not.toHaveBeenCalled();
+        expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
+        expect(onCreated).not.toHaveBeenCalled();
+        expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'prepared-auth' })
+        );
+        expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+          'prepared-tags'
+        );
+      });
+    });
+
     it('should upload file via file-service adapter and return the created document when MIME type and size are valid', async () => {
       const bucket = mockStorageBucket({ id: 'bucket-upload' });
       const buffer = Buffer.alloc(1024);

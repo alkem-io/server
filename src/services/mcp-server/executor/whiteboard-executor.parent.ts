@@ -2,6 +2,8 @@ import { ChildProcess, fork } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { LogContext } from '@common/enums';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import type { SemanticOperation } from '@excalidraw-yjs/excalidraw/headless';
 import {
   Inject,
@@ -12,11 +14,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
+  ExecutionInput,
   ExecutorOutcome,
   ExecutorResult,
+  ImportInput,
   ParentMessage,
   parseChildMessage,
   validId,
+  validImport,
   validOperations,
 } from './whiteboard-executor.protocol';
 
@@ -45,6 +50,14 @@ export function executorConfig(env: NodeJS.ProcessEnv) {
   };
 }
 export type JobOutcome = { outcome: ExecutorOutcome; result?: ExecutorResult };
+export interface ImportPreparation {
+  prepare(context: {
+    signal: AbortSignal;
+    deadlineAt: number;
+    createdDocumentIDs: string[];
+  }): Promise<ImportInput>;
+  cleanup(createdDocumentIDs: string[]): Promise<void>;
+}
 
 @Injectable()
 export class WhiteboardExecutorParent implements OnModuleDestroy {
@@ -85,13 +98,26 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
   async execute(
     documentId: string,
     actorId: string,
-    operations: SemanticOperation[],
-    signal?: AbortSignal
+    input: SemanticOperation[] | ExecutionInput,
+    signal?: AbortSignal,
+    preparation?: ImportPreparation
   ): Promise<JobOutcome> {
+    let payload: ExecutionInput = Array.isArray(input)
+      ? { operations: input }
+      : input;
     if (
       !validId(documentId) ||
       !validId(actorId) ||
-      !validOperations(operations)
+      !(
+        payload &&
+        (('import' in payload &&
+          !('operations' in payload) &&
+          validImport(payload.import)) ||
+          ('operations' in payload &&
+            !('import' in payload) &&
+            validOperations(payload.operations)))
+      ) ||
+      (preparation && !('import' in payload))
     )
       return { outcome: 'invalid' };
     if (!this.capacity) return { outcome: 'unavailable' };
@@ -103,169 +129,215 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
       return { outcome: 'busy' };
     const jobId = randomUUID();
     const deadline = Date.now() + this.capacity.deadlineMs;
-    // Both limits reserve the same record synchronously, before the first spawn.
-    this.jobs.set(jobId, { actorId, stop: () => {} });
-    let child: ChildProcess;
+    const controller = new AbortController();
+    const createdDocumentIDs: string[] = [];
+    let phase: 'preparing' | 'joining' | 'synced' | 'go' | 'published' =
+      'preparing';
+    const afterGo = () => phase === 'go' || phase === 'published';
+    let stopped: ExecutorOutcome | undefined;
+    let stopChild: ((outcome: ExecutorOutcome) => void) | undefined;
+    const stop = (outcome: ExecutorOutcome) => {
+      stopped ??= outcome;
+      controller.abort();
+      stopChild?.(outcome);
+    };
+    const cancel = () => {
+      if (!afterGo()) stop('cancelled-before-go');
+    };
+    const timer = setTimeout(
+      () => stop('timeout-before-go'),
+      Math.max(1, deadline - Date.now())
+    );
+    // Admission covers bounded materialization, the child, and definite cleanup.
+    this.jobs.set(jobId, { actorId, stop: () => stop('cancelled-before-go') });
+    signal?.addEventListener('abort', cancel, { once: true });
     try {
-      child = this.launch();
-    } catch {
-      this.jobs.delete(jobId);
-      return { outcome: 'resource-exhausted-before-go' };
-    }
-
-    return new Promise(resolve => {
-      let phase: 'joining' | 'synced' | 'go' | 'published' = 'joining';
-      let generationId: number | undefined;
-      let terminal: JobOutcome | undefined;
-      const afterGo = () => phase === 'go' || phase === 'published';
-      const abnormal = (before: ExecutorOutcome): JobOutcome => ({
-        outcome: afterGo() ? 'indeterminate-after-go' : before,
-      });
-      const finish = (outcome: JobOutcome) => {
-        if (terminal) return;
-        terminal = outcome;
-        child.kill('SIGKILL');
-      };
-      const send = (message: ParentMessage) => {
-        try {
-          child.send(message, error => {
-            if (error) finish(abnormal('cancelled-before-go'));
-          });
-        } catch {
-          finish(abnormal('cancelled-before-go'));
-        }
-      };
-      const cancel = () => {
-        if (!afterGo()) finish({ outcome: 'cancelled-before-go' });
-      };
-      const timer = setTimeout(
-        () => finish(abnormal('timeout-before-go')),
-        Math.max(1, deadline - Date.now())
-      );
-      this.jobs.set(jobId, {
-        actorId,
-        stop: () => finish(abnormal('cancelled-before-go')),
-      });
-      signal?.addEventListener('abort', cancel, { once: true });
-      child.on('message', raw => {
-        if (terminal) return;
-        const parsed = parseChildMessage(raw);
-        const msg = parsed.data;
-        if (
-          !msg ||
-          (msg.jobId !== undefined && msg.jobId !== jobId) ||
-          (msg.generationId !== undefined &&
-            generationId !== undefined &&
-            msg.generationId !== generationId)
-        ) {
-          finish(abnormal('invalid'));
-          return;
-        }
-        if (msg.type === 'FAILED') {
-          if (
-            (generationId !== undefined &&
-              (msg.generationId !== generationId || msg.jobId !== jobId)) ||
-            (generationId === undefined && msg.generationId !== undefined)
-          )
-            finish(abnormal('invalid'));
-          else
-            finish(
-              afterGo()
-                ? { outcome: 'indeterminate-after-go' }
-                : {
-                    outcome:
-                      msg.typedOutcome === 'indeterminate-after-go'
-                        ? 'invalid'
-                        : msg.typedOutcome,
-                  }
-            );
-          return;
-        }
-        if (msg.jobId !== jobId) {
-          finish(abnormal('invalid'));
-          return;
-        }
-        switch (msg.type) {
-          case 'SYNCED':
-            if (phase !== 'joining') {
-              finish(abnormal('invalid'));
-              return;
-            }
-            generationId = msg.generationId;
-            phase = 'synced';
-            break;
-          case 'PREPARED':
-            if (phase !== 'synced') {
-              finish(abnormal('invalid'));
-              return;
-            }
-            if (signal?.aborted) {
-              cancel();
-              return;
-            }
-            if (Date.now() >= deadline) {
-              finish({ outcome: 'timeout-before-go' });
-              return;
-            }
-            phase = 'go';
-            send({ type: 'GO', jobId, generationId: msg.generationId });
-            break;
-          case 'PUBLISHED':
-            if (phase !== 'go') {
-              finish(abnormal('invalid'));
-              return;
-            }
-            phase = 'published';
-            break;
-          case 'DURABLE':
-            if (!afterGo()) {
-              finish({ outcome: 'invalid' });
-              return;
-            }
-            finish({ outcome: 'durable-success', result: msg.result });
-            break;
-        }
-      });
-      const cleanup = (code?: number | null) => {
-        clearTimeout(timer);
-        signal?.removeEventListener('abort', cancel);
-        child.removeAllListeners();
-        this.jobs.delete(jobId);
-        const outcome =
-          terminal ??
-          abnormal(
-            code === 0 ? 'cancelled-before-go' : 'resource-exhausted-before-go'
-          );
-        this.logger.log(
-          {
-            message: 'Whiteboard executor completed',
-            jobId,
-            phase,
-            durationMs: Date.now() - (deadline - this.capacity!.deadlineMs),
-            outcome: outcome.outcome,
-          },
-          LogContext.MCP_SERVER
-        );
-        resolve(outcome);
-      };
-      child.once('error', () => {
-        finish(abnormal('resource-exhausted-before-go'));
-        if (!child.pid) cleanup();
-      });
-      child.once('exit', cleanup);
-      send({
-        type: 'START',
-        operations,
-        childLaunchGrant: {
-          jobId,
-          documentId,
-          actorId,
-          deadline,
-          intent: 'edit-whiteboard-elements',
-        },
-      });
       if (signal?.aborted) cancel();
-    });
+      if (preparation && !stopped) {
+        try {
+          payload = {
+            import: await preparation.prepare({
+              signal: controller.signal,
+              deadlineAt: deadline,
+              createdDocumentIDs,
+            }),
+          };
+          if (!validImport(payload.import)) stop('invalid');
+        } catch (error) {
+          stop(
+            stopped ??
+              (error instanceof ForbiddenAuthorizationPolicyException ||
+              error instanceof ForbiddenException
+                ? 'forbidden'
+                : 'invalid')
+          );
+        }
+      }
+      if (Date.now() >= deadline) stop('timeout-before-go');
+      if (stopped) return { outcome: stopped };
+      let child: ChildProcess;
+      phase = 'joining';
+      try {
+        child = this.launch();
+      } catch {
+        return { outcome: 'resource-exhausted-before-go' };
+      }
+
+      return await new Promise<JobOutcome>(resolve => {
+        let generationId: number | undefined;
+        let terminal: JobOutcome | undefined;
+        const abnormal = (before: ExecutorOutcome): JobOutcome => ({
+          outcome: afterGo() ? 'indeterminate-after-go' : before,
+        });
+        const finish = (outcome: JobOutcome) => {
+          if (terminal) return;
+          terminal = outcome;
+          child.kill('SIGKILL');
+        };
+        const send = (message: ParentMessage) => {
+          try {
+            child.send(message, error => {
+              if (error) finish(abnormal('cancelled-before-go'));
+            });
+          } catch {
+            finish(abnormal('cancelled-before-go'));
+          }
+        };
+        stopChild = before => finish(abnormal(before));
+        child.once('disconnect', () => finish(abnormal('cancelled-before-go')));
+        child.on('message', raw => {
+          if (terminal) return;
+          const parsed = parseChildMessage(raw);
+          const msg = parsed.data;
+          if (
+            !msg ||
+            (msg.jobId !== undefined && msg.jobId !== jobId) ||
+            (msg.generationId !== undefined &&
+              generationId !== undefined &&
+              msg.generationId !== generationId)
+          ) {
+            finish(abnormal('invalid'));
+            return;
+          }
+          if (msg.type === 'FAILED') {
+            if (
+              (generationId !== undefined &&
+                (msg.generationId !== generationId || msg.jobId !== jobId)) ||
+              (generationId === undefined && msg.generationId !== undefined)
+            )
+              finish(abnormal('invalid'));
+            else
+              finish(
+                afterGo()
+                  ? { outcome: 'indeterminate-after-go' }
+                  : {
+                      outcome:
+                        msg.typedOutcome === 'indeterminate-after-go'
+                          ? 'invalid'
+                          : msg.typedOutcome,
+                    }
+              );
+            return;
+          }
+          if (msg.jobId !== jobId) {
+            finish(abnormal('invalid'));
+            return;
+          }
+          switch (msg.type) {
+            case 'SYNCED':
+              if (phase !== 'joining') {
+                finish(abnormal('invalid'));
+                return;
+              }
+              generationId = msg.generationId;
+              phase = 'synced';
+              break;
+            case 'PREPARED':
+              if (phase !== 'synced') {
+                finish(abnormal('invalid'));
+                return;
+              }
+              if (signal?.aborted) {
+                cancel();
+                return;
+              }
+              if (Date.now() >= deadline) {
+                finish({ outcome: 'timeout-before-go' });
+                return;
+              }
+              phase = 'go';
+              send({ type: 'GO', jobId, generationId: msg.generationId });
+              break;
+            case 'PUBLISHED':
+              if (phase !== 'go') {
+                finish(abnormal('invalid'));
+                return;
+              }
+              phase = 'published';
+              break;
+            case 'DURABLE':
+              if (!afterGo()) {
+                finish({ outcome: 'invalid' });
+                return;
+              }
+              finish({ outcome: 'durable-success', result: msg.result });
+              break;
+          }
+        });
+        const cleanup = (code?: number | null) => {
+          child.removeAllListeners();
+          const outcome =
+            terminal ??
+            abnormal(
+              code === 0
+                ? 'cancelled-before-go'
+                : 'resource-exhausted-before-go'
+            );
+          this.logger.log(
+            {
+              message: 'Whiteboard executor completed',
+              jobId,
+              phase,
+              durationMs: Date.now() - (deadline - this.capacity!.deadlineMs),
+              outcome: outcome.outcome,
+            },
+            LogContext.MCP_SERVER
+          );
+          resolve(outcome);
+        };
+        child.once('error', () => {
+          finish(abnormal('resource-exhausted-before-go'));
+          if (!child.pid) cleanup();
+        });
+        child.once('exit', cleanup);
+        send({
+          type: 'START',
+          ...payload,
+          childLaunchGrant: {
+            jobId,
+            documentId,
+            actorId,
+            deadline,
+            intent: 'edit-whiteboard-elements',
+          },
+        });
+        if (signal?.aborted) cancel();
+      });
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', cancel);
+      if (!afterGo() && preparation && createdDocumentIDs.length) {
+        try {
+          await preparation.cleanup(createdDocumentIDs);
+        } catch {
+          this.logger.warn?.(
+            { message: 'Whiteboard import media cleanup failed', jobId },
+            LogContext.MCP_SERVER
+          );
+        }
+      }
+      this.jobs.delete(jobId);
+    }
   }
 
   onModuleDestroy() {

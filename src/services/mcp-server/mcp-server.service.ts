@@ -189,7 +189,8 @@ export class McpServerService implements OnModuleInit {
               {
                 type: 'text',
                 text:
-                  name === 'edit_whiteboard_elements'
+                  name === 'edit_whiteboard_elements' ||
+                  name === 'import_whiteboard_scene'
                     ? JSON.stringify({ outcome: 'invalid' })
                     : argError,
               },

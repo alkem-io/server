@@ -1,11 +1,14 @@
 import { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { vi } from 'vitest';
 import {
   executorConfig,
   WhiteboardExecutorParent,
 } from './whiteboard-executor.parent';
+import type { ImportInput } from './whiteboard-executor.protocol';
 
 class FakeChild extends EventEmitter {
   pid: number | undefined = 123;
@@ -37,6 +40,43 @@ function parent(n = 4, p = 1) {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.useRealTimers();
+});
+const importInput = (): ImportInput => ({
+  scene: {
+    type: 'excalidraw',
+    version: 2,
+    elements: [
+      {
+        id: 'source',
+        type: 'rectangle',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        angle: 0 as ImportInput['scene']['elements'][number]['angle'],
+        strokeColor: '#000000',
+        backgroundColor: 'transparent',
+        fillStyle: 'solid',
+        strokeWidth: 1,
+        strokeStyle: 'solid',
+        roundness: null,
+        roughness: 0,
+        opacity: 100,
+        seed: 1,
+        version: 1,
+        versionNonce: 1,
+        index: 'a0' as ImportInput['scene']['elements'][number]['index'],
+        isDeleted: false,
+        groupIds: [],
+        frameId: null,
+        boundElements: null,
+        updated: 1,
+        link: null,
+        locked: false,
+      },
+    ],
+  },
+  targetFileIDs: {},
 });
 const operations = [{ op: 'addText' as const, text: 'hello' }];
 const progress = (child: FakeChild, type: string, more = {}) => {
@@ -99,6 +139,320 @@ describe('whiteboard-executor configuration', () => {
 });
 
 describe('whiteboard-executor parent admission and lifecycle', () => {
+  it('global capacity includes media preparation and rejects overflow without a queue', async () => {
+    const h = parent(2);
+    const input = importInput();
+    const settle: (() => void)[] = [];
+    const prepare = vi.fn(async () => {
+      await new Promise<void>(resolve => settle.push(resolve));
+      return input;
+    });
+    const callbacks = { prepare, cleanup: vi.fn() };
+    const active = [randomUUID(), randomUUID()].map(actor =>
+      h.execute(
+        randomUUID(),
+        actor,
+        { import: input } as any,
+        undefined,
+        callbacks
+      )
+    );
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(
+      await h.execute(
+        randomUUID(),
+        randomUUID(),
+        { import: input } as any,
+        undefined,
+        callbacks
+      )
+    ).toEqual({ outcome: 'busy' });
+    expect(prepare).toHaveBeenCalledTimes(2);
+    h.onModuleDestroy();
+    settle.forEach(resolve => resolve());
+    expect(await Promise.all(active)).toEqual([
+      { outcome: 'cancelled-before-go' },
+      { outcome: 'cancelled-before-go' },
+    ]);
+    expect(h.children).toHaveLength(0);
+  });
+  it.each([
+    false,
+    true,
+  ])('IPC closure without child exit is terminal afterGo=%s', async afterGo => {
+    const h = parent();
+    const pending = h.execute(randomUUID(), randomUUID(), operations);
+    const child = h.children[0];
+    progress(child, 'SYNCED');
+    if (afterGo)
+      progress(child, 'PREPARED', {
+        updateDigest: 'a'.repeat(64),
+        byteLength: 2,
+        summary: [],
+      });
+    child.emit('disconnect');
+    try {
+      expect(child.kill).toHaveBeenCalledOnce();
+      expect((await pending).outcome).toBe(
+        afterGo ? 'indeterminate-after-go' : 'cancelled-before-go'
+      );
+    } finally {
+      h.onModuleDestroy();
+      await pending;
+    }
+  });
+  it('preserves a source READ denial as forbidden without spawn', async () => {
+    const h = parent();
+    const input = importInput();
+    const preparation = {
+      prepare: vi
+        .fn()
+        .mockRejectedValue(
+          new ForbiddenAuthorizationPolicyException(
+            'Source read denied',
+            AuthorizationPrivilege.READ,
+            randomUUID(),
+            randomUUID()
+          )
+        ),
+      cleanup: vi.fn(),
+    };
+    expect(
+      await h.execute(
+        randomUUID(),
+        randomUUID(),
+        { import: input } as any,
+        undefined,
+        preparation
+      )
+    ).toEqual({ outcome: 'forbidden' });
+    expect(h.children).toHaveLength(0);
+  });
+  it('diagnoses failed fresh cleanup without logging the exception or changing the failed outcome', async () => {
+    const logger = { log: vi.fn(), warn: vi.fn() };
+    parent();
+    const h = new Parent({} as any, logger as any);
+    const actor = randomUUID();
+    const input = importInput();
+    const preparation = {
+      prepare: vi.fn(async context => {
+        context.createdDocumentIDs.push('fresh');
+        throw new Error('PRIVATE_PREPARATION');
+      }),
+      cleanup: vi.fn().mockRejectedValue(new Error('PRIVATE_CLEANUP')),
+    };
+    expect(
+      await h.execute(
+        randomUUID(),
+        actor,
+        { import: input } as any,
+        undefined,
+        preparation
+      )
+    ).toEqual({ outcome: 'invalid' });
+    expect(preparation.cleanup).toHaveBeenCalledExactlyOnceWith(['fresh']);
+    expect(logger.warn).toHaveBeenCalledOnce();
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('PRIVATE');
+    const next = h.execute(randomUUID(), actor, operations);
+    h.onModuleDestroy();
+    await next;
+  });
+  it.each([
+    'disabled',
+    'busy',
+    'aborted',
+    'invalid',
+  ])('import %s never invokes preparation or spawns', async reason => {
+    const h = parent();
+    const actor = randomUUID();
+    const signal = new AbortController();
+    const active =
+      reason === 'busy'
+        ? h.execute(randomUUID(), actor, operations)
+        : undefined;
+    if (reason === 'aborted') signal.abort();
+    const instance =
+      reason === 'disabled'
+        ? (() => {
+            vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_ENABLED', 'false');
+            return new Parent({} as any, { log: vi.fn() } as any);
+          })()
+        : h;
+    const preparation = { prepare: vi.fn(), cleanup: vi.fn() };
+    const input = {
+      import: {
+        scene: {
+          type: 'excalidraw',
+          version: 2,
+          elements: [{ type: 'rectangle' }],
+        },
+        targetFileIDs: {},
+      },
+    };
+    const outcome = await instance.execute(
+      reason === 'invalid' ? '' : randomUUID(),
+      actor,
+      input as any,
+      signal.signal,
+      preparation
+    );
+    expect(outcome.outcome).toBe(
+      (
+        {
+          disabled: 'unavailable',
+          busy: 'busy',
+          aborted: 'cancelled-before-go',
+          invalid: 'invalid',
+        } as const
+      )[reason]
+    );
+    expect(preparation.prepare).not.toHaveBeenCalled();
+    expect(instance.children).toHaveLength(reason === 'busy' ? 1 : 0);
+    h.onModuleDestroy();
+    await active;
+  });
+  it.each([
+    false,
+    true,
+  ])('import fresh files are compensated only before GO afterGo=%s', async afterGo => {
+    const h = parent();
+    const fresh = randomUUID();
+    const input = importInput();
+    input.scene.elements = [
+      {
+        ...input.scene.elements[0],
+        type: 'image',
+        fileId: 'asset' as Extract<
+          ImportInput['scene']['elements'][number],
+          { type: 'image' }
+        >['fileId'],
+        status: 'saved',
+        scale: [1, 1],
+        crop: null,
+      },
+    ];
+    input.targetFileIDs = { asset: fresh };
+    const preparation = {
+      prepare: vi.fn(async (context: any) => {
+        context.createdDocumentIDs.push(fresh);
+        return input;
+      }),
+      cleanup: vi.fn().mockResolvedValue(undefined),
+    };
+    const pending = h.execute(
+      randomUUID(),
+      randomUUID(),
+      { import: input } as any,
+      undefined,
+      preparation
+    );
+    await vi.waitFor(() => expect(h.children).toHaveLength(1));
+    const child = h.children[0];
+    expect(child.send.mock.calls[0][0].import).toEqual(input);
+    expect(child.send.mock.calls[0][0]).not.toHaveProperty('operations');
+    progress(child, 'SYNCED');
+    if (afterGo)
+      progress(child, 'PREPARED', {
+        updateDigest: 'a'.repeat(64),
+        byteLength: 2,
+        summary: [{ op: 'importScene', elementIds: ['fresh'] }],
+      });
+    child.emit('exit', 1);
+    expect((await pending).outcome).toBe(
+      afterGo ? 'indeterminate-after-go' : 'resource-exhausted-before-go'
+    );
+    if (afterGo) expect(preparation.cleanup).not.toHaveBeenCalled();
+    else expect(preparation.cleanup).toHaveBeenCalledExactlyOnceWith([fresh]);
+  });
+  it('the deadline aborts media work but waits for settlement and cleanup before releasing admission', async () => {
+    vi.useFakeTimers();
+    const h = parent();
+    const actor = randomUUID();
+    let settle!: () => void;
+    let context!: {
+      signal: AbortSignal;
+      deadlineAt: number;
+      createdDocumentIDs: string[];
+    };
+    const input = importInput();
+    const preparation = {
+      prepare: vi.fn(async c => {
+        context = c;
+        await new Promise<void>(resolve => {
+          settle = resolve;
+        });
+        c.createdDocumentIDs.push('fresh');
+        throw new Error('late upload failure');
+      }),
+      cleanup: vi.fn().mockResolvedValue(undefined),
+    };
+    const pending = h.execute(
+      randomUUID(),
+      actor,
+      { import: input } as any,
+      undefined,
+      preparation
+    );
+    expect(context.deadlineAt).toBe(Date.now() + 10000);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(context.signal.aborted).toBe(true);
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    settle();
+    expect(await pending).toEqual({ outcome: 'timeout-before-go' });
+    expect(preparation.cleanup).toHaveBeenCalledExactlyOnceWith(['fresh']);
+    expect(h.children).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it('holds the actor slot through uncancellable materialization and fresh cleanup after abort', async () => {
+    const h = parent();
+    const actor = randomUUID();
+    const controller = new AbortController();
+    let settle!: () => void;
+    let cleaned!: () => void;
+    const fresh = randomUUID();
+    const input = { import: importInput() };
+    const cleanup = vi.fn(
+      () =>
+        new Promise<void>(resolve => {
+          cleaned = resolve;
+        })
+    );
+    const prepare = vi.fn(async (context: any) => {
+      await new Promise<void>(resolve => {
+        settle = resolve;
+      });
+      context.createdDocumentIDs.push(fresh);
+      return input.import;
+    });
+    const pending = h.execute(
+      randomUUID(),
+      actor,
+      input as any,
+      controller.signal,
+      { prepare, cleanup }
+    );
+    expect(prepare).toHaveBeenCalledOnce();
+    controller.abort();
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    expect(h.children).toHaveLength(0);
+    settle();
+    await vi.waitFor(() =>
+      expect(cleanup).toHaveBeenCalledExactlyOnceWith([fresh])
+    );
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    cleaned();
+    expect(await pending).toEqual({ outcome: 'cancelled-before-go' });
+    expect(h.children).toHaveLength(0);
+    const next = h.execute(randomUUID(), actor, operations);
+    h.onModuleDestroy();
+    await next;
+  });
   it.each([
     false,
     true,
@@ -190,7 +544,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         { code: null, signal: 'SIGABRT' },
       ].map(exit => ({ phase, ...exit }))
     )
-  )('classifies disconnect then exit $code/$signal in $phase without replay', async ({
+  )('classifies exit $code/$signal in $phase without replay', async ({
     phase,
     code,
     signal,
@@ -208,7 +562,6 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         summary: [],
       });
     if (phase === 'published') progress(child, 'PUBLISHED');
-    child.emit('disconnect');
     child.emit('exit', code, signal);
     expect((await pending).outcome).toBe(
       phase === 'go' || phase === 'published'

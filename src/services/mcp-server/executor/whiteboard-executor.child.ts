@@ -15,6 +15,9 @@ import {
   ChildLaunchGrant,
   ChildMessage,
   ExecutorOutcome,
+  ImportInput,
+  ParentMessage,
+  PreparedResult,
   parseParentMessage,
   validId,
 } from './whiteboard-executor.protocol';
@@ -32,11 +35,25 @@ export const prepareBatch = (
     textMetricsProvider: metrics.createNodeTextMetricsProvider(),
   });
 };
+export const prepareImport = (
+  session: CollaborationDocumentSession,
+  input: ImportInput
+): ReturnType<
+  typeof import('@excalidraw-yjs/excalidraw/headless')['prepareSceneImport']
+> => {
+  const fork: typeof import('@excalidraw-yjs/excalidraw/headless') =
+    nodeRequire('@excalidraw-yjs/excalidraw/headless');
+  const metrics: typeof import('@excalidraw-yjs/excalidraw/node-metrics') =
+    nodeRequire('@excalidraw-yjs/excalidraw/node-metrics');
+  return fork.prepareSceneImport(session.doc, input, {
+    textMetricsProvider: metrics.createNodeTextMetricsProvider(),
+  });
+};
 
 export class WhiteboardExecutorChild {
   private grant?: ChildLaunchGrant;
   private session?: CollaborationDocumentSession;
-  private prepared?: Extract<SemanticBatchResult, { ok: true }>;
+  private prepared?: Extract<PreparedResult, { ok: true }>;
   private generationId?: number;
   private afterGo = false;
   private finished = false;
@@ -49,7 +66,8 @@ export class WhiteboardExecutorChild {
       grant: ChildLaunchGrant,
       lost: () => void
     ) => CollaborationDocumentSession,
-    private readonly prepare = prepareBatch
+    private readonly prepare = prepareBatch,
+    private readonly importScene = prepareImport
   ) {}
 
   receive(raw: unknown): void {
@@ -93,7 +111,7 @@ export class WhiteboardExecutorChild {
         () => this.fail('timeout-before-go'),
         this.remaining()
       );
-      void this.start(message.operations);
+      void this.start(message);
       return;
     }
     if (
@@ -134,7 +152,7 @@ export class WhiteboardExecutorChild {
       if (!this.afterGo) this.fail('cancelled-before-go');
     });
   }
-  private async start(operations: SemanticOperation[]) {
+  private async start(input: Extract<ParentMessage, { type: 'START' }>) {
     try {
       this.session = this.open();
       await this.session.connect(this.remaining());
@@ -149,7 +167,10 @@ export class WhiteboardExecutorChild {
         jobId: this.grant!.jobId,
         generationId: this.generationId,
       });
-      const prepared = this.prepare(this.session, operations);
+      const prepared =
+        input.import !== undefined
+          ? this.importScene(this.session, input.import)
+          : this.prepare(this.session, input.operations!);
       if (this.finished) return;
       if (!prepared.ok) {
         this.fail('invalid');

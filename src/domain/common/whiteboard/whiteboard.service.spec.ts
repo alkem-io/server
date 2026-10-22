@@ -400,7 +400,7 @@ describe('WhiteboardService', () => {
         false,
         false,
         undefined,
-        { onCreated: expect.any(Function) }
+        { onCreated: expect.any(Function), composeAuthorization: true }
       );
       expect(context.createdDocumentIDs).toEqual([targetID]);
       expect(files).toEqual(embedded);
@@ -2577,7 +2577,7 @@ describe('WhiteboardService', () => {
 
   describe('materialized media cleanup', () => {
     it('logs failed deletions while keeping cleanup best-effort', async () => {
-      const cleanupError = new Error('file-service unavailable');
+      const cleanupError = new Error('PRIVATE_MEDIA_OR_TOKEN');
       vi.mocked(fileServiceAdapter.deleteDocument)
         .mockResolvedValueOnce(undefined as never)
         .mockRejectedValueOnce(cleanupError);
@@ -2591,10 +2591,15 @@ describe('WhiteboardService', () => {
         expect.objectContaining({
           message: 'Failed to clean up materialized whiteboard media document',
           documentId: 'orphaned',
-          error: String(cleanupError),
         }),
         expect.any(String)
       );
+      expect(
+        JSON.stringify(
+          (MockWinstonProvider.useValue.warn as ReturnType<typeof vi.fn>).mock
+            .calls
+        )
+      ).not.toContain('PRIVATE_MEDIA_OR_TOKEN');
     });
   });
 

@@ -504,7 +504,7 @@ export class WhiteboardService {
             false,
             false,
             undefined,
-            { onCreated }
+            { onCreated, composeAuthorization: true }
           );
       }
       checkCancellation();
@@ -542,13 +542,12 @@ export class WhiteboardService {
   ): Promise<void> {
     await Promise.all(
       documentIDs.map(id =>
-        this.fileServiceAdapter.deleteDocument(id).catch(cleanupError => {
+        this.fileServiceAdapter.deleteDocument(id).catch(() => {
           this.logger.warn?.(
             {
               message:
                 'Failed to clean up materialized whiteboard media document',
               documentId: id,
-              error: String(cleanupError),
             },
             LogContext.WHITEBOARDS
           );
