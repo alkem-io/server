@@ -211,6 +211,54 @@ describe('which bucket right an attachment send requires', () => {
     );
   });
 
+  it.each([
+    RoomType.CALLOUT,
+    RoomType.POST,
+  ])('accepts a raster image in a %s comment room', async type => {
+    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
+    await expect(
+      service.existingMedia(roomOf(type), member, reference as any)
+    ).resolves.toMatchObject({ mime_type: 'image/png' });
+  });
+
+  it.each([
+    [RoomType.CALLOUT, 'image/svg+xml'],
+    [RoomType.CALLOUT, 'application/pdf'],
+    [RoomType.POST, 'image/svg+xml'],
+    [RoomType.POST, 'application/pdf'],
+  ])('refuses a non-raster attachment in a %s comment room (%s) even when the bucket allows it', async (type, mimeType) => {
+    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
+    files.getReferenceMetadata.mockResolvedValue({ mimeType, size: 5 });
+    await expect(
+      service.existingMedia(roomOf(type), member, reference as any)
+    ).rejects.toThrow(ValidationException);
+    expect(attachments.matchesBucketPolicy).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ mimeType })
+    );
+  });
+
+  it('accepts any bucket-allowed type in a conversation room', async () => {
+    attachments.getTargetBucketForRoom.mockResolvedValue({
+      id: 'bucket',
+      authorization: bucketPolicy([
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.CONTRIBUTE,
+      ]),
+    });
+    files.getReferenceMetadata.mockResolvedValue({
+      mimeType: 'application/pdf',
+      size: 5,
+    });
+    await expect(
+      service.existingMedia(
+        roomOf(RoomType.CONVERSATION_DIRECT),
+        member,
+        reference as any
+      )
+    ).resolves.toMatchObject({ mime_type: 'application/pdf' });
+  });
+
   it('rejects a room without a target bucket as invalid', async () => {
     attachments.getTargetBucketForRoom.mockResolvedValue(undefined);
     await expect(

@@ -13,6 +13,9 @@ import {
   sanitizeAttachmentDisplayName,
 } from './message.attachment.service';
 
+const isRasterImageMimeType = (mimeType: string): boolean =>
+  mimeType.startsWith('image/') && mimeType !== 'image/svg+xml';
+
 /** Room operation authorization is shared with ordinary sends at the resolver. */
 @Injectable()
 export class RoomAttachmentSendService {
@@ -36,6 +39,10 @@ export class RoomAttachmentSendService {
       !/^[A-Za-z0-9_-]+$/.test(input.externalReference) ||
       !this.attachments.matchesBucketPolicy(bucket, metadata)
     )
+      this.invalid();
+    // Comment rooms accept raster images only, whatever else the space
+    // bucket allows; conversations keep every type their bucket allows.
+    if (!isConversationRoom(room) && !isRasterImageMimeType(metadata.mimeType))
       this.invalid();
     return {
       media_id: input.externalReference,
