@@ -154,6 +154,75 @@ describe('RoomResolverMutations', () => {
     expect(resolver).toBeDefined();
   });
 
+  describe.each([
+    'send',
+    'reply',
+  ] as const)('%s with text and an attachment', operation => {
+    const room = {
+      id: 'room-1',
+      type: RoomType.UPDATES,
+      authorization: { id: 'auth-1' },
+    } as unknown as IRoom;
+    const media = {
+      media_id: 'media',
+      display_name: 'pic.png',
+      mime_type: 'image/png',
+      size: 7,
+    };
+    const attachmentUpload = {
+      externalReference: 'media',
+      displayName: 'pic.png',
+    };
+
+    beforeEach(() => {
+      roomService.getRoomOrFail.mockResolvedValue(room as any);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+      (resolver as any).roomAttachments.existingMedia.mockResolvedValue(media);
+      roomLookupService.sendMessage.mockResolvedValue({ id: 'msg-1' } as any);
+      roomLookupService.sendMessageReply.mockResolvedValue({
+        id: 'reply-1',
+      } as any);
+    });
+
+    it('is sent once, carrying both the text and the media reference', async () => {
+      if (operation === 'send') {
+        const input = {
+          roomID: 'room-1',
+          message: 'look at this',
+          attachmentUpload,
+        };
+        await resolver.sendMessageToRoom(input, actorContext);
+        expect(roomLookupService.sendMessage).toHaveBeenCalledTimes(1);
+        expect(roomLookupService.sendMessage).toHaveBeenCalledWith(
+          room,
+          actorContext.actorID,
+          expect.objectContaining({ message: 'look at this' }),
+          media
+        );
+        expect(roomLookupService.sendMessageReply).not.toHaveBeenCalled();
+      } else {
+        const input = {
+          roomID: 'room-1',
+          threadID: '$parent',
+          message: 'look at this',
+          attachmentUpload,
+        };
+        await resolver.sendMessageReplyToRoom(input, actorContext);
+        expect(roomLookupService.sendMessageReply).toHaveBeenCalledTimes(1);
+        expect(roomLookupService.sendMessageReply).toHaveBeenCalledWith(
+          room,
+          actorContext.actorID,
+          expect.objectContaining({
+            message: 'look at this',
+            threadID: '$parent',
+          }),
+          media
+        );
+        expect(roomLookupService.sendMessage).not.toHaveBeenCalled();
+      }
+    });
+  });
+
   describe('sendMessageToRoom', () => {
     const mockRoom = {
       id: 'room-1',
