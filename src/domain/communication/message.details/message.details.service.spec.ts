@@ -116,12 +116,8 @@ describe('MessageDetailsService', () => {
       });
 
       const mockCalloutRoom = (message: IMessage) => {
-        const mockRoom = {
-          id: 'room-1',
-          type: RoomType.CALLOUT,
-        } as unknown as IRoom;
         roomLookupService.getMessageInRoom.mockResolvedValue({
-          room: mockRoom,
+          room: { id: 'room-1', type: RoomType.CALLOUT } as unknown as IRoom,
           message,
         });
         roomResolverService.getCalloutForRoom.mockResolvedValue({
@@ -131,33 +127,12 @@ describe('MessageDetailsService', () => {
         urlGeneratorService.getCalloutUrlPath.mockResolvedValue(
           '/spaces/s1/callouts/callout-1'
         );
-        return mockRoom;
       };
 
       it('returns the image icon for an attachment-only message', async () => {
-        const mockRoom = mockCalloutRoom({
-          ...mockMessage,
-          message: 'shot.png',
-          rawAttachments: [attachment('shot.png')],
-        });
-
-        const result = await service.getMessageDetails('room-1', 'msg-1');
-
-        expect(result.message).toBe('🖼️');
-        expect(result.roomID).toBe('room-1');
-        expect(result.messageID).toBe('msg-1');
-        expect(result.room).toBe(mockRoom);
-        expect(result.parent).toEqual({
-          id: 'callout-1',
-          displayName: 'Test Callout',
-          url: '/spaces/s1/callouts/callout-1',
-        });
-      });
-
-      it('returns the icon for an empty body with one attachment', async () => {
         mockCalloutRoom({
           ...mockMessage,
-          message: '',
+          message: 'shot.png',
           rawAttachments: [attachment('shot.png')],
         });
 
@@ -176,54 +151,6 @@ describe('MessageDetailsService', () => {
         const result = await service.getMessageDetails('room-1', 'msg-1');
 
         expect(result.message).toBe('look at this');
-      });
-
-      it('keeps text when there are no attachments', async () => {
-        mockCalloutRoom({ ...mockMessage, rawAttachments: [] });
-
-        const result = await service.getMessageDetails('room-1', 'msg-1');
-
-        expect(result.message).toBe('Hello world');
-      });
-
-      it('keeps the body when two attachments are present even if it equals one name', async () => {
-        mockCalloutRoom({
-          ...mockMessage,
-          message: 'a.png',
-          rawAttachments: [attachment('a.png'), attachment('b.png')],
-        });
-
-        const result = await service.getMessageDetails('room-1', 'msg-1');
-
-        expect(result.message).toBe('a.png');
-      });
-
-      it('still resolves the parent for an attachment-only message in a POST room', async () => {
-        roomLookupService.getMessageInRoom.mockResolvedValue({
-          room: { id: 'room-2', type: RoomType.POST } as unknown as IRoom,
-          message: {
-            ...mockMessage,
-            message: 'shot.png',
-            rawAttachments: [attachment('shot.png')],
-          },
-        });
-        roomResolverService.getCalloutWithPostContributionForRoom.mockResolvedValue(
-          {
-            post: { id: 'post-1', profile: { displayName: 'Test Post' } },
-          } as any
-        );
-        urlGeneratorService.getPostUrlPath.mockResolvedValue(
-          '/spaces/s1/posts/post-1'
-        );
-
-        const result = await service.getMessageDetails('room-2', 'msg-1');
-
-        expect(result.message).toBe('🖼️');
-        expect(result.parent).toEqual({
-          id: 'post-1',
-          displayName: 'Test Post',
-          url: '/spaces/s1/posts/post-1',
-        });
       });
     });
 

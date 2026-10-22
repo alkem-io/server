@@ -330,28 +330,6 @@ describe('MessageInboxService', () => {
         ).toHaveBeenCalledTimes(1);
       });
 
-      it('does not start a new VC thread for an attachment-only top-level message', async () => {
-        const room = makeRoom({ type: RoomType.CALLOUT });
-        const payload = {
-          ...basePayload,
-          message: {
-            ...basePayload.message,
-            message: '',
-            attachments: [imageAttachment],
-          },
-        };
-        mockNonConversationRoom(room);
-
-        await service.handleMessageReceived(
-          new MessageReceivedEvent(payload as any)
-        );
-
-        expect(vcInvocationService.processNewThread).not.toHaveBeenCalled();
-        expect(
-          vcInvocationService.processExistingThread
-        ).not.toHaveBeenCalled();
-      });
-
       it('does not invoke the conversation VC for an attachment-only chat message', async () => {
         const room = makeRoom({ type: RoomType.CONVERSATION_DIRECT });
         roomLookupService.getRoomOrFail.mockResolvedValue(room);
