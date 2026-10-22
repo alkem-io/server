@@ -8,6 +8,7 @@ import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbid
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { applicationLifecycleMachine } from '@domain/access/application/application.service.lifecycle';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
 import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
@@ -36,7 +37,10 @@ import {
   OrgCommunityGateService,
   SELF_TARGET_REFUSAL_REASON,
 } from './org.community.gate.service';
-import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutations.membership';
+import {
+  RoleSetResolverMutationsMembership,
+  SUPPORT_APPLICATION_EVENT_AUDIT_ACTIONS,
+} from './role.set.resolver.mutations.membership';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
 
@@ -395,15 +399,57 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
       expect(audit.record.mock.calls[0][0].action).toBe('reject_application');
     });
 
-    it('writes no row for an event outside the audited vocabulary', async () => {
-      arrange('applicant-1', ['archived']);
+    it.each([
+      ['ARCHIVE', 'archived', 'archive_application'],
+      ['REOPEN', 'new', 'reopen_application'],
+      ['APPROVED', 'approved', 'mark_application_approved'],
+    ])('lets Support send %s and writes exactly one row', async (eventName, state, action) => {
+      arrange('applicant-1', [state]);
+      const support = supportActor('support-1');
 
       await resolver.eventOnApplication(
-        { applicationID: 'app-1', eventName: 'ARCHIVE' } as any,
-        supportActor('support-1')
+        { applicationID: 'app-1', eventName } as any,
+        support
       );
 
+      expect(lifecycleService.event).toHaveBeenCalledTimes(1);
+      expect(roleSetService.approveApplication).not.toHaveBeenCalled();
+      expect(audit.record).toHaveBeenCalledTimes(1);
+      expect(audit.record).toHaveBeenCalledWith({
+        actorContext: support,
+        roleSetId: 'rs-org',
+        action,
+        targetUserId: 'applicant-1',
+        applicationId: 'app-1',
+      });
+    });
+
+    it.each([
+      ['ARCHIVE', 'archived'],
+      ['REOPEN', 'new'],
+      ['APPROVED', 'approved'],
+    ])('writes no row when the organization admin sends %s', async (eventName, state) => {
+      arrange('applicant-1', [state]);
+
+      await resolver.eventOnApplication(
+        { applicationID: 'app-1', eventName } as any,
+        orgAdminActor()
+      );
+
+      expect(lifecycleService.event).toHaveBeenCalledTimes(1);
       expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('maps every event the application lifecycle accepts to an audit action', () => {
+      const machineEvents = new Set(
+        Object.values(applicationLifecycleMachine.states ?? {}).flatMap(state =>
+          Object.keys((state as { on?: object }).on ?? {})
+        )
+      );
+      expect(machineEvents.size).toBeGreaterThan(0);
+      expect(
+        Object.keys(SUPPORT_APPLICATION_EVENT_AUDIT_ACTIONS).sort()
+      ).toEqual([...machineEvents].sort());
     });
 
     it('refuses Support approving their own application before any event fires', async () => {

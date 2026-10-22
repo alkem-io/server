@@ -45,6 +45,10 @@ const OUTCOME_BY_ACTION: Record<
   revoke_email_invitation: PlatformAuditOutcome.OPERATION_SUCCEEDED,
   approve_application: PlatformAuditOutcome.ROLE_GRANTED,
   reject_application: PlatformAuditOutcome.OPERATION_SUCCEEDED,
+  archive_application: PlatformAuditOutcome.OPERATION_SUCCEEDED,
+  reopen_application: PlatformAuditOutcome.OPERATION_SUCCEEDED,
+  // Only moves a stalled approval to its final state; it grants no role.
+  mark_application_approved: PlatformAuditOutcome.OPERATION_SUCCEEDED,
   assign_role: PlatformAuditOutcome.ROLE_GRANTED,
   remove_role: PlatformAuditOutcome.ROLE_REVOKED,
   remove_member: PlatformAuditOutcome.ROLE_REVOKED,

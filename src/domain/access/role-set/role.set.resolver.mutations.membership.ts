@@ -43,6 +43,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { IOrganization } from '@domain/community/organization';
 import { isDomainJoinEligible } from '@domain/community/organization/organization.domain.join.policy';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { OrganizationAdministrationAction } from '@domain/community/user-email-change/platform.audit.entry.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
@@ -102,6 +103,23 @@ const APPLICATION_APPROVE_EVENTS: ReadonlySet<string> = new Set([
   'APPROVE',
   ApplicationLifecycleEvent.APPROVED,
 ]);
+
+/**
+ * The audit action for every event the application lifecycle accepts. Every
+ * event a Platform Support user sends on an organization's application writes
+ * one row, so this map must cover the whole machine. `APPROVED` sent directly
+ * only moves a stalled approval to its final state without granting the role,
+ * which is why it is not recorded as an approval.
+ */
+export const SUPPORT_APPLICATION_EVENT_AUDIT_ACTIONS: Readonly<
+  Record<string, OrganizationAdministrationAction>
+> = {
+  APPROVE: 'approve_application',
+  [ApplicationLifecycleEvent.APPROVED]: 'mark_application_approved',
+  REJECT: 'reject_application',
+  REOPEN: 'reopen_application',
+  ARCHIVE: 'archive_application',
+};
 
 @InstrumentResolver()
 @Resolver()
@@ -1131,7 +1149,7 @@ export class RoleSetResolverMutationsMembership {
       );
 
       if (branch === 'platform-support') {
-        await this.recordSupportApplicationDecision(
+        await this.recordSupportApplicationEvent(
           eventData.eventName,
           actorContext,
           application.roleSet.id,
@@ -1147,31 +1165,28 @@ export class RoleSetResolverMutationsMembership {
   }
 
   /**
-   * The Community tab decides an application with APPROVE or REJECT; those are
-   * the only application events the audit vocabulary records. Any other event
-   * on the Support path is logged, not audited.
+   * One `organization_administration` row for an application event admitted
+   * on the Platform Support path, written after the event has landed.
    */
-  private async recordSupportApplicationDecision(
+  private async recordSupportApplicationEvent(
     eventName: string,
     actorContext: ActorContext,
     roleSetId: string,
     applicantID: string,
     applicationId: string
   ): Promise<void> {
-    const action =
-      eventName === 'APPROVE'
-        ? 'approve_application'
-        : eventName === 'REJECT'
-          ? 'reject_application'
-          : undefined;
+    const action = SUPPORT_APPLICATION_EVENT_AUDIT_ACTIONS[eventName];
     if (!action) {
-      this.logger.verbose?.(
+      // Unreachable while the map covers the lifecycle: the machine rejects
+      // any other event before this point.
+      this.logger.error?.(
         {
           message:
-            'Application event on the Platform Support path is outside the audited vocabulary',
+            'Application event on the Platform Support path has no audit action',
           eventName,
           applicationId,
         },
+        undefined,
         LogContext.ROLES
       );
       return;
