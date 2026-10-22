@@ -1,9 +1,11 @@
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { RoleSetType } from '@common/enums/role.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
+import { SPACE_INVITATION_ACCEPTORS_CHANGED } from '@domain/access/invitation/invitation.space.acceptors.event';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -1187,6 +1189,37 @@ describe('RegistrationService', () => {
         'self',
         'file_bytes_cleanup_completed',
         undefined
+      );
+    });
+  });
+
+  describe('deleteOrganizationWithPendingMemberships', () => {
+    it('resets the Spaces the organization was invited to once its invitations are deleted', async () => {
+      (invitationService.findInvitationsForActor as Mock).mockResolvedValue([
+        { id: 'inv-1', roleSet: { id: 'rs-space', type: RoleSetType.SPACE } },
+        {
+          id: 'inv-2',
+          roleSet: { id: 'rs-org', type: RoleSetType.ORGANIZATION },
+        },
+      ]);
+      (invitationService.deleteInvitation as Mock).mockResolvedValue({});
+      (
+        organizationLookupService as any
+      ).getOrganizationByIdOrFail.mockResolvedValue({ id: 'org-1' });
+      _organizationService.getAccount.mockResolvedValue({ id: 'account-1' });
+      _organizationService.deleteOrganization.mockResolvedValue({
+        id: 'org-1',
+      });
+      (accountService.deleteAccountOrFail as Mock).mockResolvedValue({});
+      const eventEmitter = (service as any).eventEmitter;
+
+      await service.deleteOrganizationWithPendingMemberships({ ID: 'org-1' });
+
+      expect(invitationService.deleteInvitation).toHaveBeenCalledTimes(2);
+      expect(eventEmitter.emitAsync).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
+        SPACE_INVITATION_ACCEPTORS_CHANGED,
+        { roleSetID: 'rs-space' }
       );
     });
   });
