@@ -15,9 +15,11 @@ cleared; failure stops the loop and retains the remaining draft. A completed
 upload is reused on manual retry. Navigation disposes the old composer and stops
 its remaining work. An already submitted event cannot be cancelled.
 
-The room mutation and adapter accept either text or one attachment, and return
-that actual event. Attachments must belong to the destination bucket, satisfy its
-MIME/size policy, and be readable by the sender. Another member may reuse a file;
+The room mutation and adapter accept text, one attachment, or text with one
+attachment, and return that actual event. Text sent with an attachment travels as
+the media caption, so text and attachment form a single message. Attachments
+must belong to the destination bucket, satisfy its MIME/size policy, and be
+readable by the sender. Another member may reuse a file;
 there is no single-use or uploader-only gate.
 
 Web upload forwarding uses a bounded Readable stream through the existing
@@ -67,8 +69,14 @@ The Alkemio document URL enforces the document policy. Native Synapse media
 retrieval authenticates the caller but does not check room membership against an
 already known media URI. Do not describe those two serving paths as equivalent.
 
-Comment-room attachments use their existing parent collaboration bucket and its
-normal authorization and policy.
+Comment rooms (every room that is not a conversation) store attachments in their
+existing parent collaboration bucket, but a send does not check the caller's
+upload right on that bucket. The resolver's message gate authorizes the send:
+CREATE_MESSAGE on the room for a message, CREATE_MESSAGE_REPLY for a reply. The
+bucket only sets the accepted MIME types and maximum size. On top of that,
+comment rooms accept raster images only (any `image/*` type except SVG).
+Conversation rooms additionally require FILE_UPLOAD on their own bucket and
+accept every type that bucket allows.
 
 ## Lifecycle and rollout
 
