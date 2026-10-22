@@ -1,3 +1,4 @@
+import { ORGANIZATION_COMMUNITY_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { LogContext } from '@common/enums/logging.context';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -179,7 +180,7 @@ export class OrganizationAdministrationAuditService {
       actorCredentialTypes: input.actorContext.credentials.map(
         credential => credential.type as AuthorizationCredential
       ),
-      intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+      intendedOwners: ORGANIZATION_COMMUNITY_INTENDED_OWNERS,
     });
   }
 }
