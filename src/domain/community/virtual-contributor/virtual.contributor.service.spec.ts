@@ -1,9 +1,11 @@
+import { RoleSetType } from '@common/enums/role.set.type';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { SPACE_INVITATION_ACCEPTORS_CHANGED } from '@domain/access/invitation/invitation.space.acceptors.event';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
 import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
@@ -403,6 +405,39 @@ describe('VirtualContributorService', () => {
         mockVC.knowledgeBase
       );
       expect(result.id).toBe('vc-1');
+    });
+
+    it('resets the Spaces whose open invitations it deletes, after the transaction commits', async () => {
+      repository.findOne.mockResolvedValue({
+        id: 'vc-1',
+        profile: { id: 'profile-1' },
+        knowledgeBase: { id: 'kb-1' },
+      });
+      entityManager.find.mockResolvedValue([
+        { id: 'inv-1', roleSet: { id: 'rs-space', type: RoleSetType.SPACE } },
+        {
+          id: 'inv-2',
+          roleSet: { id: 'rs-org', type: RoleSetType.ORGANIZATION },
+        },
+      ]);
+      const order: string[] = [];
+      (repository as any).manager.transaction = vi.fn(async (cb: any) => {
+        await cb();
+        order.push('commit');
+      });
+      const eventEmitter = (service as any).eventEmitter;
+      eventEmitter.emitAsync.mockImplementation(async () => {
+        order.push('reset');
+      });
+
+      await service.deleteVirtualContributor('vc-1');
+
+      expect(eventEmitter.emitAsync).toHaveBeenCalledTimes(1);
+      expect(eventEmitter.emitAsync).toHaveBeenCalledWith(
+        SPACE_INVITATION_ACCEPTORS_CHANGED,
+        { roleSetID: 'rs-space' }
+      );
+      expect(order).toEqual(['commit', 'reset']);
     });
 
     it('should throw RelationshipNotFoundException when profile is missing', async () => {

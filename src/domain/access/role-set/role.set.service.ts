@@ -939,6 +939,50 @@ export class RoleSetService {
     }
   }
 
+  /**
+   * The credentials of whoever may accept a still-open organization or virtual
+   * contributor invitation on this RoleSet: the invitee's account admins, who
+   * hold the accept privilege (see InvitationAuthorizationService). The
+   * SPACE_MEMBER_INVITEE credential is issued to the invited actor itself,
+   * which for these actor types nobody signs in as.
+   */
+  async getAccountAdminCredentialsForOpenInvitations(
+    roleSet: IRoleSet
+  ): Promise<ICredentialDefinition[]> {
+    const [organizationIDs, virtualContributorIDs] = await Promise.all([
+      this.invitationService.getActorIDsWithOpenInvitationOnRoleSet(
+        roleSet.id,
+        ActorType.ORGANIZATION
+      ),
+      this.invitationService.getActorIDsWithOpenInvitationOnRoleSet(
+        roleSet.id,
+        ActorType.VIRTUAL_CONTRIBUTOR
+      ),
+    ]);
+    const accountIDs = await Promise.all([
+      ...organizationIDs.map(
+        async organizationID =>
+          (
+            await this.organizationLookupService.getOrganizationByIdOrFail(
+              organizationID
+            )
+          ).accountID
+      ),
+      ...virtualContributorIDs.map(
+        async virtualContributorID =>
+          (
+            await this.virtualContributorLookupService.getAccountOrFail(
+              virtualContributorID
+            )
+          ).id
+      ),
+    ]);
+    return accountIDs.map(accountID => ({
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: accountID,
+    }));
+  }
+
   // Actor-based credential methods - entity.id IS the actorID
   private async assignSpaceInviteeCredential(
     actorID: string,

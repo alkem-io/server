@@ -17,7 +17,9 @@ import { InvitationService } from '@domain/access/invitation/invitation.service'
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -359,6 +361,59 @@ describe('RoleSetService', () => {
       vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue(mockRoleSet);
 
       const result = await service.getInvitations({ id: 'rs-1' } as any);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getAccountAdminCredentialsForOpenInvitations', () => {
+    it('grants the account admins of invited organizations and virtual contributors', async () => {
+      (
+        invitationService.getActorIDsWithOpenInvitationOnRoleSet as Mock
+      ).mockImplementation(async (_roleSetID: string, actorType: ActorType) =>
+        actorType === ActorType.ORGANIZATION ? ['org-1'] : ['vc-1']
+      );
+      const organizationLookupService = (service as any)
+        .organizationLookupService as OrganizationLookupService;
+      (
+        organizationLookupService.getOrganizationByIdOrFail as Mock
+      ).mockResolvedValue({ id: 'org-1', accountID: 'org-account' });
+      const virtualContributorLookupService = (service as any)
+        .virtualContributorLookupService as VirtualContributorLookupService;
+      (
+        virtualContributorLookupService.getAccountOrFail as Mock
+      ).mockResolvedValue({ id: 'vc-account' });
+
+      const result = await service.getAccountAdminCredentialsForOpenInvitations(
+        { id: 'rs-1' } as IRoleSet
+      );
+
+      expect(result).toEqual([
+        {
+          type: AuthorizationCredential.ACCOUNT_ADMIN,
+          resourceID: 'org-account',
+        },
+        {
+          type: AuthorizationCredential.ACCOUNT_ADMIN,
+          resourceID: 'vc-account',
+        },
+      ]);
+      expect(
+        invitationService.getActorIDsWithOpenInvitationOnRoleSet
+      ).toHaveBeenCalledWith('rs-1', ActorType.ORGANIZATION);
+      expect(
+        invitationService.getActorIDsWithOpenInvitationOnRoleSet
+      ).toHaveBeenCalledWith('rs-1', ActorType.VIRTUAL_CONTRIBUTOR);
+    });
+
+    it('grants nothing when no organization or virtual contributor invitation is open', async () => {
+      (
+        invitationService.getActorIDsWithOpenInvitationOnRoleSet as Mock
+      ).mockResolvedValue([]);
+
+      const result = await service.getAccountAdminCredentialsForOpenInvitations(
+        { id: 'rs-1' } as IRoleSet
+      );
 
       expect(result).toEqual([]);
     });
