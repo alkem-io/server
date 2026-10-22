@@ -27,6 +27,10 @@ import {
   IInvitation,
   InvitationEventInput,
 } from '@domain/access/invitation';
+import {
+  emitSpaceInvitationAcceptorsChanged,
+  isAcceptedByAccountAdmins,
+} from '@domain/access/invitation/invitation.space.acceptors.event';
 import { ResendPlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.resend';
 import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
@@ -43,6 +47,7 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Inject, LoggerService } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationInputOrganizationAssociatePlatformInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.associate.platform.invitation';
 import { NotificationInputOrganizationSpaceCommunityInvitation } from '@services/adapters/notification-adapter/dto/organization/notification.dto.input.organization.space.community.invitation';
@@ -117,6 +122,7 @@ export class RoleSetResolverMutationsMembership {
     private lifecycleService: LifecycleService,
     private roleSetCacheService: RoleSetCacheService,
     private eligibleLanguageGuard: RoleSetEligibleLanguageGuard,
+    private readonly eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -531,6 +537,25 @@ export class RoleSetResolverMutationsMembership {
 
     // Reset all authorizations on the invitations and applications because it's easier
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
+
+    // Before the notifications go out, so the admins they reach can already
+    // see the Space.
+    const invitedActorAcceptedByAccountAdmins = invitationResults.some(
+      result =>
+        result.type === RoleSetInvitationResultType.INVITED_TO_ROLE_SET &&
+        result.invitation &&
+        isAcceptedByAccountAdmins(
+          actorTypes.get(result.invitation.invitedActorID)
+        )
+    );
+    if (
+      roleSet.type === RoleSetType.SPACE &&
+      invitedActorAcceptedByAccountAdmins
+    ) {
+      await emitSpaceInvitationAcceptorsChanged(this.eventEmitter, [
+        roleSet.id,
+      ]);
+    }
 
     // Reload the invitations to get the latest authorizations
     const invitationsReloaded =
@@ -1257,6 +1282,15 @@ export class RoleSetResolverMutationsMembership {
         invitation.roleSet.id,
         isMember
       );
+    }
+
+    if (
+      invitation.roleSet?.type === RoleSetType.SPACE &&
+      isAcceptedByAccountAdmins(invitedActorType)
+    ) {
+      await emitSpaceInvitationAcceptorsChanged(this.eventEmitter, [
+        invitation.roleSet.id,
+      ]);
     }
 
     const reloadedInvitation = await this.invitationService.getInvitationOrFail(
