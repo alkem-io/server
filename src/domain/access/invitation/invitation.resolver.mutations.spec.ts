@@ -125,15 +125,21 @@ describe('InvitationResolverMutations', () => {
       expect(audit.record).not.toHaveBeenCalled();
     });
 
-    it('refuses Content Full Access, and Support on a Space invitation', async () => {
-      (invitationService.getInvitationOrFail as Mock).mockResolvedValueOnce(
+    it('leaves Content Full Access its pre-existing root-cascade DELETE, never audited', async () => {
+      (invitationService.getInvitationOrFail as Mock).mockResolvedValue(
         orgInvitation()
       );
-      await expect(
-        resolver.deleteInvitation(contentFullAccessActor(), { ID: 'inv-1' })
-      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
 
-      (invitationService.getInvitationOrFail as Mock).mockResolvedValueOnce({
+      await resolver.deleteInvitation(contentFullAccessActor(), {
+        ID: 'inv-1',
+      });
+
+      expect(invitationService.deleteInvitation).toHaveBeenCalledTimes(1);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('refuses Support on a Space invitation', async () => {
+      (invitationService.getInvitationOrFail as Mock).mockResolvedValue({
         id: 'inv-2',
         invitedActorID: 'invitee-1',
         authorization: spaceRoleSetPolicy(),

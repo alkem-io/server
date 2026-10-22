@@ -87,14 +87,20 @@ describe('RoleSetServiceLifecycleApplication', () => {
       );
     });
 
-    it('block Content Full Access, and Support on a Space application', () => {
+    it('never let Content Full Access approve (no GRANT), and leave it its pre-existing root-cascade UPDATE', () => {
       expect(
         stateAfter('APPROVE', contentFullAccessActor(), orgChildPolicy())
       ).toBe('new');
       expect(
         stateAfter('REJECT', contentFullAccessActor(), orgChildPolicy())
-      ).toBe('new');
+      ).toBe('rejected');
+    });
+
+    it('block Support on a Space application', () => {
       expect(stateAfter('APPROVE', supportActor(), spaceRoleSetPolicy())).toBe(
+        'new'
+      );
+      expect(stateAfter('REJECT', supportActor(), spaceRoleSetPolicy())).toBe(
         'new'
       );
     });

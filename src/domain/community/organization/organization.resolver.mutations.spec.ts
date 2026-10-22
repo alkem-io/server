@@ -7,7 +7,6 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import {
-  contentFullAccessActor,
   orgRoleSetPolicy,
   realAuthorizationService,
   supportActor,
@@ -196,7 +195,8 @@ describe('OrganizationResolverMutations', () => {
 
   describe('Platform Support beyond the Community tab', () => {
     // The real AuthorizationService over a policy carrying even the
-    // role-set Support rules: neither gives UPDATE on the organization.
+    // role-set Support rules: neither gives Support UPDATE on the
+    // organization.
     let realResolver: OrganizationResolverMutations;
     let orgService: { getOrganizationOrFail: Mock; updateOrganization: Mock };
 
@@ -224,7 +224,6 @@ describe('OrganizationResolverMutations', () => {
 
     it.each([
       ['Platform Support', supportActor()],
-      ['Content Full Access', contentFullAccessActor()],
     ])('%s cannot update the organization profile or settings', async (_label, actor) => {
       await expect(
         realResolver.updateOrganization(actor, { ID: 'org-1' } as any)

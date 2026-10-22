@@ -101,19 +101,25 @@ describe('PlatformInvitationResolverMutations', () => {
       );
     });
 
-    it('refuses Content Full Access, and Support on a Space email invitation', async () => {
+    it('leaves Content Full Access its pre-existing root-cascade DELETE, never audited', async () => {
       (
         platformInvitationService.getPlatformInvitationOrFail as Mock
-      ).mockResolvedValueOnce(orgEmailInvitation());
-      await expect(
-        resolver.deletePlatformInvitation(contentFullAccessActor(), {
-          ID: 'pinv-1',
-        })
-      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      ).mockResolvedValue(orgEmailInvitation());
 
+      await resolver.deletePlatformInvitation(contentFullAccessActor(), {
+        ID: 'pinv-1',
+      });
+
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).toHaveBeenCalledTimes(1);
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it('refuses Support on a Space email invitation', async () => {
       (
         platformInvitationService.getPlatformInvitationOrFail as Mock
-      ).mockResolvedValueOnce({
+      ).mockResolvedValue({
         ...orgEmailInvitation(),
         authorization: spaceRoleSetPolicy(),
         roleSet: { id: 'rs-space', type: RoleSetType.SPACE },

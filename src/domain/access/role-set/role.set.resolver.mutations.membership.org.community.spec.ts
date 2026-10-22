@@ -443,16 +443,15 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
       expect(audit.record).not.toHaveBeenCalled();
     });
 
-    it('refuses Content Full Access', async () => {
-      arrange('applicant-1', ['approving']);
+    it('admits Content Full Access only through its pre-existing root-cascade UPDATE, and never audits it', async () => {
+      arrange('applicant-1', ['rejected']);
 
-      await expect(
-        resolver.eventOnApplication(
-          { applicationID: 'app-1', eventName: 'APPROVE' } as any,
-          contentFullAccessActor()
-        )
-      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
-      expect(lifecycleService.event).not.toHaveBeenCalled();
+      await resolver.eventOnApplication(
+        { applicationID: 'app-1', eventName: 'REJECT' } as any,
+        contentFullAccessActor()
+      );
+
+      expect(audit.record).not.toHaveBeenCalled();
     });
   });
 
@@ -485,12 +484,20 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
       expect(lifecycleService.event).not.toHaveBeenCalled();
     });
 
-    it('Content Full Access gets none of the Community-tab writes', async () => {
+    it('Content Full Access gains no invite or resend reach', async () => {
       await expect(
-        resolver.updateApplicationFormOnRoleSet(contentFullAccessActor(), {
-          roleSetID: 'rs-org',
-          formData: {},
-        } as any)
+        invite(contentFullAccessActor(), ['user-a'])
+      ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      platformInvitationService.getPlatformInvitationOrFail.mockResolvedValue({
+        id: 'pinv-1',
+        email: 'new@example.org',
+        profileCreated: false,
+        roleSet: orgRoleSet(),
+      });
+      await expect(
+        resolver.resendPlatformInvitation(contentFullAccessActor(), {
+          ID: 'pinv-1',
+        })
       ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
     });
   });

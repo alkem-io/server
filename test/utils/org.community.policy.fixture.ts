@@ -12,7 +12,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
  * restating a mock.
  *
  * Mirrors what an authorization reset stores on an organization role set:
- * the organization admin/owner cascade (GRANT/CREATE/UPDATE/DELETE), their
+ * the root Content Full Access cascade, the organization admin/owner cascade (GRANT/CREATE/UPDATE/DELETE), their
  * non-cascading ROLESET_ENTRY_ROLE_ASSIGN, the ASSIGN → INVITE privilege rule,
  * and Platform Support's two type-only rules (membership privilege cascading,
  * invite not cascading).
@@ -24,6 +24,28 @@ const adminCriterias = [
   { type: AuthorizationCredential.ORGANIZATION_OWNER, resourceID: ORG_ID },
 ];
 
+/** The root policy's Content Full Access rule, inherited (cascading) by
+ * every organization and Space tree: blanket CREATE/READ/UPDATE/DELETE plus
+ * its own privilege — but never GRANT, an entry privilege or the Support
+ * membership privilege. */
+const rootContentFullAccessRule = {
+  name: 'root-content-full-access',
+  grantedPrivileges: [
+    AuthorizationPrivilege.CREATE,
+    AuthorizationPrivilege.READ,
+    AuthorizationPrivilege.UPDATE,
+    AuthorizationPrivilege.DELETE,
+    AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS,
+  ],
+  criterias: [
+    {
+      type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+      resourceID: '',
+    },
+  ],
+  cascade: true,
+};
+
 export const realAuthorizationService = (): AuthorizationService =>
   new AuthorizationService(MockWinstonProvider.useValue as any);
 
@@ -34,6 +56,7 @@ export const orgRoleSetPolicy = (
     id: 'auth-org-roleset',
     type: 'role-set',
     credentialRules: [
+      rootContentFullAccessRule,
       {
         name: 'org-admin',
         grantedPrivileges: [
@@ -121,6 +144,7 @@ export const spaceRoleSetPolicy = (): IAuthorizationPolicy =>
     id: 'auth-space-roleset',
     type: 'role-set',
     credentialRules: [
+      rootContentFullAccessRule,
       {
         name: 'space-admin',
         grantedPrivileges: [
