@@ -25,10 +25,9 @@ export class RoomAttachmentSendService {
   async existingMedia(
     room: IRoom,
     actor: ActorContext,
-    input: RoomMessageAttachmentInput,
-    threadID?: string
+    input: RoomMessageAttachmentInput
   ): Promise<ExistingMediaRef> {
-    const bucket = await this.targetBucket(room, actor, threadID);
+    const bucket = await this.targetBucket(room, actor);
     const metadata = await this.files.getReferenceMetadata(
       input.externalReference
     );
@@ -51,37 +50,19 @@ export class RoomAttachmentSendService {
     };
   }
 
-  private async targetBucket(
-    room: IRoom,
-    actor: ActorContext,
-    threadID?: string
-  ) {
+  private async targetBucket(room: IRoom, actor: ActorContext) {
     const bucket = await this.attachments.getTargetBucketForRoom(room);
     if (!bucket) this.invalid();
     if (isConversationRoom(room)) {
-      // A conversation owns its bucket; its participants hold the upload
-      // right on it.
       this.authorization.grantAccessOrFail(
         actor,
         bucket.authorization,
         AuthorizationPrivilege.FILE_UPLOAD,
         `send room attachment: ${room.id}`
       );
-    } else {
-      // A comment room stores attachments in the space's shared bucket, on
-      // which ordinary members hold no upload right, so attaching follows the
-      // right to post in this room instead. Attachments arriving from Matrix
-      // are placed in the same bucket on that same right. The bucket still
-      // sets the accepted file types and size.
-      this.authorization.grantAccessOrFail(
-        actor,
-        room.authorization,
-        threadID
-          ? AuthorizationPrivilege.CREATE_MESSAGE_REPLY
-          : AuthorizationPrivilege.CREATE_MESSAGE,
-        `send room attachment: ${room.id}`
-      );
     }
+    // Other rooms: the caller's message gate already authorizes posting in
+    // the room; the bucket only sets the accepted file types and size.
     return bucket;
   }
 

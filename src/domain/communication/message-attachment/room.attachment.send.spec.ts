@@ -1,5 +1,4 @@
 import {
-  POLICY_RULE_ROOM_CONTRIBUTE,
   POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
   POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
 } from '@common/constants';
@@ -7,6 +6,7 @@ import { AuthorizationCredential } from '@common/enums/authorization.credential'
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoomType } from '@common/enums/room.type';
+import { ValidationException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -15,7 +15,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoomAttachmentSendService } from './room.attachment.send';
 
 const actor = { actorID: '11111111-1111-4111-8111-111111111111' } as any;
-const room = { id: '22222222-2222-4222-8222-222222222222' } as any;
+const room = {
+  id: '22222222-2222-4222-8222-222222222222',
+  type: RoomType.CONVERSATION_DIRECT,
+} as any;
 const reference = { externalReference: 'media-ref', displayName: 'résumé.png' };
 const bucket = { id: 'bucket', authorization: { id: 'policy' } };
 
@@ -84,72 +87,37 @@ describe('sending a completed media reference', () => {
   });
 });
 
-describe('who may attach a file to a room message', () => {
+describe('which bucket right an attachment send requires', () => {
   const SPACE = 'space-1';
   const credential = (type: AuthorizationCredential, resourceID = '') => ({
     type,
     resourceID,
   });
-  const actorWith = (
-    actorID: string,
-    ...credentials: { type: AuthorizationCredential; resourceID: string }[]
-  ) => {
-    const context = new ActorContext();
-    context.actorID = actorID;
-    context.credentials = credentials;
-    return context;
-  };
-  const member = actorWith(
-    'member',
+  const member = new ActorContext();
+  member.actorID = 'member';
+  member.credentials = [
     credential(AuthorizationCredential.GLOBAL_REGISTERED),
-    credential(AuthorizationCredential.SPACE_MEMBER, SPACE)
-  );
-  const admin = actorWith(
-    'admin',
-    credential(AuthorizationCredential.GLOBAL_REGISTERED),
-    credential(AuthorizationCredential.SPACE_ADMIN, SPACE)
-  );
-  const registeredOnly = actorWith(
-    'outsider',
-    credential(AuthorizationCredential.GLOBAL_REGISTERED)
-  );
+    credential(AuthorizationCredential.SPACE_MEMBER, SPACE),
+  ];
 
   const rule = (
     name: string,
     grantedPrivileges: AuthorizationPrivilege[],
     ...criterias: { type: AuthorizationCredential; resourceID: string }[]
   ) => ({ name, grantedPrivileges, criterias, cascade: true });
-  const crudGrant = [
-    AuthorizationPrivilege.CREATE,
-    AuthorizationPrivilege.READ,
-    AuthorizationPrivilege.UPDATE,
-    AuthorizationPrivilege.DELETE,
-    AuthorizationPrivilege.GRANT,
-  ];
 
-  // The rules the space's shared bucket carries: members and registered users
-  // read, only admins write, so the contributor upload rule never fires for a
-  // member.
-  const spaceBucketPolicy = () => {
+  // A bucket on which the member reads but holds no upload right, plus the
+  // privilege rules that would derive one from UPDATE or CONTRIBUTE.
+  const bucketPolicy = (memberPrivileges: AuthorizationPrivilege[]) => {
     const policy = new AuthorizationPolicy(
       AuthorizationPolicyType.STORAGE_BUCKET
     );
-    policy.id = 'space-bucket-policy';
+    policy.id = 'bucket-policy';
     policy.credentialRules = [
       rule(
-        'spaceMembersRead',
-        [AuthorizationPrivilege.READ],
+        'spaceMembers',
+        memberPrivileges,
         credential(AuthorizationCredential.SPACE_MEMBER, SPACE)
-      ),
-      rule(
-        'spaceAdmins',
-        crudGrant,
-        credential(AuthorizationCredential.SPACE_ADMIN, SPACE)
-      ),
-      rule(
-        'global-registered',
-        [AuthorizationPrivilege.READ],
-        credential(AuthorizationCredential.GLOBAL_REGISTERED)
       ),
     ] as any;
     policy.privilegeRules = [
@@ -166,49 +134,17 @@ describe('who may attach a file to a room message', () => {
     ] as any;
     return policy;
   };
+  const readOnlyBucket = () => ({
+    id: 'bucket',
+    authorization: bucketPolicy([AuthorizationPrivilege.READ]),
+  });
 
-  // A callout comment room: members contribute, which lets them comment and
-  // reply; registered users outside the space only read.
-  const commentRoomPolicy = () => {
-    const policy = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
-    policy.id = 'room-policy';
-    policy.credentialRules = [
-      rule(
-        'spaceMembersContribute',
-        [AuthorizationPrivilege.READ, AuthorizationPrivilege.CONTRIBUTE],
-        credential(AuthorizationCredential.SPACE_MEMBER, SPACE)
-      ),
-      rule(
-        'spaceAdmins',
-        crudGrant,
-        credential(AuthorizationCredential.SPACE_ADMIN, SPACE)
-      ),
-      rule(
-        'global-registered',
-        [AuthorizationPrivilege.READ],
-        credential(AuthorizationCredential.GLOBAL_REGISTERED)
-      ),
-    ] as any;
-    policy.privilegeRules = [
-      {
-        name: POLICY_RULE_ROOM_CONTRIBUTE,
-        sourcePrivilege: AuthorizationPrivilege.CONTRIBUTE,
-        grantedPrivileges: [
-          AuthorizationPrivilege.CREATE_MESSAGE,
-          AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
-        ],
-      },
-      {
-        name: 'roomAdmins',
-        sourcePrivilege: AuthorizationPrivilege.CREATE,
-        grantedPrivileges: [
-          AuthorizationPrivilege.CREATE_MESSAGE,
-          AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
-        ],
-      },
-    ] as any;
-    return policy;
-  };
+  const roomOf = (type: RoomType) =>
+    ({
+      id: 'room-1',
+      type,
+      authorization: new AuthorizationPolicy(AuthorizationPolicyType.ROOM),
+    }) as any;
 
   const attachments = {
     getTargetBucketForRoom: vi.fn(),
@@ -225,10 +161,6 @@ describe('who may attach a file to a room message', () => {
       files as any,
       new AuthorizationService(logger as any)
     );
-    attachments.getTargetBucketForRoom.mockResolvedValue({
-      id: 'space-bucket',
-      authorization: spaceBucketPolicy(),
-    });
     attachments.matchesBucketPolicy.mockReturnValue(true);
     files.getReferenceMetadata.mockResolvedValue({
       mimeType: 'image/png',
@@ -236,75 +168,54 @@ describe('who may attach a file to a room message', () => {
     });
   });
 
-  const commentRoom = (type: RoomType) =>
-    ({ id: 'room-1', type, authorization: commentRoomPolicy() }) as any;
-
   it.each([
-    RoomType.CALLOUT,
-    RoomType.POST,
-  ])('lets a plain member attach an image to a comment in a %s room', async type => {
+    RoomType.CONVERSATION_DIRECT,
+    RoomType.CONVERSATION_GROUP,
+  ])('refuses a %s attachment without the upload right on the bucket', async type => {
+    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
     await expect(
-      service.existingMedia(commentRoom(type), member, reference as any)
-    ).resolves.toMatchObject({ media_id: reference.externalReference });
-  });
-
-  it('lets a plain member attach an image to a reply', async () => {
-    await expect(
-      service.existingMedia(
-        commentRoom(RoomType.CALLOUT),
-        member,
-        reference as any,
-        '$thread'
-      )
-    ).resolves.toMatchObject({ media_id: reference.externalReference });
-  });
-
-  it('lets a space admin attach an image to a comment', async () => {
-    await expect(
-      service.existingMedia(
-        commentRoom(RoomType.CALLOUT),
-        admin,
-        reference as any
-      )
-    ).resolves.toMatchObject({ media_id: reference.externalReference });
-  });
-
-  it('refuses a registered user who may only read the comments', async () => {
-    await expect(
-      service.existingMedia(
-        commentRoom(RoomType.CALLOUT),
-        registeredOnly,
-        reference as any
-      )
+      service.existingMedia(roomOf(type), member, reference as any)
     ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
     expect(files.getReferenceMetadata).not.toHaveBeenCalled();
   });
 
-  it('checks the reply right for a reply', async () => {
-    const room = commentRoom(RoomType.CALLOUT);
-    room.authorization.privilegeRules = [
-      {
-        name: POLICY_RULE_ROOM_CONTRIBUTE,
-        sourcePrivilege: AuthorizationPrivilege.CONTRIBUTE,
-        grantedPrivileges: [AuthorizationPrivilege.CREATE_MESSAGE],
-      },
-    ];
+  it('accepts a conversation attachment with the upload right on the bucket', async () => {
+    attachments.getTargetBucketForRoom.mockResolvedValue({
+      id: 'bucket',
+      authorization: bucketPolicy([
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.CONTRIBUTE,
+      ]),
+    });
     await expect(
-      service.existingMedia(room, member, reference as any)
-    ).resolves.toBeDefined();
-    await expect(
-      service.existingMedia(room, member, reference as any, '$thread')
-    ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      service.existingMedia(
+        roomOf(RoomType.CONVERSATION_DIRECT),
+        member,
+        reference as any
+      )
+    ).resolves.toMatchObject({ media_id: reference.externalReference });
   });
 
-  it('still requires the upload right on a conversation bucket', async () => {
-    const conversationRoom = {
-      id: 'room-2',
-      type: RoomType.CONVERSATION_DIRECT,
-      authorization: commentRoomPolicy(),
-    } as any;
+  it.each([
+    RoomType.CALLOUT,
+    RoomType.POST,
+  ])('does not require the bucket upload right in a %s comment room', async type => {
+    const bucket = readOnlyBucket();
+    attachments.getTargetBucketForRoom.mockResolvedValue(bucket);
     await expect(
-      service.existingMedia(conversationRoom, member, reference as any)
-    ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
+      service.existingMedia(roomOf(type), member, reference as any)
+    ).resolves.toMatchObject({ media_id: reference.externalReference });
+    expect(attachments.matchesBucketPolicy).toHaveBeenCalledWith(
+      bucket,
+      expect.objectContaining({ mimeType: 'image/png' })
+    );
+  });
+
+  it('rejects a room without a target bucket as invalid', async () => {
+    attachments.getTargetBucketForRoom.mockResolvedValue(undefined);
+    await expect(
+      service.existingMedia(roomOf(RoomType.CALLOUT), member, reference as any)
+    ).rejects.toThrow(ValidationException);
+    expect(files.getReferenceMetadata).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoomType } from '@common/enums/room.type';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -89,6 +90,34 @@ describe('RoomResolverMutations', () => {
       expect(roomLookupService.sendMessage).not.toHaveBeenCalled();
       expect(roomLookupService.sendMessageReply).not.toHaveBeenCalled();
     };
+    it('denies an actor without the message right before event publication', async () => {
+      const policy = { id: 'policy' };
+      const required =
+        operation === 'send'
+          ? AuthorizationPrivilege.CREATE_MESSAGE
+          : AuthorizationPrivilege.CREATE_MESSAGE_REPLY;
+      roomService.getRoomOrFail.mockResolvedValue({
+        id: 'room-1',
+        type: RoomType.CALLOUT,
+        authorization: policy,
+      } as any);
+      authorizationService.grantAccessOrFail.mockImplementation(
+        (_actor, authorization, privilege) => {
+          if (authorization === policy && privilege === required)
+            throw new ForbiddenAuthorizationPolicyException(
+              'denied',
+              privilege,
+              'policy',
+              actorContext.actorID
+            );
+          return true;
+        }
+      );
+      await expect(invoke()).rejects.toThrow(
+        ForbiddenAuthorizationPolicyException
+      );
+      noPublication();
+    });
     it('denies closed callout before event publication', async () => {
       roomService.getRoomOrFail.mockResolvedValue({
         id: 'room-1',
@@ -313,45 +342,6 @@ describe('RoomResolverMutations', () => {
         mockRoom.authorization,
         AuthorizationPrivilege.CREATE_MESSAGE_REPLY,
         expect.any(String)
-      );
-    });
-
-    it('checks an attached file against the reply thread', async () => {
-      const mockRoom = {
-        id: 'room-1',
-        type: RoomType.CALLOUT,
-        authorization: { id: 'auth-1' },
-      } as unknown as IRoom;
-      const input = {
-        roomID: 'room-1',
-        message: '',
-        threadID: 'msg-1',
-        attachmentUpload: {
-          externalReference: 'media',
-          displayName: 'pic.png',
-        },
-      };
-      roomService.getRoomOrFail.mockResolvedValue(mockRoom as any);
-      roomResolverService.getCalloutForRoom.mockResolvedValue({
-        settings: { framing: { commentsEnabled: true } },
-      } as any);
-      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
-      (resolver as any).roomAttachments.existingMedia.mockResolvedValue({
-        media_id: 'media',
-      });
-      roomLookupService.sendMessageReply.mockResolvedValue({
-        id: 'reply-1',
-      } as any);
-
-      await resolver.sendMessageReplyToRoom(input, actorContext);
-
-      expect(
-        (resolver as any).roomAttachments.existingMedia
-      ).toHaveBeenCalledWith(
-        mockRoom,
-        actorContext,
-        input.attachmentUpload,
-        'msg-1'
       );
     });
   });
