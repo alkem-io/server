@@ -1,5 +1,6 @@
 import { ExistingMediaRef } from '@alkemio/matrix-adapter-lib';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -7,25 +8,19 @@ import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomMessageAttachmentInput } from '../room/dto/room.dto.attachment';
 import { IRoom } from '../room/room.interface';
-import { isCommentRoom, isConversationRoom } from '../room/room.utils';
+import { isCommentRoom } from '../room/room.utils';
 import {
   MessageAttachmentService,
   sanitizeAttachmentDisplayName,
 } from './message.attachment.service';
 
-// The image types every browser renders inline. Uploads of the first three
-// are stripped of location and device metadata; GIF carries none. HEIC, HEIF
-// and AVIF keep their metadata and do not render everywhere, so they are out.
-// File-service stores MIME types already lower-cased without parameters.
+// Comment images render inline everywhere; file-service lower-cases MIME types.
 const COMMENT_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
+  MimeTypeVisual.JPEG,
+  MimeTypeVisual.PNG,
+  MimeTypeVisual.WEBP,
+  MimeTypeVisual.GIF,
 ]);
-
-const isCommentImageMimeType = (mimeType: string): boolean =>
-  COMMENT_IMAGE_MIME_TYPES.has(mimeType);
 
 /** Room operation authorization is shared with ordinary sends at the resolver. */
 @Injectable()
@@ -48,13 +43,9 @@ export class RoomAttachmentSendService {
     if (
       !metadata ||
       !/^[A-Za-z0-9_-]+$/.test(input.externalReference) ||
-      !this.attachments.matchesBucketPolicy(bucket, metadata)
+      !this.attachments.matchesBucketPolicy(bucket, metadata) ||
+      (isCommentRoom(room) && !COMMENT_IMAGE_MIME_TYPES.has(metadata.mimeType))
     )
-      this.invalid();
-    // Comment rooms accept JPEG, PNG, GIF and WebP images only, whatever else
-    // the space bucket allows; conversations keep every type their bucket
-    // allows.
-    if (isCommentRoom(room) && !isCommentImageMimeType(metadata.mimeType))
       this.invalid();
     return {
       media_id: input.externalReference,
@@ -70,11 +61,9 @@ export class RoomAttachmentSendService {
   }
 
   private async targetBucket(room: IRoom, actor: ActorContext) {
-    // Only conversation and comment rooms take attachments.
-    if (!isConversationRoom(room) && !isCommentRoom(room)) this.invalid();
     const bucket = await this.attachments.getTargetBucketForRoom(room);
     if (!bucket) this.invalid();
-    if (isConversationRoom(room)) {
+    if (!isCommentRoom(room)) {
       this.authorization.grantAccessOrFail(
         actor,
         bucket.authorization,

@@ -14,10 +14,7 @@ export function isConversationRoom(room: IRoom): boolean {
   );
 }
 
-/**
- * Whether a room is a comment room under a callout or a post. Only these rooms,
- * besides conversations, take message attachments.
- */
+/** Whether a room is a comment room under a callout or a post. */
 export function isCommentRoom(room: IRoom): boolean {
   return room.type === RoomType.CALLOUT || room.type === RoomType.POST;
 }

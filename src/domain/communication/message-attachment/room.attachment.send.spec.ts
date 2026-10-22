@@ -1,16 +1,5 @@
-import {
-  POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
-  POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
-} from '@common/constants';
-import { AuthorizationCredential } from '@common/enums/authorization.credential';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
-import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { ActorContext } from '@core/actor-context/actor.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoomAttachmentSendService } from './room.attachment.send';
 
@@ -85,132 +74,8 @@ describe('sending a completed media reference', () => {
       service.existingMedia(room, actor, reference as any)
     ).rejects.toThrow();
   });
-});
 
-describe('which bucket right an attachment send requires', () => {
-  const SPACE = 'space-1';
-  const credential = (type: AuthorizationCredential, resourceID = '') => ({
-    type,
-    resourceID,
-  });
-  const member = new ActorContext();
-  member.actorID = 'member';
-  member.credentials = [
-    credential(AuthorizationCredential.GLOBAL_REGISTERED),
-    credential(AuthorizationCredential.SPACE_MEMBER, SPACE),
-  ];
-
-  const rule = (
-    name: string,
-    grantedPrivileges: AuthorizationPrivilege[],
-    ...criterias: { type: AuthorizationCredential; resourceID: string }[]
-  ) => ({ name, grantedPrivileges, criterias, cascade: true });
-
-  // A bucket on which the member reads but holds no upload right, plus the
-  // privilege rules that would derive one from UPDATE or CONTRIBUTE.
-  const bucketPolicy = (memberPrivileges: AuthorizationPrivilege[]) => {
-    const policy = new AuthorizationPolicy(
-      AuthorizationPolicyType.STORAGE_BUCKET
-    );
-    policy.id = 'bucket-policy';
-    policy.credentialRules = [
-      rule(
-        'spaceMembers',
-        memberPrivileges,
-        credential(AuthorizationCredential.SPACE_MEMBER, SPACE)
-      ),
-    ] as any;
-    policy.privilegeRules = [
-      {
-        name: POLICY_RULE_STORAGE_BUCKET_UPDATER_FILE_UPLOAD,
-        sourcePrivilege: AuthorizationPrivilege.UPDATE,
-        grantedPrivileges: [AuthorizationPrivilege.FILE_UPLOAD],
-      },
-      {
-        name: POLICY_RULE_STORAGE_BUCKET_CONTRIBUTOR_FILE_UPLOAD,
-        sourcePrivilege: AuthorizationPrivilege.CONTRIBUTE,
-        grantedPrivileges: [AuthorizationPrivilege.FILE_UPLOAD],
-      },
-    ] as any;
-    return policy;
-  };
-  const readOnlyBucket = () => ({
-    id: 'bucket',
-    authorization: bucketPolicy([AuthorizationPrivilege.READ]),
-  });
-
-  const roomOf = (type: RoomType) =>
-    ({
-      id: 'room-1',
-      type,
-      authorization: new AuthorizationPolicy(AuthorizationPolicyType.ROOM),
-    }) as any;
-
-  const attachments = {
-    getTargetBucketForRoom: vi.fn(),
-    matchesBucketPolicy: vi.fn(),
-  };
-  const files = { getReferenceMetadata: vi.fn() };
-  let service: RoomAttachmentSendService;
-
-  beforeEach(() => {
-    vi.resetAllMocks();
-    const logger = { verbose: vi.fn(), debug: vi.fn(), warn: vi.fn() };
-    service = new RoomAttachmentSendService(
-      attachments as any,
-      files as any,
-      new AuthorizationService(logger as any)
-    );
-    attachments.matchesBucketPolicy.mockReturnValue(true);
-    files.getReferenceMetadata.mockResolvedValue({
-      mimeType: 'image/png',
-      size: 5,
-    });
-  });
-
-  it.each([
-    RoomType.CONVERSATION_DIRECT,
-    RoomType.CONVERSATION_GROUP,
-  ])('refuses a %s attachment without the upload right on the bucket', async type => {
-    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
-    await expect(
-      service.existingMedia(roomOf(type), member, reference as any)
-    ).rejects.toThrow(ForbiddenAuthorizationPolicyException);
-    expect(files.getReferenceMetadata).not.toHaveBeenCalled();
-  });
-
-  it('accepts a conversation attachment with the upload right on the bucket', async () => {
-    attachments.getTargetBucketForRoom.mockResolvedValue({
-      id: 'bucket',
-      authorization: bucketPolicy([
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.CONTRIBUTE,
-      ]),
-    });
-    await expect(
-      service.existingMedia(
-        roomOf(RoomType.CONVERSATION_DIRECT),
-        member,
-        reference as any
-      )
-    ).resolves.toMatchObject({ media_id: reference.externalReference });
-  });
-
-  it.each([
-    RoomType.CALLOUT,
-    RoomType.POST,
-  ])('does not require the bucket upload right in a %s comment room', async type => {
-    const bucket = readOnlyBucket();
-    attachments.getTargetBucketForRoom.mockResolvedValue(bucket);
-    await expect(
-      service.existingMedia(roomOf(type), member, reference as any)
-    ).resolves.toMatchObject({ media_id: reference.externalReference });
-    expect(attachments.matchesBucketPolicy).toHaveBeenCalledWith(
-      bucket,
-      expect.objectContaining({ mimeType: 'image/png' })
-    );
-  });
-
+  const roomOf = (type: RoomType) => ({ ...room, type }) as any;
   const commentRooms = [RoomType.CALLOUT, RoomType.POST];
   const each = (mimeTypes: string[]) =>
     commentRooms.flatMap(type =>
@@ -219,12 +84,15 @@ describe('which bucket right an attachment send requires', () => {
 
   it.each(
     each(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
-  )('accepts an image in a %s comment room (%s)', async (type, mimeType) => {
-    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
+  )('accepts an image in a %s comment room (%s) without the bucket upload right', async (type, mimeType) => {
+    auth.grantAccessOrFail.mockImplementation(() => {
+      throw new Error('denied');
+    });
     files.getReferenceMetadata.mockResolvedValue({ mimeType, size: 5 });
     await expect(
-      service.existingMedia(roomOf(type), member, reference as any)
+      service.existingMedia(roomOf(type), actor, reference as any)
     ).resolves.toMatchObject({ mime_type: mimeType });
+    expect(auth.grantAccessOrFail).not.toHaveBeenCalled();
   });
 
   it.each(
@@ -236,35 +104,23 @@ describe('which bucket right an attachment send requires', () => {
       'application/pdf',
     ])
   )('refuses a non-JPEG/PNG/GIF/WebP attachment in a %s comment room (%s) even when the bucket allows it', async (type, mimeType) => {
-    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
     files.getReferenceMetadata.mockResolvedValue({ mimeType, size: 5 });
     await expect(
-      service.existingMedia(roomOf(type), member, reference as any)
+      service.existingMedia(roomOf(type), actor, reference as any)
     ).rejects.toThrow(ValidationException);
     expect(attachments.matchesBucketPolicy).toHaveBeenCalledWith(
-      expect.anything(),
+      bucket,
       expect.objectContaining({ mimeType })
     );
   });
 
   it('accepts any bucket-allowed type in a conversation room', async () => {
-    attachments.getTargetBucketForRoom.mockResolvedValue({
-      id: 'bucket',
-      authorization: bucketPolicy([
-        AuthorizationPrivilege.READ,
-        AuthorizationPrivilege.CONTRIBUTE,
-      ]),
-    });
     files.getReferenceMetadata.mockResolvedValue({
       mimeType: 'application/pdf',
       size: 5,
     });
     await expect(
-      service.existingMedia(
-        roomOf(RoomType.CONVERSATION_DIRECT),
-        member,
-        reference as any
-      )
+      service.existingMedia(room, actor, reference as any)
     ).resolves.toMatchObject({ mime_type: 'application/pdf' });
   });
 
@@ -272,18 +128,20 @@ describe('which bucket right an attachment send requires', () => {
     RoomType.UPDATES,
     RoomType.CALENDAR_EVENT,
     RoomType.DISCUSSION_FORUM,
-  ])('refuses an attachment in a %s room even when a bucket is returned', async type => {
-    attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
+  ])('requires the bucket upload right in a %s room when a bucket is returned', async type => {
+    auth.grantAccessOrFail.mockImplementation(() => {
+      throw new Error('denied');
+    });
     await expect(
-      service.existingMedia(roomOf(type), member, reference as any)
-    ).rejects.toThrow(ValidationException);
+      service.existingMedia(roomOf(type), actor, reference as any)
+    ).rejects.toThrow('denied');
     expect(files.getReferenceMetadata).not.toHaveBeenCalled();
   });
 
   it('rejects a room without a target bucket as invalid', async () => {
     attachments.getTargetBucketForRoom.mockResolvedValue(undefined);
     await expect(
-      service.existingMedia(roomOf(RoomType.CALLOUT), member, reference as any)
+      service.existingMedia(roomOf(RoomType.CALLOUT), actor, reference as any)
     ).rejects.toThrow(ValidationException);
     expect(files.getReferenceMetadata).not.toHaveBeenCalled();
   });

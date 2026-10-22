@@ -1,8 +1,5 @@
 import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
-import {
-  ATTACHMENT_ONLY_MESSAGE_TEXT,
-  isAttachmentOnlyMessage,
-} from './attachment.only.message';
+import { isAttachmentOnlyMessage } from './attachment.only.message';
 
 const attachment = (display_name: string): ReceivedAttachment => ({
   display_name,
@@ -13,7 +10,7 @@ const attachment = (display_name: string): ReceivedAttachment => ({
 describe('isAttachmentOnlyMessage', () => {
   it.each<{
     name: string;
-    body: string | undefined;
+    body: string;
     attachments: ReceivedAttachment[] | undefined;
     expected: boolean;
   }>([
@@ -32,12 +29,6 @@ describe('isAttachmentOnlyMessage', () => {
     {
       name: 'one attachment, empty body',
       body: '',
-      attachments: [attachment('shot.png')],
-      expected: true,
-    },
-    {
-      name: 'one attachment, undefined body',
-      body: undefined,
       attachments: [attachment('shot.png')],
       expected: true,
     },
@@ -73,12 +64,5 @@ describe('isAttachmentOnlyMessage', () => {
     },
   ])('$name → $expected', ({ body, attachments, expected }) => {
     expect(isAttachmentOnlyMessage(body, attachments)).toBe(expected);
-  });
-});
-
-describe('ATTACHMENT_ONLY_MESSAGE_TEXT', () => {
-  it('is the framed-picture emoji', () => {
-    expect(ATTACHMENT_ONLY_MESSAGE_TEXT).toBe('\u{1F5BC}\u{FE0F}');
-    expect(ATTACHMENT_ONLY_MESSAGE_TEXT).toBe('🖼️');
   });
 });

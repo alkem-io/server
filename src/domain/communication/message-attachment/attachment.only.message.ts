@@ -9,11 +9,11 @@ export const ATTACHMENT_ONLY_MESSAGE_TEXT = '🖼️';
  * no text at all, or exactly one attachment whose display name is the whole body.
  */
 export function isAttachmentOnlyMessage(
-  body: string | undefined,
+  body: string,
   attachments: ReceivedAttachment[] | undefined
 ): boolean {
   if (!attachments?.length) return false;
-  const trimmed = (body ?? '').trim();
+  const trimmed = body.trim();
   if (trimmed.length === 0) return true;
   return attachments.length === 1 && trimmed === attachments[0].display_name;
 }
