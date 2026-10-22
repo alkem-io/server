@@ -159,6 +159,15 @@ export const AUDIT_WRITER_COVERAGE: Record<
     owner: 'external',
     spec: 'src/domain/community/user/account-deletion/account.deletion.audit.service.spec.ts',
   },
+  // Platform Support's organization Community-tab actions: fail-open for
+  // every action, written post-effect.
+  [PlatformAuditCategory.ORGANIZATION_ADMINISTRATION]: {
+    failMode: 'fail-open',
+    writeSucceedsSpec:
+      'src/platform-admin/organization-administration-audit/organization.administration.audit.service.spec.ts',
+    writeFailsSpec:
+      'src/platform-admin/organization-administration-audit/organization.administration.audit.service.spec.ts',
+  },
 };
 
 // ---------------------------------------------------------------------------
