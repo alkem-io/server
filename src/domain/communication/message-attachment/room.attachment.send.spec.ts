@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -122,6 +123,12 @@ describe('sending a completed media reference', () => {
     await expect(
       service.existingMedia(room, actor, reference as any)
     ).resolves.toMatchObject({ mime_type: 'application/pdf' });
+    expect(auth.grantAccessOrFail).toHaveBeenCalledWith(
+      actor,
+      bucket.authorization,
+      AuthorizationPrivilege.FILE_UPLOAD,
+      expect.any(String)
+    );
   });
 
   it.each([
@@ -135,6 +142,12 @@ describe('sending a completed media reference', () => {
     await expect(
       service.existingMedia(roomOf(type), actor, reference as any)
     ).rejects.toThrow('denied');
+    expect(auth.grantAccessOrFail).toHaveBeenCalledWith(
+      actor,
+      bucket.authorization,
+      AuthorizationPrivilege.FILE_UPLOAD,
+      expect.any(String)
+    );
     expect(files.getReferenceMetadata).not.toHaveBeenCalled();
   });
 
