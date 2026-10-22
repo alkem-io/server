@@ -198,6 +198,17 @@ export const contentFullAccessActor = (actorID = 'cfa-user'): ActorContext =>
     { type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS },
   ]);
 
+/** Content Full Access and Platform Support together: no mutual exclusion
+ * forbids the pair. CFA supplies UPDATE through the root cascade but never
+ * GRANT, so anything GRANT decides is admitted on the Support path only. */
+export const contentFullAccessAndSupportActor = (
+  actorID = 'cfa-support-user'
+): ActorContext =>
+  actor(actorID, [
+    { type: AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS },
+    { type: AuthorizationCredential.PLATFORM_SUPPORT },
+  ]);
+
 export const registeredActor = (actorID = 'plain-user'): ActorContext =>
   actor(actorID, []);
 

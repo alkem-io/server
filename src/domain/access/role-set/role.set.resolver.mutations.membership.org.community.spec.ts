@@ -25,6 +25,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import {
   contentFullAccessActor,
+  contentFullAccessAndSupportActor,
   orgAdminActor,
   orgChildPolicy,
   orgRoleSetPolicy,
@@ -484,6 +485,39 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
       await resolver.eventOnApplication(
         { applicationID: 'app-1', eventName: 'APPROVE' } as any,
         orgAdminActor()
+      );
+
+      expect(audit.record).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['APPROVE', ['approving', 'approved'], 'approve_application'],
+      ['APPROVED', ['approved'], 'mark_application_approved'],
+    ])('audits %s by a Content Full Access + Support holder, whose GRANT comes only from Support', async (eventName, states, action) => {
+      arrange('applicant-1', states);
+      const actor = contentFullAccessAndSupportActor();
+
+      await resolver.eventOnApplication(
+        { applicationID: 'app-1', eventName } as any,
+        actor
+      );
+
+      expect(audit.record).toHaveBeenCalledTimes(1);
+      expect(audit.record).toHaveBeenCalledWith({
+        actorContext: actor,
+        roleSetId: 'rs-org',
+        action,
+        targetUserId: 'applicant-1',
+        applicationId: 'app-1',
+      });
+    });
+
+    it('writes no row when a Content Full Access + Support holder rejects through the root-cascade UPDATE', async () => {
+      arrange('applicant-1', ['rejected']);
+
+      await resolver.eventOnApplication(
+        { applicationID: 'app-1', eventName: 'REJECT' } as any,
+        contentFullAccessAndSupportActor()
       );
 
       expect(audit.record).not.toHaveBeenCalled();

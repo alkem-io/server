@@ -981,25 +981,33 @@ export class RoleSetResolverMutationsMembership {
     // application is a Community-tab action: the organization's admins via
     // UPDATE, Platform Support via its membership privilege — never on the
     // Support user's own application.
-    const branch = this.orgCommunityGate.authorizeOrFail(
+    const updateBranch = this.orgCommunityGate.authorizeOrFail(
       actorContext,
       application.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on application: ${application.id}`,
       { targetActorID: applicantID }
     );
-    // An applicant holds UPDATE on their own application, so the check above
-    // admits them on the entity-admin path. Approving is decided by GRANT (the
-    // lifecycle guards); when only the Support path supplies it, approving
-    // one's own application is still a self-targeted Support action.
+    // Approving is decided by GRANT (the lifecycle guards), not by UPDATE, so
+    // the path that supplies GRANT is the one that admits it — and the one
+    // that is audited. An actor whose UPDATE comes from elsewhere (an
+    // applicant on their own application, or Content Full Access through the
+    // root cascade) but whose GRANT comes only from Support is approving on
+    // the Support path.
+    const isApproveEvent = APPLICATION_APPROVE_EVENTS.has(eventData.eventName);
+    const branch = isApproveEvent
+      ? this.orgCommunityGate.resolveBranch(
+          actorContext,
+          application.authorization,
+          AuthorizationPrivilege.GRANT
+        )
+      : updateBranch;
+    // Approving one's own application on the Support path is a self-targeted
+    // Support action.
     if (
-      APPLICATION_APPROVE_EVENTS.has(eventData.eventName) &&
-      applicantID === actorContext.actorID &&
-      this.orgCommunityGate.resolveBranch(
-        actorContext,
-        application.authorization,
-        AuthorizationPrivilege.GRANT
-      ) === 'platform-support'
+      isApproveEvent &&
+      branch === 'platform-support' &&
+      applicantID === actorContext.actorID
     ) {
       throw this.orgCommunityGate.selfTargetRefusal(
         actorContext,
