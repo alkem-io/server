@@ -285,12 +285,16 @@ describe('ActorContextService', () => {
     });
 
     it('returns context with actor credentials', async () => {
-      const mockActor = {
-        id: 'actor-1',
-        credentials: [{ type: 'space-admin', resourceID: 'space-1' }],
-      } as unknown as Actor;
-
-      mockEntityManager.findOne.mockResolvedValue(mockActor);
+      // `credentials` is a lazy relation: the row only carries it when the
+      // query asks for it, as the database would.
+      mockEntityManager.findOne.mockImplementation(
+        async (_entity: unknown, options: { relations?: any }) => ({
+          id: 'actor-1',
+          ...(options.relations?.credentials
+            ? { credentials: [{ type: 'space-admin', resourceID: 'space-1' }] }
+            : {}),
+        })
+      );
 
       const ctx = await service.buildForActor('actor-1');
 

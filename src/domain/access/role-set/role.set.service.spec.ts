@@ -13,6 +13,7 @@ import {
 } from '@common/exceptions';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
@@ -35,7 +36,7 @@ import {
   supportActor,
 } from '@test/utils/org.community.policy.fixture';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Mock, type Mocked, vi } from 'vitest';
 import { OrgCommunityGateService } from './org.community.gate.service';
 import { RoleSet } from './role.set.entity';
@@ -3083,7 +3084,13 @@ describe('RoleSetService', () => {
       // Standing is decided by the real Community-tab gate over a real-shaped
       // stored policy: the organization's admins pass on the entity-admin
       // path, Platform Support on its own path, anyone else is withheld.
-      let buildForActor: Mock;
+      //
+      // The offerer's context is built by the real ActorContextService over a
+      // stored actor row whose credentials, like the entity's lazy
+      // `credentials` relation, only come back when the query asks for them —
+      // so a context builder that forgets to load them sees an offerer with
+      // no standing at all, which a mocked builder would hide.
+      let findActor: Mock;
       let audit: { record: Mock; wasOfferedOnSupportPath: Mock };
 
       const orgTarget = (): IRoleSet =>
@@ -3102,12 +3109,22 @@ describe('RoleSetService', () => {
         (service as any).orgCommunityGate = new OrgCommunityGateService(
           realAuthorizationService()
         );
-        buildForActor = vi.fn(async () =>
-          offerer === 'deleted'
-            ? Object.assign(new ActorContext(), { isAnonymous: true })
-            : offerer
+        findActor = vi.fn(
+          async (_entity: unknown, options: { relations?: any }) => {
+            if (offerer === 'deleted') return null;
+            return {
+              id: offerer.actorID,
+              ...(options.relations?.credentials
+                ? { credentials: offerer.credentials }
+                : {}),
+            };
+          }
         );
-        (service as any).actorContextService = { buildForActor };
+        (service as any).actorContextService = new ActorContextService(
+          { findOne: findActor } as unknown as EntityManager,
+          { warn: vi.fn(), verbose: vi.fn() } as any,
+          {} as ActorLookupService
+        );
         audit = {
           record: vi.fn().mockResolvedValue(undefined),
           wasOfferedOnSupportPath: vi.fn().mockResolvedValue(false),
@@ -3190,7 +3207,10 @@ describe('RoleSetService', () => {
         expect(extraRoleGranted(assignSpy, RoleName.ADMIN)).toBe(true);
         expect(audit.record).toHaveBeenCalledTimes(1);
         expect(audit.record).toHaveBeenCalledWith({
-          actorContext: offerer,
+          actorContext: expect.objectContaining({
+            actorID: 'support-1',
+            credentials: offerer.credentials,
+          }),
           roleSetId: 'org-rs',
           action: 'extra_role_honoured',
           targetUserId: 'invitee-1',
@@ -3270,7 +3290,7 @@ describe('RoleSetService', () => {
           undefined
         );
         expect(noOfferer.extraRolesWithheld).toEqual([RoleName.ADMIN]);
-        expect(buildForActor).not.toHaveBeenCalled();
+        expect(findActor).not.toHaveBeenCalled();
 
         const second = arrange('deleted');
         const deleted = await accept(second.target, [RoleName.ADMIN], 'gone-1');
@@ -3296,7 +3316,7 @@ describe('RoleSetService', () => {
 
         const result = await accept(target, [RoleName.LEAD], 'support-1');
 
-        expect(buildForActor).not.toHaveBeenCalled();
+        expect(findActor).not.toHaveBeenCalled();
         expect(result.extraRolesWithheld).toEqual([]);
         expect(audit.record).not.toHaveBeenCalled();
       });
