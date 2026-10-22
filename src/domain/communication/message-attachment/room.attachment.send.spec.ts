@@ -211,22 +211,31 @@ describe('which bucket right an attachment send requires', () => {
     );
   });
 
-  it.each([
-    RoomType.CALLOUT,
-    RoomType.POST,
-  ])('accepts a raster image in a %s comment room', async type => {
+  const commentRooms = [RoomType.CALLOUT, RoomType.POST];
+  const each = (mimeTypes: string[]) =>
+    commentRooms.flatMap(type =>
+      mimeTypes.map(mimeType => [type, mimeType] as const)
+    );
+
+  it.each(
+    each(['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+  )('accepts an image in a %s comment room (%s)', async (type, mimeType) => {
     attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
+    files.getReferenceMetadata.mockResolvedValue({ mimeType, size: 5 });
     await expect(
       service.existingMedia(roomOf(type), member, reference as any)
-    ).resolves.toMatchObject({ mime_type: 'image/png' });
+    ).resolves.toMatchObject({ mime_type: mimeType });
   });
 
-  it.each([
-    [RoomType.CALLOUT, 'image/svg+xml'],
-    [RoomType.CALLOUT, 'application/pdf'],
-    [RoomType.POST, 'image/svg+xml'],
-    [RoomType.POST, 'application/pdf'],
-  ])('refuses a non-raster attachment in a %s comment room (%s) even when the bucket allows it', async (type, mimeType) => {
+  it.each(
+    each([
+      'image/heic',
+      'image/heif',
+      'image/avif',
+      'image/svg+xml',
+      'application/pdf',
+    ])
+  )('refuses a non-JPEG/PNG/GIF/WebP attachment in a %s comment room (%s) even when the bucket allows it', async (type, mimeType) => {
     attachments.getTargetBucketForRoom.mockResolvedValue(readOnlyBucket());
     files.getReferenceMetadata.mockResolvedValue({ mimeType, size: 5 });
     await expect(

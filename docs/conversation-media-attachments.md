@@ -78,7 +78,10 @@ existing parent collaboration bucket, but a send does not check the caller's
 upload right on that bucket. The resolver's message gate authorizes the send:
 CREATE_MESSAGE on the room for a message, CREATE_MESSAGE_REPLY for a reply. The
 bucket only sets the accepted MIME types and maximum size. On top of that,
-comment rooms accept raster images only (any `image/*` type except SVG).
+comment rooms accept JPEG, PNG, GIF and WebP images only (`image/jpeg`,
+`image/png`, `image/gif`, `image/webp`). Matrix-adapter strips location and
+device metadata from JPEG, PNG and WebP at upload, and GIF carries none; HEIC,
+HEIF and AVIF would keep theirs and do not render inline in most browsers.
 Conversation rooms additionally require FILE_UPLOAD on their own bucket and
 accept every type that bucket allows.
 

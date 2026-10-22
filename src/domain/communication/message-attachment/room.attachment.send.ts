@@ -13,8 +13,19 @@ import {
   sanitizeAttachmentDisplayName,
 } from './message.attachment.service';
 
-const isRasterImageMimeType = (mimeType: string): boolean =>
-  mimeType.startsWith('image/') && mimeType !== 'image/svg+xml';
+// The image types every browser renders inline. Uploads of the first three
+// are stripped of location and device metadata; GIF carries none. HEIC, HEIF
+// and AVIF keep their metadata and do not render everywhere, so they are out.
+// File-service stores MIME types already lower-cased without parameters.
+const COMMENT_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
+
+const isCommentImageMimeType = (mimeType: string): boolean =>
+  COMMENT_IMAGE_MIME_TYPES.has(mimeType);
 
 /** Room operation authorization is shared with ordinary sends at the resolver. */
 @Injectable()
@@ -40,9 +51,10 @@ export class RoomAttachmentSendService {
       !this.attachments.matchesBucketPolicy(bucket, metadata)
     )
       this.invalid();
-    // Comment rooms accept raster images only, whatever else the space
-    // bucket allows; conversations keep every type their bucket allows.
-    if (!isConversationRoom(room) && !isRasterImageMimeType(metadata.mimeType))
+    // Comment rooms accept JPEG, PNG, GIF and WebP images only, whatever else
+    // the space bucket allows; conversations keep every type their bucket
+    // allows.
+    if (!isConversationRoom(room) && !isCommentImageMimeType(metadata.mimeType))
       this.invalid();
     return {
       media_id: input.externalReference,
