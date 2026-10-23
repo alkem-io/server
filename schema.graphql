@@ -1351,6 +1351,34 @@ type AccountDeletionBlockerTotal {
   total: Int!
 }
 
+"""A hosted Innovation Hub card: its identity, nameID and profile only."""
+type AccountHostedInnovationHub {
+  """The ID of the Innovation Hub."""
+  id: UUID!
+  """The nameID of the Innovation Hub."""
+  nameID: NameID!
+  """The profile of this Innovation Hub."""
+  profile: Profile!
+}
+
+"""Resources hosted by an Account, as the current viewer may see them."""
+type AccountHostedResources {
+  """The Innovation Hubs hosted by the Account."""
+  innovationHubs: [AccountHostedInnovationHub!]!
+  """Innovation Packs of the Account that the current viewer may see."""
+  innovationPacks: [InnovationPack!]!
+  """Virtual Contributors of the Account that the current viewer may see."""
+  virtualContributors: [AccountHostedVirtualContributor!]!
+}
+
+"""A hosted Virtual Contributor card: its identity and profile only."""
+type AccountHostedVirtualContributor {
+  """The ID of the Virtual Contributor."""
+  id: UUID!
+  """The public profile of this Virtual Contributor."""
+  profile: Profile!
+}
+
 type AccountLicensePlan {
   """The number of Innovation Packs allowed."""
   innovationPacks: Int!
@@ -5490,6 +5518,8 @@ type Organization implements ActorFull & Groupable {
   group(ID: UUID!): UserGroup
   """Groups defined on this organization."""
   groups: [UserGroup!]
+  """Viewer-scoped hosted resources, null if anonymous. Single-profile use."""
+  hostedResources: AccountHostedResources
   """The ID of the Actor"""
   id: UUID!
   """Legal name - required if hosting an Space"""
@@ -7731,6 +7761,8 @@ type User implements ActorFull {
   """The email address for this User."""
   email: String!
   firstName: String!
+  """Viewer-scoped hosted resources, null if anonymous. Single-profile use."""
+  hostedResources: AccountHostedResources
   """The ID of the Actor"""
   id: UUID!
   """Can a message be sent to this User."""

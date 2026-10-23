@@ -7,6 +7,7 @@ Synapse owns media serving. References remain retrievable after bucket placement
 This canonical module supplies generated deployment copies.
 """
 
+import inspect
 import math
 import os
 import tempfile
@@ -20,6 +21,10 @@ from synapse.logging.context import make_deferred_yieldable
 from synapse.media.media_storage import FileResponder
 from synapse.media.storage_provider import StorageProvider
 from synapse.util.async_helpers import timeout_deferred
+
+# Synapse 1.140 made timeout_deferred keyword-only and replaced the reactor
+# argument with a Clock; older releases take (deferred, timeout, reactor).
+_TIMEOUT_DEFERRED_TAKES_CLOCK = "clock" in inspect.signature(timeout_deferred).parameters
 
 
 class FileServiceStorageProvider(StorageProvider):
@@ -57,6 +62,13 @@ class FileServiceStorageProvider(StorageProvider):
             and file_info.thumbnail is None
             and not file_info.url_cache
         )
+
+    def _with_timeout(self, deferred, timeout_s):
+        if _TIMEOUT_DEFERRED_TAKES_CLOCK:
+            return timeout_deferred(
+                deferred=deferred, timeout=timeout_s, clock=self.hs.get_clock()
+            )
+        return timeout_deferred(deferred, timeout_s, self.reactor)
 
     async def store_file(self, path: str, file_info) -> None:
         if not self._is_original(file_info):
@@ -102,9 +114,8 @@ class FileServiceStorageProvider(StorageProvider):
                     spool.close()
                     return None
                 raise HttpResponseException(response.code, "Content download failed", b"")
-            await make_deferred_yieldable(timeout_deferred(
-                read_body_with_max_size(response, spool, self.max_size),
-                30, self.reactor,
+            await make_deferred_yieldable(self._with_timeout(
+                read_body_with_max_size(response, spool, self.max_size), 30,
             ))
             spool.seek(0)
             return FileResponder(self.hs, spool)
