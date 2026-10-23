@@ -6,8 +6,7 @@ import { MatrixSessionResolverMutations } from './matrix.session.resolver.mutati
 import { MatrixSessionService } from './matrix.session.service';
 
 @Module({
-  // `TypeOrmModule.forFeature([PlatformAuditEntry])` is what provides the
-  // `Repository<PlatformAuditEntry>` the service injects. Deliberately NOT
+  // Deliberately `forFeature([PlatformAuditEntry])` and NOT
   // `UserEmailChangeModule`, which provides a different repository class.
   imports: [
     CommunicationAdapterModule,

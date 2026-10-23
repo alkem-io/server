@@ -34,12 +34,6 @@ export class MatrixSessionService {
     const credentials =
       await this.communicationAdapter.createActorSession(actorID);
 
-    // An explicit allowlist, never a spread of the adapter response: a
-    // spread would put the minted access token into the audit row.
-    const details: MatrixSessionAuditDetails = {
-      deviceId: credentials.deviceId,
-    };
-
     try {
       await this.auditRepository.save(
         this.auditRepository.create({
@@ -51,7 +45,11 @@ export class MatrixSessionService {
           initiatorUserId: actorID,
           initiatorRole: PlatformAuditInitiatorRole.SELF,
           outcome: PlatformAuditOutcome.KEY_MINTED,
-          details,
+          // An explicit allowlist, never a spread of the adapter response: a
+          // spread would put the minted access token into the audit row.
+          details: {
+            deviceId: credentials.deviceId,
+          } satisfies MatrixSessionAuditDetails,
         })
       );
     } catch (error: unknown) {

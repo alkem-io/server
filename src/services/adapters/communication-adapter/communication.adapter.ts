@@ -65,6 +65,7 @@ import { LogContext } from '@common/enums';
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
+import { MatrixSessionCredentials } from '@domain/communication/matrix-session/dto/matrix.session.credentials';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { IRoomWithReadState } from '@domain/communication/room/room.with.read.state.interface';
@@ -292,16 +293,13 @@ export class CommunicationAdapter {
    *
    * `enabled === false` means this environment has no Matrix at all, and is
    * the ONE place in this file that throws instead of returning a benign
-   * sentinel (`syncActor` returns `true`, `:272`): there is no truthful empty
-   * credential to return, so a silent success here would hand the app a
-   * blank triple it would store and keep reusing. Tested in
-   * `communication.adapter.spec.ts`.
+   * sentinel: there is no truthful empty credential to return, so a silent
+   * success here would hand the app a blank triple it would store and keep
+   * reusing.
    */
-  async createActorSession(actorID: AlkemioActorID): Promise<{
-    userId: string;
-    deviceId: string;
-    accessToken: string;
-  }> {
+  async createActorSession(
+    actorID: AlkemioActorID
+  ): Promise<MatrixSessionCredentials> {
     if (!this.enabled) {
       throw CommunicationAdapterException.fromAdapterError(
         'createActorSession',
@@ -321,7 +319,6 @@ export class CommunicationAdapter {
       ensureSuccess: true,
     });
 
-    // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
     return {
       userId: response!.user_id,
       deviceId: response!.device_id,
