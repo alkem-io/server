@@ -175,6 +175,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 117,
     userMessage: 'userMessages.authorization.sessionRefreshRequired',
   },
+  [AlkemioErrorStatus.PLATFORM_SUPPORT_SELF_TARGET]: {
+    category: ErrorCategory.AUTHORIZATION,
+    specificCode: 118,
+    userMessage: 'userMessages.authorization.platformSupportSelfTarget',
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 12xxx - VALIDATION: Input/state validation errors

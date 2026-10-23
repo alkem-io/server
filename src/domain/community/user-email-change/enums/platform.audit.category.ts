@@ -36,4 +36,9 @@ export enum PlatformAuditCategory {
   // plus one appended row per post-commit external leg (identity removal,
   // stored-file cleanup, session revocation).
   ACCOUNT_DELETION = 'account_deletion',
+  // Organisation Community-tab actions taken on the Platform Support path
+  // (never the organisation's own admins): one row per target, written after
+  // the effect has committed. FAIL-OPEN — a failed write is logged at error
+  // level and the action's result stands.
+  ORGANIZATION_ADMINISTRATION = 'organization_administration',
 }

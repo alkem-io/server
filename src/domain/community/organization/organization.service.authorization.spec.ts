@@ -425,7 +425,7 @@ describe('OrganizationAuthorizationService', () => {
       );
     };
 
-    it('grants EXACTLY {platform-support, global-admin, global-support}, non-cascading — NOT feature-organization-creator', async () => {
+    it('grants EXACTLY platform-support, non-cascading — NOT feature-organization-creator', async () => {
       arrange();
       await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
 
@@ -557,6 +557,189 @@ describe('OrganizationAuthorizationService', () => {
         )
       );
       expect(joinRule).toBeUndefined();
+    });
+  });
+
+  describe('Platform Support on the organization Community tab', () => {
+    const FORBIDDEN_FOR_SUPPORT = [
+      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.DELETE,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN,
+    ];
+
+    type RecordedRule = {
+      grantedPrivileges: AuthorizationPrivilege[];
+      criterias: Array<AuthorizationCredential | { type: string }>;
+      cascade: boolean;
+      name: string;
+    };
+
+    const criteriaTypes = (rule: RecordedRule): string[] =>
+      rule.criterias.map(criteria =>
+        typeof criteria === 'string' ? criteria : criteria.type
+      );
+
+    const arrange = () => {
+      const authorization = { credentialRules: [] };
+      organizationService.getOrganizationOrFail.mockResolvedValue({
+        id: 'org-1',
+        accountID: 'account-1',
+        authorization,
+        profile: { id: 'profile-1' },
+        storageAggregator: { id: 'sa-1' },
+        credentials: [],
+        groups: [],
+        verification: { id: 'ver-1' },
+        roleSet: { id: 'rs-1' },
+      });
+      authorizationPolicyService.reset.mockReturnValue(authorization);
+      platformAuthorizationService.inheritRootAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        (privileges, types, name) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.createCredentialRule.mockImplementation(
+        (privileges, criterias, name) => ({
+          grantedPrivileges: privileges,
+          criterias,
+          name,
+          cascade: true,
+        })
+      );
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(
+        authorization
+      );
+      authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess.mockReturnValue(
+        authorization
+      );
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      storageAggregatorAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [authorization]
+      );
+      roleSetAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      userGroupAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        authorization,
+      ]);
+      organizationVerificationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        authorization
+      );
+    };
+
+    const allCreatedRules = (): RecordedRule[] => [
+      ...authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results.map(
+        r => r.value as RecordedRule
+      ),
+      ...authorizationPolicyService.createCredentialRule.mock.results.map(
+        r => r.value as RecordedRule
+      ),
+    ];
+
+    const roleSetExtraRules = (): RecordedRule[] =>
+      roleSetAuthorizationService.applyAuthorizationPolicy.mock
+        .calls[0][2] as RecordedRule[];
+
+    it('adds exactly two type-only Support rules to the role set: membership (cascading) and invite (not cascading)', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
+
+      const supportRules = roleSetExtraRules().filter(rule =>
+        criteriaTypes(rule).includes(AuthorizationCredential.PLATFORM_SUPPORT)
+      );
+      expect(supportRules).toHaveLength(2);
+
+      const membership = supportRules.find(rule =>
+        rule.grantedPrivileges.includes(
+          AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP
+        )
+      );
+      expect(membership?.grantedPrivileges).toEqual([
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP,
+      ]);
+      expect(membership?.criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+      ]);
+      expect(membership?.cascade).toBe(true);
+
+      const invite = supportRules.find(rule =>
+        rule.grantedPrivileges.includes(
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
+        )
+      );
+      expect(invite?.grantedPrivileges).toEqual([
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE,
+      ]);
+      expect(invite?.criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+      ]);
+      expect(invite?.cascade).toBe(false);
+    });
+
+    it('never grants Support a baseline verb or ROLESET_ENTRY_ROLE_ASSIGN anywhere on the organization or its role set', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
+
+      const supportRules = [
+        ...allCreatedRules(),
+        ...roleSetExtraRules(),
+      ].filter(rule =>
+        criteriaTypes(rule).includes(AuthorizationCredential.PLATFORM_SUPPORT)
+      );
+      expect(supportRules.length).toBeGreaterThan(0);
+      for (const rule of supportRules) {
+        for (const privilege of FORBIDDEN_FOR_SUPPORT) {
+          expect(rule.grantedPrivileges).not.toContain(privilege);
+        }
+      }
+    });
+
+    it('puts the membership privilege on the role set only — never on the organization policy itself', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
+
+      const appendedToOrganization =
+        authorizationPolicyService.appendCredentialAuthorizationRules.mock.calls.flatMap(
+          call => call[1] as RecordedRule[]
+        );
+      for (const rule of appendedToOrganization) {
+        expect(rule.grantedPrivileges).not.toContain(
+          AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP
+        );
+      }
+    });
+
+    it('gives no other platform role (in particular Content Full Access) anything on the role set', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy({ id: 'org-1' } as any);
+
+      for (const rule of roleSetExtraRules()) {
+        expect(criteriaTypes(rule)).not.toContain(
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS
+        );
+        if (
+          rule.grantedPrivileges.includes(
+            AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP
+          )
+        ) {
+          expect(criteriaTypes(rule)).toEqual([
+            AuthorizationCredential.PLATFORM_SUPPORT,
+          ]);
+        }
+      }
     });
   });
 });

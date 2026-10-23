@@ -218,6 +218,53 @@ export interface AccountDeletionAuditDetails {
   error?: string;
 }
 
+/** The closed set of actions an `organization_administration` row records. */
+export type OrganizationAdministrationAction =
+  | 'invite_user'
+  | 'invite_email'
+  | 'resend_email_invitation'
+  | 'revoke_user_invitation'
+  | 'revoke_email_invitation'
+  | 'approve_application'
+  | 'reject_application'
+  | 'archive_application'
+  | 'reopen_application'
+  | 'mark_application_approved'
+  | 'assign_role'
+  | 'remove_role'
+  | 'remove_member'
+  | 'extra_role_honoured'
+  | 'extra_role_withheld';
+
+/** Why a role offered on an organisation invitation was withheld on accept. */
+export type OrganizationAdministrationWithheldReason =
+  | 'role_limits'
+  | 'standing_lost'
+  | 'self_offer'
+  | 'offerer_deleted';
+
+/**
+ * `organization_administration` category payload shape: a Community-tab action
+ * taken on an organisation through the Platform Support path. Deliberately an
+ * ALLOWLIST of identifiers — never an email address, a display name or an
+ * application answer. An email invitation is identified by its platform
+ * invitation id only.
+ */
+export interface OrganizationAdministrationAuditDetails {
+  action: OrganizationAdministrationAction;
+  /** The organisation role set the action ran on. Always present. */
+  roleSetId: string;
+  /** Role name(s) granted, revoked or offered by the action. */
+  roles?: string[];
+  /** Accept-time rows only: offered roles that were not granted. */
+  withheldRoles?: string[];
+  /** `extra_role_withheld` rows only. */
+  reason?: OrganizationAdministrationWithheldReason;
+  invitationId?: string;
+  platformInvitationId?: string;
+  applicationId?: string;
+}
+
 /**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
@@ -234,7 +281,10 @@ export type PlatformAuditDetails = EmailChangeAuditDetails &
   PlatformConfigurationAuditDetails &
   PlatformResourceAuditDetails &
   McpApiKeyAuditDetails &
-  AccountDeletionAuditDetails;
+  AccountDeletionAuditDetails &
+  // `action` and `reason` are already open strings on other categories; the
+  // closed unions are enforced by the organisation-administration writer.
+  Partial<Omit<OrganizationAdministrationAuditDetails, 'action' | 'reason'>>;
 
 /**
  * Row shape of `platform_audit_entry`. Append-only; retained indefinitely

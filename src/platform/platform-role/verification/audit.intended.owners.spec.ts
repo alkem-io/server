@@ -1,6 +1,7 @@
 import {
   A5_INTENDED_OWNERS,
   A12_INTENDED_OWNERS,
+  ORGANIZATION_COMMUNITY_INTENDED_OWNERS,
 } from '@common/constants/authorization/audit.intended.owners';
 import { A13_INTENDED_OWNERS } from '@common/constants/authorization/license.definition.policy';
 import type { AuthorizationCredential } from '@common/enums/authorization.credential';
@@ -26,6 +27,22 @@ const AUDITED_SURFACES: readonly {
       'deleteUser',
       'adminIdentityDeleteKratosIdentity',
       'adminUserAccountDelete',
+    ],
+  },
+  {
+    constant: 'ORGANIZATION_COMMUNITY_INTENDED_OWNERS',
+    owners: ORGANIZATION_COMMUNITY_INTENDED_OWNERS,
+    row: 'A6',
+    members: [
+      'assignRoleToUser',
+      'assignRole',
+      'removeRoleFromUser',
+      'removeRole',
+      'deleteInvitation',
+      'deletePlatformInvitation',
+      'eventOnApplication',
+      'inviteForEntryRoleOnRoleSet',
+      'resendPlatformInvitation',
     ],
   },
   {

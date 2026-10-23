@@ -94,6 +94,10 @@ export enum AlkemioErrorStatus {
   // from SESSION_EXPIRED so the client can route specifically to the
   // re-authentication round trip rather than a generic sign-in prompt.
   SESSION_REFRESH_REQUIRED = 'SESSION_REFRESH_REQUIRED',
+  // A Platform Support user tried an organization Community-tab action on
+  // their own account (self-invite, self-approve, self-promote, ...). Distinct
+  // from FORBIDDEN_POLICY so the client can tell it apart from missing rights.
+  PLATFORM_SUPPORT_SELF_TARGET = 'PLATFORM_SUPPORT_SELF_TARGET',
   // Self-account deletion: the account still holds a blocking resource (or is
   // the sole owner of an organization). The client re-runs the pre-flight
   // read on this code and renders the itemized blocked dialog from the fresh

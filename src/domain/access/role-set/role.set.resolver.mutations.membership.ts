@@ -43,6 +43,7 @@ import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { IOrganization } from '@domain/community/organization';
 import { isDomainJoinEligible } from '@domain/community/organization/organization.domain.join.policy';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { OrganizationAdministrationAction } from '@domain/community/user-email-change/platform.audit.entry.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
@@ -67,6 +68,7 @@ import { NotificationVirtualContributorAdapter } from '@services/adapters/notifi
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { OrganizationAdministrationAuditService } from '@src/platform-admin/organization-administration-audit/organization.administration.audit.service';
 import { compact } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ApplicationService } from '../application/application.service';
@@ -84,6 +86,10 @@ import { InviteForEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.
 import { JoinAsEntryRoleOnRoleSetInput } from './dto/role.set.dto.entry.role.join';
 import { UpdateApplicationFormOnRoleSetInput } from './dto/role.set.dto.update.application.form';
 import { RoleSetInvitationResult } from './dto/role.set.invitation.result';
+import {
+  OrgCommunityBranch,
+  OrgCommunityGateService,
+} from './org.community.gate.service';
 import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
@@ -91,6 +97,29 @@ import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
+
+/** Application events whose transition is guarded by GRANT. */
+const APPLICATION_APPROVE_EVENTS: ReadonlySet<string> = new Set([
+  'APPROVE',
+  ApplicationLifecycleEvent.APPROVED,
+]);
+
+/**
+ * The audit action for every event the application lifecycle accepts. Every
+ * event a Platform Support user sends on an organization's application writes
+ * one row, so this map must cover the whole machine. `APPROVED` sent directly
+ * only moves a stalled approval to its final state without granting the role,
+ * which is why it is not recorded as an approval.
+ */
+export const SUPPORT_APPLICATION_EVENT_AUDIT_ACTIONS: Readonly<
+  Record<string, OrganizationAdministrationAction>
+> = {
+  APPROVE: 'approve_application',
+  [ApplicationLifecycleEvent.APPROVED]: 'mark_application_approved',
+  REJECT: 'reject_application',
+  REOPEN: 'reopen_application',
+  ARCHIVE: 'archive_application',
+};
 
 @InstrumentResolver()
 @Resolver()
@@ -123,8 +152,30 @@ export class RoleSetResolverMutationsMembership {
     private roleSetCacheService: RoleSetCacheService,
     private eligibleLanguageGuard: RoleSetEligibleLanguageGuard,
     private readonly eventEmitter: EventEmitter2,
+    private orgCommunityGate: OrgCommunityGateService,
+    private organizationAdministrationAuditService: OrganizationAdministrationAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  /**
+   * Which path an organization invite / resend runs on, for auditing. Both
+   * stay gated on ROLESET_ENTRY_ROLE_INVITE; attribution uses
+   * ROLESET_ENTRY_ROLE_ASSIGN as the entity-admin base, which on an
+   * organization role set exactly its own admins and owners hold.
+   */
+  private resolveOrganizationInviteBranch(
+    roleSet: IRoleSet,
+    actorContext: ActorContext
+  ): OrgCommunityBranch | undefined {
+    if (roleSet.type !== RoleSetType.ORGANIZATION) {
+      return undefined;
+    }
+    return this.orgCommunityGate.resolveBranch(
+      actorContext,
+      roleSet.authorization,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN
+    );
+  }
 
   /**
    * Wraps a fire-and-forget notification dispatch with a `.catch` so an
@@ -502,6 +553,22 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
+    // On the Support path nobody may invite themself — checked after typed
+    // addresses have been resolved to users, and before anything is created.
+    const inviteBranch = this.resolveOrganizationInviteBranch(
+      roleSet,
+      actorContext
+    );
+    if (
+      inviteBranch === 'platform-support' &&
+      actorIDsToInvite.includes(actorContext.actorID)
+    ) {
+      throw this.orgCommunityGate.selfTargetRefusal(
+        actorContext,
+        roleSet.authorization
+      );
+    }
+
     // Reserve the external-email budget before anything is created, so a
     // refusal leaves no half-processed batch behind.
     await this.claimExternalInvitationEmailBudgetOrFail(
@@ -534,6 +601,17 @@ export class RoleSetResolverMutationsMembership {
         invitationData.suggestedLanguage
       );
     invitationResults.push(...newUserInvitationResults);
+
+    // Audit as soon as the invitations exist, so a failure in the follow-up
+    // work below cannot lose the record of what was created.
+    if (inviteBranch === 'platform-support') {
+      await this.recordSupportInvitations(
+        roleSet,
+        actorContext,
+        invitationResults,
+        extraRoles
+      );
+    }
 
     // Reset all authorizations on the invitations and applications because it's easier
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
@@ -597,6 +675,42 @@ export class RoleSetResolverMutationsMembership {
     }
 
     return invitationResults;
+  }
+
+  /** One `organization_administration` row per invitation this call created. */
+  private async recordSupportInvitations(
+    roleSet: IRoleSet,
+    actorContext: ActorContext,
+    invitationResults: RoleSetInvitationResult[],
+    extraRoles: RoleName[]
+  ): Promise<void> {
+    for (const result of invitationResults) {
+      if (
+        result.type === RoleSetInvitationResultType.INVITED_TO_ROLE_SET &&
+        result.invitation
+      ) {
+        await this.organizationAdministrationAuditService.record({
+          actorContext,
+          roleSetId: roleSet.id,
+          action: 'invite_user',
+          targetUserId: result.invitation.invitedActorID,
+          invitationId: result.invitation.id,
+          roles: extraRoles,
+        });
+      } else if (
+        result.type ===
+          RoleSetInvitationResultType.INVITED_TO_PLATFORM_AND_ROLE_SET &&
+        result.platformInvitation
+      ) {
+        await this.organizationAdministrationAuditService.record({
+          actorContext,
+          roleSetId: roleSet.id,
+          action: 'invite_email',
+          platformInvitationId: result.platformInvitation.id,
+          roles: extraRoles,
+        });
+      }
+    }
   }
 
   /**
@@ -836,6 +950,18 @@ export class RoleSetResolverMutationsMembership {
       LogContext.ROLES
     );
 
+    if (
+      this.resolveOrganizationInviteBranch(roleSet, actorContext) ===
+      'platform-support'
+    ) {
+      await this.organizationAdministrationAuditService.record({
+        actorContext,
+        roleSetId: roleSet.id,
+        action: 'resend_email_invitation',
+        platformInvitationId: platformInvitation.id,
+      });
+    }
+
     return platformInvitation;
   }
 
@@ -848,16 +974,48 @@ export class RoleSetResolverMutationsMembership {
     @CurrentActor() actorContext: ActorContext
   ): Promise<IApplication> {
     let application = await this.applicationService.getApplicationOrFail(
-      eventData.applicationID
+      eventData.applicationID,
+      { relations: { user: true } }
     );
+    const applicantID = application.user?.id;
 
-    // Assumption is that the user with the GRANT also has UPDATE
-    this.authorizationService.grantAccessOrFail(
+    // Assumption is that the user with the GRANT also has UPDATE. Deciding an
+    // application is a Community-tab action: the organization's admins via
+    // UPDATE, Platform Support via its membership privilege — never on the
+    // Support user's own application.
+    const updateBranch = this.orgCommunityGate.authorizeOrFail(
       actorContext,
       application.authorization,
       AuthorizationPrivilege.UPDATE,
-      `event on application: ${application.id}`
+      `event on application: ${application.id}`,
+      { targetActorID: applicantID }
     );
+    // Approving is decided by GRANT (the lifecycle guards), not by UPDATE, so
+    // the path that supplies GRANT is the one that admits it — and the one
+    // that is audited. An actor whose UPDATE comes from elsewhere (an
+    // applicant on their own application, or Content Full Access through the
+    // root cascade) but whose GRANT comes only from Support is approving on
+    // the Support path.
+    const isApproveEvent = APPLICATION_APPROVE_EVENTS.has(eventData.eventName);
+    const branch = isApproveEvent
+      ? this.orgCommunityGate.resolveBranch(
+          actorContext,
+          application.authorization,
+          AuthorizationPrivilege.GRANT
+        )
+      : updateBranch;
+    // Approving one's own application on the Support path is a self-targeted
+    // Support action.
+    if (
+      isApproveEvent &&
+      branch === 'platform-support' &&
+      applicantID === actorContext.actorID
+    ) {
+      throw this.orgCommunityGate.selfTargetRefusal(
+        actorContext,
+        application.authorization
+      );
+    }
 
     // Send the event, translated if needed
     this.logger.verbose?.(
@@ -918,6 +1076,18 @@ export class RoleSetResolverMutationsMembership {
         application.lifecycle,
         this.roleSetServiceLifecycleApplication.getApplicationMachine()
       );
+
+      // Audit once the lifecycle has settled, before the notification lookups
+      // and cache updates that could still fail.
+      if (branch === 'platform-support') {
+        await this.recordSupportApplicationEvent(
+          eventData.eventName,
+          actorContext,
+          application.roleSet.id,
+          application.user.id,
+          application.id
+        );
+      }
 
       // Send notification if application was declined/rejected
       if (
@@ -1004,6 +1174,42 @@ export class RoleSetResolverMutationsMembership {
     return this.applicationService.getApplicationOrFail(
       eventData.applicationID
     );
+  }
+
+  /**
+   * One `organization_administration` row for an application event admitted
+   * on the Platform Support path, written after the event has landed.
+   */
+  private async recordSupportApplicationEvent(
+    eventName: string,
+    actorContext: ActorContext,
+    roleSetId: string,
+    applicantID: string,
+    applicationId: string
+  ): Promise<void> {
+    const action = SUPPORT_APPLICATION_EVENT_AUDIT_ACTIONS[eventName];
+    if (!action) {
+      // Unreachable while the map covers the lifecycle: the machine rejects
+      // any other event before this point.
+      this.logger.error?.(
+        {
+          message:
+            'Application event on the Platform Support path has no audit action',
+          eventName,
+          applicationId,
+        },
+        undefined,
+        LogContext.ROLES
+      );
+      return;
+    }
+    await this.organizationAdministrationAuditService.record({
+      actorContext,
+      roleSetId,
+      action,
+      targetUserId: applicantID,
+      applicationId,
+    });
   }
 
   @Mutation(() => IInvitation, {
