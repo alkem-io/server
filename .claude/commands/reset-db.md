@@ -37,8 +37,7 @@ bash .scripts/reset-db.sh
 3. Waits for PostgreSQL and the `alkemio` database to be initialized
 4. Runs TypeORM migrations (`pnpm run migration:run`)
 5. Starts `pnpm start:dev` in background, waits for Kratos + GraphQL health
-6. Registers admin user (`admin@alkem.io`) with password from `.env`
-7. Seeds the platform-role dev accounts (`.scripts/dev-seed-roles.sh`) — non-fatal
+6. Waits for the `dev-seed-roles` compose container, which registers `admin@alkem.io` and the platform-role dev accounts (`.scripts/dev-seed-roles.sh`) — non-fatal
 
 ## Accounts after a reset
 
@@ -62,7 +61,7 @@ is assignment-only — on its own it cannot reset authorization, cannot grant
 itself a role (rule `self-assignment`), and cannot grant the legacy `global-*`
 roles at all. That is the feature working, not a misconfiguration.
 
-Step 7 grants through `assignPlatformRoleToUser`, never SQL, so a regression in
+Step 6 grants through `assignPlatformRoleToUser`, never SQL, so a regression in
 the assignment rule engine surfaces as a seeding failure instead of being
 silently bypassed. It refuses to run against any non-loopback endpoint.
 
@@ -78,5 +77,5 @@ Report each step's outcome to the user. If the script fails, show the failing st
 - **Kratos / GraphQL timeout** — Verify services with `docker ps`.
 - **Volume not found** — Safe to ignore; volumes were already removed.
 - **Admin registration fails** — Check `/tmp/alkemio-dev-server.log`.
-- **Role seeding fails (step 7)** — The reset itself succeeded. Re-run `bash .scripts/dev-seed-roles.sh`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
+- **Role seeding fails (step 6)** — The reset itself succeeded. Re-run `pnpm run dev:seed-roles`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
 - **`unable to grant '<privilege>'` as `admin@alkem.io`** — Check the account actually holds `global-admin`: `SELECT type FROM credential c JOIN "user" u ON u.id = c."actorId" WHERE u.email = 'admin@alkem.io';`. If it is missing, the seed regressed and `test-suites` cannot run at all — 83% of its spec files act as this user.
