@@ -76,6 +76,6 @@ Report each step's outcome to the user. If the script fails, show the failing st
 - **PostgreSQL timeout** — Docker may be slow. Re-run the script.
 - **Kratos / GraphQL timeout** — Verify services with `docker ps`.
 - **Volume not found** — Safe to ignore; volumes were already removed.
-- **Admin registration fails** — Check `/tmp/alkemio-dev-server.log`.
-- **Role seeding fails (step 6)** — The reset itself succeeded. Re-run `pnpm run dev:seed-roles`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
+- **Admin registration fails** — Check `docker logs alkemio_dev_seed_roles` and `/tmp/alkemio-dev-server.log`.
+- **Role seeding fails (step 6)** — The reset itself succeeded, but the script stops its dev server on exit. Start `pnpm start:dev` (if not already running), wait for it to come up, then re-run `pnpm run dev:seed-roles`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
 - **`unable to grant '<privilege>'` as `admin@alkem.io`** — Check the account actually holds `global-admin`: `SELECT type FROM credential c JOIN "user" u ON u.id = c."actorId" WHERE u.email = 'admin@alkem.io';`. If it is missing, the seed regressed and `test-suites` cannot run at all — 83% of its spec files act as this user.
