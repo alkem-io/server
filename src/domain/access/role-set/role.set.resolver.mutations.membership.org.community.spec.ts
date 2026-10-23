@@ -44,6 +44,7 @@ import {
 } from './role.set.resolver.mutations.membership';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
+import { RoleSetCacheService } from './role.set.service.cache';
 
 /**
  * Organization Community-tab invite / resend / application decisions on the
@@ -62,6 +63,7 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
   let userLookupService: Record<string, Mock>;
   let actorLookupService: Record<string, Mock>;
   let audit: { record: Mock };
+  let roleSetCacheService: Record<string, Mock>;
 
   const orgRoleSet = () => ({
     id: 'rs-org',
@@ -95,6 +97,7 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
     userLookupService = module.get(UserLookupService) as any;
     actorLookupService = module.get(ActorLookupService) as any;
     audit = module.get(OrganizationAdministrationAuditService) as any;
+    roleSetCacheService = module.get(RoleSetCacheService) as any;
     audit.record.mockResolvedValue(undefined);
 
     // Invite path plumbing: every invitee is a registered user with no open
@@ -213,6 +216,21 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
           JSON.stringify({ ...row, actorContext: undefined })
         ).not.toContain('@');
       }
+    });
+
+    it('keeps the rows when follow-up work fails after the invitations exist', async () => {
+      invitationService.getInvitationsOrFail.mockRejectedValue(
+        new Error('reload failed')
+      );
+
+      await expect(
+        invite(supportActor('support-1'), ['user-a'], ['new@example.org'])
+      ).rejects.toThrow('reload failed');
+
+      expect(audit.record.mock.calls.map(call => call[0].action)).toEqual([
+        'invite_user',
+        'invite_email',
+      ]);
     });
 
     it('refuses Support inviting themself by id, creating nothing', async () => {
@@ -398,6 +416,24 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
 
       expect(audit.record).toHaveBeenCalledTimes(1);
       expect(audit.record.mock.calls[0][0].action).toBe('reject_application');
+    });
+
+    it('keeps the row when the cache update after approval fails', async () => {
+      arrange('applicant-1', ['approving', 'approved']);
+      roleSetCacheService.deleteOpenApplicationFromCache.mockRejectedValue(
+        new Error('cache down')
+      );
+
+      await expect(
+        resolver.eventOnApplication(
+          { applicationID: 'app-1', eventName: 'APPROVE' } as any,
+          supportActor('support-1')
+        )
+      ).rejects.toThrow('cache down');
+
+      expect(roleSetService.approveApplication).toHaveBeenCalledTimes(1);
+      expect(audit.record).toHaveBeenCalledTimes(1);
+      expect(audit.record.mock.calls[0][0].action).toBe('approve_application');
     });
 
     it.each([

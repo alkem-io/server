@@ -602,6 +602,17 @@ export class RoleSetResolverMutationsMembership {
       );
     invitationResults.push(...newUserInvitationResults);
 
+    // Audit as soon as the invitations exist, so a failure in the follow-up
+    // work below cannot lose the record of what was created.
+    if (inviteBranch === 'platform-support') {
+      await this.recordSupportInvitations(
+        roleSet,
+        actorContext,
+        invitationResults,
+        extraRoles
+      );
+    }
+
     // Reset all authorizations on the invitations and applications because it's easier
     await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
@@ -648,15 +659,6 @@ export class RoleSetResolverMutationsMembership {
       actorContext,
       invitationResults
     );
-
-    if (inviteBranch === 'platform-support') {
-      await this.recordSupportInvitations(
-        roleSet,
-        actorContext,
-        invitationResults,
-        extraRoles
-      );
-    }
 
     // Echo the outcome of the single invitation back for every duplicate typed
     // address of that invitee. Appended after notifications are sent so the
@@ -1075,6 +1077,18 @@ export class RoleSetResolverMutationsMembership {
         this.roleSetServiceLifecycleApplication.getApplicationMachine()
       );
 
+      // Audit once the lifecycle has settled, before the notification lookups
+      // and cache updates that could still fail.
+      if (branch === 'platform-support') {
+        await this.recordSupportApplicationEvent(
+          eventData.eventName,
+          actorContext,
+          application.roleSet.id,
+          application.user.id,
+          application.id
+        );
+      }
+
       // Send notification if application was declined/rejected
       if (
         applicationState === ApplicationLifecycleState.REJECTED &&
@@ -1155,16 +1169,6 @@ export class RoleSetResolverMutationsMembership {
         application.roleSet.id,
         isMember
       );
-
-      if (branch === 'platform-support') {
-        await this.recordSupportApplicationEvent(
-          eventData.eventName,
-          actorContext,
-          application.roleSet.id,
-          application.user.id,
-          application.id
-        );
-      }
     }
 
     return this.applicationService.getApplicationOrFail(
