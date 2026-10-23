@@ -1,11 +1,7 @@
 import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { MimeFileType } from '@common/enums/mime.file.type';
-import { RoomType } from '@common/enums/room.type';
-import {
-  EntityNotFoundException,
-  ValidationException,
-} from '@common/exceptions';
+import { ValidationException } from '@common/exceptions';
 import { IRoom } from '@domain/communication/room/room.interface';
 import {
   isCommentRoom,
@@ -23,7 +19,6 @@ import {
   StorageServiceUnavailableException,
 } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { In, Repository } from 'typeorm';
@@ -53,7 +48,6 @@ export class MessageAttachmentService {
   constructor(
     config: ConfigService<AlkemioConfig, true>,
     private readonly storageBucketService: StorageBucketService,
-    private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly roomResolverService: RoomResolverService,
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
@@ -264,59 +258,19 @@ export class MessageAttachmentService {
   private async getCommentRoomParentBucket(
     room: IRoom
   ): Promise<IStorageBucket | undefined> {
-    const calloutId = await this.resolveParentCalloutId(room);
-    if (!calloutId) {
+    const bucket =
+      await this.roomResolverService.getStorageBucketForCommentRoom(room);
+    if (!bucket) {
       this.logger.warn?.(
         {
           message:
-            'Comment-room attachment: unable to resolve parent callout; media remains unavailable',
+            'Comment-room attachment: unable to resolve the parent storage bucket; media remains unavailable',
           roomId: room.id,
           roomType: room.type,
         },
         LogContext.COMMUNICATION
       );
-      return undefined;
     }
-
-    const aggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
-        calloutId,
-        { relations: { directStorage: { authorization: true } } }
-      );
-    return aggregator.directStorage ?? undefined;
-  }
-
-  private async resolveParentCalloutId(
-    room: IRoom
-  ): Promise<string | undefined> {
-    if (room.type === RoomType.CALLOUT) {
-      return this.resolveCalloutIdOrUndefined(() =>
-        this.roomResolverService.getCalloutForRoom(room.id)
-      );
-    }
-    if (room.type === RoomType.POST) {
-      return this.resolveCalloutIdOrUndefined(
-        async () =>
-          (
-            await this.roomResolverService.getCalloutWithPostContributionForRoom(
-              room.id
-            )
-          ).callout
-      );
-    }
-    return undefined;
-  }
-
-  private async resolveCalloutIdOrUndefined(
-    load: () => Promise<{ id: string } | undefined>
-  ): Promise<string | undefined> {
-    try {
-      return (await load())?.id;
-    } catch (e) {
-      if (e instanceof EntityNotFoundException) {
-        return undefined;
-      }
-      throw e;
-    }
+    return bucket;
   }
 }
