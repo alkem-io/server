@@ -115,7 +115,7 @@ services:
       retries: 5
 
   mailslurper:
-    image: oryd/mailslurper:latest-smtps
+    image: ghcr.io/alkem-io/test-suites/mailslurper:smtps-4c6aecc-p2
     restart: unless-stopped
     ports:
       - "4436:4436"
