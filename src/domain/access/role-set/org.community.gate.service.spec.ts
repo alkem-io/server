@@ -1,3 +1,4 @@
+import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import {
@@ -170,6 +171,30 @@ describe('OrgCommunityGateService', () => {
         );
       expect(attempt).toThrow(ForbiddenAuthorizationPolicyException);
       expect(attempt).toThrow(SELF_TARGET_REFUSAL_REASON);
+    });
+
+    it('carries the PLATFORM_SUPPORT_SELF_TARGET code and its numeric code', () => {
+      const actor = supportActor('support-self');
+      let thrown: unknown;
+      try {
+        gate.authorizeOrFail(
+          actor,
+          orgRoleSetPolicy(),
+          AuthorizationPrivilege.GRANT,
+          'assign role',
+          { targetActorID: 'support-self' }
+        );
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBeInstanceOf(ForbiddenAuthorizationPolicyException);
+      const error = thrown as ForbiddenAuthorizationPolicyException;
+      expect(error.code).toBe(AlkemioErrorStatus.PLATFORM_SUPPORT_SELF_TARGET);
+      expect(error.extensions.code).toBe('PLATFORM_SUPPORT_SELF_TARGET');
+      expect(error.extensions.numericCode).toBe(11118);
+      expect(error.extensions.userMessage).toBe(
+        'userMessages.authorization.platformSupportSelfTarget'
+      );
     });
 
     it('does not apply the self-target refusal on the entity-admin path', () => {

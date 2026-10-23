@@ -80,6 +80,7 @@ When you see an error code:
 | 20113 | MATRIX_ENTITY_NOT_FOUND_ERROR       | You don't have the correct rights.      | Request access to the resource        |
 | 20114 | LICENSE_ENTITLEMENT_NOT_AVAILABLE   | License entitlement not available.      | Check license plan features           |
 | 20115 | LICENSE_ENTITLEMENT_NOT_SUPPORTED   | License entitlement not supported.      | Contact support for license options   |
+| 11118 | PLATFORM_SUPPORT_SELF_TARGET        | You can't do this to your own account.  | Ask another Platform Support user or an org admin |
 
 ### 30xxx - Validation Errors
 

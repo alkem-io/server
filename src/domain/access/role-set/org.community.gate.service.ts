@@ -1,3 +1,4 @@
+import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -109,7 +110,8 @@ export class OrgCommunityGateService {
       SELF_TARGET_REFUSAL_REASON,
       AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP,
       authorization?.id ?? '',
-      actorContext.actorID
+      actorContext.actorID,
+      AlkemioErrorStatus.PLATFORM_SUPPORT_SELF_TARGET
     );
   }
 }
