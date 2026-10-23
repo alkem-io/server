@@ -1087,3 +1087,28 @@ services:
     restart: unless-stopped
     networks:
       - alkemio_dev_net
+
+  # One-shot: registers admin@alkem.io and the per-role dev accounts once the
+  # NestJS server (run on the host via `pnpm start:dev`) answers. Uses only
+  # product APIs (Kratos registration + `assignPlatformRoleToUser`), never SQL.
+  # Host network because the script talks to localhost:3000 / :4437 exactly as
+  # it does from the host, and its loopback-only guard must keep holding.
+  dev-seed-roles:
+    container_name: alkemio_dev_seed_roles
+    build:
+      context: .scripts
+      dockerfile_inline: |
+        FROM alpine:3.20
+        RUN apk add --no-cache bash curl jq
+    network_mode: host
+    working_dir: /app
+    volumes:
+      - ./.scripts:/app/.scripts:ro
+      - ./.env:/app/.env:ro
+    environment:
+      - SEED_WAIT_SECONDS=${DEV_SEED_WAIT_SECONDS:-3600}
+      # Passed through only when set on the host; otherwise the script falls
+      # back to AUTH_ADMIN_PASSWORD from the mounted .env.
+      - DEV_SEED_PASSWORD
+    entrypoint: ['bash', '.scripts/dev-seed-roles.sh']
+    restart: 'no'
