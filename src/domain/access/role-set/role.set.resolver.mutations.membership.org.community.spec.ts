@@ -420,7 +420,7 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
 
     it('keeps the row when the cache update after approval fails', async () => {
       arrange('applicant-1', ['approving', 'approved']);
-      roleSetCacheService.deleteOpenApplicationFromCache.mockRejectedValue(
+      roleSetCacheService.deleteOpenApplicationFromCache.mockRejectedValueOnce(
         new Error('cache down')
       );
 
