@@ -23,6 +23,10 @@ describe('MatrixSessionService', () => {
     save: ReturnType<typeof vi.fn>;
   };
   let communicationAdapter: { createActorSession: ReturnType<typeof vi.fn> };
+  let redis: {
+    incr: ReturnType<typeof vi.fn>;
+    expire: ReturnType<typeof vi.fn>;
+  };
   let logger: { error: ReturnType<typeof vi.fn> };
   let service: MatrixSessionService;
 
@@ -34,10 +38,15 @@ describe('MatrixSessionService', () => {
     communicationAdapter = {
       createActorSession: vi.fn().mockResolvedValue({ ...MINTED }),
     };
+    redis = {
+      incr: vi.fn().mockResolvedValue(1),
+      expire: vi.fn().mockResolvedValue(1),
+    };
     logger = { error: vi.fn() };
     service = new MatrixSessionService(
       auditRepository as any,
       communicationAdapter as any,
+      redis as any,
       logger as any
     );
   });
@@ -77,6 +86,37 @@ describe('MatrixSessionService', () => {
       expect.anything(),
       expect.anything()
     );
+  });
+
+  it('refuses the mint past the per-actor window limit, before anything is issued', async () => {
+    redis.incr.mockResolvedValue(11);
+
+    await expect(service.mintForActor(ACTOR_ID)).rejects.toThrow(
+      'Too many Matrix session mints'
+    );
+    expect(communicationAdapter.createActorSession).not.toHaveBeenCalled();
+    expect(auditRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('claims the window per actor and sets the TTL only on the first mint', async () => {
+    await service.mintForActor(ACTOR_ID);
+    expect(redis.incr).toHaveBeenCalledWith(
+      expect.stringContaining(`matrix-session:mint:${ACTOR_ID}:`)
+    );
+    expect(redis.expire).toHaveBeenCalledTimes(1);
+
+    redis.incr.mockResolvedValue(2);
+    await service.mintForActor(ACTOR_ID);
+    expect(redis.expire).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails open on a quota store error: the mint still succeeds', async () => {
+    redis.incr.mockRejectedValue(new Error('redis down'));
+
+    const result = await service.mintForActor(ACTOR_ID);
+
+    expect(result).toEqual(MINTED);
+    expect(auditRepository.save).toHaveBeenCalledTimes(1);
   });
 
   it('propagates an adapter failure without writing an audit row', async () => {
