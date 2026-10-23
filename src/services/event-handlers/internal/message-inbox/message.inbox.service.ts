@@ -9,6 +9,7 @@ import { IConversation } from '@domain/communication/conversation/conversation.i
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { isAttachmentOnlyMessage } from '@domain/communication/message-attachment/attachment.only.message';
 import { MessageAttachmentService } from '@domain/communication/message-attachment/message.attachment.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
@@ -182,11 +183,27 @@ export class MessageInboxService {
 
   /**
    * Delegate VC invocation based on room type and thread state.
+   *
+   * Attachment-only messages never reach a virtual contributor, in any room
+   * type: their body would be a filename (or nothing), which is no prompt.
    */
   private async processVcInvocation(
     payload: MessageReceivedEvent['payload'],
     room: IRoom
   ): Promise<void> {
+    if (
+      isAttachmentOnlyMessage(
+        payload.message.message,
+        payload.message.attachments
+      )
+    ) {
+      this.logger.verbose?.(
+        `Skipping VC invocation for attachment-only message ${payload.message.id} in room ${room.id}`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     // Conversation rooms use direct VC invocation
     // This handles USER_VC conversations where the VC should respond to every message
     if (isConversationRoom(room)) {

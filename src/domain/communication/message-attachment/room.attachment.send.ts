@@ -1,5 +1,6 @@
 import { ExistingMediaRef } from '@alkemio/matrix-adapter-lib';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -7,10 +8,19 @@ import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomMessageAttachmentInput } from '../room/dto/room.dto.attachment';
 import { IRoom } from '../room/room.interface';
+import { isCommentRoom } from '../room/room.utils';
 import {
   MessageAttachmentService,
   sanitizeAttachmentDisplayName,
 } from './message.attachment.service';
+
+// Comment images render inline everywhere; file-service lower-cases MIME types.
+const COMMENT_IMAGE_MIME_TYPES: ReadonlySet<string> = new Set([
+  MimeTypeVisual.JPEG,
+  MimeTypeVisual.PNG,
+  MimeTypeVisual.WEBP,
+  MimeTypeVisual.GIF,
+]);
 
 /** Room operation authorization is shared with ordinary sends at the resolver. */
 @Injectable()
@@ -33,7 +43,8 @@ export class RoomAttachmentSendService {
     if (
       !metadata ||
       !/^[A-Za-z0-9_-]+$/.test(input.externalReference) ||
-      !this.attachments.matchesBucketPolicy(bucket, metadata)
+      !this.attachments.matchesBucketPolicy(bucket, metadata) ||
+      (isCommentRoom(room) && !COMMENT_IMAGE_MIME_TYPES.has(metadata.mimeType))
     )
       this.invalid();
     return {
@@ -52,12 +63,16 @@ export class RoomAttachmentSendService {
   private async targetBucket(room: IRoom, actor: ActorContext) {
     const bucket = await this.attachments.getTargetBucketForRoom(room);
     if (!bucket) this.invalid();
-    this.authorization.grantAccessOrFail(
-      actor,
-      bucket.authorization,
-      AuthorizationPrivilege.FILE_UPLOAD,
-      `send room attachment: ${room.id}`
-    );
+    if (!isCommentRoom(room)) {
+      this.authorization.grantAccessOrFail(
+        actor,
+        bucket.authorization,
+        AuthorizationPrivilege.FILE_UPLOAD,
+        `send room attachment: ${room.id}`
+      );
+    }
+    // Comment rooms: the caller's message gate already authorizes posting in
+    // the room; the bucket only sets the accepted file types and size.
     return bucket;
   }
 

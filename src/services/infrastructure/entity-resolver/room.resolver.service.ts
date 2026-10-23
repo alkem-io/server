@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { RoomType } from '@common/enums/room.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
@@ -6,11 +7,13 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.interface';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { Conversation } from '@domain/communication/conversation/conversation.entity';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { CalendarEvent } from '@domain/timeline/event/event.entity';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -147,6 +150,33 @@ export class RoomResolverService {
       callout,
       contribution: callout.contributions[0],
     };
+  }
+
+  /**
+   * The storage bucket of the callout or post whose comments the room holds.
+   * It follows that callout's or post's own authorization, so what is stored
+   * there is readable exactly by those who can read what is commented on.
+   */
+  async getStorageBucketForCommentRoom(room: {
+    id: string;
+    type: RoomType;
+  }): Promise<IStorageBucket | undefined> {
+    const profile = { storageBucket: { authorization: true } } as const;
+    if (room.type === RoomType.CALLOUT) {
+      const callout = await this.entityManager.findOne(Callout, {
+        where: { comments: { id: room.id } },
+        relations: { framing: { profile } },
+      });
+      return callout?.framing?.profile?.storageBucket;
+    }
+    if (room.type === RoomType.POST) {
+      const post = await this.entityManager.findOne(Post, {
+        where: { comments: { id: room.id } },
+        relations: { profile },
+      });
+      return post?.profile?.storageBucket;
+    }
+    return undefined;
   }
 
   async getCalloutForRoom(commentsID: string): Promise<ICallout> {
