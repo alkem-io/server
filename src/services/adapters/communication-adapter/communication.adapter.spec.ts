@@ -407,6 +407,40 @@ describe('CommunicationAdapter', () => {
       ]);
     });
 
+    it.each([
+      'send',
+      'reply',
+    ] as const)('%s puts the text and the media reference in one request', async operation => {
+      mockAmqpConnection.request.mockResolvedValue(
+        createSuccessResponse({ message_id: 'msg-cap', timestamp: 1 })
+      );
+      const existingMedia = {
+        media_id: 'media',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 7,
+      };
+      const input = {
+        roomID: 'room-uuid-123',
+        actorID: 'actor-uuid-456',
+        message: 'look at this',
+        existingMedia,
+      };
+
+      if (operation === 'send') await adapter.sendMessage(input);
+      else await adapter.sendMessageReply({ ...input, threadID: '$parent' });
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledTimes(1);
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            content: 'look at this',
+            existing_media: existingMedia,
+          }),
+        })
+      );
+    });
+
     it('should throw when roomID is empty', async () => {
       const messageInput: CommunicationSendMessageInput = {
         roomID: '',
