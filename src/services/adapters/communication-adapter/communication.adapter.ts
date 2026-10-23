@@ -12,6 +12,7 @@ import {
   BatchRemoveSpaceMemberRequest,
   // Type-safe command registry types
   CommandTopic,
+  CreateActorSessionRequest,
   CreateRoomRequest,
   CreateSpaceRequest,
   DeleteMessageRequest,
@@ -283,6 +284,49 @@ export class CommunicationAdapter {
     });
 
     return response?.success ?? false;
+  }
+
+  /**
+   * Mint a Matrix access token for an actor's own chat session
+   * (workspace#091, FR-026). Synapse generates a fresh device per call.
+   *
+   * `enabled === false` means this environment has no Matrix at all, and is
+   * the ONE place in this file that throws instead of returning a benign
+   * sentinel (`syncActor` returns `true`, `:272`): there is no truthful empty
+   * credential to return, so a silent success here would hand the app a
+   * blank triple it would store and keep reusing. Tested in
+   * `communication.adapter.spec.ts`.
+   */
+  async createActorSession(actorID: AlkemioActorID): Promise<{
+    userId: string;
+    deviceId: string;
+    accessToken: string;
+  }> {
+    if (!this.enabled) {
+      throw CommunicationAdapterException.fromAdapterError(
+        'createActorSession',
+        {
+          code: 'ErrCodeInvalidParam',
+          message:
+            'Communications are disabled in this environment - cannot mint a Matrix session',
+        }
+      );
+    }
+
+    const response = await this.sendCommand({
+      operation: 'createActorSession',
+      topic: MatrixAdapterEventType.COMMUNICATION_ACTOR_SESSION_CREATE,
+      payload: { actor_id: actorID } satisfies CreateActorSessionRequest,
+      errorContext: { actorID },
+      ensureSuccess: true,
+    });
+
+    // Response is guaranteed non-null when ensureSuccess: true (throws on failure)
+    return {
+      userId: response!.user_id,
+      deviceId: response!.device_id,
+      accessToken: response!.access_token,
+    };
   }
 
   // ============================================================================

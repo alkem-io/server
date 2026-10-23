@@ -151,6 +151,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   markMessageAsReadInRoom: NON_ADMIN,
   markNotificationsAsRead: NON_ADMIN,
   markNotificationsAsUnread: NON_ADMIN,
+  mintMatrixSession: NON_ADMIN,
   mintMcpApiKey: NON_ADMIN,
   moveTaskToColumn: NON_ADMIN,
   prepareMemoSigning: NON_ADMIN,
