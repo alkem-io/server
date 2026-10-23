@@ -118,7 +118,8 @@ fi
 docker logs alkemio_dev_seed_roles 2>&1 | sed 's/^/  /'
 if [ "$SEED_EXIT" != "0" ]; then
   echo "  WARNING: seeding did not complete ($SEED_EXIT) — the database reset itself succeeded."
-  echo "  Re-run manually: pnpm run dev:seed-roles"
+  echo "  This script stops its dev server on exit — start it with: pnpm start:dev"
+  echo "  Once it is ready, re-run manually: pnpm run dev:seed-roles"
 fi
 
 cat <<'EOF'
