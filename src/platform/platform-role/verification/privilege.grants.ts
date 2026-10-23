@@ -42,6 +42,10 @@ export type ManagedPrivilege =
   | AuthorizationPrivilege.PLATFORM_CONTENT_FULL_ACCESS
   | AuthorizationPrivilege.PLATFORM_USERS_ADMIN
   | AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES
+  // Support's organization Community-tab actions (A6), granted type-only on
+  // every organization role set and cascading to its invitations and
+  // applications.
+  | AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP
   // R-F.2 (2026-09-16, research D29) — Support's console list read. Mirrored
   // here so `PRIVILEGE_COVERAGE` forces a grant-set spec, although it names
   // NO census gate: the three `platformAdmin` list reads it admits are not
@@ -147,6 +151,12 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
   // --- A7. Wholly new capability.
   [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES]: {
     anchor: 'account',
+    owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
+  },
+  // --- A6 Community tab. Declared on the organization role set
+  // (`organization.service.authorization.ts`), cascading to its children.
+  [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP]: {
+    anchor: 'role-set',
     owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
   },
   // --- R-F.2 (2026-09-16, D29). Platform-anchored READ for the three
@@ -333,6 +343,16 @@ export const TREE_SCOPED_PRIVILEGE_GRANTS: {
     },
     [AuthorizationPrivilege.GRANT]: {
       anchor: 'organization-verification',
+      owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
+    },
+  },
+  // A6 Community tab — inviting into an organization. Granted directly (not
+  // derived from ROLESET_ENTRY_ROLE_ASSIGN, which Support never holds) on
+  // every organization role set, not cascading. Tree-scoped because the
+  // same privilege is held per Space by Space admins.
+  organization: {
+    [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE]: {
+      anchor: 'organization',
       owningCredentials: [AuthorizationCredential.PLATFORM_SUPPORT],
     },
   },

@@ -159,6 +159,15 @@ export const AUDIT_WRITER_COVERAGE: Record<
     owner: 'external',
     spec: 'src/domain/community/user/account-deletion/account.deletion.audit.service.spec.ts',
   },
+  // Platform Support's organization Community-tab actions: fail-open for
+  // every action, written post-effect.
+  [PlatformAuditCategory.ORGANIZATION_ADMINISTRATION]: {
+    failMode: 'fail-open',
+    writeSucceedsSpec:
+      'src/platform-admin/organization-administration-audit/organization.administration.audit.service.spec.ts',
+    writeFailsSpec:
+      'src/platform-admin/organization-administration-audit/organization.administration.audit.service.spec.ts',
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -214,6 +223,13 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
   A6: {
     gateSpecs: [
       'src/services/api/registration/registration.resolver.mutations.spec.ts',
+      // The organization Community-tab surfaces.
+      'src/domain/access/role-set/org.community.gate.service.spec.ts',
+      'src/domain/access/role-set/role.set.resolver.mutations.org.community.spec.ts',
+      'src/domain/access/role-set/role.set.resolver.mutations.membership.org.community.spec.ts',
+      'src/domain/access/role-set/role.set.resolver.fields.spec.ts',
+      'src/domain/access/invitation/invitation.resolver.mutations.spec.ts',
+      'src/domain/access/invitation.platform/platform.invitation.resolver.mutations.spec.ts',
     ],
   },
   A7: {
@@ -420,6 +436,10 @@ export const PRIVILEGE_COVERAGE: Record<
   [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_RESOURCES]: {
     ruleSpec: ACCOUNT_POLICY_SPEC,
     grantSetSpec: ACCOUNT_POLICY_SPEC,
+  },
+  [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP]: {
+    ruleSpec: ORGANIZATION_POLICY_SPEC,
+    grantSetSpec: ORGANIZATION_POLICY_SPEC,
   },
   [AuthorizationPrivilege.PLATFORM_FORUM_MANAGE]: {
     ruleSpec: PLATFORM_POLICY_SPEC,
