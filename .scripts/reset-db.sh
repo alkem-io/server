@@ -99,11 +99,25 @@ done
 #
 # Non-fatal: the reset itself has succeeded by this point. Re-run with
 # `pnpm run dev:seed-roles` (or `docker start -a alkemio_dev_seed_roles`).
-info "Step 6/6: Waiting for dev-seed-roles (admin + platform-role accounts)"
-SEED_EXIT=$(docker wait alkemio_dev_seed_roles)
+#
+# Bounded: `docker wait` has no timeout, and the container's own readiness
+# deadline (DEV_SEED_WAIT_SECONDS, default 1h) would blow the reset budget if
+# it cannot reach the server (e.g. no host networking). Seeding itself takes
+# well under a minute once the server is ready.
+SEED_TIMEOUT=90
+info "Step 6/6: Waiting for dev-seed-roles (admin + platform-role accounts, max ${SEED_TIMEOUT}s)"
+for i in $(seq 1 "$SEED_TIMEOUT"); do
+  [ "$(docker inspect -f '{{.State.Running}}' alkemio_dev_seed_roles 2>/dev/null)" = "true" ] || break
+  sleep 1
+done
+SEED_EXIT=$(docker inspect -f '{{if .State.Running}}timeout{{else}}{{.State.ExitCode}}{{end}}' alkemio_dev_seed_roles 2>/dev/null | tr -d '\n' || true)
+SEED_EXIT="${SEED_EXIT:-missing}"
+if [ "$SEED_EXIT" = "timeout" ]; then
+  docker stop -t 2 alkemio_dev_seed_roles >/dev/null 2>&1 || true
+fi
 docker logs alkemio_dev_seed_roles 2>&1 | sed 's/^/  /'
 if [ "$SEED_EXIT" != "0" ]; then
-  echo "  WARNING: seeding exited $SEED_EXIT — the database reset itself succeeded."
+  echo "  WARNING: seeding did not complete ($SEED_EXIT) — the database reset itself succeeded."
   echo "  Re-run manually: pnpm run dev:seed-roles"
 fi
 

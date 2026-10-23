@@ -14,6 +14,8 @@ To simplify setting up the Server development environment, a pre-configured dock
 - Docker Desktop for Mac (Apple Silicon) can run x86/amd64 images using emulation.
 - [Colima](https://github.com/abiosoft/colima) offers ARM-native Docker environments, but may be slower still, as it is still an emulation.
 
+**Dev account seeding needs host networking.** `pnpm run start:services` also starts the one-shot `dev-seed-roles` container (`network_mode: host`), which waits for your `pnpm start:dev` server and then registers `admin@alkem.io` plus the per-role dev accounts. This works out of the box on Linux; on Docker Desktop (Mac/Windows) host networking must be supported (4.34+) and enabled under _Settings → Resources → Network_. Without it the container waits up to `DEV_SEED_WAIT_SECONDS` (default 3600) and exits without creating accounts — check with `docker logs alkemio_dev_seed_roles` and seed from the host instead with `pnpm run dev:seed-roles`.
+
 ## Database Backend
 
 **Alkemio uses PostgreSQL 17.5 as the database backend** for both the Alkemio server and Ory Kratos identity service.

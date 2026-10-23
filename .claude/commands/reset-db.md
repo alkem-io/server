@@ -2,13 +2,13 @@
 description: Reset the local development database and services (full wipe + re-seed)
 ---
 
-Run the database reset script with a **6-minute timeout** (typical run is 2-3 min; script-internal waits cap at ~4 min):
+Run the database reset script with a **7-minute timeout** (typical run is 2-3 min; script-internal waits cap at ~5.5 min):
 
 ```bash
 bash .scripts/reset-db.sh
 ```
 
-**Important:** Use a 360 000 ms timeout — this covers the script's internal polling budgets (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL) plus compose, migration, and compilation time.
+**Important:** Use a 420 000 ms timeout — this covers the script's internal polling budgets (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL + 90 s dev-seed-roles) plus compose, migration, and compilation time.
 
 Report each step's outcome to the user. If the script fails, show the failing step and suggest checking `docker ps` or the server log at `/tmp/alkemio-dev-server.log`.
 
@@ -22,13 +22,13 @@ When asked to reset the database, wipe the DB, start fresh, or clean-slate the l
 
 ## Procedure
 
-Run the reset script with a **6-minute timeout**:
+Run the reset script with a **7-minute timeout**:
 
 ```bash
 bash .scripts/reset-db.sh
 ```
 
-**Timeout budget (360 000 ms):** The script's internal polling loops cap at ~240 s (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL). Adding compose restart, migrations, TS compilation, and user registration brings the realistic ceiling to ~5.5 min. The 6-minute timeout provides headroom without excessive wait on failure.
+**Timeout budget (420 000 ms):** The script's internal polling loops cap at ~330 s (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL + 90 s dev-seed-roles). Adding compose restart, migrations and TS compilation brings the realistic ceiling to ~6.5 min. The 7-minute timeout provides headroom without excessive wait on failure.
 
 ## What It Does
 

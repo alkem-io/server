@@ -1107,5 +1107,8 @@ services:
       - ./.env:/app/.env:ro
     environment:
       - SEED_WAIT_SECONDS=${DEV_SEED_WAIT_SECONDS:-3600}
+      # Passed through only when set on the host; otherwise the script falls
+      # back to AUTH_ADMIN_PASSWORD from the mounted .env.
+      - DEV_SEED_PASSWORD
     entrypoint: ['bash', '.scripts/dev-seed-roles.sh']
     restart: 'no'
