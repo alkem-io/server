@@ -127,23 +127,105 @@ test('US4-AS2: bounded full Nest/cgroup experiment and independent API readiness
   );
   prerequisite(
     experiment.terminationEvidence,
-    'separate forced child heap exit and full MCP termination evidence required'
+    'separate forced child resource exit and full MCP termination evidence required'
   );
   const terminations = JSON.parse(
     artifact(manifest, experiment.terminationEvidence)
   );
   assert.equal(terminations.runId, manifest.runId);
   assert.deepEqual(terminations.cases.map(item => item.kind).sort(), [
-    'child-heap',
+    'child-resource',
     'mcp-process',
   ]);
   for (const item of terminations.cases) {
     assert.equal(item.apiFailures, 0);
     assert.ok(item.apiReadinessProbes > 1);
     assert.equal(item.beforeGo.publications, 0);
-    if (item.kind === 'child-heap') {
+    if (item.kind === 'child-resource') {
       assert.equal(item.beforeGo.outcome, 'resource-exhausted-before-go');
       assert.equal(item.afterGo.outcome, 'indeterminate-after-go');
+      for (const [phase, subcase] of [
+        ['before-go', item.beforeGo],
+        ['after-go', item.afterGo],
+      ]) {
+        const proof = subcase.resourceEvidence;
+        prerequisite(proof, `${phase} resource mechanism provenance required`);
+        assert.ok(['kernel-cgroup-oom', 'v8-heap'].includes(proof.mechanism));
+        const fault = JSON.parse(artifact(manifest, proof.faultEvidence));
+        const exit = JSON.parse(artifact(manifest, proof.exitEvidence));
+        assert.equal(fault.runId, manifest.runId);
+        assert.equal(fault.phase, phase);
+        assert.ok(typeof fault.case === 'string' && fault.case.length > 0);
+        assert.equal(fault.imageId, manifest.services.mcp.imageId);
+        assert.equal(fault.imageId, item.mcpImageId);
+        assert.equal(fault.containerId, subcase.mcpContainerId);
+        assert.ok(
+          typeof fault.containerId === 'string' && fault.containerId.length > 0
+        );
+        assert.ok(
+          Number.isInteger(fault.childContainerPid) &&
+            fault.childContainerPid > 0
+        );
+        assert.ok(
+          Number.isInteger(fault.childStartTicks) && fault.childStartTicks > 0
+        );
+        assert.ok(Number.isInteger(fault.childUid) && fault.childUid >= 0);
+        for (const field of [
+          'runId',
+          'case',
+          'containerId',
+          'imageId',
+          'childContainerPid',
+          'childStartTicks',
+          'childUid',
+          'phase',
+        ])
+          assert.equal(exit[field], fault[field]);
+        assert.equal(exit.code, null);
+        if (proof.mechanism === 'kernel-cgroup-oom') {
+          assert.equal(fault.kind, 'external-child-only-cgroup-memory-oom');
+          assert.ok(
+            Number.isInteger(fault.childHostPid) && fault.childHostPid > 0
+          );
+          assert.ok(
+            Number.isInteger(fault.mcpParentHostPid) &&
+              fault.mcpParentHostPid > 0
+          );
+          assert.equal(fault.childParentHostPid, fault.mcpParentHostPid);
+          assert.notEqual(fault.childHostPid, fault.mcpParentHostPid);
+          assert.equal(fault.mcpParentExcludedFromLeaf, true);
+          assert.equal(
+            fault.cgroupPath,
+            `/docker/forge088-oom-${manifest.runId}`
+          );
+          assert.ok(
+            Number.isInteger(fault.memoryMaxBytes) && fault.memoryMaxBytes > 0
+          );
+          assert.ok(
+            Number.isInteger(fault.memoryEventsBefore?.oom_kill) &&
+              fault.memoryEventsBefore.oom_kill >= 0
+          );
+          assert.ok(
+            Number.isInteger(fault.memoryEventsAfter?.oom_kill) &&
+              fault.memoryEventsAfter.oom_kill >
+                fault.memoryEventsBefore.oom_kill
+          );
+          assert.equal(fault.kernelOomKillProven, true);
+          assert.equal(fault.childObservedExited, true);
+          assert.equal(exit.signal, 'SIGKILL');
+        } else {
+          assert.equal(fault.kind, 'child-v8-fatal-heap');
+          assert.equal(exit.signal, 'SIGABRT');
+          const stderr = artifact(manifest, fault.fatalHeapEvidence).toString(
+            'utf8'
+          );
+          assert.match(
+            stderr,
+            /FATAL ERROR:.*(?:heap out of memory|Allocation failed)/
+          );
+          assert.match(stderr, new RegExp(`\\[${fault.childContainerPid}:`));
+        }
+      }
     } else {
       assert.equal(item.beforeGo.transportDisconnected, true);
       assert.equal(item.afterGo.transportDisconnected, true);

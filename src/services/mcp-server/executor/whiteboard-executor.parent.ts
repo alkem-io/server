@@ -200,7 +200,6 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
           }
         };
         stopChild = before => finish(abnormal(before));
-        child.once('disconnect', () => finish(abnormal('cancelled-before-go')));
         child.on('message', raw => {
           if (terminal) return;
           const parsed = parseChildMessage(raw);

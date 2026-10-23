@@ -179,10 +179,15 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
   it.each([
     false,
     true,
-  ])('IPC closure without child exit is terminal afterGo=%s', async afterGo => {
+  ])('IPC closure without child exit waits for the existing deadline afterGo=%s', async afterGo => {
+    vi.useFakeTimers();
     const h = parent();
-    const pending = h.execute(randomUUID(), randomUUID(), operations);
+    const actor = randomUUID();
+    const pending = h.execute(randomUUID(), actor, operations);
+    const settled = vi.fn();
+    void pending.then(settled);
     const child = h.children[0];
+    child.kill.mockImplementation(() => true);
     progress(child, 'SYNCED');
     if (afterGo)
       progress(child, 'PREPARED', {
@@ -191,15 +196,28 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         summary: [],
       });
     child.emit('disconnect');
-    try {
-      expect(child.kill).toHaveBeenCalledOnce();
-      expect((await pending).outcome).toBe(
-        afterGo ? 'indeterminate-after-go' : 'cancelled-before-go'
-      );
-    } finally {
-      h.onModuleDestroy();
-      await pending;
-    }
+    await vi.advanceTimersByTimeAsync(9999);
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(settled).not.toHaveBeenCalled();
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(child.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+    expect(settled).not.toHaveBeenCalled();
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    child.emit('exit', null, 'SIGKILL');
+    expect((await pending).outcome).toBe(
+      afterGo ? 'indeterminate-after-go' : 'timeout-before-go'
+    );
+    expect(child.eventNames()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    const next = h.execute(randomUUID(), actor, operations);
+    expect(h.children).toHaveLength(2);
+    h.onModuleDestroy();
+    await next;
   });
   it('preserves a source READ denial as forbidden without spawn', async () => {
     const h = parent();
@@ -513,18 +531,25 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         { code: 0, signal: null },
         { code: 1, signal: null },
         { code: null, signal: 'SIGABRT' },
-      ].map(exit => ({ phase, ...exit }))
+        { code: null, signal: 'SIGKILL' },
+      ].flatMap(exit =>
+        ['exit-only', 'disconnect-before-exit', 'exit-before-disconnect'].map(
+          order => ({ phase, ...exit, order })
+        )
+      )
     )
-  )('classifies exit $code/$signal in $phase without replay', async ({
+  )('classifies exit $code/$signal in $phase ($order) without replay', async ({
     phase,
     code,
     signal,
+    order,
   }) => {
     vi.useFakeTimers();
     const h = parent();
     const actor = randomUUID();
     const pending = h.execute(randomUUID(), actor, operations);
     const child = h.children[0];
+    child.kill.mockImplementation(() => true);
     if (phase !== 'joining') progress(child, 'SYNCED');
     if (phase === 'go' || phase === 'published')
       progress(child, 'PREPARED', {
@@ -533,7 +558,12 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         summary: [],
       });
     if (phase === 'published') progress(child, 'PUBLISHED');
+    if (order === 'disconnect-before-exit') child.emit('disconnect');
     child.emit('exit', code, signal);
+    if (order === 'exit-before-disconnect') child.emit('disconnect');
+    expect(
+      child.send.mock.calls.filter(([message]) => message.type === 'GO')
+    ).toHaveLength(phase === 'go' || phase === 'published' ? 1 : 0);
     expect((await pending).outcome).toBe(
       phase === 'go' || phase === 'published'
         ? 'indeterminate-after-go'
@@ -550,6 +580,57 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     h.onModuleDestroy();
     await next;
     expect(vi.getTimerCount()).toBe(0);
+  });
+  it.each([
+    'caller',
+    'module',
+    'deadline',
+    'FAILED',
+    'DURABLE',
+  ])('preserves selected %s terminal through disconnect and signal exit', async owner => {
+    vi.useFakeTimers();
+    const h = parent();
+    const controller = new AbortController();
+    const pending = h.execute(
+      randomUUID(),
+      randomUUID(),
+      operations,
+      controller.signal
+    );
+    const child = h.children[0];
+    child.kill.mockImplementation(() => true);
+    progress(child, 'SYNCED');
+    if (owner === 'DURABLE') {
+      progress(child, 'PREPARED', {
+        updateDigest: 'a'.repeat(64),
+        byteLength: 2,
+        summary: [],
+      });
+      progress(child, 'DURABLE', {
+        result: { addedElementIds: [], summary: [] },
+      });
+    } else if (owner === 'FAILED') {
+      progress(child, 'FAILED', { typedOutcome: 'forbidden' });
+    } else if (owner === 'caller') controller.abort();
+    else if (owner === 'module') h.onModuleDestroy();
+    else await vi.advanceTimersByTimeAsync(10000);
+    child.emit('disconnect');
+    child.emit('exit', null, 'SIGKILL');
+    expect((await pending).outcome).toBe(
+      owner === 'DURABLE'
+        ? 'durable-success'
+        : owner === 'FAILED'
+          ? 'forbidden'
+          : owner === 'deadline'
+            ? 'timeout-before-go'
+            : 'cancelled-before-go'
+    );
+    expect(child.eventNames()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(h.children).toHaveLength(1);
+    expect(
+      child.send.mock.calls.filter(([message]) => message.type === 'GO')
+    ).toHaveLength(owner === 'DURABLE' ? 1 : 0);
   });
   it.each([false, true])('caller cancellation afterGo=%s', async afterGo => {
     const h = parent();
