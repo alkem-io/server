@@ -29,6 +29,14 @@ Logical source documents must be actor-readable, including in the target
 bucket. Authorized sources are materialized into the target bucket; arbitrary
 remote URLs are never fetched. Unreferenced source-map keys are rejected.
 
+Failed or cancelled imports can retain unused target-owned image files with
+their authorization and tagsets. A newly created file can immediately be reused
+by another import, so MCP does not delete materialized files on failure, even
+before publication. The existing document and bucket lifecycle owns these files;
+no automatic reclamation time or aggregate retention bound is promised. Admission
+remains held until uncancellable storage work settles, and failure before GO
+publishes no scene update.
+
 The existing decoded MCP request limit is **262144 bytes for the whole request**,
 including envelope, escaping and embedded media. It is not an element-count
 limit. A request larger than this cannot start imports or uploads.

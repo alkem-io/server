@@ -366,7 +366,6 @@ export class StorageBucketService {
     skipDedup = false,
     allowedMimeTypesOverride?: string[],
     options?: {
-      onCreated?: (fileID: string) => void;
       composeAuthorization?: boolean;
     }
   ): Promise<IDocument> {
@@ -408,8 +407,7 @@ export class StorageBucketService {
       options?.composeAuthorization ? storage.authorization : undefined,
       options?.composeAuthorization
         ? { createdBy: userID, destinationBucket: storage }
-        : undefined,
-      options?.onCreated
+        : undefined
     );
   }
 
@@ -431,7 +429,6 @@ export class StorageBucketService {
     options?: {
       externalReference?: string;
       displayName?: string;
-      onCreated?: (fileID: string) => void;
     }
   ): Promise<IDocument> {
     const destination = await this.getStorageBucketOrFail(destinationBucketId, {
@@ -459,8 +456,7 @@ export class StorageBucketService {
           displayName: options?.displayName,
         }),
       destination.authorization,
-      { createdBy, destinationBucket: destination },
-      options?.onCreated
+      { createdBy, destinationBucket: destination }
     );
   }
 
@@ -523,8 +519,7 @@ export class StorageBucketService {
       createdBy?: string;
       destinationBucket?: IStorageBucket;
       conditionalMove?: boolean;
-    },
-    onCreated?: (fileID: string) => void
+    }
   ): Promise<IDocument> {
     let savedAuth;
     let savedTagset;
@@ -563,10 +558,6 @@ export class StorageBucketService {
 
       goInvoked = true;
       result = await goCall(savedAuth.id, savedTagset.id);
-
-      // Report before reload: a later failure must not hide a fresh committed file
-      // from the execution owner's definite pre-publication compensation list.
-      if (result.reused === false) onCreated?.(result.id);
 
       // Load with relations needed for auth/tagset consumers. On dedup
       // reuse this is an existing row; otherwise the freshly-inserted one.

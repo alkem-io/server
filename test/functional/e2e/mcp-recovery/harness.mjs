@@ -330,7 +330,7 @@ export function loadManifest(live = true) {
   );
   prerequisite(
     Object.keys(manifest.fixtures.actors ?? {}).every(name =>
-      ['author', 'secondAuthor', 'reader', 'denied', 'authorAlias', 'resource3', 'resource4'].includes(
+      ['author', 'secondAuthor', 'reader', 'denied', 'authorAlias', 'resource3', 'resource4', 'resource5'].includes(
         name
       )
     ),

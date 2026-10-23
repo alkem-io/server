@@ -143,8 +143,6 @@ export class ImportWhiteboardSceneTool implements McpTool {
             );
           return { scene, targetFileIDs };
         },
-        cleanup: ids =>
-          this.whiteboardService.deleteMaterializedContentDocuments(ids),
       }
     );
     return render(

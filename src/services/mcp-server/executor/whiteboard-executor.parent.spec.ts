@@ -147,7 +147,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
       await new Promise<void>(resolve => settle.push(resolve));
       return input;
     });
-    const callbacks = { prepare, cleanup: vi.fn() };
+    const callbacks = { prepare };
     const active = [randomUUID(), randomUUID()].map(actor =>
       h.execute(
         randomUUID(),
@@ -215,7 +215,6 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
             randomUUID()
           )
         ),
-      cleanup: vi.fn(),
     };
     expect(
       await h.execute(
@@ -228,18 +227,16 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     ).toEqual({ outcome: 'forbidden' });
     expect(h.children).toHaveLength(0);
   });
-  it('diagnoses failed fresh cleanup without logging the exception or changing the failed outcome', async () => {
+  it('releases admission after preparation failure without spawning or logging the exception', async () => {
     const logger = { log: vi.fn(), warn: vi.fn() };
     parent();
     const h = new Parent({} as any, logger as any);
     const actor = randomUUID();
     const input = importInput();
     const preparation = {
-      prepare: vi.fn(async context => {
-        context.createdDocumentIDs.push('fresh');
+      prepare: vi.fn(async () => {
         throw new Error('PRIVATE_PREPARATION');
       }),
-      cleanup: vi.fn().mockRejectedValue(new Error('PRIVATE_CLEANUP')),
     };
     expect(
       await h.execute(
@@ -250,9 +247,8 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         preparation
       )
     ).toEqual({ outcome: 'invalid' });
-    expect(preparation.cleanup).toHaveBeenCalledExactlyOnceWith(['fresh']);
-    expect(logger.warn).toHaveBeenCalledOnce();
-    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('PRIVATE');
+    expect(h.children).toHaveLength(0);
+    expect(JSON.stringify(logger.log.mock.calls)).not.toContain('PRIVATE');
     const next = h.execute(randomUUID(), actor, operations);
     h.onModuleDestroy();
     await next;
@@ -278,7 +274,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
             return new Parent({} as any, { log: vi.fn() } as any);
           })()
         : h;
-    const preparation = { prepare: vi.fn(), cleanup: vi.fn() };
+    const preparation = { prepare: vi.fn() };
     const input = {
       import: {
         scene: {
@@ -314,7 +310,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
   it.each([
     false,
     true,
-  ])('import fresh files are compensated only before GO afterGo=%s', async afterGo => {
+  ])('import failure preserves resolved file bindings and phase outcomes afterGo=%s', async afterGo => {
     const h = parent();
     const fresh = randomUUID();
     const input = importInput();
@@ -333,11 +329,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     ];
     input.targetFileIDs = { asset: fresh };
     const preparation = {
-      prepare: vi.fn(async (context: any) => {
-        context.createdDocumentIDs.push(fresh);
-        return input;
-      }),
-      cleanup: vi.fn().mockResolvedValue(undefined),
+      prepare: vi.fn(async () => input),
     };
     const pending = h.execute(
       randomUUID(),
@@ -361,10 +353,9 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     expect((await pending).outcome).toBe(
       afterGo ? 'indeterminate-after-go' : 'resource-exhausted-before-go'
     );
-    if (afterGo) expect(preparation.cleanup).not.toHaveBeenCalled();
-    else expect(preparation.cleanup).toHaveBeenCalledExactlyOnceWith([fresh]);
+    expect(input.targetFileIDs).toEqual({ asset: fresh });
   });
-  it('the deadline aborts media work but waits for settlement and cleanup before releasing admission', async () => {
+  it('the deadline aborts media work but waits for settlement before releasing admission', async () => {
     vi.useFakeTimers();
     const h = parent();
     const actor = randomUUID();
@@ -372,7 +363,6 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     let context!: {
       signal: AbortSignal;
       deadlineAt: number;
-      createdDocumentIDs: string[];
     };
     const input = importInput();
     const preparation = {
@@ -381,10 +371,8 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         await new Promise<void>(resolve => {
           settle = resolve;
         });
-        c.createdDocumentIDs.push('fresh');
         throw new Error('late upload failure');
       }),
-      cleanup: vi.fn().mockResolvedValue(undefined),
     };
     const pending = h.execute(
       randomUUID(),
@@ -401,29 +389,19 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     });
     settle();
     expect(await pending).toEqual({ outcome: 'timeout-before-go' });
-    expect(preparation.cleanup).toHaveBeenCalledExactlyOnceWith(['fresh']);
     expect(h.children).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
-  it('holds the actor slot through uncancellable materialization and fresh cleanup after abort', async () => {
+  it('holds the actor slot through uncancellable materialization after abort and never spawns', async () => {
     const h = parent();
     const actor = randomUUID();
     const controller = new AbortController();
     let settle!: () => void;
-    let cleaned!: () => void;
-    const fresh = randomUUID();
     const input = { import: importInput() };
-    const cleanup = vi.fn(
-      () =>
-        new Promise<void>(resolve => {
-          cleaned = resolve;
-        })
-    );
-    const prepare = vi.fn(async (context: any) => {
+    const prepare = vi.fn(async () => {
       await new Promise<void>(resolve => {
         settle = resolve;
       });
-      context.createdDocumentIDs.push(fresh);
       return input.import;
     });
     const pending = h.execute(
@@ -431,7 +409,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
       actor,
       input as any,
       controller.signal,
-      { prepare, cleanup }
+      { prepare }
     );
     expect(prepare).toHaveBeenCalledOnce();
     controller.abort();
@@ -440,13 +418,6 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     });
     expect(h.children).toHaveLength(0);
     settle();
-    await vi.waitFor(() =>
-      expect(cleanup).toHaveBeenCalledExactlyOnceWith([fresh])
-    );
-    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
-      outcome: 'busy',
-    });
-    cleaned();
     expect(await pending).toEqual({ outcome: 'cancelled-before-go' });
     expect(h.children).toHaveLength(0);
     const next = h.execute(randomUUID(), actor, operations);

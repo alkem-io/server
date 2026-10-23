@@ -270,7 +270,6 @@ describe('WhiteboardService', () => {
       actorContext: ActorContext;
       signal: AbortSignal;
       deadlineAt: number;
-      createdDocumentIDs: string[];
     };
     let controller: AbortController;
     const resolve = (
@@ -291,7 +290,6 @@ describe('WhiteboardService', () => {
         actorContext,
         signal: controller.signal,
         deadlineAt: Date.now() + 60000,
-        createdDocumentIDs: [],
       };
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: sourceID,
@@ -300,8 +298,7 @@ describe('WhiteboardService', () => {
         storageBucket: { id: 'foreign-bucket' },
       } as any);
       vi.mocked(storageBucketService.copyDocumentToBucket).mockImplementation(
-        async (_bucket, _source, _actor, _skip, options) => {
-          options?.onCreated?.(targetID);
+        async () => {
           return {
             id: targetID,
             mimeType: 'image/png',
@@ -312,8 +309,7 @@ describe('WhiteboardService', () => {
       );
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
-      ).mockImplementation(async (...args) => {
-        args[8]?.onCreated?.(targetID);
+      ).mockImplementation(async () => {
         return {
           id: targetID,
           mimeType: 'image/png',
@@ -340,10 +336,8 @@ describe('WhiteboardService', () => {
         'target-bucket',
         expect.objectContaining({ id: sourceID }),
         actorContext.actorID,
-        false,
-        { onCreated: expect.any(Function) }
+        false
       );
-      expect(context.createdDocumentIDs).toEqual([targetID]);
     });
 
     it.each([
@@ -367,7 +361,7 @@ describe('WhiteboardService', () => {
       expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
     });
 
-    it('reuses a readable target-owned file without marking it fresh', async () => {
+    it('reuses a readable target-owned file without copying', async () => {
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: sourceID,
         mimeType: 'image/png',
@@ -378,7 +372,6 @@ describe('WhiteboardService', () => {
         targetFileIDs: { asset: sourceID },
       });
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
-      expect(context.createdDocumentIDs).toEqual([]);
       expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
     });
 
@@ -400,9 +393,8 @@ describe('WhiteboardService', () => {
         false,
         false,
         undefined,
-        { onCreated: expect.any(Function), composeAuthorization: true }
+        { composeAuthorization: true }
       );
-      expect(context.createdDocumentIDs).toEqual([targetID]);
       expect(files).toEqual(embedded);
       expect(storageBucketService.uploadFileFromURI).not.toHaveBeenCalled();
       expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
@@ -483,7 +475,6 @@ describe('WhiteboardService', () => {
         new ValidationException('invalid image bytes', LogContext.WHITEBOARDS)
       );
       await expect(resolve(embedded)).rejects.toThrow('invalid image bytes');
-      expect(context.createdDocumentIDs).toEqual([]);
     });
 
     it('fails on missing logical source instead of retaining its locator', async () => {
@@ -520,7 +511,7 @@ describe('WhiteboardService', () => {
     it.each([
       'upload',
       'copy',
-    ])('settles an uncancellable %s and records its fresh file before rejecting cancellation', async kind => {
+    ])('settles an uncancellable %s and retains its file before rejecting cancellation', async kind => {
       let finish!: (value: any) => void;
       let started!: () => void;
       const entered = new Promise<void>(resolve => {
@@ -529,11 +520,9 @@ describe('WhiteboardService', () => {
       const pending = new Promise<any>(resolve => {
         finish = resolve;
       });
-      const operation = async (...args: any[]) => {
+      const operation = async () => {
         started();
-        const result = await pending;
-        (kind === 'upload' ? args[8] : args[4]).onCreated(result.id);
-        return result;
+        return pending;
       };
       if (kind === 'upload')
         vi.mocked(
@@ -561,14 +550,13 @@ describe('WhiteboardService', () => {
         storageBucket: { id: 'target-bucket' },
       });
       await rejection;
-      expect(context.createdDocumentIDs).toEqual([targetID]);
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
     it.each([
       'upload',
       'copy',
-    ])('never includes a deduplicated %s in the cleanup list', async kind => {
+    ])('retains a deduplicated %s and returns its target binding', async kind => {
       const reused = {
         id: targetID,
         reused: true,
@@ -583,24 +571,25 @@ describe('WhiteboardService', () => {
         vi.mocked(storageBucketService.copyDocumentToBucket).mockResolvedValue(
           reused
         );
-      await resolve(
-        kind === 'upload' ? embedded : {},
-        kind === 'copy' ? { asset: { fileID: sourceID } } : {}
-      );
-      expect(context.createdDocumentIDs).toEqual([]);
+      expect(
+        await resolve(
+          kind === 'upload' ? embedded : {},
+          kind === 'copy' ? { asset: { fileID: sourceID } } : {}
+        )
+      ).toEqual({ targetFileIDs: { asset: targetID } });
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
-    it('retains fresh IDs if storage fails after receiving a committed upload response', async () => {
+    it('does not delete materialized files when the storage owner rejects', async () => {
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
-      ).mockImplementation(async (...args) => {
-        args[8]?.onCreated?.(targetID);
+      ).mockImplementation(async () => {
         throw new Error('post-upload load failed');
       });
       await expect(resolve(embedded)).rejects.toThrow(
         'post-upload load failed'
       );
-      expect(context.createdDocumentIDs).toEqual([targetID]);
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('stops after source lookup if the existing execution was cancelled', async () => {
@@ -619,15 +608,14 @@ describe('WhiteboardService', () => {
     it.each([
       { mimeType: 'application/pdf', storageBucket: { id: 'target-bucket' } },
       { mimeType: 'image/png', storageBucket: { id: 'foreign-bucket' } },
-    ])('rejects a nonimage or foreign materialization result while retaining its fresh ID', async invalidResult => {
+    ])('rejects a nonimage or foreign materialization result without deleting it', async invalidResult => {
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
-      ).mockImplementation(async (...args) => {
-        args[8]?.onCreated?.(targetID);
+      ).mockImplementation(async () => {
         return { id: targetID, reused: false, ...invalidResult } as any;
       });
       await expect(resolve(embedded)).rejects.toThrow(ValidationException);
-      expect(context.createdDocumentIDs).toEqual([targetID]);
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('rejects a nonimage logical source before copying', async () => {
@@ -643,11 +631,10 @@ describe('WhiteboardService', () => {
       expect(storageBucketService.copyDocumentToBucket).not.toHaveBeenCalled();
     });
 
-    it('retains earlier fresh files for execution-owned cleanup when a later asset fails', async () => {
+    it('retains earlier materialized files when a later asset fails', async () => {
       const later = { ...image, fileId: 'later' };
       vi.mocked(storageBucketService.uploadFileAsDocumentFromBuffer)
-        .mockImplementationOnce(async (...args) => {
-          args[8]?.onCreated?.(targetID);
+        .mockImplementationOnce(async () => {
           return {
             id: targetID,
             reused: false,
@@ -663,20 +650,18 @@ describe('WhiteboardService', () => {
           [image, later]
         )
       ).rejects.toThrow('later upload failed');
-      expect(context.createdDocumentIDs).toEqual([targetID]);
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('rechecks the existing deadline after settling storage work', async () => {
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
-      ).mockImplementation(async (...args) => {
-        args[8]?.onCreated?.(targetID);
+      ).mockImplementation(async () => {
         context.deadlineAt = 0;
         return { id: targetID } as any;
       });
       await expect(resolve(embedded)).rejects.toThrow('deadline exceeded');
-      expect(context.createdDocumentIDs).toEqual([targetID]);
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
   });
 

@@ -54,9 +54,7 @@ export interface ImportPreparation {
   prepare(context: {
     signal: AbortSignal;
     deadlineAt: number;
-    createdDocumentIDs: string[];
   }): Promise<ImportInput>;
-  cleanup(createdDocumentIDs: string[]): Promise<void>;
 }
 
 @Injectable()
@@ -130,7 +128,6 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
     const jobId = randomUUID();
     const deadline = Date.now() + this.capacity.deadlineMs;
     const controller = new AbortController();
-    const createdDocumentIDs: string[] = [];
     let phase: 'preparing' | 'joining' | 'synced' | 'go' | 'published' =
       'preparing';
     const afterGo = () => phase === 'go' || phase === 'published';
@@ -148,7 +145,7 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
       () => stop('timeout-before-go'),
       Math.max(1, deadline - Date.now())
     );
-    // Admission covers bounded materialization, the child, and definite cleanup.
+    // Admission covers materialization settlement and the child lifecycle.
     this.jobs.set(jobId, { actorId, stop: () => stop('cancelled-before-go') });
     signal?.addEventListener('abort', cancel, { once: true });
     try {
@@ -159,7 +156,6 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
             import: await preparation.prepare({
               signal: controller.signal,
               deadlineAt: deadline,
-              createdDocumentIDs,
             }),
           };
           if (!validImport(payload.import)) stop('invalid');
@@ -326,16 +322,6 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener('abort', cancel);
-      if (!afterGo() && preparation && createdDocumentIDs.length) {
-        try {
-          await preparation.cleanup(createdDocumentIDs);
-        } catch {
-          this.logger.warn?.(
-            { message: 'Whiteboard import media cleanup failed', jobId },
-            LogContext.MCP_SERVER
-          );
-        }
-      }
       this.jobs.delete(jobId);
     }
   }

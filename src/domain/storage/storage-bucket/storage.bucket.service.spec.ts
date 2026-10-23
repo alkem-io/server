@@ -525,11 +525,11 @@ describe('StorageBucketService', () => {
 
   // ── uploadFileAsDocumentFromBuffer ──────────────────────────────
 
-  describe('fresh materialization reporting', () => {
+  describe('materialization failure retention', () => {
     it.each([
       'upload',
       'copy',
-    ])('reports a fresh %s before a failed post-response reload', async operation => {
+    ])('retains a committed %s and its metadata after a failed reload', async operation => {
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
         mockStorageBucket()
       );
@@ -545,12 +545,8 @@ describe('StorageBucketService', () => {
         id: 'fresh',
         reused: false,
       });
-      const onCreated = vi.fn();
-      (documentService.getDocumentOrFail as Mock).mockImplementation(
-        async () => {
-          expect(onCreated).toHaveBeenCalledExactlyOnceWith('fresh');
-          throw new Error('reload failed');
-        }
+      (documentService.getDocumentOrFail as Mock).mockRejectedValue(
+        new Error('reload failed')
       );
       const work =
         operation === 'upload'
@@ -561,65 +557,18 @@ describe('StorageBucketService', () => {
               MimeTypeVisual.PNG,
               'actor',
               false,
-              false,
-              undefined,
-              { onCreated }
+              false
             )
           : service.copyDocumentToBucket(
               'target',
               mockDocument(),
               'actor',
-              false,
-              { onCreated }
+              false
             );
       await expect(work).rejects.toThrow('reload failed');
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it.each([
-      'upload',
-      'copy',
-    ])('does not report deduplicated %s as fresh', async operation => {
-      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(
-        mockStorageBucket()
-      );
-      (authorizationPolicyService.save as Mock).mockResolvedValue({
-        id: 'auth',
-      });
-      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset' });
-      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
-        id: 'shared',
-        reused: true,
-      });
-      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
-        id: 'shared',
-        reused: true,
-      });
-      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
-        mockDocument({ id: 'shared' })
-      );
-      const onCreated = vi.fn();
-      if (operation === 'upload')
-        await service.uploadFileAsDocumentFromBuffer(
-          'target',
-          Buffer.from('bytes'),
-          'image',
-          MimeTypeVisual.PNG,
-          'actor',
-          false,
-          false,
-          undefined,
-          { onCreated }
-        );
-      else
-        await service.copyDocumentToBucket(
-          'target',
-          mockDocument(),
-          'actor',
-          false,
-          { onCreated }
-        );
-      expect(onCreated).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
   });
 
@@ -711,7 +660,6 @@ describe('StorageBucketService', () => {
         [StorageAggregatorType.USER, true, true],
       ])('persists rules before insertion (owner=%s, compose=%s, reused=%s)', async (owner, composeAuthorization, reused) => {
         bucket.directStorageOwner!.type = owner;
-        const onCreated = vi.fn();
         const original = structuredClone(existing);
         const expectedRules = composeAuthorization
           ? [
@@ -746,7 +694,6 @@ describe('StorageBucketService', () => {
               createdBy: 'actor',
               tagsetId: 'prepared-tags',
             });
-            expect(onCreated).not.toHaveBeenCalled();
             return { id: reused ? existing.id : 'fresh', reused };
           }
         );
@@ -759,7 +706,7 @@ describe('StorageBucketService', () => {
           false,
           false,
           undefined,
-          { composeAuthorization, onCreated }
+          { composeAuthorization }
         );
         expect(storageBucketRepository.findOneOrFail).toHaveBeenCalledWith({
           where: { id: bucket.id },
@@ -767,7 +714,6 @@ describe('StorageBucketService', () => {
             ? { relations: { authorization: true, directStorageOwner: true } }
             : {}),
         });
-        expect(onCreated.mock.calls).toEqual(reused ? [] : [['fresh']]);
         if (reused) {
           expect(result).toBe(existing);
           expect(existing).toEqual({ ...original, reused: true });
@@ -797,7 +743,6 @@ describe('StorageBucketService', () => {
           id: 'fresh',
           reused: false,
         });
-        const onCreated = vi.fn();
         await expect(
           service.uploadFileAsDocumentFromBuffer(
             bucket.id,
@@ -808,12 +753,11 @@ describe('StorageBucketService', () => {
             false,
             false,
             undefined,
-            { composeAuthorization: true, onCreated }
+            { composeAuthorization: true }
           )
         ).rejects.toThrow('composition failed');
         expect(fileServiceAdapter.createDocument).not.toHaveBeenCalled();
         expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
-        expect(onCreated).not.toHaveBeenCalled();
         expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
           expect.objectContaining({ id: 'prepared-auth' })
         );

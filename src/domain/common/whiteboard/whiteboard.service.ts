@@ -88,8 +88,6 @@ export interface WhiteboardImportAssetContext {
   actorContext: ActorContext;
   signal: AbortSignal;
   deadlineAt: number;
-  /** Execution-owned accumulator, also populated when materialization rejects. */
-  createdDocumentIDs: string[];
 }
 
 @Injectable()
@@ -376,7 +374,7 @@ export class WhiteboardService {
 
   /**
    * Strict caller-scene media resolution; graph validation stays with the fork.
-   * The admitted execution owns cleanup and must retain this context through GO.
+   * Target files may be shared immediately; their lifecycle stays with storage.
    */
   public async materializeImportAssetsIntoBucket(
     scene: WhiteboardImportAssetInput,
@@ -454,10 +452,6 @@ export class WhiteboardService {
     }
 
     const targetFileIDs: Record<string, string> = Object.create(null);
-    const onCreated = (fileID: string) => {
-      if (!context.createdDocumentIDs.includes(fileID))
-        context.createdDocumentIDs.push(fileID);
-    };
     for (const [id, source] of sources) {
       checkCancellation();
       let targetDocument;
@@ -488,12 +482,10 @@ export class WhiteboardService {
                 targetBucketID,
                 document,
                 context.actorContext.actorID || undefined,
-                false,
-                { onCreated }
+                false
               );
       } else {
-        // Await uncancellable storage work to completion. Its response callback records
-        // fresh IDs even if the storage owner's subsequent document reload fails.
+        // Await uncancellable storage work before releasing execution admission.
         targetDocument =
           await this.storageBucketService.uploadFileAsDocumentFromBuffer(
             targetBucketID,
@@ -504,7 +496,7 @@ export class WhiteboardService {
             false,
             false,
             undefined,
-            { onCreated, composeAuthorization: true }
+            { composeAuthorization: true }
           );
       }
       checkCancellation();

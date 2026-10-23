@@ -103,6 +103,13 @@ describe('whiteboard creation definitions through the argument validator', () =>
       );
       expect(result.isError).toBe(true);
       expect(error).toContain('must NOT have additional properties');
+      if ('content' in extra) {
+        expect(result.content[0].text).toContain(
+          'Create a blank whiteboard, then use import_whiteboard_scene'
+        );
+      } else {
+        expect(result.content[0].text).toBe(error);
+      }
     }
     expect(execute).not.toHaveBeenCalled();
     expect(

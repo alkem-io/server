@@ -192,7 +192,12 @@ export class McpServerService implements OnModuleInit {
                   name === 'edit_whiteboard_elements' ||
                   name === 'import_whiteboard_scene'
                     ? JSON.stringify({ outcome: 'invalid' })
-                    : argError,
+                    : (name === 'create_whiteboard' ||
+                          name === 'create_whiteboard_in_space') &&
+                        args != null &&
+                        Object.hasOwn(args, 'content')
+                      ? `${argError}. Create a blank whiteboard, then use import_whiteboard_scene`
+                      : argError,
               },
             ],
             isError: true,

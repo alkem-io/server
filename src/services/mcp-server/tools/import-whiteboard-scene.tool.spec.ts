@@ -180,7 +180,6 @@ describe('scene import public boundary', () => {
     const context = {
       signal: new AbortController().signal,
       deadlineAt: Date.now() + 1000,
-      createdDocumentIDs: [],
     };
     const prepared = await callbacks.prepare(context);
     expect(
@@ -199,10 +198,8 @@ describe('scene import public boundary', () => {
           .targetFileIDs,
     });
     expect(JSON.stringify(prepared)).not.toContain('data:');
-    await callbacks.cleanup(['fresh']);
-    expect(h.board.deleteMaterializedContentDocuments).toHaveBeenCalledWith([
-      'fresh',
-    ]);
+    expect(Object.keys(callbacks)).toEqual(['prepare']);
+    expect(h.board.deleteMaterializedContentDocuments).not.toHaveBeenCalled();
   });
   it('returns only the durable public metadata', async () => {
     const h = setup();
@@ -221,5 +218,47 @@ describe('scene import public boundary', () => {
       addedElementIds: ['fresh'],
       summary: [{ op: 'importScene', elementIds: ['fresh'] }],
     });
+  });
+  it('retains a shared target binding when the actual parent fails before GO', async () => {
+    vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_ENABLED', 'true');
+    vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_MAX_CONCURRENT_CHILDREN', '4');
+    vi.stubEnv(
+      'MCP_WHITEBOARD_EXECUTOR_MAX_CONCURRENT_CHILDREN_PER_ACTOR',
+      '1'
+    );
+    vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_HEAP_MB', '256');
+    vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_DEADLINE_MS', '10000');
+    const executor = new WhiteboardExecutorParent(
+      {} as any,
+      { log: vi.fn() } as any
+    );
+    const launch = vi
+      .spyOn(executor as any, 'launch')
+      .mockImplementation(() => {
+        throw new Error('child launch failed');
+      });
+    try {
+      const h = setup();
+      const shared = randomUUID();
+      h.board.materializeImportAssetsIntoBucket.mockResolvedValue({
+        targetFileIDs: { asset: shared },
+      });
+      const tool = new ImportWhiteboardSceneTool(
+        h.board as any,
+        h.auth as any,
+        executor
+      );
+      const result = await tool.execute(h.args, h.actor);
+      expect(JSON.parse(result.content[0].text!)).toEqual({
+        outcome: 'resource-exhausted-before-go',
+      });
+      expect(h.board.materializeImportAssetsIntoBucket).toHaveBeenCalledOnce();
+      expect(launch).toHaveBeenCalledOnce();
+      expect(h.board.deleteMaterializedContentDocuments).not.toHaveBeenCalled();
+    } finally {
+      executor.onModuleDestroy();
+      launch.mockRestore();
+      vi.unstubAllEnvs();
+    }
   });
 });

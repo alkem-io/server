@@ -172,6 +172,11 @@ test('US4-AS1/AS4: external real socket faults preserve identical bytes and phas
       );
       assert.equal(audit.settled, true);
       assert.equal(item.outcome, 'cancelled-before-go');
+    } else if (item.fault === 'before-go-caller-disconnect') {
+      assert.ok(capture.childPid > 0);
+      assert.ok(
+        !capture.events.some(event => event.type === 'PREPARED')
+      );
     } else {
       assert.ok(
         capture.childPid > 0 &&
@@ -185,7 +190,7 @@ test('US4-AS1/AS4: external real socket faults preserve identical bytes and phas
         )
       );
       assert.equal(capture.updates.length, 0);
-      assert.deepEqual(audit.deleted.sort(), audit.fresh.sort());
+      assert.deepEqual(audit.deleted, []);
       assert.equal(cold.addedElementIds.length, 0);
     } else {
       assert.ok(capture.events.some(event => event.type === 'GO'));
