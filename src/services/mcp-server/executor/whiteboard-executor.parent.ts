@@ -12,6 +12,10 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  FileServiceAdapterException,
+  StorageServiceUnavailableException,
+} from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   ExecutionInput,
@@ -165,7 +169,12 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
               (error instanceof ForbiddenAuthorizationPolicyException ||
               error instanceof ForbiddenException
                 ? 'forbidden'
-                : 'invalid')
+                : error instanceof StorageServiceUnavailableException ||
+                    (error instanceof FileServiceAdapterException &&
+                      (error.httpStatus === undefined ||
+                        error.httpStatus >= 500))
+                  ? 'unavailable'
+                  : 'invalid')
           );
         }
       }

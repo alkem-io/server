@@ -51,6 +51,8 @@ describe('whiteboard creation blank and template controls', () => {
       ...(fromTemplate ? { fromTemplateId: 'template' } : {}),
     };
     const definition = tool.getDefinition();
+    expect(definition.description).toContain('use import_whiteboard_scene');
+    expect(definition.description).not.toContain('forthcoming');
     expect(
       new McpToolArgsValidator().validate(
         definition.name,

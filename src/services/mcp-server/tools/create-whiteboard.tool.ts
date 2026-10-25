@@ -56,7 +56,7 @@ export class CreateWhiteboardTool implements McpTool {
         'Create a whiteboard on a callout. Omit "fromTemplateId" for a BLANK board; set it to a ' +
         'whiteboard TEMPLATE id to fill the new board from that template — the server copies the ' +
         "template's stored content server-side, so you must NOT generate or paste any scene JSON. " +
-        'Retired content arguments are rejected. After creation, use the forthcoming import_whiteboard_scene ' +
+        'Retired content arguments are rejected. After creation, use import_whiteboard_scene ' +
         'for scene JSON, or edit_whiteboard_elements for edits. Requires CONTRIBUTE access to the target callout, and the callout must allow ' +
         'whiteboard contributions. Use list_whiteboards / a callout id to pick the target.',
       inputSchema: {

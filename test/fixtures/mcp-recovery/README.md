@@ -1,7 +1,7 @@
 # Recovery harness prerequisites
 
 Preparation only. No live, native, build, resource, policy or browser result is
-asserted by these files. The installed 0.5.4 package lacks `prepareSceneImport`.
+asserted by these files. The pinned 0.5.5 package exports `prepareSceneImport`.
 Do not replace it with a preview or skip its native regression tests.
 
 The five tests in `deployment.test.mjs` whose names do not start with `US` use
@@ -39,7 +39,7 @@ fields (see `harness.mjs` for executable validation):
   API and MCP containers/endpoints differ. Endpoints use numeric loopback and
   explicit ports, without userinfo or redirects; protocols are HTTP, WS,
   PostgreSQL, AMQP and Redis according to service. PostgreSQL database path is
-  `/forge088_<runId-without-hyphens>` (the complete run identity, within the63-byte
+  `/forge088_<runId-without-hyphens>` (the complete run identity, within the 63-byte
   PostgreSQL identifier limit); RabbitMQ uses its
   supported default vhost on the inspected fresh project-owned broker (empty,
   `/` or `/%2F` path); Redis uses `/0` on its inspected dedicated fresh instance,

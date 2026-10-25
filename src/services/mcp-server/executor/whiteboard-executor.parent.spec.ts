@@ -1,8 +1,14 @@
 import { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
+import {
+  FileServiceAdapterException,
+  StorageServiceUnavailableException,
+} from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { vi } from 'vitest';
 import {
   executorConfig,
@@ -272,6 +278,56 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     await next;
   });
   it.each([
+    [new StorageServiceUnavailableException('Unavailable'), 'unavailable'],
+    [
+      FileServiceAdapterException.fromTransportError(
+        'copyDocument',
+        new Error('PRIVATE')
+      ),
+      'unavailable',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 500),
+      'unavailable',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 504),
+      'unavailable',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 400),
+      'invalid',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 403),
+      'invalid',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 415),
+      'invalid',
+    ],
+    [new ForbiddenException('Denied', LogContext.STORAGE_BUCKET), 'forbidden'],
+  ] as const)('classifies preparation error %s as %s without spawn or retry', async (error, outcome) => {
+    const h = parent();
+    const actor = randomUUID();
+    const prepare = vi.fn().mockRejectedValue(error);
+    expect(
+      await h.execute(
+        randomUUID(),
+        actor,
+        { import: importInput() },
+        undefined,
+        { prepare }
+      )
+    ).toEqual({ outcome });
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(h.children).toHaveLength(0);
+    const next = h.execute(randomUUID(), actor, operations);
+    expect(h.children).toHaveLength(1);
+    h.onModuleDestroy();
+    await next;
+  });
+  it.each([
     'disabled',
     'busy',
     'aborted',
@@ -389,7 +445,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         await new Promise<void>(resolve => {
           settle = resolve;
         });
-        throw new Error('late upload failure');
+        throw new StorageServiceUnavailableException('Late upload failure');
       }),
     };
     const pending = h.execute(
@@ -410,7 +466,11 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     expect(h.children).toHaveLength(0);
     expect(vi.getTimerCount()).toBe(0);
   });
-  it('holds the actor slot through uncancellable materialization after abort and never spawns', async () => {
+  it.each([
+    undefined,
+    new StorageServiceUnavailableException('Late upload failure'),
+    new ForbiddenException('Late source denial', LogContext.STORAGE_BUCKET),
+  ])('holds the actor slot through uncancellable materialization after abort and never spawns, late error=%s', async error => {
     const h = parent();
     const actor = randomUUID();
     const controller = new AbortController();
@@ -420,6 +480,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
       await new Promise<void>(resolve => {
         settle = resolve;
       });
+      if (error) throw error;
       return input.import;
     });
     const pending = h.execute(

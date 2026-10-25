@@ -88,6 +88,17 @@ describe('FileServiceAdapterException transport diagnostics', () => {
         })
         .catch(error => error);
       expect(error.cause).toBeInstanceOf(AggregateError);
+      const [ipv6, ipv4] = error.cause.errors;
+      expect(ipv6).toMatchObject({
+        code: expect.stringMatching(/^E[A-Z]+$/),
+        address: '::1',
+        port,
+      });
+      expect(ipv4).toMatchObject({
+        code: 'ECONNREFUSED',
+        address: '127.0.0.1',
+        port,
+      });
       const exception = FileServiceAdapterException.fromTransportError(
         'read',
         error
@@ -95,7 +106,7 @@ describe('FileServiceAdapterException transport diagnostics', () => {
       expect(exception.details?.transportCause).toMatchObject({
         cause: {
           errors: [
-            { code: 'ECONNREFUSED', address: '::1', port },
+            { code: ipv6.code, address: '::1', port },
             { code: 'ECONNREFUSED', address: '127.0.0.1', port },
           ],
         },
