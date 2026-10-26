@@ -38,20 +38,10 @@ export class MatrixSessionService {
    * logged at error level (R-4) and the error rethrown.
    */
   async mintForActor(actorID: string): Promise<MatrixSessionCredentials> {
-    // Per-actor bound on the mint, claimed before anything is issued. Every
-    // mint is a 48h credential with no revoke path (R-13) plus one audit row,
-    // so an ordinary authenticated caller must not be able to loop the
-    // mutation. The limit sits far above legitimate use (one mint per app
-    // launch plus recovery), so it does not bound the app's only issuer —
-    // which is what D11 declined a limiter for. Synapse's own login limiter
-    // cannot do this job: its appservice-login bucket is keyed to the
-    // requesting address, and every mint is issued by the adapter pod, so all
-    // actors would share one bucket.
-    //
-    // The window is an epoch-minute suffix on the key (same shape as the
-    // platform-invitation email budget), so a counter whose EXPIRE did not
-    // land belongs to a minute that is never written again and cannot
-    // throttle anyone permanently.
+    // Per-actor bound on the mint, claimed before anything is issued
+    // (workspace#091 D11 as amended). The window is an epoch-minute suffix on
+    // the key, so a counter whose EXPIRE did not land belongs to a minute that
+    // is never written again and cannot throttle anyone permanently.
     const epochMinute = Math.floor(Date.now() / (MINT_WINDOW_SECONDS * 1000));
     const mintKey = `matrix-session:mint:${actorID}:${epochMinute}`;
     let mintsInWindow: number;
