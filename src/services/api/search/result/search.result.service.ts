@@ -209,8 +209,9 @@ export class SearchResultService {
     }
 
     if (spaceId) {
-      const space = await this.entityManager.findOneByOrFail(Space, {
-        id: spaceId,
+      const space = await this.entityManager.findOneOrFail(Space, {
+        where: { id: spaceId },
+        relations: { about: { profile: true } },
       });
 
       return [{ ...rawSearchResults[0], space }];
@@ -218,8 +219,9 @@ export class SearchResultService {
 
     const spaceIds = rawSearchResults.map(hit => hit.result.id);
 
-    const spaces = await this.entityManager.findBy(Space, {
-      id: In(spaceIds),
+    const spaces = await this.entityManager.find(Space, {
+      where: { id: In(spaceIds) },
+      relations: { about: { profile: true } },
     });
 
     return spaces
@@ -262,7 +264,7 @@ export class SearchResultService {
       where: {
         id: In(subspaceIds),
       },
-      relations: { parentSpace: true },
+      relations: { parentSpace: true, about: { profile: true } },
     });
 
     return subspaces
@@ -329,8 +331,9 @@ export class SearchResultService {
       ? intersection(usersFromSearch, usersInSpace)
       : usersFromSearch;
 
-    const users = await this.entityManager.findBy(User, {
-      id: In(userIdsIntersection),
+    const users = await this.entityManager.find(User, {
+      where: { id: In(userIdsIntersection) },
+      relations: { profile: true },
     });
 
     return users
@@ -373,8 +376,9 @@ export class SearchResultService {
       ? intersection(orgsInSearch, orgsInSpace)
       : orgsInSearch;
 
-    const organizations = await this.entityManager.findBy(Organization, {
-      id: In(orgIdsIntersection),
+    const organizations = await this.entityManager.find(Organization, {
+      where: { id: In(orgIdsIntersection) },
+      relations: { profile: true },
     });
 
     return organizations
@@ -420,8 +424,9 @@ export class SearchResultService {
 
     const postIds = rawSearchResults.map(hit => hit.result.id);
 
-    const posts = await this.entityManager.findBy(Post, {
-      id: In(postIds),
+    const posts = await this.entityManager.find(Post, {
+      where: { id: In(postIds) },
+      relations: { profile: true },
     });
 
     // usually the authorization is last but here it might be more expensive than usual
@@ -472,8 +477,9 @@ export class SearchResultService {
 
     const whiteboardIds = rawSearchResults.map(hit => hit.result.id);
 
-    const whiteboards = await this.entityManager.findBy(Whiteboard, {
-      id: In(whiteboardIds),
+    const whiteboards = await this.entityManager.find(Whiteboard, {
+      where: { id: In(whiteboardIds) },
+      relations: { profile: true },
     });
 
     // usually the authorization is last but here it might be more expensive than usual
@@ -529,8 +535,9 @@ export class SearchResultService {
 
     const memoIds = rawSearchResults.map(hit => hit.result.id);
 
-    const memos = await this.entityManager.findBy(Memo, {
-      id: In(memoIds),
+    const memos = await this.entityManager.find(Memo, {
+      where: { id: In(memoIds) },
+      relations: { profile: true },
     });
 
     // usually the authorization is last but here it might be more expensive than usual
@@ -584,10 +591,11 @@ export class SearchResultService {
 
     const collaboraDocumentIds = rawSearchResults.map(hit => hit.result.id);
 
-    const collaboraDocuments = await this.entityManager.findBy(
+    const collaboraDocuments = await this.entityManager.find(
       CollaboraDocument,
       {
-        id: In(collaboraDocumentIds),
+        where: { id: In(collaboraDocumentIds) },
+        relations: { profile: true },
       }
     );
 
@@ -652,6 +660,7 @@ export class SearchResultService {
       relations: {
         calloutsSet: true,
         framing: {
+          profile: true,
           whiteboard: true,
         },
         contributions: {
@@ -665,6 +674,7 @@ export class SearchResultService {
         // createdDate is the relevance tiebreak when folding results (FR-019)
         createdDate: true,
         framing: {
+          profile: { displayName: true },
           id: true,
           type: true,
           whiteboard: {

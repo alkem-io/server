@@ -23,7 +23,7 @@ export class EditWhiteboardElementsTool implements McpTool {
     return {
       name: 'edit_whiteboard_elements',
       description:
-        'Edit a live whiteboard with ordered addShape, addText, connect, setText or remove operations. Additions without explicit x/y use compact horizontal rows below existing content. IDs reference existing elements from analyze_whiteboard. Edits merge with concurrent collaborators and succeed only after durable persistence. Requires UPDATE_CONTENT access. An indeterminate-after-go outcome must not be automatically replayed.',
+        'Edit a live whiteboard with ordered addShape, addText, connect, setText or remove operations. Additions without explicit x/y use compact horizontal rows below existing content. addText without width sizes naturally; width wraps text at the same fontSize with a canonical minimum width and derived height. Supplying addText height is unsupported and rejected; addShape height remains supported. IDs reference existing elements from analyze_whiteboard. Edits merge with concurrent collaborators and succeed only after durable persistence. Requires UPDATE_CONTENT access. An indeterminate-after-go outcome must not be automatically replayed.',
       inputSchema: {
         type: 'object',
         properties: {

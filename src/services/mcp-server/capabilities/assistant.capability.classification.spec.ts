@@ -20,6 +20,7 @@ const CONTRACT_TABLE: Record<string, AssistantCapabilityKind> = {
   create_whiteboard: AssistantCapabilityKind.WRITE_ADDITIVE,
   create_whiteboard_in_space: AssistantCapabilityKind.WRITE_ADDITIVE,
   edit_whiteboard_elements: AssistantCapabilityKind.WRITE_ADDITIVE,
+  import_whiteboard_scene: AssistantCapabilityKind.WRITE_ADDITIVE,
   search_content: AssistantCapabilityKind.READ,
   list_whiteboards: AssistantCapabilityKind.READ,
   analyze_whiteboard: AssistantCapabilityKind.READ,
@@ -106,6 +107,7 @@ describe('Read-only default toggles (T023)', () => {
     // The explicit writes are present and disabled.
     expect(byName.get('create_whiteboard')).toBe(false);
     expect(byName.get('edit_whiteboard_elements')).toBe(false);
+    expect(byName.get('import_whiteboard_scene')).toBe(false);
   });
 
   it('a freshly-added WRITE_* capability defaults disabled for an existing user (absent ⇒ disabled)', () => {
