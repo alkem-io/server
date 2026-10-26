@@ -1,4 +1,5 @@
 import type {
+  prepareSceneImport,
   SemanticBatchResult,
   SemanticOperation,
 } from '@excalidraw-yjs/excalidraw/headless';
@@ -6,6 +7,7 @@ import Ajv from 'ajv';
 
 export type ExecutorOutcome =
   | 'invalid'
+  | 'unavailable'
   | 'unauthorized'
   | 'forbidden'
   | 'busy'
@@ -14,8 +16,15 @@ export type ExecutorOutcome =
   | 'timeout-before-go'
   | 'indeterminate-after-go'
   | 'durable-success';
+export type ImportInput = Parameters<typeof prepareSceneImport>[1];
+export type PreparedResult =
+  | SemanticBatchResult
+  | ReturnType<typeof prepareSceneImport>;
+export type ExecutionInput =
+  | { operations: SemanticOperation[]; import?: never }
+  | { import: ImportInput; operations?: never };
 export type ExecutorResult = Pick<
-  Extract<SemanticBatchResult, { ok: true }>,
+  Extract<PreparedResult, { ok: true }>,
   'addedElementIds' | 'summary'
 >;
 export interface ChildLaunchGrant {
@@ -26,11 +35,10 @@ export interface ChildLaunchGrant {
   intent: 'edit-whiteboard-elements';
 }
 export type ParentMessage =
-  | {
+  | (ExecutionInput & {
       type: 'START';
-      operations: SemanticOperation[];
       childLaunchGrant: ChildLaunchGrant;
-    }
+    })
   | { type: 'GO' | 'CANCEL'; jobId: string; generationId: number };
 export type ChildMessage =
   | { type: 'SYNCED' | 'PUBLISHED'; jobId: string; generationId: number }
@@ -90,7 +98,14 @@ export const operationsSchema = {
       ),
       operation(
         'addText',
-        { text: string, fontSize: number, strokeColor: string, ...placement },
+        {
+          text: string,
+          fontSize: number,
+          strokeColor: string,
+          x: number,
+          y: number,
+          width: number,
+        },
         ['text']
       ),
       operation(
@@ -107,10 +122,48 @@ export const operationsSchema = {
   },
 };
 const identity = { jobId: uuid, generationId: { type: 'integer', minimum: 1 } };
+export const importSceneSchema = object(
+  {
+    type: { const: 'excalidraw' },
+    version: { const: 2 },
+    elements: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        required: ['type'],
+        properties: { type: string, isDeleted: { type: 'boolean' } },
+      },
+      contains: {
+        type: 'object',
+        not: {
+          required: ['isDeleted'],
+          properties: { isDeleted: { const: true } },
+        },
+      },
+    },
+    source: string,
+    appState: { type: 'object' },
+  },
+  ['type', 'version', 'elements']
+);
+export const importInputSchema = object({
+  scene: importSceneSchema,
+  targetFileIDs: { type: 'object', additionalProperties: uuid },
+});
 const summary = {
   type: 'array',
   items: object({
-    op: { enum: ['addShape', 'addText', 'connect', 'setText', 'remove'] },
+    op: {
+      enum: [
+        'addShape',
+        'addText',
+        'connect',
+        'setText',
+        'remove',
+        'importScene',
+      ],
+    },
     elementIds: { type: 'array', items: string },
   }),
 };
@@ -121,17 +174,20 @@ const result = object({
 const ajv = new Ajv({ strict: false });
 const parentValidator = ajv.compile({
   oneOf: [
-    object({
-      type: { const: 'START' },
-      operations: operationsSchema,
-      childLaunchGrant: object({
-        jobId: uuid,
-        documentId: uuid,
-        actorId: uuid,
-        deadline: { type: 'integer', minimum: 1 },
-        intent: { const: 'edit-whiteboard-elements' },
-      }),
-    }),
+    ...['operations', 'import'].map(payload =>
+      object({
+        type: { const: 'START' },
+        [payload]:
+          payload === 'operations' ? operationsSchema : importInputSchema,
+        childLaunchGrant: object({
+          jobId: uuid,
+          documentId: uuid,
+          actorId: uuid,
+          deadline: { type: 'integer', minimum: 1 },
+          intent: { const: 'edit-whiteboard-elements' },
+        }),
+      })
+    ),
     object({ type: { enum: ['GO', 'CANCEL'] }, ...identity }),
   ],
 });
@@ -168,6 +224,9 @@ const childValidator = ajv.compile({
   ],
 });
 const batchValidator = ajv.compile(operationsSchema);
+const importValidator = ajv.compile(importInputSchema);
+export const validImport = (value: unknown): value is ImportInput =>
+  !!importValidator(value);
 export const validOperations = (value: unknown): value is SemanticOperation[] =>
   !!batchValidator(value);
 export const validId = (value: unknown): value is string =>

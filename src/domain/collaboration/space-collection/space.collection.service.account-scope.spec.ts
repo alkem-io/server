@@ -17,6 +17,9 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import type { Mocked } from 'vitest';
 import { SpaceCollectionService } from './space.collection.service';
 
+// This suite replaces a dependency that an earlier suite may already have loaded.
+vi.hoisted(() => vi.resetModules());
+
 // The shared account-scope predicate is mocked so this suite can assert WHICH
 // predicate the read path uses and WHAT it passes it. Its own statement shape
 // is proven in `account.scope.spec.ts`, and its SQL set semantics only against
