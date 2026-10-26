@@ -50,6 +50,10 @@ export const CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN =
   'credentialRuleTypes-organizationPlatformAdmin';
 export const CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_APPLY =
   'credentialRuleTypes-organizationRoleSetApply';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_PLATFORM_SUPPORT_MEMBERSHIP =
+  'credentialRuleTypes-organizationRoleSetPlatformSupportMembership';
+export const CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_PLATFORM_SUPPORT_INVITE =
+  'credentialRuleTypes-organizationRoleSetPlatformSupportInvite';
 export const CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET =
   'credentialRuleTypes-userAuthorizationReset';
 export const CREDENTIAL_RULE_TYPES_USER_PLATFORM_ADMIN =

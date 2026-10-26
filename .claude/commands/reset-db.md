@@ -2,13 +2,13 @@
 description: Reset the local development database and services (full wipe + re-seed)
 ---
 
-Run the database reset script with a **6-minute timeout** (typical run is 2-3 min; script-internal waits cap at ~4 min):
+Run the database reset script with a **7-minute timeout** (typical run is 2-3 min; script-internal waits cap at ~5.5 min):
 
 ```bash
 bash .scripts/reset-db.sh
 ```
 
-**Important:** Use a 360 000 ms timeout — this covers the script's internal polling budgets (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL) plus compose, migration, and compilation time.
+**Important:** Use a 420 000 ms timeout — this covers the script's internal polling budgets (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL + 90 s dev-seed-roles) plus compose, migration, and compilation time.
 
 Report each step's outcome to the user. If the script fails, show the failing step and suggest checking `docker ps` or the server log at `/tmp/alkemio-dev-server.log`.
 
@@ -22,13 +22,13 @@ When asked to reset the database, wipe the DB, start fresh, or clean-slate the l
 
 ## Procedure
 
-Run the reset script with a **6-minute timeout**:
+Run the reset script with a **7-minute timeout**:
 
 ```bash
 bash .scripts/reset-db.sh
 ```
 
-**Timeout budget (360 000 ms):** The script's internal polling loops cap at ~240 s (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL). Adding compose restart, migrations, TS compilation, and user registration brings the realistic ceiling to ~5.5 min. The 6-minute timeout provides headroom without excessive wait on failure.
+**Timeout budget (420 000 ms):** The script's internal polling loops cap at ~330 s (60 s PostgreSQL + 90 s Kratos + 90 s GraphQL + 90 s dev-seed-roles). Adding compose restart, migrations and TS compilation brings the realistic ceiling to ~6.5 min. The 7-minute timeout provides headroom without excessive wait on failure.
 
 ## What It Does
 
@@ -37,8 +37,7 @@ bash .scripts/reset-db.sh
 3. Waits for PostgreSQL and the `alkemio` database to be initialized
 4. Runs TypeORM migrations (`pnpm run migration:run`)
 5. Starts `pnpm start:dev` in background, waits for Kratos + GraphQL health
-6. Registers admin user (`admin@alkem.io`) with password from `.env`
-7. Seeds the platform-role dev accounts (`.scripts/dev-seed-roles.sh`) — non-fatal
+6. Waits for the `dev-seed-roles` compose container, which registers `admin@alkem.io` and the platform-role dev accounts (`.scripts/dev-seed-roles.sh`) — non-fatal
 
 ## Accounts after a reset
 
@@ -62,7 +61,7 @@ is assignment-only — on its own it cannot reset authorization, cannot grant
 itself a role (rule `self-assignment`), and cannot grant the legacy `global-*`
 roles at all. That is the feature working, not a misconfiguration.
 
-Step 7 grants through `assignPlatformRoleToUser`, never SQL, so a regression in
+Step 6 grants through `assignPlatformRoleToUser`, never SQL, so a regression in
 the assignment rule engine surfaces as a seeding failure instead of being
 silently bypassed. It refuses to run against any non-loopback endpoint.
 
@@ -77,6 +76,6 @@ Report each step's outcome to the user. If the script fails, show the failing st
 - **PostgreSQL timeout** — Docker may be slow. Re-run the script.
 - **Kratos / GraphQL timeout** — Verify services with `docker ps`.
 - **Volume not found** — Safe to ignore; volumes were already removed.
-- **Admin registration fails** — Check `/tmp/alkemio-dev-server.log`.
-- **Role seeding fails (step 7)** — The reset itself succeeded. Re-run `bash .scripts/dev-seed-roles.sh`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
+- **Admin registration fails** — Check `docker logs alkemio_dev_seed_roles` and `/tmp/alkemio-dev-server.log`.
+- **Role seeding fails (step 6)** — The reset itself succeeded, but the script stops its dev server on exit. Start `pnpm start:dev` (if not already running), wait for it to come up, then re-run `pnpm run dev:seed-roles`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
 - **`unable to grant '<privilege>'` as `admin@alkem.io`** — Check the account actually holds `global-admin`: `SELECT type FROM credential c JOIN "user" u ON u.id = c."actorId" WHERE u.email = 'admin@alkem.io';`. If it is missing, the seed regressed and `test-suites` cannot run at all — 83% of its spec files act as this user.

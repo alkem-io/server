@@ -7,7 +7,7 @@ import { SigningAttemptService } from '@domain/common/content-signing/signing.at
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { markdownSchema } from '@domain/common/memo/conversion/markdown.schema';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion/yjs.state.to.markdown';
-import { MemoPdfRenderer } from '@domain/common/memo/memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from '@domain/common/memo/memo.pdf.test-helper';
 import { MemoService } from '@domain/common/memo/memo.service';
 import { MemoSigningService } from '@domain/common/memo/memo.signing.service';
 import { MemoSigningSweepService } from '@domain/common/memo/memo.signing.sweep.service';
@@ -860,7 +860,11 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       { getCleverbaseSubject: vi.fn().mockResolvedValue('subject') } as any,
       { read } as any,
       {
-        render: vi.fn().mockResolvedValue(Buffer.from('%PDF-live-read')),
+        // The renderer runs the deferred live read once the render is admitted.
+        render: vi.fn(async (readState: () => Promise<Buffer>) => {
+          await readState();
+          return Buffer.from('%PDF-live-read');
+        }),
       } as any,
       services.fileAdapter,
       { start: vi.fn() } as any,
@@ -1263,18 +1267,18 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       'default'
     );
     const authorization = { grantAccessOrFail: vi.fn() };
-    const renderer = new MemoPdfRenderer(
-      {
+    const renderer = inProcessMemoPdfRenderer({
+      documentService: {
         isAlkemioDocumentURL: vi.fn((url: string) => url === imageUrl),
         getDocumentFromURL: vi.fn().mockResolvedValue({
           id: sourceImage.id,
           authorization: { id: 'image-authorization' },
           storageBucket: { id: UUIDS.bucket },
         }),
-      } as any,
-      authorization as any,
-      services.fileAdapter
-    );
+      },
+      authorizationService: authorization,
+      fileServiceAdapter: services.fileAdapter,
+    });
     const urlGenerator = {
       getMemoSigningSnapshotRestUrl: vi
         .fn()
@@ -1290,7 +1294,14 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
           project(liveDocument)
         ),
       } as any,
-      renderer,
+      {
+        // The signing service hands the renderer a deferred live read.
+        render: async (
+          readState: () => Promise<Buffer>,
+          bucketId: string | undefined,
+          actor: ActorContext
+        ) => renderer.render(await readState(), bucketId, actor),
+      } as any,
       services.fileAdapter,
       { start: vi.fn() } as any,
       urlGenerator as any,

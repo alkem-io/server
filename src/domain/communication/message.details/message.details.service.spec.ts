@@ -108,6 +108,52 @@ describe('MessageDetailsService', () => {
       expect(result.parent.url).toBe('/spaces/s1/posts/post-1');
     });
 
+    describe('attachment-only messages', () => {
+      const attachment = (display_name: string) => ({
+        display_name,
+        mime_type: 'image/png',
+        size: 10,
+      });
+
+      const mockCalloutRoom = (message: IMessage) => {
+        roomLookupService.getMessageInRoom.mockResolvedValue({
+          room: { id: 'room-1', type: RoomType.CALLOUT } as unknown as IRoom,
+          message,
+        });
+        roomResolverService.getCalloutForRoom.mockResolvedValue({
+          id: 'callout-1',
+          framing: { profile: { displayName: 'Test Callout' } },
+        } as any);
+        urlGeneratorService.getCalloutUrlPath.mockResolvedValue(
+          '/spaces/s1/callouts/callout-1'
+        );
+      };
+
+      it('returns the image icon for an attachment-only message', async () => {
+        mockCalloutRoom({
+          ...mockMessage,
+          message: 'shot.png',
+          rawAttachments: [attachment('shot.png')],
+        });
+
+        const result = await service.getMessageDetails('room-1', 'msg-1');
+
+        expect(result.message).toBe('🖼️');
+      });
+
+      it('keeps a caption that differs from the attachment name', async () => {
+        mockCalloutRoom({
+          ...mockMessage,
+          message: 'look at this',
+          rawAttachments: [attachment('shot.png')],
+        });
+
+        const result = await service.getMessageDetails('room-1', 'msg-1');
+
+        expect(result.message).toBe('look at this');
+      });
+    });
+
     it('should return message details for a CALENDAR_EVENT room type', async () => {
       const mockRoom = {
         id: 'room-3',

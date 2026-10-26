@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Invitation } from '@domain/access/invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { OrgCommunityGateModule } from '@domain/access/role-set/org.community.gate.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -11,6 +12,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { OrganizationAdministrationAuditModule } from '@src/platform-admin/organization-administration-audit/organization.administration.audit.module';
 import { RoleSetModule } from '../role-set/role.set.module';
 import { RoleSetCacheModule } from '../role-set/role.set.service.cache.module';
 import { InvitationResolverFields } from './invitation.resolver.fields';
@@ -21,6 +23,8 @@ import { InvitationLifecycleService } from './invitation.service.lifecycle';
 
 @Module({
   imports: [
+    OrgCommunityGateModule,
+    OrganizationAdministrationAuditModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     LifecycleModule,

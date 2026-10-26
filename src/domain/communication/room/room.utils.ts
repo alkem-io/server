@@ -13,3 +13,8 @@ export function isConversationRoom(room: IRoom): boolean {
     room.type === RoomType.CONVERSATION_GROUP
   );
 }
+
+/** Whether a room is a comment room under a callout or a post. */
+export function isCommentRoom(room: IRoom): boolean {
+  return room.type === RoomType.CALLOUT || room.type === RoomType.POST;
+}

@@ -281,6 +281,42 @@ export class InvitationService {
   }
 
   /**
+   * IDs of the actors of a given type holding a still-pending (invited or
+   * accepting) invitation on a RoleSet. Selects only the columns the predicate
+   * needs, as {@link countOpenInvitationsForRoleSet} does.
+   */
+  async getActorIDsWithOpenInvitationOnRoleSet(
+    roleSetID: string,
+    actorType: ActorType
+  ): Promise<string[]> {
+    const invitations = await this.invitationRepository
+      .createQueryBuilder('invitation')
+      .innerJoin('invitation.lifecycle', 'lifecycle')
+      .innerJoin('invitation.invitedActor', 'invitedActor')
+      .where('invitation.roleSetId = :roleSetID', { roleSetID })
+      .andWhere('invitedActor.type = :actorType', { actorType })
+      .select([
+        'invitation.id',
+        'invitation.invitedActorID',
+        'lifecycle.id',
+        'lifecycle.machineState',
+      ])
+      .getMany();
+
+    return invitations
+      .filter(invitation => {
+        const state = this.invitationLifecycleService.getState(
+          invitation.lifecycle
+        );
+        return (
+          state === InvitationLifecycleState.INVITED ||
+          state === InvitationLifecycleState.ACCEPTING
+        );
+      })
+      .map(invitation => invitation.invitedActorID);
+  }
+
+  /**
    * Counts the still-pending (invited or accepting) invitations on a
    * RoleSet that carry a given extra role and target a given actor type.
    * Used by the advisory Lead-slot check: a still-pending, never-acted-on

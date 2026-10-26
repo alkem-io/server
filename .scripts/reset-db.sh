@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Full database reset: tear down services, wipe volumes, restart fresh,
-# run migrations, start dev server, register admin user.
+# run migrations, start dev server, wait for the dev-seed-roles container
+# (registers admin + per-role accounts).
 #
 # Usage: .scripts/reset-db.sh
 
@@ -32,15 +33,15 @@ AUTH_ADMIN_PASSWORD=$(grep '^AUTH_ADMIN_PASSWORD=' .env | head -1 | cut -d= -f2-
 [ -n "$AUTH_ADMIN_PASSWORD" ] || fail "AUTH_ADMIN_PASSWORD not found in .env"
 
 # ---------- Step 1: Stop compose services and remove volumes ----------
-info "Step 1/7: Stopping compose services and removing volumes"
+info "Step 1/6: Stopping compose services and removing volumes"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v
 
 # ---------- Step 2: Start compose services ----------
-info "Step 2/7: Starting compose services"
+info "Step 2/6: Starting compose services"
 pnpm run start:services
 
 # ---------- Step 3: Wait for PostgreSQL + database init ----------
-info "Step 3/7: Waiting for PostgreSQL and database initialization"
+info "Step 3/6: Waiting for PostgreSQL and database initialization"
 for i in $(seq 1 60); do
   if docker exec alkemio_dev_postgres psql -U synapse -d alkemio -c "SELECT 1" >/dev/null 2>&1; then
     echo "  PostgreSQL ready, alkemio database exists."
@@ -51,11 +52,11 @@ for i in $(seq 1 60); do
 done
 
 # ---------- Step 4: Run migrations ----------
-info "Step 4/7: Running database migrations"
+info "Step 4/6: Running database migrations"
 pnpm run migration:run
 
 # ---------- Step 5: Start dev server in background ----------
-info "Step 5/7: Starting dev server"
+info "Step 5/6: Starting dev server"
 : > "$SERVER_LOG"
 set -m
 pnpm start:dev >> "$SERVER_LOG" 2>&1 &
@@ -90,30 +91,35 @@ for i in $(seq 1 90); do
   sleep 1
 done
 
-# ---------- Step 6: Register admin user ----------
-info "Step 6/7: Registering admin user"
-printf '%s' "$AUTH_ADMIN_PASSWORD" > /tmp/.register-password
-bash .scripts/register-user.sh "admin@alkem.io" "admin" "alkemio"
-
-# ---------- Step 7: Seed the platform-role accounts ----------
-# Gives each of the 027 platform roles a LOGGABLE account. Bootstrap seeding
-# creates an Alkemio `user` row but no Kratos identity, so a role seeded
-# through users.json alone cannot be exercised by anyone.
+# ---------- Step 6: Wait for the dev-seed-roles container ----------
+# `start:services` (step 2) started the one-shot `dev-seed-roles` service; it
+# has been polling for the server and now registers admin@alkem.io plus the
+# per-role accounts through product APIs only. Wait for it here — the trap
+# above stops the dev server when this script exits.
 #
-# admin@alkem.io keeps legacy `global-admin` for the whole of Slice A, so it
-# can still do everything it could before — these accounts are for testing the
-# roles in ISOLATION, which is the only way separation of duties is
-# observable. At Slice B, when `global-admin` is deleted, they stop being a
-# convenience and become the only way in.
+# Non-fatal: the reset itself has succeeded by this point. Re-run with
+# `pnpm run dev:seed-roles` (or `docker start -a alkemio_dev_seed_roles`).
 #
-# Non-fatal: the reset itself has succeeded by this point, and a seeding
-# failure must not make it look otherwise.
-info "Step 7/7: Seeding platform-role dev accounts"
-if bash .scripts/dev-seed-roles.sh; then
-  :
-else
-  echo "  WARNING: role seeding failed — the database reset itself succeeded."
-  echo "  Re-run manually: bash .scripts/dev-seed-roles.sh"
+# Bounded: `docker wait` has no timeout, and the container's own readiness
+# deadline (DEV_SEED_WAIT_SECONDS, default 1h) would blow the reset budget if
+# it cannot reach the server (e.g. no host networking). Seeding itself takes
+# well under a minute once the server is ready.
+SEED_TIMEOUT=90
+info "Step 6/6: Waiting for dev-seed-roles (admin + platform-role accounts, max ${SEED_TIMEOUT}s)"
+for i in $(seq 1 "$SEED_TIMEOUT"); do
+  [ "$(docker inspect -f '{{.State.Running}}' alkemio_dev_seed_roles 2>/dev/null)" = "true" ] || break
+  sleep 1
+done
+SEED_EXIT=$(docker inspect -f '{{if .State.Running}}timeout{{else}}{{.State.ExitCode}}{{end}}' alkemio_dev_seed_roles 2>/dev/null | tr -d '\n' || true)
+SEED_EXIT="${SEED_EXIT:-missing}"
+if [ "$SEED_EXIT" = "timeout" ]; then
+  docker stop -t 2 alkemio_dev_seed_roles >/dev/null 2>&1 || true
+fi
+docker logs alkemio_dev_seed_roles 2>&1 | sed 's/^/  /'
+if [ "$SEED_EXIT" != "0" ]; then
+  echo "  WARNING: seeding did not complete ($SEED_EXIT) — the database reset itself succeeded."
+  echo "  This script stops its dev server on exit — start it with: pnpm start:dev"
+  echo "  Once it is ready, re-run manually: pnpm run dev:seed-roles"
 fi
 
 cat <<'EOF'

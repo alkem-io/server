@@ -23,6 +23,7 @@ import { CreateInnovationFlowInput } from '@domain/collaboration/innovation-flow
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
+import { sortBySortOrder } from '@domain/collaboration/innovation-flow-state/utils/sortBySortOrder';
 import { CreatePollInput } from '@domain/collaboration/poll/dto/poll.dto.create';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IClassification } from '@domain/common/classification/classification.interface';
@@ -455,19 +456,22 @@ export class InputCreatorService {
     return result;
   }
 
+  /**
+   * Copies states for a new flow, in the source's `(sortOrder, id)` order and renumbered
+   * 5, 10, 15, ... — the same spacing the flow-create path assigns. The copy gets fresh ids,
+   * so copying tied sort orders verbatim would let the id tiebreak rank a different state
+   * first in the copy, and the first state decides a subspace's sidebar. Renumbering also
+   * keeps a sort order of 0 out of the copy, which the create path would otherwise refill.
+   */
   public buildCreateInnovationFlowStateInputFromInnovationFlowState(
     states: IInnovationFlowState[]
   ): CreateInnovationFlowStateInput[] {
-    const result: CreateInnovationFlowStateInput[] = [];
-    for (const state of states) {
-      result.push({
-        displayName: state.displayName,
-        description: state.description,
-        settings: state.settings,
-        sortOrder: state.sortOrder,
-      });
-    }
-    return result;
+    return [...states].sort(sortBySortOrder).map((state, index) => ({
+      displayName: state.displayName,
+      description: state.description,
+      settings: state.settings,
+      sortOrder: (index + 1) * 5,
+    }));
   }
 
   public buildCreateCommunityGuidelinesInputFromCommunityGuidelines(

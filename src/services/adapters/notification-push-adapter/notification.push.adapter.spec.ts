@@ -1,4 +1,5 @@
 import { NotificationEvent } from '@common/enums/notification.event';
+import { DevicePushTokenService } from '@domain/device-push-token/device.push.token.service';
 import { PushSubscriptionService } from '@domain/push-subscription/push.subscription.service';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 import { ConfigService } from '@nestjs/config';
@@ -19,6 +20,10 @@ const mockPushSubscriptionService = {
   getActiveSubscriptions: vi.fn(),
 };
 
+const mockDevicePushTokenService = {
+  getTokensForUsers: vi.fn(),
+};
+
 const mockPushThrottleService = {
   isAllowed: vi.fn(),
 };
@@ -34,6 +39,8 @@ describe('NotificationPushAdapter', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    // Default: no device tokens, so every pre-existing case keeps its counts.
+    mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([]);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,6 +48,10 @@ describe('NotificationPushAdapter', () => {
         {
           provide: PushSubscriptionService,
           useValue: mockPushSubscriptionService,
+        },
+        {
+          provide: DevicePushTokenService,
+          useValue: mockDevicePushTokenService,
         },
         {
           provide: PushThrottleService,
@@ -99,6 +110,10 @@ describe('NotificationPushAdapter', () => {
           {
             provide: PushSubscriptionService,
             useValue: mockPushSubscriptionService,
+          },
+          {
+            provide: DevicePushTokenService,
+            useValue: mockDevicePushTokenService,
           },
           {
             provide: PushThrottleService,
@@ -163,6 +178,87 @@ describe('NotificationPushAdapter', () => {
         mockPushSubscriptionService.getActiveSubscriptions
       ).toHaveBeenCalledWith(['user-1']);
       expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('native device-token fan-out', () => {
+    const activeSubscription = {
+      id: 'sub-1',
+      userId: 'user-1',
+      endpoint: 'https://push.example.com/1',
+      p256dh: 'key1',
+      auth: 'auth1',
+    };
+    const deviceToken = {
+      id: 'tok-row-1',
+      userId: 'user-1',
+      token: 'device-token-1',
+      platform: 'ios',
+    };
+
+    it('publishes one web and one native message for a recipient holding both', async () => {
+      mockPushThrottleService.isAllowed.mockResolvedValue(true);
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        activeSubscription,
+      ]);
+      mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([
+        deviceToken,
+      ]);
+
+      await adapter.sendPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_MENTIONED,
+        { title: 'Test', body: 'Test body', url: '/test' }
+      );
+
+      expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(2);
+      const [, , webMessage] = mockAmqpConnection.publish.mock.calls[0];
+      const [, , nativeMessage] = mockAmqpConnection.publish.mock.calls[1];
+
+      // The web shape is byte-identical to today's.
+      expect(webMessage).toEqual({
+        subscriptionId: 'sub-1',
+        userId: 'user-1',
+        endpoint: 'https://push.example.com/1',
+        keys: { p256dh: 'key1', auth: 'auth1' },
+        payload: {
+          title: 'Test',
+          body: 'Test body',
+          url: '/test',
+          eventType: NotificationEvent.USER_MENTIONED,
+          timestamp: webMessage.payload.timestamp,
+        },
+        retryCount: 0,
+      });
+      expect(nativeMessage).toEqual({
+        userId: 'user-1',
+        platform: 'ios',
+        token: 'device-token-1',
+        payload: webMessage.payload,
+      });
+    });
+
+    // SC-015 — the MVP's primary recipient: a phone and no browser
+    // subscription at all. The unwidened early return dropped them silently.
+    it('publishes exactly one native message for a recipient with NO web subscription', async () => {
+      mockPushThrottleService.isAllowed.mockResolvedValue(true);
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([]);
+      mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([
+        deviceToken,
+      ]);
+
+      await adapter.sendPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_MENTIONED,
+        { title: 'Test', body: 'Test body', url: '/test' }
+      );
+
+      expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
+      const [, , message] = mockAmqpConnection.publish.mock.calls[0];
+      expect(message).toMatchObject({
+        platform: 'ios',
+        token: 'device-token-1',
+      });
     });
   });
 

@@ -21,9 +21,14 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { OrganizationAdministrationAuditService } from '@src/platform-admin/organization-administration-audit/organization.administration.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AssignRoleOnRoleSetInput } from './dto/role.set.dto.role.assign';
 import { RemoveRoleOnRoleSetInput } from './dto/role.set.dto.role.remove';
+import {
+  OrgCommunityBranch,
+  OrgCommunityGateService,
+} from './org.community.gate.service';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetAuthorizationService } from './role.set.service.authorization';
@@ -42,6 +47,8 @@ export class RoleSetResolverMutations {
     private userAuthorizationService: UserAuthorizationService,
     private virtualContributorLookupService: VirtualContributorLookupService,
     private licenseService: LicenseService,
+    private orgCommunityGate: OrgCommunityGateService,
+    private organizationAdministrationAuditService: OrganizationAdministrationAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -56,7 +63,7 @@ export class RoleSetResolverMutations {
       roleData.roleSetID
     );
 
-    await this.authorizeAssignUser(
+    const branch = await this.authorizeAssignUser(
       actorContext,
       roleSet,
       roleData.role,
@@ -86,6 +93,15 @@ export class RoleSetResolverMutations {
         break;
       }
     }
+
+    await this.recordSupportRoleChange(
+      branch,
+      actorContext,
+      roleSet,
+      'assign',
+      roleData.role,
+      roleData.actorID
+    );
 
     return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
@@ -186,49 +202,13 @@ export class RoleSetResolverMutations {
     const roleSet = await this.roleSetService.getRoleSetOrFail(
       roleData.roleSetID
     );
-    this.validateRoleSetTypeOrFail(roleSet, [
-      RoleSetType.SPACE,
-      RoleSetType.ORGANIZATION,
-    ]);
 
-    let privilegeRequired = AuthorizationPrivilege.GRANT;
-    let extendedAuthorization = roleSet.authorization;
-    switch (roleSet.type) {
-      case RoleSetType.SPACE: {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        if (roleData.role === RoleName.MEMBER) {
-          // Extend the authorization policy with a credential rule to assign the GRANT privilege
-          // to the user specified in the incoming mutation. Then if it is the same user as is logged
-          // in then the user will have the GRANT privilege + so can carry out the mutation
-          extendedAuthorization =
-            this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
-              roleSet,
-              roleData.actorID
-            );
-        }
-        break;
-      }
-      case RoleSetType.ORGANIZATION: {
-        privilegeRequired = AuthorizationPrivilege.GRANT;
-        if (roleData.role === RoleName.ASSOCIATE) {
-          // Extend the authorization policy with a credential rule to assign the GRANT privilege
-          // to the user specified in the incoming mutation. Then if it is the same user as is logged
-          // in then the user will have the GRANT privilege + so can carry out the mutation
-          extendedAuthorization =
-            this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
-              roleSet,
-              roleData.actorID
-            );
-        }
-        break;
-      }
-    }
-
-    this.authorizationService.grantAccessOrFail(
+    // The same gate as the generic `removeRole` — one remove gate for users.
+    const branch = await this.authorizeRemoveUser(
       actorContext,
-      extendedAuthorization,
-      privilegeRequired,
-      `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`
+      roleSet,
+      roleData.role,
+      roleData.actorID
     );
 
     await this.roleSetService.removeActorFromRole(
@@ -254,6 +234,15 @@ export class RoleSetResolverMutations {
         break;
       }
     }
+
+    await this.recordSupportRoleChange(
+      branch,
+      actorContext,
+      roleSet,
+      'remove',
+      roleData.role,
+      roleData.actorID
+    );
 
     return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
@@ -355,9 +344,10 @@ export class RoleSetResolverMutations {
     );
 
     // Type-specific authorization and validation
+    let branch: OrgCommunityBranch | undefined;
     switch (actor.type) {
       case ActorType.USER:
-        await this.authorizeAssignUser(
+        branch = await this.authorizeAssignUser(
           actorContext,
           roleSet,
           roleData.role,
@@ -402,6 +392,15 @@ export class RoleSetResolverMutations {
       await this.authorizationPolicyService.saveAll(authorizations);
     }
 
+    await this.recordSupportRoleChange(
+      branch,
+      actorContext,
+      roleSet,
+      'assign',
+      roleData.role,
+      actor.id
+    );
+
     return actor;
   }
 
@@ -423,9 +422,10 @@ export class RoleSetResolverMutations {
     );
 
     // Type-specific authorization
+    let branch: OrgCommunityBranch | undefined;
     switch (actor.type) {
       case ActorType.USER:
-        await this.authorizeRemoveUser(
+        branch = await this.authorizeRemoveUser(
           actorContext,
           roleSet,
           roleData.role,
@@ -469,39 +469,75 @@ export class RoleSetResolverMutations {
       await this.authorizationPolicyService.saveAll(authorizations);
     }
 
+    await this.recordSupportRoleChange(
+      branch,
+      actorContext,
+      roleSet,
+      'remove',
+      roleData.role,
+      actor.id
+    );
+
     return actor;
   }
 
+  /**
+   * One `organization_administration` row for a role change the gate admitted
+   * on the Platform Support path, written after the change has landed. The
+   * entity-admin path writes nothing.
+   */
+  private async recordSupportRoleChange(
+    branch: OrgCommunityBranch | undefined,
+    actorContext: ActorContext,
+    roleSet: IRoleSet,
+    change: 'assign' | 'remove',
+    role: RoleName,
+    targetUserId: string
+  ): Promise<void> {
+    if (branch !== 'platform-support') {
+      return;
+    }
+    await this.organizationAdministrationAuditService.record({
+      actorContext,
+      roleSetId: roleSet.id,
+      action:
+        change === 'assign'
+          ? 'assign_role'
+          : role === roleSet.entryRoleName
+            ? 'remove_member'
+            : 'remove_role',
+      targetUserId,
+      roles: [role],
+    });
+  }
+
   // Authorization helpers for assign operations
+  /**
+   * Returns the path that admitted the GRANT half (for auditing), or
+   * `undefined` when only the entry role was assigned.
+   */
   private async authorizeAssignUser(
     actorContext: ActorContext,
     roleSet: IRoleSet,
     role: RoleName,
     actorID: string
-  ): Promise<void> {
+  ): Promise<OrgCommunityBranch | undefined> {
     this.validateRoleSetTypeOrFail(roleSet, [
       RoleSetType.SPACE,
       RoleSetType.ORGANIZATION,
     ]);
     const reason = `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`;
 
-    if (roleSet.type === RoleSetType.ORGANIZATION) {
-      this.authorizationService.grantAccessOrFail(
-        actorContext,
-        roleSet.authorization,
-        AuthorizationPrivilege.GRANT,
-        reason
-      );
-      return;
-    }
-
-    // Consent is about ENTERING the Space, not about which role the actor
-    // holds once in (R32, as for organizations). A user not yet in the entry
-    // role needs the entry privilege whatever role is asked for, so Lead or
-    // Admin is never a side door into an L0, where nobody holds it
-    // (server#6623). Roles beyond the entry role also need GRANT.
+    // Consent is about ENTERING the role set, not about which role the actor
+    // holds once in — the same split for Spaces and organizations. A user not
+    // yet in the entry role needs the entry privilege whatever role is asked
+    // for, so Lead/Admin/Owner is never a side door in: nobody holds it on an
+    // L0, and on an organization only its own admins and owners do. That is
+    // also why Platform Support can never add anyone directly — it holds no
+    // entry privilege anywhere. Roles beyond the entry role also need GRANT,
+    // through the shared Community-tab gate.
     if (
-      role === RoleName.MEMBER ||
+      role === roleSet.entryRoleName ||
       !(await this.roleSetService.isInRole(
         actorID,
         roleSet,
@@ -515,14 +551,16 @@ export class RoleSetResolverMutations {
         reason
       );
     }
-    if (role !== RoleName.MEMBER) {
-      this.authorizationService.grantAccessOrFail(
+    if (role !== roleSet.entryRoleName) {
+      return this.orgCommunityGate.authorizeOrFail(
         actorContext,
         roleSet.authorization,
         AuthorizationPrivilege.GRANT,
-        reason
+        reason,
+        { targetActorID: actorID }
       );
     }
+    return undefined;
   }
 
   /**
@@ -626,12 +664,13 @@ export class RoleSetResolverMutations {
   }
 
   // Authorization helpers for remove operations
+  /** Returns the path that admitted the removal, for auditing. */
   private async authorizeRemoveUser(
     actorContext: ActorContext,
     roleSet: IRoleSet,
     role: RoleName,
     actorID: string
-  ): Promise<void> {
+  ): Promise<OrgCommunityBranch> {
     this.validateRoleSetTypeOrFail(roleSet, [
       RoleSetType.SPACE,
       RoleSetType.ORGANIZATION,
@@ -639,6 +678,10 @@ export class RoleSetResolverMutations {
 
     let extendedAuthorization = roleSet.authorization;
 
+    // Leaving is always allowed: for the entry role, the policy is extended
+    // with a GRANT rule for the user being removed, so a user removing
+    // themself is admitted on the entity-admin path (never refused as a
+    // self-targeted Support action).
     switch (roleSet.type) {
       case RoleSetType.SPACE:
         if (role === RoleName.MEMBER) {
@@ -660,11 +703,12 @@ export class RoleSetResolverMutations {
         break;
     }
 
-    this.authorizationService.grantAccessOrFail(
+    return this.orgCommunityGate.authorizeOrFail(
       actorContext,
       extendedAuthorization,
       AuthorizationPrivilege.GRANT,
-      `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`
+      `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`,
+      { targetActorID: actorID }
     );
   }
 

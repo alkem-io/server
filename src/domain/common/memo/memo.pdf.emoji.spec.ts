@@ -16,7 +16,7 @@ import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import * as Y from 'yjs';
 import { memoSchema } from './conversion/memo.extensions';
 import { applyMemoFontRuns, splitMemoFontRuns } from './memo.pdf.fonts';
-import { MemoPdfRenderer } from './memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from './memo.pdf.test-helper';
 
 type FontGlyph = {
   id: number;
@@ -223,7 +223,11 @@ const fontFixture = (family: 'NotoEmoji' | 'NotoSansSymbols2') =>
 
 describe('Memo PDF emoji glyph coverage', () => {
   const actor = Object.assign(new ActorContext(), { actorID: 'actor-1' });
-  const renderer = new MemoPdfRenderer({} as never, {} as never, {} as never);
+  const renderer = inProcessMemoPdfRenderer({
+    documentService: {},
+    authorizationService: {},
+    fileServiceAdapter: {},
+  });
   const render = (content: unknown[]) =>
     renderer.render(toState(content), 'bucket-1', actor);
 

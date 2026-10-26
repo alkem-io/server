@@ -10,6 +10,7 @@ import { RoleSetMembershipException } from '@common/exceptions/role.set.membersh
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { SPACE_INVITATION_ACCEPTORS_CHANGED } from '@domain/access/invitation/invitation.space.acceptors.event';
 import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.platform/platform.invitation.email.budget.service';
 import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
@@ -1832,6 +1833,43 @@ describe('RoleSetResolverMutationsMembership', () => {
         'organization'
       );
     };
+
+    const inviteOrganization = () =>
+      resolver.inviteForEntryRoleOnRoleSet(
+        { actorID: 'user-1' } as any,
+        {
+          roleSetID: 'rs-1',
+          invitedActorIDs: ['org-1'],
+          invitedUserEmails: [],
+          extraRoles: [],
+        } as any
+      );
+
+    it('resets the Space when a new organization invitation is created', async () => {
+      setUp();
+      (userLookupService.usersWithCredentials as Mock).mockResolvedValue([]);
+
+      await inviteOrganization();
+
+      expect((resolver as any).eventEmitter.emitAsync).toHaveBeenCalledWith(
+        SPACE_INVITATION_ACCEPTORS_CHANGED,
+        { roleSetID: 'rs-1' }
+      );
+    });
+
+    it('does not reset the Space when the organization is already invited', async () => {
+      setUp();
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(
+        mockInvitation
+      );
+
+      const result = await inviteOrganization();
+
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET
+      );
+      expect((resolver as any).eventEmitter.emitAsync).not.toHaveBeenCalled();
+    });
 
     it('sets the zero-admin notice and passes organizationHasNoAdministrators: true to the dispatch', async () => {
       setUp();

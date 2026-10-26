@@ -4,6 +4,8 @@ import {
   CREDENTIAL_RULE_TYPES_DELETE_ORGANIZATION,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
   CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_APPLY,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_PLATFORM_SUPPORT_INVITE,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_PLATFORM_SUPPORT_MEMBERSHIP,
 } from '@common/constants';
 import {
   AuthorizationCredential,
@@ -274,12 +276,12 @@ export class OrganizationAuthorizationService {
   ): Promise<IAuthorizationPolicyRuleCredential[]> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // 027-platform-role-redesign (T076, Slice B): the "Later remove this" rule
-    // is removed — this is later. It let `{global-admin, global-support}` assign
-    // directly into any organization's role-set; no target role inherits that
-    // (row 2 denies Content Full Access role assignment; row 1's Roles Admin
-    // owns platform roles only). The organization's own admins keep it through
-    // the rule immediately below.
+    // Direct assignment into an organization's role set belongs to the
+    // organization's own admins and owners only (the rule immediately below);
+    // no platform role holds ROLESET_ENTRY_ROLE_ASSIGN or GRANT here. Platform
+    // Support's Community-tab reach comes from the dedicated membership
+    // privilege further down — never ASSIGN, never GRANT — so it can repair an
+    // organization by invitation, but never add anyone without consent.
 
     const organizationAdmin =
       this.authorizationPolicyService.createCredentialRule(
@@ -305,6 +307,32 @@ export class OrganizationAuthorizationService {
       );
     globalRegisteredApply.cascade = false;
     newRules.push(globalRegisteredApply);
+
+    // Platform Support acts on the organization's Community tab with the same
+    // results an organization admin gets, through a privilege that ONLY the
+    // Community-tab gates accept. Cascading, so the role set's invitations,
+    // email invitations and applications inherit it (revoke, decide).
+    const platformSupportMembership =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_PLATFORM_SUPPORT_MEMBERSHIP
+      );
+    platformSupportMembership.cascade = true;
+    newRules.push(platformSupportMembership);
+
+    // Inviting is granted directly, not derived from ROLESET_ENTRY_ROLE_ASSIGN
+    // (which Support never holds): people enter an organization through
+    // Support only by accepting an invitation. Not cascading — the children
+    // have nothing to invite to.
+    const platformSupportInvite =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
+        [AuthorizationCredential.PLATFORM_SUPPORT],
+        CREDENTIAL_RULE_TYPES_ORGANIZATION_ROLESET_PLATFORM_SUPPORT_INVITE
+      );
+    platformSupportInvite.cascade = false;
+    newRules.push(platformSupportInvite);
 
     return newRules;
   }

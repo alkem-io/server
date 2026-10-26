@@ -1,9 +1,11 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { OrgCommunityGateModule } from '@domain/access/role-set/org.community.gate.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MessagingRedisModule } from '@services/infrastructure/redis-client/messaging-redis.module';
+import { OrganizationAdministrationAuditModule } from '@src/platform-admin/organization-administration-audit/organization.administration.audit.module';
 import { PlatformInvitationEmailBudgetService } from './platform.invitation.email.budget.service';
 import { PlatformInvitation } from './platform.invitation.entity';
 import { PlatformInvitationResendThrottleService } from './platform.invitation.resend.throttle.service';
@@ -14,6 +16,8 @@ import { PlatformInvitationAuthorizationService } from './platform.invitation.se
 
 @Module({
   imports: [
+    OrgCommunityGateModule,
+    OrganizationAdministrationAuditModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     UserLookupModule,

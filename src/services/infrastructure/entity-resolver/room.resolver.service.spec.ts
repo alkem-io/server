@@ -1,6 +1,8 @@
+import { RoomType } from '@common/enums/room.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { Conversation } from '@domain/communication/conversation/conversation.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { CalendarEvent } from '@domain/timeline/event/event.entity';
@@ -228,6 +230,64 @@ describe('RoomResolverService', () => {
       await expect(service.getCalloutForRoom('nonexistent')).rejects.toThrow(
         EntityNotFoundException
       );
+    });
+  });
+
+  describe('getStorageBucketForCommentRoom', () => {
+    const bucket = { id: 'bucket-1' };
+
+    it("returns a callout room's bucket from the callout's own profile", async () => {
+      entityManager.findOne.mockResolvedValue({
+        framing: { profile: { storageBucket: bucket } },
+      });
+
+      const result = await service.getStorageBucketForCommentRoom({
+        id: 'comments-1',
+        type: RoomType.CALLOUT,
+      });
+
+      expect(result).toBe(bucket);
+      expect(entityManager.findOne).toHaveBeenCalledWith(Callout, {
+        where: { comments: { id: 'comments-1' } },
+        relations: {
+          framing: { profile: { storageBucket: { authorization: true } } },
+        },
+      });
+    });
+
+    it("returns a post room's bucket from the post's own profile", async () => {
+      entityManager.findOne.mockResolvedValue({
+        profile: { storageBucket: bucket },
+      });
+
+      const result = await service.getStorageBucketForCommentRoom({
+        id: 'comments-2',
+        type: RoomType.POST,
+      });
+
+      expect(result).toBe(bucket);
+      expect(entityManager.findOne).toHaveBeenCalledWith(Post, {
+        where: { comments: { id: 'comments-2' } },
+        relations: { profile: { storageBucket: { authorization: true } } },
+      });
+    });
+
+    it('returns undefined when the parent is not found or the room is not a comment room', async () => {
+      entityManager.findOne.mockResolvedValue(null);
+
+      expect(
+        await service.getStorageBucketForCommentRoom({
+          id: 'comments-3',
+          type: RoomType.CALLOUT,
+        })
+      ).toBeUndefined();
+      expect(
+        await service.getStorageBucketForCommentRoom({
+          id: 'comments-4',
+          type: RoomType.CALENDAR_EVENT,
+        })
+      ).toBeUndefined();
+      expect(entityManager.findOne).toHaveBeenCalledTimes(1);
     });
   });
 

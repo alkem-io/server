@@ -4,7 +4,7 @@ import { getDocument, OPS, Util } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import sharp from 'sharp';
 import * as Y from 'yjs';
 import { memoSchema } from './conversion/memo.extensions';
-import { MemoPdfRenderer } from './memo.pdf.renderer';
+import { inProcessMemoPdfRenderer } from './memo.pdf.test-helper';
 
 type Matrix = [number, number, number, number, number, number];
 type Bounds = { left: number; top: number; right: number; bottom: number };
@@ -129,11 +129,11 @@ describe('Memo PDF image geometry', () => {
   };
   const authorizationService = { grantAccessOrFail: vi.fn() };
   const fileServiceAdapter = { getDocumentContent: vi.fn() };
-  const renderer = new MemoPdfRenderer(
-    documentService as never,
-    authorizationService as never,
-    fileServiceAdapter as never
-  );
+  const renderer = inProcessMemoPdfRenderer({
+    documentService,
+    authorizationService,
+    fileServiceAdapter,
+  });
 
   beforeEach(() => vi.clearAllMocks());
 

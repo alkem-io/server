@@ -45,21 +45,14 @@ const NON_ADMIN: NonAdminClassification = {
 export const NON_ADMIN_SURFACES: Readonly<
   Record<string, NonAdminClassification>
 > = {
-  // ===== pending-ruling (5) — real, named gaps; the fix is a decision =====
+  // ===== pending-ruling (4) — real, named gaps; the fix is a decision =====
   // QA server-C1-12 / server-C2-d were RULED (2026-09-25) and moved INTO the
   // census: `createInnovationHub` (A12, Platform License Manager) and
   // `eventOnOrganizationVerification` (A6, Platform Support).
-  deletePlatformInvitation: {
-    disposition: 'pending-ruling',
-    reason:
-      'QA finding census-deletePlatformInvitation (the FR-007(e) class): ' +
-      'bare DELETE against the PlatformInvitation’s own policy, reachable ' +
-      'by platform-content-full-access through the root CRUD cascade — the ' +
-      'same shape as the accepted A6/A7/A8 exceptions, but this surface is ' +
-      'not one of those three families, so the reach is not yet ruled on. ' +
-      'This finding had no pre-existing key in the QA handover — ' +
-      '`census-deletePlatformInvitation` is the new one it was given.',
-  },
+  // `deletePlatformInvitation` moved INTO the census with the organization
+  // Community tab (A6, Platform Support); its Content Full Access root-cascade
+  // reach is carried there as a recorded extra reacher whose ruling is still
+  // open (QA finding census-deletePlatformInvitation).
   createUser: {
     disposition: 'pending-ruling',
     reason:
@@ -102,7 +95,7 @@ export const NON_ADMIN_SURFACES: Readonly<
       'AI persona; not yet ruled on.',
   },
 
-  // ===== non-admin (143) — ordinary, owner-gated or self-service mutations =====
+  // ===== non-admin (136) — ordinary, owner-gated or self-service mutations =====
   addClassificationEntryFromTemplate: NON_ADMIN,
   addPollOption: NON_ADMIN,
   addReactionToCallout: NON_ADMIN,
@@ -110,9 +103,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   addVisualToMediaGallery: NON_ADMIN,
   applyForEntryRoleOnRoleSet: NON_ADMIN,
   assignConversationMember: NON_ADMIN,
-  assignRole: NON_ADMIN,
   assignRoleToOrganization: NON_ADMIN,
-  assignRoleToUser: NON_ADMIN,
   assignRoleToVirtualContributor: NON_ADMIN,
   assignUserToGroup: NON_ADMIN,
   castPollVote: NON_ADMIN,
@@ -140,7 +131,6 @@ export const NON_ADMIN_SURFACES: Readonly<
   deleteCollaboraDocument: NON_ADMIN,
   deleteConversation: NON_ADMIN,
   deleteDocument: NON_ADMIN,
-  deleteInvitation: NON_ADMIN,
   deleteLink: NON_ADMIN,
   deleteMemo: NON_ADMIN,
   deletePost: NON_ADMIN,
@@ -154,10 +144,8 @@ export const NON_ADMIN_SURFACES: Readonly<
   deleteWhiteboard: NON_ADMIN,
   deleteWhiteboardDraft: NON_ADMIN,
   enablePushSubscription: NON_ADMIN,
-  eventOnApplication: NON_ADMIN,
   eventOnInvitation: NON_ADMIN,
   importCollaboraDocument: NON_ADMIN,
-  inviteForEntryRoleOnRoleSet: NON_ADMIN,
   joinRoleSet: NON_ADMIN,
   leaveConversation: NON_ADMIN,
   markMessageAsReadInRoom: NON_ADMIN,
@@ -167,6 +155,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   moveTaskToColumn: NON_ADMIN,
   prepareMemoSigning: NON_ADMIN,
   refreshVirtualContributorBodyOfKnowledge: NON_ADMIN,
+  registerDevicePushToken: NON_ADMIN,
   removeCommunityGuidelinesContent: NON_ADMIN,
   removeConversationMember: NON_ADMIN,
   removeDefaultCalloutTemplateOnInnovationFlowState: NON_ADMIN,
@@ -175,15 +164,12 @@ export const NON_ADMIN_SURFACES: Readonly<
   removePollVote: NON_ADMIN,
   removeReactionFromCallout: NON_ADMIN,
   removeReactionToMessageInRoom: NON_ADMIN,
-  removeRole: NON_ADMIN,
   removeRoleFromOrganization: NON_ADMIN,
-  removeRoleFromUser: NON_ADMIN,
   removeRoleFromVirtualContributor: NON_ADMIN,
   removeUserFromGroup: NON_ADMIN,
   reorderPollOptions: NON_ADMIN,
   replaceCollaboraDocument: NON_ADMIN,
   replaceWhiteboardContentFromSource: NON_ADMIN,
-  resendPlatformInvitation: NON_ADMIN,
   resetConversationVc: NON_ADMIN,
   revokeMcpApiKey: NON_ADMIN,
   sendDirectMessageToUsers: NON_ADMIN,
@@ -195,6 +181,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   setDefaultCalloutTemplateOnInnovationFlowState: NON_ADMIN,
   submitCalloutFormResponse: NON_ADMIN,
   subscribeToPushNotifications: NON_ADMIN,
+  unregisterDevicePushToken: NON_ADMIN,
   unsubscribeFromPushNotifications: NON_ADMIN,
   updateApplicationFormOnRoleSet: NON_ADMIN,
   updateCalendarEvent: NON_ADMIN,
