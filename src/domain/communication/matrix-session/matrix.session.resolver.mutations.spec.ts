@@ -4,9 +4,10 @@ import { MatrixSessionResolverMutations } from './matrix.session.resolver.mutati
 
 /**
  * workspace#091, FR-007/D4. `mintMatrixSession` is caller-scoped by
- * STRUCTURE, not by a check: it takes no arguments, so case 3 below is the
- * executable form of "there is no subject parameter" — a re-added subject
- * argument reds here, which is the one thing a reviewer cannot reliably be.
+ * STRUCTURE, not by a check: it takes no subject argument, so the arity case
+ * below is the executable form of "there is no subject parameter" — a
+ * re-added subject argument reds there, which is the one thing a reviewer
+ * cannot reliably be.
  */
 describe('MatrixSessionResolverMutations', () => {
   let resolver: MatrixSessionResolverMutations;
@@ -52,9 +53,19 @@ describe('MatrixSessionResolverMutations', () => {
     });
   });
 
-  it('takes exactly one parameter — there is no subject argument (FR-007/D4)', () => {
+  it('refuses a bearer-authenticated caller and never calls the service (SEC-091-SRV-10)', async () => {
+    // The mint is confined to the first-party session cookie. A Hydra API
+    // bearer resolves to a real, non-anonymous actor, so the authentication
+    // guard would pass it — only the transport check stops it.
+    await expect(
+      resolver.mintMatrixSession(actor('actor-uuid-123', false), 'Bearer rs256')
+    ).rejects.toThrow(/first-party/i);
+    expect(matrixSessionService.mintForActor).not.toHaveBeenCalled();
+  });
+
+  it('takes the actor and the Authorization header — there is no subject argument (FR-007/D4)', () => {
     expect(
       MatrixSessionResolverMutations.prototype.mintMatrixSession
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 });
