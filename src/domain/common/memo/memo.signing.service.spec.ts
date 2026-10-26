@@ -5,6 +5,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavailable.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { SigningAttemptStatus } from '@domain/common/content-signing/signing.attempt.status';
 import { prosemirrorJSONToYDoc } from '@tiptap/y-tiptap';
@@ -79,17 +80,23 @@ describe('MemoSigningService', () => {
       return Buffer.from('current-state');
     }),
   };
+  // Stands in for the executor: an admitted render reads the state it is
+  // given, then renders it.
+  const renderedStates: Buffer[] = [];
+  const admittedRender = async (state: () => Promise<Buffer>) => {
+    renderedStates.push(await state());
+    calls.push('render');
+    return pdf;
+  };
   const renderer = {
-    render: vi.fn<
-      (
-        state: Buffer,
-        storageBucketId: string,
-        actor: ActorContext
-      ) => Promise<Buffer>
-    >(async () => {
-      calls.push('render');
-      return pdf;
-    }),
+    render:
+      vi.fn<
+        (
+          state: () => Promise<Buffer>,
+          storageBucketId: string,
+          actor: ActorContext
+        ) => Promise<Buffer>
+      >(admittedRender),
   };
   const fileServiceAdapter = {
     createInternalDocumentInBucket: vi.fn(async () => {
@@ -176,10 +183,8 @@ describe('MemoSigningService', () => {
       calls.push('live-read');
       return Buffer.from('current-state');
     });
-    renderer.render.mockImplementation(async () => {
-      calls.push('render');
-      return pdf;
-    });
+    renderedStates.length = 0;
+    renderer.render.mockImplementation(admittedRender);
     fileServiceAdapter.createInternalDocumentInBucket.mockImplementation(
       async () => {
         calls.push('upload');
@@ -245,10 +250,11 @@ describe('MemoSigningService', () => {
       expect.any(Function)
     );
     expect(renderer.render).toHaveBeenCalledWith(
-      Buffer.from('current-state'),
+      expect.any(Function),
       'bucket-1',
       actor
     );
+    expect(renderedStates).toEqual([Buffer.from('current-state')]);
     expect(
       fileServiceAdapter.createInternalDocumentInBucket
     ).toHaveBeenCalledWith(
@@ -346,7 +352,7 @@ describe('MemoSigningService', () => {
       liveDocument.destroy();
     }
 
-    const state = renderer.render.mock.calls[0][0];
+    const [state] = renderedStates;
     expect(Buffer.isBuffer(state)).toBe(true);
     const html = yjsStateToTiptapHtml(state);
     expect(html).toContain('<mark>Projected highlight text</mark>');
@@ -475,6 +481,27 @@ describe('MemoSigningService', () => {
       undefined,
       LogContext.MEMOS
     );
+  });
+
+  it('does not join the live document when the render is refused for capacity', async () => {
+    const busy = new MemoPdfUnavailableException('busy-global');
+    renderer.render.mockRejectedValue(busy);
+
+    await expect(service.prepareMemoSigning(memo.id, actor)).rejects.toBe(busy);
+    expect(collaborationDocumentService.read).not.toHaveBeenCalled();
+  });
+
+  it('fails with the live read error when the admitted read fails', async () => {
+    const unavailable = new Error('collaboration unavailable');
+    collaborationDocumentService.read.mockRejectedValue(unavailable);
+
+    await expect(service.prepareMemoSigning(memo.id, actor)).rejects.toBe(
+      unavailable
+    );
+    expect(
+      fileServiceAdapter.createInternalDocumentInBucket
+    ).not.toHaveBeenCalled();
+    expect(attemptService.finalizePrepared).not.toHaveBeenCalled();
   });
 
   it('leaves an unready row for the bounded sweep when rendering fails', async () => {

@@ -337,6 +337,15 @@ export class SpaceAuthorizationService {
       type: AuthorizationCredential.SPACE_MEMBER_INVITEE,
       resourceID: space.id,
     });
+    // ...and so can whoever may accept an organization or virtual contributor
+    // invitation on the invitee's behalf
+    if (space.community?.roleSet) {
+      credentialCriteriasWithAccess.push(
+        ...(await this.roleSetService.getAccountAdminCredentialsForOpenInvitations(
+          space.community.roleSet
+        ))
+      );
+    }
 
     return credentialCriteriasWithAccess;
   }

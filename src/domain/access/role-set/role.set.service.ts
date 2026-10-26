@@ -2,6 +2,7 @@ import { ActorType } from '@common/enums/actor.type';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommunityMembershipOrigin } from '@common/enums/community.membership.origin';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
@@ -23,6 +24,7 @@ import {
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import {
   CreateApplicationInput,
   IApplication,
@@ -49,6 +51,7 @@ import { CommunityCommunicationService } from '@domain/community/community-commu
 import { IOrganization } from '@domain/community/organization/organization.interface';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { OrganizationAdministrationWithheldReason } from '@domain/community/user-email-change/platform.audit.entry.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
@@ -61,12 +64,17 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { FEATURE_FAMILY_ROLES } from '@platform/platform-role/platform.role.assignment.rules.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { OrganizationAdministrationAuditService } from '@src/platform-admin/organization-administration-audit/organization.administration.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, In, Not, Repository } from 'typeorm';
 import { IActorRolePolicy } from '../role/actor.role.policy.interface';
 import { IRole } from '../role/role.interface';
 import { RoleService } from '../role/role.service';
 import { CreateRoleSetInput } from './dto/role.set.dto.create';
+import {
+  OrgCommunityBranch,
+  OrgCommunityGateService,
+} from './org.community.gate.service';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetCacheService } from './role.set.service.cache';
@@ -109,6 +117,8 @@ export interface EnsureMemberOfRoleSetAndAncestorsOptions {
    * withheld, and withheld roles are already reported to both sides.
    */
   extraRolesOfferedBy?: string;
+  /** Invitation only: the invitation being accepted, for the audit trail. */
+  invitationID?: string;
   /** Invitation only (SPACE target): remove the SPACE_MEMBER_INVITEE credential. */
   removeSpaceInviteeCredential?: boolean;
 }
@@ -147,7 +157,10 @@ export class RoleSetService {
     // credential change — makes the guarantee hold by construction rather
     // than by an incidental call chain a future refactor could silently
     // remove.
-    private readonly actorContextCacheService: ActorContextCacheService
+    private readonly actorContextCacheService: ActorContextCacheService,
+    private readonly actorContextService: ActorContextService,
+    private readonly orgCommunityGate: OrgCommunityGateService,
+    private readonly organizationAdministrationAuditService: OrganizationAdministrationAuditService
   ) {}
 
   async createRoleSet(roleSetData: CreateRoleSetInput): Promise<IRoleSet> {
@@ -924,6 +937,7 @@ export class RoleSetService {
           invitedToParent: invitation.invitedToParent,
           extraRoles: invitation.extraRoles,
           extraRolesOfferedBy: invitation.createdBy,
+          invitationID: invitation.id,
           removeSpaceInviteeCredential: true,
         }
       );
@@ -937,6 +951,50 @@ export class RoleSetService {
         LogContext.COMMUNITY
       );
     }
+  }
+
+  /**
+   * The credentials of whoever may accept a still-open organization or virtual
+   * contributor invitation on this RoleSet: the invitee's account admins, who
+   * hold the accept privilege (see InvitationAuthorizationService). The
+   * SPACE_MEMBER_INVITEE credential is issued to the invited actor itself,
+   * which for these actor types nobody signs in as.
+   */
+  async getAccountAdminCredentialsForOpenInvitations(
+    roleSet: IRoleSet
+  ): Promise<ICredentialDefinition[]> {
+    const [organizationIDs, virtualContributorIDs] = await Promise.all([
+      this.invitationService.getActorIDsWithOpenInvitationOnRoleSet(
+        roleSet.id,
+        ActorType.ORGANIZATION
+      ),
+      this.invitationService.getActorIDsWithOpenInvitationOnRoleSet(
+        roleSet.id,
+        ActorType.VIRTUAL_CONTRIBUTOR
+      ),
+    ]);
+    const accountIDs = await Promise.all([
+      ...organizationIDs.map(
+        async organizationID =>
+          (
+            await this.organizationLookupService.getOrganizationByIdOrFail(
+              organizationID
+            )
+          ).accountID
+      ),
+      ...virtualContributorIDs.map(
+        async virtualContributorID =>
+          (
+            await this.virtualContributorLookupService.getAccountOrFail(
+              virtualContributorID
+            )
+          ).id
+      ),
+    ]);
+    return accountIDs.map(accountID => ({
+      type: AuthorizationCredential.ACCOUNT_ADMIN,
+      resourceID: accountID,
+    }));
   }
 
   // Actor-based credential methods - entity.id IS the actorID
@@ -1640,26 +1698,6 @@ export class RoleSetService {
     );
 
     return validCredential;
-  }
-
-  /**
-   * Whether `actorID` currently holds standing to offer ADMIN / OWNER on an
-   * organization role set: organization ADMIN or OWNER.
-   *
-   * 027-platform-role-redesign (T076, Slice B): the platform arm is gone. The
-   * `{global-admin, global-support}` direct-assign rule on organization role
-   * sets was removed with the legacy roles, and no target role inherits it
-   * (`organization.service.authorization.ts`), so no platform credential
-   * confers this standing any more.
-   */
-  private async mayStillOfferOrganizationRoles(
-    actorID: string,
-    roleSet: IRoleSet
-  ): Promise<boolean> {
-    return (
-      (await this.isInRole(actorID, roleSet, RoleName.ADMIN)) ||
-      (await this.isInRole(actorID, roleSet, RoleName.OWNER))
-    );
   }
 
   public async isInRole(
@@ -2434,32 +2472,23 @@ export class RoleSetService {
     // Scoped to organizations because that is where the elevated grant is
     // implicit. Resolved once for the whole loop, and only when an extra role
     // is actually on offer, so the ordinary path costs nothing.
-    //
-    // "May still offer" means holding the standing that granted
-    // ROLESET_ENTRY_ROLE_INVITE on an organization role set: an organization
-    // ADMIN / OWNER. (Slice B, T076: the legacy platform arm — global-admin /
-    // global-support holding ROLESET_ENTRY_ROLE_ASSIGN on every organization —
-    // is gone with those roles; no target role inherits it.)
     const extraRoles = opts.extraRoles ?? [];
-    let offererMayStillOffer: boolean | undefined;
-    if (
-      extraRoles.length > 0 &&
-      targetRoleSet.type === RoleSetType.ORGANIZATION
-    ) {
-      offererMayStillOffer = opts.extraRolesOfferedBy
-        ? await this.mayStillOfferOrganizationRoles(
-            opts.extraRolesOfferedBy,
-            targetRoleSet
+    const offerStanding =
+      extraRoles.length > 0 && targetRoleSet.type === RoleSetType.ORGANIZATION
+        ? await this.resolveOrganizationOfferStanding(
+            targetRoleSet,
+            actorID,
+            opts.extraRolesOfferedBy
           )
-        : // A deleted account leaves `createdBy` empty; nobody vouches for the
-          // offer any more, so it is not honoured.
-          false;
-    }
+        : undefined;
 
+    const honouredRoles: RoleName[] = [];
+    let withheldReason: OrganizationAdministrationWithheldReason | undefined =
+      offerStanding?.withheldReason;
     for (const extraRole of extraRoles) {
-      if (offererMayStillOffer === false) {
+      if (offerStanding?.withheldReason) {
         this.logger.warn?.(
-          `Extra role (${extraRole}) withheld for actor (${actorID}): the actor who offered it no longer holds organization-admin or platform-admin standing`,
+          `Extra role (${extraRole}) withheld for actor (${actorID}): ${offerStanding.withheldReason}`,
           LogContext.COMMUNITY
         );
         extraRolesWithheld.push(extraRole);
@@ -2473,6 +2502,7 @@ export class RoleSetService {
           actorContext,
           false
         );
+        honouredRoles.push(extraRole);
       } catch (e: any) {
         // Do not throw further as there might not be entitlements to grant the
         // extra role (behaviour-preserving with the previous invitation flow).
@@ -2481,7 +2511,28 @@ export class RoleSetService {
           LogContext.COMMUNITY
         );
         extraRolesWithheld.push(extraRole);
+        withheldReason ??= 'role_limits';
       }
+    }
+
+    // Where account-admin standing is actually minted: an offer that came
+    // through the Platform Support path is recorded whether it was honoured or
+    // withheld (initiator = the offerer, subject = the invitee). Fail-open —
+    // the invitee's accept is never blocked by the audit store.
+    if (offerStanding?.supportOffer && offerStanding.offerer) {
+      await this.organizationAdministrationAuditService.record({
+        actorContext: offerStanding.offerer,
+        roleSetId: targetRoleSet.id,
+        action:
+          honouredRoles.length > 0
+            ? 'extra_role_honoured'
+            : 'extra_role_withheld',
+        targetUserId: actorID,
+        roles: honouredRoles,
+        withheldRoles: extraRolesWithheld,
+        reason: honouredRoles.length > 0 ? undefined : withheldReason,
+        invitationId: opts.invitationID,
+      });
     }
 
     // Source-specific cache tail (mirrors the original callers). A direct join
@@ -2501,6 +2552,64 @@ export class RoleSetService {
     }
 
     return { extraRolesWithheld };
+  }
+
+  /**
+   * Whether whoever offered extra roles on an organization invitation STILL
+   * has the standing to offer them, decided by the same Community-tab gate
+   * that admits the other actions, with ROLESET_ENTRY_ROLE_ASSIGN as the
+   * entity-admin base: the organization's own admins and owners pass on that
+   * path, Platform Support on its own path, anyone else is withheld.
+   *
+   * An invitation is a durable, unexpiring grant, and the offerer's authority
+   * is otherwise only checked when it is created — so an invitation planted by
+   * an administrator who has since been offboarded (or a Support user whose
+   * credential was revoked) must not confer ADMIN/OWNER, and with it
+   * account-admin standing, whenever its recipient chooses to accept.
+   */
+  private async resolveOrganizationOfferStanding(
+    roleSet: IRoleSet,
+    inviteeID: string,
+    offererID: string | undefined
+  ): Promise<{
+    offerer?: ActorContext;
+    branch?: OrgCommunityBranch;
+    supportOffer: boolean;
+    withheldReason?: 'standing_lost' | 'self_offer' | 'offerer_deleted';
+  }> {
+    if (!offererID) {
+      // A deleted account leaves `createdBy` empty; nobody vouches for the
+      // offer any more, so it is not honoured.
+      return { supportOffer: false, withheldReason: 'offerer_deleted' };
+    }
+    const offerer = await this.actorContextService.buildForActor(offererID);
+    if (offerer.isAnonymous) {
+      return { supportOffer: false, withheldReason: 'offerer_deleted' };
+    }
+    const branch = this.orgCommunityGate.resolveBranch(
+      offerer,
+      roleSet.authorization,
+      AuthorizationPrivilege.ROLESET_ENTRY_ROLE_ASSIGN
+    );
+    if (branch === undefined) {
+      // Lost standing is still recorded when the offer was a Support one.
+      const supportOffer =
+        await this.organizationAdministrationAuditService.wasOfferedOnSupportPath(
+          offererID,
+          inviteeID,
+          roleSet.id
+        );
+      return { offerer, supportOffer, withheldReason: 'standing_lost' };
+    }
+    if (branch === 'platform-support' && offererID === inviteeID) {
+      return {
+        offerer,
+        branch,
+        supportOffer: true,
+        withheldReason: 'self_offer',
+      };
+    }
+    return { offerer, branch, supportOffer: branch === 'platform-support' };
   }
 
   /**

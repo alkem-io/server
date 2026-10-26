@@ -175,6 +175,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 117,
     userMessage: 'userMessages.authorization.sessionRefreshRequired',
   },
+  [AlkemioErrorStatus.PLATFORM_SUPPORT_SELF_TARGET]: {
+    category: ErrorCategory.AUTHORIZATION,
+    specificCode: 118,
+    userMessage: 'userMessages.authorization.platformSupportSelfTarget',
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 12xxx - VALIDATION: Input/state validation errors
@@ -490,6 +495,14 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     category: ErrorCategory.SYSTEM,
     specificCode: 121,
     userMessage: 'userMessages.system.platformRoleAssignmentAuditFailed',
+  },
+  // Memo PDF rendering is temporarily unavailable (capacity, deadline, worker
+  // crash or launch failure, or the live memo content could not be read).
+  // Retryable; 122 is the next free slot after 121, keeping the band contiguous.
+  [AlkemioErrorStatus.MEMO_PDF_UNAVAILABLE]: {
+    category: ErrorCategory.SYSTEM,
+    specificCode: 122,
+    userMessage: 'userMessages.system.memoPdfUnavailable',
   },
   // ═══════════════════════════════════════════════════════════════════════════
   // 99xxx - FALLBACK: Unmapped errors

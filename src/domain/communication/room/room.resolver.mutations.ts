@@ -1,6 +1,4 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { LogContext } from '@common/enums/logging.context';
-import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
@@ -45,7 +43,6 @@ export class RoomResolverMutations {
       relations: { authorization: true },
     });
 
-    this.validateMessageContent(messageData);
     await this.messageGate.assertOperation(room, actorContext);
 
     const existingMedia =
@@ -69,15 +66,6 @@ export class RoomResolverMutations {
     return message;
   }
 
-  private validateMessageContent(input: RoomSendMessageInput): void {
-    if (input.attachmentUpload != null && input.message.trim()) {
-      throw new ValidationException(
-        'An attachment message cannot also contain text',
-        LogContext.COMMUNICATION
-      );
-    }
-  }
-
   @Mutation(() => IMessage, {
     description: 'Sends a reply to a message from the specified Room.',
   })
@@ -89,7 +77,6 @@ export class RoomResolverMutations {
       relations: { authorization: true },
     });
 
-    this.validateMessageContent(messageData);
     await this.messageGate.assertOperation(
       room,
       actorContext,

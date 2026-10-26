@@ -183,11 +183,15 @@ export class ActorContextService {
   /**
    * Builds an ActorContext from an actor ID.
    * Works for all actor types (User, Organization, VirtualContributor, Space, Account).
-   * Credentials are loaded eagerly from the base actor table.
+   * Credentials are loaded from the base actor table. The `credentials`
+   * relation is not eager, so it must be requested explicitly — without it
+   * every actor built here would carry no credentials and pass no
+   * authorization check.
    */
   public async buildForActor(actorID: string): Promise<ActorContext> {
     const actor = await this.entityManager.findOne(Actor, {
       where: { id: actorID },
+      relations: { credentials: true },
     });
 
     if (!actor) {

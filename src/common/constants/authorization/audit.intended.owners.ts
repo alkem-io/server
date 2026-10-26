@@ -15,6 +15,12 @@ export const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_USERS_ADMIN,
 ];
 
+/** A6 — the organization Community-tab actions taken through Platform
+ * Support's membership privilege (the `organization_administration`
+ * category). */
+export const ORGANIZATION_COMMUNITY_INTENDED_OWNERS: readonly AuthorizationCredential[] =
+  [AuthorizationCredential.PLATFORM_SUPPORT];
+
 /** A12 — license assignment (the licensing-framework GRANT and the
  * ACCOUNT_LICENSE_MANAGE grant). */
 export const A12_INTENDED_OWNERS: readonly AuthorizationCredential[] = [

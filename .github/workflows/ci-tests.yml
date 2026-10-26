@@ -49,6 +49,16 @@ jobs:
           path: coverage-ci/
           retention-days: 1
 
+      # Forks the compiled memo PDF worker entry exactly as production does
+      # (alias registration, copied font assets, binary IPC). The unit suite
+      # skips this spec when there is no build output; MEMO_PDF_DIST_GATE=1
+      # turns a missing build into a failure, so this step cannot skip.
+      - name: Build and fork the compiled memo PDF worker
+        timeout-minutes: 10
+        run: |
+          pnpm build
+          MEMO_PDF_DIST_GATE=1 pnpm exec vitest run src/domain/common/memo/memo.pdf.executor.dist.spec.ts
+
   content-signing-integration:
     runs-on: ubuntu-latest
     permissions:

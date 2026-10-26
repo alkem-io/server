@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoleSetType } from '@common/enums/role.set.type';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -11,6 +12,7 @@ import {
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
+import { emitSpaceInvitationAcceptorsChanged } from '@domain/access/invitation/invitation.space.acceptors.event';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorQueryArgs } from '@domain/actor/actor/dto';
@@ -28,6 +30,7 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Inject, Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -70,6 +73,7 @@ export class VirtualContributorService {
     private entityManager: EntityManager,
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
+    private readonly eventEmitter: EventEmitter2,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger
   ) {}
@@ -388,6 +392,7 @@ export class VirtualContributorService {
 
     // All DB deletions in a single transaction so a partial failure
     // does not leave the VC in an inconsistent state.
+    let invitingSpaceRoleSetIDs: string[] = [];
     await this.virtualContributorRepository.manager.transaction(async () => {
       await this.profileService.deleteProfile(virtualContributor.profile.id);
 
@@ -397,7 +402,8 @@ export class VirtualContributorService {
         );
       }
 
-      await this.deleteVCInvitations(virtualContributorID);
+      invitingSpaceRoleSetIDs =
+        await this.deleteVCInvitations(virtualContributorID);
 
       if (virtualContributor.aiPersonaID) {
         try {
@@ -424,6 +430,13 @@ export class VirtualContributorService {
 
       await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
     });
+
+    // After the commit, so the reset no longer sees the deleted invitations
+    // and drops the visibility they gave the VC's account admins.
+    await emitSpaceInvitationAcceptorsChanged(
+      this.eventEmitter,
+      invitingSpaceRoleSetIDs
+    );
 
     virtualContributor.id = virtualContributorID;
     return virtualContributor;
@@ -658,15 +671,22 @@ export class VirtualContributorService {
   }
 
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
-  private async deleteVCInvitations(actorID: string) {
+  /** @returns the IDs of the Space RoleSets the deleted invitations were on */
+  private async deleteVCInvitations(actorID: string): Promise<string[]> {
     const invitations = await this.entityManager.find(Invitation, {
       where: { invitedActorID: actorID },
+      relations: { roleSet: true },
     });
+    const spaceRoleSetIDs: string[] = [];
     for (const invitation of invitations) {
+      if (invitation.roleSet?.type === RoleSetType.SPACE) {
+        spaceRoleSetIDs.push(invitation.roleSet.id);
+      }
       if (invitation.authorization) {
         await this.authorizationPolicyService.delete(invitation.authorization);
       }
       await this.entityManager.remove(invitation);
     }
+    return spaceRoleSetIDs;
   }
 }

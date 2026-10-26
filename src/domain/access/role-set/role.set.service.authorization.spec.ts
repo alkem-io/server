@@ -206,6 +206,114 @@ describe('RoleSetAuthorizationService', () => {
     });
   });
 
+  describe('Platform Support rules on an organization role set', () => {
+    // The two rules the organization authorization emits for Platform
+    // Support: the membership privilege cascades, the direct invite does not.
+    const membershipRule = {
+      grantedPrivileges: [
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP,
+      ],
+      criterias: [
+        { type: AuthorizationCredential.PLATFORM_SUPPORT, resourceID: '' },
+      ],
+      cascade: true,
+      name: 'support-membership',
+    };
+    const inviteRule = {
+      grantedPrivileges: [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE],
+      criterias: [
+        { type: AuthorizationCredential.PLATFORM_SUPPORT, resourceID: '' },
+      ],
+      cascade: false,
+      name: 'support-invite',
+    };
+
+    it('reaches the invitations, email invitations and applications with the membership privilege only', async () => {
+      // The real cascade filter, so a non-cascading rule leaking to the
+      // children would surface here.
+      const realPolicyService = Object.create(
+        AuthorizationPolicyService.prototype
+      ) as AuthorizationPolicyService;
+      const inherit = (child: any, parent: any) =>
+        realPolicyService.inheritParentAuthorization(child, parent);
+
+      const roleSet = {
+        id: 'rs-1',
+        roles: [],
+        applications: [{ id: 'app-1', authorization: { id: 'a' } }],
+        invitations: [{ id: 'inv-1', authorization: { id: 'i' } }],
+        platformInvitations: [{ id: 'pinv-1', authorization: { id: 'p' } }],
+        license: { id: 'lic-1' },
+        authorization: {
+          id: 'auth-rs',
+          credentialRules: [],
+          privilegeRules: [],
+        },
+      } as any;
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(roleSet);
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockImplementation(inherit);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as Mock
+      ).mockImplementation((auth, rules) => {
+        auth.credentialRules.push(...rules);
+        return auth;
+      });
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mockImplementation((auth, rules) => {
+        auth.privilegeRules.push(...rules);
+        return auth;
+      });
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockReturnValue([]);
+      (
+        applicationAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockImplementation(async (app, parent) =>
+        inherit(app.authorization, parent)
+      );
+      (
+        invitationAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockImplementation(async (inv, parent) =>
+        inherit(inv.authorization, parent)
+      );
+      (
+        platformInvitationAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockImplementation(async (pinv, parent) =>
+        inherit(pinv.authorization, parent)
+      );
+
+      const [roleSetAuthorization, ...children] =
+        await service.applyAuthorizationPolicy(
+          'rs-1',
+          { id: 'auth-org', credentialRules: [], privilegeRules: [] } as any,
+          [membershipRule, inviteRule]
+        );
+
+      const roleSetGrants = roleSetAuthorization.credentialRules.flatMap(
+        rule => rule.grantedPrivileges
+      );
+      expect(roleSetGrants).toContain(
+        AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP
+      );
+      expect(roleSetGrants).toContain(
+        AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
+      );
+
+      expect(children).toHaveLength(3);
+      for (const child of children) {
+        const grants = child.credentialRules.flatMap(
+          rule => rule.grantedPrivileges
+        );
+        expect(grants).toEqual([
+          AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP,
+        ]);
+      }
+    });
+  });
+
   describe('applyAuthorizationPolicyOnInvitationsApplications', () => {
     it('should throw when invitations are not loaded', async () => {
       const mockRoleSet = {

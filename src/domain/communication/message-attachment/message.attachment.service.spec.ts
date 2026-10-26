@@ -6,7 +6,6 @@ import { createMock } from '@golevelup/ts-vitest';
 import { ConfigService } from '@nestjs/config';
 import { FileServiceAdapterException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { IRoom } from '../room/room.interface';
 import {
@@ -41,7 +40,6 @@ const makeDocument = (values: Partial<IDocument> = {}): IDocument =>
 
 describe('MessageAttachmentService', () => {
   const storage = createMock<StorageBucketService>();
-  const aggregators = createMock<StorageAggregatorResolverService>();
   const rooms = createMock<RoomResolverService>();
   const documentRepository = { find: vi.fn(), findOne: vi.fn() };
   const conversationRepository = { findOne: vi.fn() };
@@ -73,7 +71,6 @@ describe('MessageAttachmentService', () => {
     service = new MessageAttachmentService(
       { get: () => 'matrix' } as unknown as ConfigService<AlkemioConfig, true>,
       storage,
-      aggregators,
       rooms,
       conversationRepository as any,
       documentRepository as any,
@@ -222,23 +219,34 @@ describe('MessageAttachmentService', () => {
     expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
   });
 
-  it('comment media uses the existing callout bucket', async () => {
-    rooms.getCalloutForRoom.mockResolvedValue({ id: 'callout' } as any);
-    aggregators.getStorageAggregatorForCallout.mockResolvedValue({
-      directStorage: bucket,
-    } as any);
-    await service.prepareInboundAttachments(
-      { ...room, type: RoomType.CALLOUT },
-      'alice',
-      [raw]
+  it('comment media goes to the bucket of the callout or post it comments on', async () => {
+    const calloutBucket = { ...bucket, id: 'callout-profile' };
+    rooms.getStorageBucketForCommentRoom.mockResolvedValue(
+      calloutBucket as any
+    );
+    const calloutRoom = { ...room, type: RoomType.CALLOUT };
+    await service.prepareInboundAttachments(calloutRoom, 'alice', [raw]);
+    expect(rooms.getStorageBucketForCommentRoom).toHaveBeenCalledWith(
+      calloutRoom
     );
     expect(storage.moveDocumentToBucket).toHaveBeenCalledWith(
-      'conversation',
+      'callout-profile',
       provider,
       'alice',
       'matrix',
       expect.anything()
     );
+  });
+
+  it('leaves comment media unavailable when the room has no parent bucket', async () => {
+    rooms.getStorageBucketForCommentRoom.mockResolvedValue(undefined);
+    await service.prepareInboundAttachments(
+      { ...room, type: RoomType.POST },
+      'alice',
+      [raw]
+    );
+    expect(storage.moveDocumentToBucket).not.toHaveBeenCalled();
+    expect(storage.copyDocumentToBucket).not.toHaveBeenCalled();
   });
 });
 

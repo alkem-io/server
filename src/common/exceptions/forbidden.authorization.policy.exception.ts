@@ -10,8 +10,9 @@ export class ForbiddenAuthorizationPolicyException extends BaseException {
     error: string,
     public checkedPrivilege: AuthorizationPrivilege,
     public authPolicyId: string,
-    public userId: string
+    public userId: string,
+    status: AlkemioErrorStatus = AlkemioErrorStatus.FORBIDDEN_POLICY
   ) {
-    super(error, LogContext.AUTH, AlkemioErrorStatus.FORBIDDEN_POLICY);
+    super(error, LogContext.AUTH, status);
   }
 }

@@ -13,6 +13,7 @@
     "specs",
     "docs",
     "**/*spec.ts",
+    "src/domain/common/memo/memo.pdf.test-helper.ts",
     "vitest.config.ts"
   ]
 }

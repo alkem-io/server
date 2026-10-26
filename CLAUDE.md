@@ -109,15 +109,18 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 1. Start dependencies: `pnpm run start:services` (PostgreSQL 17.5, RabbitMQ, Redis, Ory Kratos/Oathkeeper)
 2. Run migrations: `pnpm run migration:run`
 3. Start server: `pnpm start:dev`
-4. Access GraphQL Playground at `/graphiql`
-5. Stop services: `docker compose -f quickstart-services.yml down`
+4. Dev accounts seed themselves: the one-shot `dev-seed-roles` compose service waits (up to `DEV_SEED_WAIT_SECONDS`, default 3600) for the server, then registers them. Re-run by hand with `pnpm run dev:seed-roles` (idempotent)
+5. Access GraphQL Playground at `/graphiql`
+6. Stop services: `docker compose -f quickstart-services.yml down`
 
-Full wipe and re-seed: `bash .scripts/reset-db.sh` (7 steps, ~3 min).
+Full wipe and re-seed: `bash .scripts/reset-db.sh` (6 steps, ~3 min).
 
 ### Dev accounts and roles
 
-`.scripts/reset-db.sh` step 7 runs `.scripts/dev-seed-roles.sh`, which creates
-loggable accounts for the platform roles. All share `AUTH_ADMIN_PASSWORD` from
+The `dev-seed-roles` service in `quickstart-services.yml` runs
+`.scripts/dev-seed-roles.sh` on every `start:services` (`reset-db.sh` step 6
+waits for it). It registers `admin@alkem.io` if needed and creates loggable
+accounts for the platform roles. All share `AUTH_ADMIN_PASSWORD` from
 `.env`:
 
 | Account | Role |

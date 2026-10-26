@@ -350,6 +350,121 @@ describe('UserResolverFields', () => {
     });
   });
 
+  describe('hostedResources', () => {
+    const hosted = {
+      virtualContributors: [{ id: 'vc-1' }],
+      innovationPacks: [],
+      innovationHubs: [],
+    };
+    const user = { id: 'user-1', authorization: { id: 'auth-1' } } as any;
+    const account = { id: 'acc-1', authorization: { id: 'account-auth' } };
+    let accountLookupService: { getHostedResourcesForViewer: Mock };
+
+    beforeEach(() => {
+      accountLookupService = (resolver as any).accountLookupService;
+      accountLookupService.getHostedResourcesForViewer.mockResolvedValue(
+        hosted
+      );
+      userService.getAccount.mockResolvedValue(account);
+    });
+
+    it('resolves the deleted-user sentinel to null without any lookup', async () => {
+      const result = await resolver.hostedResources(
+        DELETED_USER_SENTINEL as any,
+        { actorID: 'viewer-1', credentials: [] } as any
+      );
+
+      expect(result).toBeNull();
+      expect(userService.getAccount).not.toHaveBeenCalled();
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['an empty actorID', { actorID: '', credentials: [] }],
+      [
+        'an anonymous actor',
+        { actorID: 'anon', isAnonymous: true, credentials: [] },
+      ],
+    ])('resolves %s to null without loading the account', async (_label, actorContext) => {
+      const result = await resolver.hostedResources(user, actorContext as any);
+
+      expect(result).toBeNull();
+      expect(userService.getAccount).not.toHaveBeenCalled();
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).not.toHaveBeenCalled();
+    });
+
+    it('gives the user themself the FULL scope', async () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = await resolver.hostedResources(user, {
+        actorID: 'user-1',
+        credentials: [],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'FULL');
+      expect(result).toBe(hosted);
+    });
+
+    it('gives a holder of READ_USER_PII on the user the FULL scope', async () => {
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'auth-1' &&
+          privilege === AuthorizationPrivilege.READ_USER_PII
+      );
+
+      await resolver.hostedResources(user, {
+        actorID: 'viewer-1',
+        credentials: [],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'FULL');
+    });
+
+    it('gives a platform role holding its privilege on the account the FULL scope', async () => {
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor: unknown, policy: any, privilege: AuthorizationPrivilege) =>
+          policy?.id === 'account-auth' &&
+          privilege === AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT
+      );
+
+      await resolver.hostedResources(user, {
+        actorID: 'viewer-1',
+        credentials: [],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'FULL');
+    });
+
+    it('gives any other registered viewer the REGISTERED scope — never the associate tier', async () => {
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = await resolver.hostedResources(user, {
+        actorID: 'viewer-1',
+        credentials: [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+            resourceID: 'user-1',
+          },
+        ],
+      } as any);
+
+      expect(
+        accountLookupService.getHostedResourcesForViewer
+      ).toHaveBeenCalledWith('acc-1', 'REGISTERED');
+      expect(result).toBe(hosted);
+    });
+  });
+
   describe('authentication', () => {
     it('should return full auth details for the current actor', async () => {
       const user = { id: 'user-1', email: 'test@example.com' } as any;

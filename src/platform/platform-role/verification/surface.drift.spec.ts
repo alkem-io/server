@@ -82,9 +82,12 @@ function scanFile(repoRelativePath: string): FileScan {
   const hasGateCall = GATE_CALL_PATTERN.test(content);
   const scannedPrivileges = new Set<AuthorizationPrivilege>();
   for (const privilege of SCANNED_PRIVILEGES) {
-    if (
-      content.includes(`AuthorizationPrivilege.${privilegeEnumKey(privilege)}`)
-    ) {
+    // Whole-token match: `ROLESET_ENTRY_ROLE_INVITE` must not match inside
+    // `ROLESET_ENTRY_ROLE_INVITE_ACCEPT`.
+    const token = new RegExp(
+      `AuthorizationPrivilege\\.${privilegeEnumKey(privilege)}\\b`
+    );
+    if (token.test(content)) {
       scannedPrivileges.add(privilege);
     }
   }

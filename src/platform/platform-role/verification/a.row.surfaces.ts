@@ -104,11 +104,9 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // `removeRoleFromUser` and their organization-target twins),
   // `role.set.resolver.mutations.ts` — SPACE/ORGANIZATION role-sets only
   // (`validateRoleSetTypeOrFail` rejects PLATFORM), never A1/A2's surface.
-  // `PLATFORM_ROLES_ASSIGN` appears there only as the `privilegeRequired`
-  // variable's initial value, immediately overwritten by the
-  // `roleSet.type` switch for every reachable case (SPACE → `GRANT` or
-  // `ROLESET_ENTRY_ROLE_ASSIGN`; ORGANIZATION → `GRANT`) — a dead literal,
-  // not a live PLATFORM-role gate, and outside this census's 21 rows.
+  // Their Platform Support path on organizations is censused under A6 at
+  // its enforcement location, the shared Community-tab gate; the resolver
+  // itself checks only baseline verbs and the entry privilege.
   'src/domain/access/role-set/role.set.resolver.mutations.ts',
   // A20/A20b (sec-server-10 fix): `admin.authorization.resolver.queries.ts`
   // NAMES `actorsWithCredential`/`usersWithAuthorizationCredential`, but the
@@ -178,7 +176,23 @@ export const INDIRECT_ENFORCEMENT_FILES: readonly string[] = [
   // would expose every account id platform-wide.
   'src/domain/community/user/user.resolver.fields.ts',
   'src/domain/community/organization/organization.resolver.fields.ts',
+  // The role set's pending-invitation list reads (`invitations`,
+  // `platformInvitations`) key on ROLESET_ENTRY_ROLE_INVITE, which Platform
+  // Support holds directly on organization role sets so the Community tab can
+  // show what is pending. A read affordance beside the censused A6 invite
+  // action, not an A-row of its own — same disposition as the list reads
+  // above. (`applications` is censused: its gate runs in the shared
+  // Community-tab gate.)
+  'src/domain/access/role-set/role.set.resolver.fields.ts',
 ];
+
+/** The shared Community-tab gate — where Platform Support's membership
+ * privilege is enforced for every organization Community-tab surface. */
+const ORG_COMMUNITY_GATE_FILE =
+  'src/domain/access/role-set/org.community.gate.service.ts';
+
+const ROOT_CASCADE_COMMUNITY_REASON =
+  'Pre-existing reach, recorded rather than ruled on (the open QA finding census-deletePlatformInvitation covers this root-cascade class): the inheritance root cascades full CRUD into every organization tree, so Content Full Access satisfies the plain DELETE/UPDATE owner branch (revoke an invitation, reject an application) exactly as before the Community-tab dual path existed. It gains no GRANT, invite or entry privilege, so it still cannot assign, remove, approve, invite or resend, and its actions are never audited as Support actions.';
 
 export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // ===== A1 — assign/revoke a PLATFORM role =====================
@@ -595,6 +609,80 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       },
       intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
     },
+    // The organization Community tab: Platform Support acts with an
+    // organization admin's results — promote, demote, remove an existing
+    // associate, decide applications, revoke invitations, read the
+    // applications — through PLATFORM_SUPPORT_ORG_MEMBERSHIP, enforced by
+    // the shared gate (the dual path beside each surface's own base
+    // privilege). Every Support-path call writes an
+    // `organization_administration` audit row. Assigning the entry role, or
+    // any role to a non-member, additionally requires
+    // ROLESET_ENTRY_ROLE_ASSIGN, which Support never holds — no direct add
+    // (not modelled: GateExpr has no `allOf`).
+    ...(
+      [
+        ['assignRoleToUser', 'graphql-mutation', AuthorizationPrivilege.GRANT],
+        ['assignRole', 'graphql-mutation', AuthorizationPrivilege.GRANT],
+        [
+          'removeRoleFromUser',
+          'graphql-mutation',
+          AuthorizationPrivilege.GRANT,
+        ],
+        ['removeRole', 'graphql-mutation', AuthorizationPrivilege.GRANT],
+        ['applications', 'graphql-field', AuthorizationPrivilege.GRANT],
+        ['deleteInvitation', 'graphql-mutation', AuthorizationPrivilege.DELETE],
+        [
+          'deletePlatformInvitation',
+          'graphql-mutation',
+          AuthorizationPrivilege.DELETE,
+        ],
+        [
+          'eventOnApplication',
+          'graphql-mutation',
+          AuthorizationPrivilege.UPDATE,
+        ],
+      ] as const
+    ).map(
+      ([member, kind, basePrivilege]): SurfaceRef => ({
+        file: ORG_COMMUNITY_GATE_FILE,
+        member,
+        kind,
+        tree: 'organization',
+        gate: {
+          anyOf: [
+            basePrivilege,
+            AuthorizationPrivilege.PLATFORM_SUPPORT_ORG_MEMBERSHIP,
+          ],
+        },
+        intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+        ...(basePrivilege === AuthorizationPrivilege.GRANT
+          ? {}
+          : {
+              acceptedExtraReachers: [
+                {
+                  credential:
+                    AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+                  reason: ROOT_CASCADE_COMMUNITY_REASON,
+                },
+              ],
+            }),
+      })
+    ),
+    // Inviting (optionally offering Admin/Owner, honoured on accept) and
+    // resending an email invitation keep their own ROLESET_ENTRY_ROLE_INVITE
+    // gate, which Support holds directly on organization role sets.
+    ...(
+      ['inviteForEntryRoleOnRoleSet', 'resendPlatformInvitation'] as const
+    ).map(
+      (member): SurfaceRef => ({
+        file: 'src/domain/access/role-set/role.set.resolver.mutations.membership.ts',
+        member,
+        kind: 'graphql-mutation',
+        tree: 'organization',
+        gate: { requires: AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE },
+        intendedOwners: [AuthorizationCredential.PLATFORM_SUPPORT],
+      })
+    ),
   ],
 
   // ===== A7 — edit an org-owned pack/hub + CRUD its templates =====

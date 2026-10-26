@@ -2,6 +2,10 @@ import { LogContext } from '@common/enums/logging.context';
 import { RoomType } from '@common/enums/room.type';
 import { NotSupportedException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import {
+  ATTACHMENT_ONLY_MESSAGE_TEXT,
+  isAttachmentOnlyMessage,
+} from '@domain/communication/message-attachment/attachment.only.message';
 import { Injectable } from '@nestjs/common';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
@@ -33,7 +37,9 @@ export class MessageDetailsService {
       roomID: room.id,
       messageID: message.id,
       room: room,
-      message: message.message,
+      message: isAttachmentOnlyMessage(message.message, message.rawAttachments)
+        ? ATTACHMENT_ONLY_MESSAGE_TEXT
+        : message.message,
       parent: roomParentEntityInfo,
     };
   }

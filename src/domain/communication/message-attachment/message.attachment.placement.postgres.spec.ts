@@ -3,17 +3,16 @@ import { createServer, request as httpRequest, type Server } from 'node:http';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { MimeFileType } from '@common/enums/mime.file.type';
+import { ProfileType } from '@common/enums/profile.type';
 import { RoomType } from '@common/enums/room.type';
-import { SpaceLevel } from '@common/enums/space.level';
-import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -22,7 +21,6 @@ import { Tagset } from '@domain/common/tagset/tagset.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Conversation } from '@domain/communication/conversation/conversation.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { Space } from '@domain/space/space/space.entity';
 import { Document } from '@domain/storage/document/document.entity';
 import type { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -36,7 +34,6 @@ import type { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AddContentMetadataToFile1778198400000 } from '@src/migrations/1778198400000-AddContentMetadataToFile';
 import type { AlkemioConfig } from '@src/types/alkemio.config';
 import axios from 'axios';
@@ -122,12 +119,6 @@ describeRealServices(
       const messages = new MessageAttachmentService(
         config,
         bucket,
-        new StorageAggregatorResolverService(
-          undefined as never,
-          database.manager,
-          database.getRepository(StorageAggregator),
-          logger
-        ),
         new RoomResolverService(database.manager, logger),
         database.getRepository(Conversation),
         database.getRepository(Document),
@@ -814,86 +805,73 @@ describeRealServices(
       );
     });
 
-    it('maps callout and post rooms to the same persisted Space bucket and reuses one reference association', async () => {
-      const target = await ownedBucket(StorageAggregatorType.SPACE);
+    it('maps callout and post rooms to the bucket of what they comment on, one association per bucket', async () => {
+      const profileBucket = async (type: ProfileType) => {
+        const { bucket, actorID } = await ownedBucket(
+          StorageAggregatorType.SPACE
+        );
+        const profile = await database
+          .getRepository(Profile)
+          .save({ displayName: 'commented on', type, storageBucket: bucket });
+        return { bucket, profile, actorID };
+      };
       const calloutsSet = await database
         .getRepository(CalloutsSet)
         .save({ type: CalloutsSetType.COLLABORATION });
-      const collaboration = await database
-        .getRepository(Collaboration)
-        .save({ calloutsSet });
-      await database.getRepository(Space).save({
-        nameID: randomUUID(),
-        collaboration,
-        storageAggregator: target.owner,
-        level: SpaceLevel.L0,
-        visibility: SpaceVisibility.ACTIVE,
-        settings: {},
-        platformRolesAccess: { roles: [] },
-      });
-      const calloutRoom = await database
-        .getRepository(Room)
-        .save(new Room('callout comments', RoomType.CALLOUT));
-      const anotherCalloutRoom = await database
-        .getRepository(Room)
-        .save(new Room('other callout comments', RoomType.CALLOUT));
-      const postRoom = await database
-        .getRepository(Room)
-        .save(new Room('post comments', RoomType.POST));
-      const callout = await database.getRepository(Callout).save({
-        nameID: randomUUID(),
-        sortOrder: 0,
-        settings: {},
-        calloutsSet,
-        comments: calloutRoom,
-      });
-      await database.getRepository(Callout).save({
-        nameID: randomUUID(),
-        sortOrder: 1,
-        settings: {},
-        calloutsSet,
-        comments: anotherCalloutRoom,
-      });
+      const comments = (name: string, type: RoomType) =>
+        database.getRepository(Room).save(new Room(name, type));
+      const callout = async (sortOrder: number) => {
+        const owner = await profileBucket(ProfileType.CALLOUT_FRAMING);
+        const room = await comments(`callout ${sortOrder}`, RoomType.CALLOUT);
+        const saved = await database.getRepository(Callout).save({
+          nameID: randomUUID(),
+          sortOrder,
+          settings: {},
+          calloutsSet,
+          comments: room,
+          framing: { type: CalloutFramingType.NONE, profile: owner.profile },
+        });
+        return { ...owner, room, callout: saved };
+      };
+      const first = await callout(0);
+      const second = await callout(1);
+      const postOwner = await profileBucket(ProfileType.POST);
+      const postRoom = await comments('post comments', RoomType.POST);
       const post = await database.getRepository(Post).save({
         nameID: randomUUID(),
-        createdBy: target.actorID,
+        createdBy: first.actorID,
         comments: postRoom,
+        profile: postOwner.profile,
       });
       await database
         .getRepository(CalloutContribution)
-        .save({ callout, post, sortOrder: 0 });
-      for (const room of [calloutRoom, postRoom, anotherCalloutRoom]) {
-        expect((await placement.getTargetBucketForRoom(room))?.id).toBe(
+        .save({ callout: first.callout, post, sortOrder: 0 });
+      const targets = [first, { ...postOwner, room: postRoom }, second];
+      for (const target of targets) {
+        expect((await placement.getTargetBucketForRoom(target.room))?.id).toBe(
           target.bucket.id
         );
       }
+
       const staged = await stage();
-      await deliver(
-        { ...target, room: calloutRoom },
-        staged.mediaID,
-        'original-space-name.bin'
-      );
-      const first = await load(staged.document.id);
-      await deliver(
-        { ...target, room: postRoom },
-        staged.mediaID,
-        'post-rename.bin'
-      );
-      await deliver(
-        { ...target, room: anotherCalloutRoom },
-        staged.mediaID,
-        'other-rename.bin'
-      );
+      for (const target of targets) {
+        await deliver(
+          { ...target, actorID: first.actorID },
+          staged.mediaID,
+          'comment-image.bin'
+        );
+      }
       const rows = await associations(staged.mediaID);
-      expect(rows).toHaveLength(1);
-      expect(rows[0].id).toBe(first.id);
-      expect(rows[0].storageBucket.id).toBe(target.bucket.id);
-      expect(rows[0].displayName).toBe('original-space-name.bin');
-      expect(rows[0].createdBy).toBe(target.actorID);
-      expect(
-        rows[0].authorization?.credentialRules.map(rule => rule.name)
-      ).toContain('credentialRule-documentCreatedBy');
-      expect(rows[0].tagset.authorization?.id).toBeTruthy();
+      expect(rows.map(row => row.storageBucket.id).sort()).toEqual(
+        targets.map(target => target.bucket.id).sort()
+      );
+      for (const row of rows) {
+        expect(row.createdBy).toBe(first.actorID);
+        expect(
+          row.authorization?.credentialRules.map(rule => rule.name)
+        ).toContain('credentialRule-documentCreatedBy');
+        expect(row.tagset.authorization?.id).toBeTruthy();
+      }
     });
 
     it('rejects stale staging cleanup after MOVE and retains the authorized row and bytes', async () => {
