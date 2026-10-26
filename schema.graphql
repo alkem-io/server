@@ -4500,6 +4500,22 @@ type LookupQueryResults {
 }
 
 """
+Credentials for one Matrix chat session belonging to the current user's own actor.
+"""
+type MatrixSessionCredentials {
+  """
+  A LIVE Matrix access token for this session, returned once per mint. It is not stored by the platform and cannot be re-read.
+  """
+  accessToken: String!
+  """
+  The Matrix device id Synapse generated for this session. A fresh device per mint.
+  """
+  deviceId: String!
+  """The actor's Matrix user id (MXID), e.g. `@uuid:matrix.host`."""
+  userId: String!
+}
+
+"""
 Metadata for one MCP API key. The key value itself is never exposed here.
 """
 type McpApiKey {
@@ -5152,6 +5168,10 @@ type Mutation {
   Migrates pending legacy Whiteboard documents and independently normalizes every legacy Whiteboard contribution default, including defaults stored by Callout templates. Idempotent: repeated calls process only unmigrated documents and non-canonical defaults.
   """
   migrateLegacyWhiteboardContent: CollaborationMigrationResult!
+  """
+  Mint a Matrix access token for the current user's own chat session. Takes no subject: the actor is the authenticated caller.
+  """
+  mintMatrixSession: MatrixSessionCredentials!
   """
   Mint a new MCP API key for the current user. Returns the plaintext exactly once.
   """

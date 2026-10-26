@@ -16,6 +16,7 @@ import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { MatrixSessionModule } from '@domain/communication/matrix-session/matrix.session.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
@@ -233,6 +234,7 @@ class SchemaBootstrapStubModule {}
     TaskGraphqlModule,
     ActivityFeedModule,
     DevicePushTokenModule,
+    MatrixSessionModule,
     PlatformRoleModule,
     TemplateApplierModule,
     AuthResetSubscriberModule,

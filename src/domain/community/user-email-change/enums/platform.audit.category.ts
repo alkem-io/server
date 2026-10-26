@@ -41,4 +41,13 @@ export enum PlatformAuditCategory {
   // the effect has committed. FAIL-OPEN — a failed write is logged at error
   // level and the action's result stands.
   ORGANIZATION_ADMINISTRATION = 'organization_administration',
+  // Matrix chat session mint (workspace#091): one row per minted Matrix
+  // session, written FAIL-CLOSED — a mint the register cannot record is not
+  // handed out (FR-010). Self-service only; no admin writer exists, so
+  // `initiatorRole` is always `SELF` and `subjectUserId` ==
+  // `initiatorUserId` by construction. A non-human actor (virtual
+  // contributor, assistant) can mint for its own ghost, so that uuid is an
+  // **actor** id and may have no `user` row — accepted, workspace#091
+  // FR-009/D10. Reuses the `key_minted` outcome (D6).
+  MATRIX_SESSION = 'matrix_session',
 }

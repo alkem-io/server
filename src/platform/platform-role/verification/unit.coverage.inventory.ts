@@ -168,6 +168,16 @@ export const AUDIT_WRITER_COVERAGE: Record<
     writeFailsSpec:
       'src/platform-admin/organization-administration-audit/organization.administration.audit.service.spec.ts',
   },
+  [PlatformAuditCategory.MATRIX_SESSION]: {
+    // 091: fail-closed — a mint the register cannot record is a mint we do not
+    // hand out (FR-010). Both specs are the same file: T026 case 1 is the
+    // write-succeeds proof, case 3 the write-fails one.
+    failMode: 'fail-closed',
+    writeSucceedsSpec:
+      'src/domain/communication/matrix-session/matrix.session.service.spec.ts',
+    writeFailsSpec:
+      'src/domain/communication/matrix-session/matrix.session.service.spec.ts',
+  },
 };
 
 // ---------------------------------------------------------------------------
