@@ -115,3 +115,17 @@ jobs:
       - name: Roll the auth-reset worker to the same image
         run: |
           kubectl patch deployment alkemio-auth-reset-worker-deployment -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"alkemio-server-secret"}],"containers":[{"name":"alkemio-auth-reset-worker","image":"${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}"}]}}}}'
+
+      - name: Roll the MCP server to the same image when present
+        run: |
+          set -euo pipefail
+          deployment=$(kubectl -n default get deployment alkemio-server-mcp-deployment --ignore-not-found -o name)
+          if [[ -z "$deployment" ]]; then
+            echo 'Dedicated MCP deployment is not installed; skipping its image roll.'
+          elif [[ "$deployment" == 'deployment.apps/alkemio-server-mcp-deployment' ]]; then
+            kubectl -n default patch deployment alkemio-server-mcp-deployment -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"alkemio-server-secret"}],"containers":[{"name":"alkemio-server-mcp","image":"${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}"}]}}}}'
+            kubectl -n default rollout status deployment/alkemio-server-mcp-deployment --timeout=180s
+          else
+            echo 'Unexpected dedicated MCP deployment lookup response.' >&2
+            exit 1
+          fi

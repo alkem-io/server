@@ -27,7 +27,7 @@ const prepared = {
   summary: [{ op: 'addText' as const, elementIds: ['created'] }],
 };
 
-function harness() {
+function harness(imported = false) {
   const messages: ChildMessage[] = [];
   let lost = () => {};
   const session = {
@@ -39,6 +39,10 @@ function harness() {
     doc: {},
   };
   const prepare = vi.fn().mockReturnValue(prepared);
+  const importScene = vi.fn().mockReturnValue({
+    ...prepared,
+    summary: [{ op: 'importScene', elementIds: ['created'] }],
+  });
   const exit = vi.fn();
   const newSession = vi.fn((_grant, loss) => {
     lost = loss;
@@ -48,9 +52,23 @@ function harness() {
     message => messages.push(message),
     exit,
     newSession,
-    prepare
+    prepare,
+    importScene
   );
-  const command = start();
+  const command = imported
+    ? {
+        type: 'START' as const,
+        childLaunchGrant: start().childLaunchGrant,
+        import: {
+          scene: {
+            type: 'excalidraw' as const,
+            version: 2 as const,
+            elements: [{ type: 'rectangle' }],
+          },
+          targetFileIDs: {},
+        },
+      }
+    : start();
   const go = () =>
     child.receive({
       type: 'GO',
@@ -63,6 +81,7 @@ function harness() {
     go,
     session,
     prepare,
+    importScene,
     exit,
     newSession,
     messages,
@@ -137,6 +156,78 @@ async function withConnectedChild(
 }
 
 describe('whiteboard-executor child publication boundary', () => {
+  it('dispatches import only after self-join and resends identical bytes without preparing twice', async () => {
+    const h = harness(true);
+    let joined!: () => void;
+    h.session.connect.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          joined = resolve;
+        })
+    );
+    h.session.requestDurability.mockRejectedValueOnce(
+      new Error('connection lost')
+    );
+    h.child.receive(h.command);
+    expect(h.importScene).not.toHaveBeenCalled();
+    joined();
+    await flush();
+    expect(h.prepare).not.toHaveBeenCalled();
+    expect(h.importScene).toHaveBeenCalledExactlyOnceWith(
+      h.session,
+      h.command.import
+    );
+    expect(h.messages.map(m => m.type)).toEqual(['SYNCED', 'PREPARED']);
+    expect(h.session.resend).not.toHaveBeenCalled();
+    expect(JSON.stringify(h.messages)).not.toContain('scene');
+    h.go();
+    await flush();
+    await flush();
+    expect(h.importScene).toHaveBeenCalledOnce();
+    expect(h.session.resend.mock.calls).toEqual([
+      [prepared.update],
+      [prepared.update],
+    ]);
+    expect(h.messages.at(-1)).toMatchObject({
+      type: 'DURABLE',
+      result: { summary: [{ op: 'importScene', elementIds: ['created'] }] },
+    });
+  });
+  it.each([
+    'invalid',
+    'stale-go',
+    'cancel',
+    'room-loss',
+  ])('import %s publishes zero bytes', async reason => {
+    const h = harness(true);
+    if (reason === 'invalid')
+      h.importScene.mockReturnValueOnce({
+        ok: false,
+        error: { category: 'invalid-scene' },
+      } as any);
+    h.child.receive(h.command);
+    await flush();
+    if (reason === 'stale-go')
+      h.child.receive({
+        type: 'GO',
+        jobId: h.command.childLaunchGrant.jobId,
+        generationId: 2,
+      });
+    if (reason === 'cancel')
+      h.child.receive({
+        type: 'CANCEL',
+        jobId: h.command.childLaunchGrant.jobId,
+        generationId: 1,
+      });
+    if (reason === 'room-loss') h.loss();
+    h.go();
+    await flush();
+    expect(h.session.resend).not.toHaveBeenCalled();
+    expect(h.importScene).toHaveBeenCalledOnce();
+    if (reason === 'invalid')
+      expect(h.messages.map(m => m.type)).toEqual(['SYNCED', 'FAILED']);
+    expect(h.exit).toHaveBeenCalledOnce();
+  });
   it.each([
     [1008, 'document deleted', 'forbidden'],
     [1013, 'room-capacity-reached', 'cancelled-before-go'],
