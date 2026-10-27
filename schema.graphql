@@ -245,6 +245,7 @@ enum AuthorizationPrivilege {
   PLATFORM_ROLES_ASSIGN
   PLATFORM_SETTINGS_ADMIN
   PLATFORM_SUPPORT_LISTS_READ
+  PLATFORM_SUPPORT_ORG_MEMBERSHIP
   PLATFORM_SUPPORT_ORG_RESOURCES
   PLATFORM_USERS_ADMIN
   PUBLIC_SHARE
@@ -964,12 +965,14 @@ enum SearchVisibility {
 }
 
 """
-The widgets available for the Space sidepanel, per InnovationFlow state (tab).
+The widgets available for the Space sidepanel, per InnovationFlow state (tab/phase).
 """
 enum SidebarWidget {
   ABOUT
+  ACTIVITY
   ADD_USER
   APPLICATION_BUTTON
+  COMMUNITY
   CONTACT_LEADS
   CREATE_POST
   CREATE_SUBSPACE
@@ -1346,6 +1349,34 @@ Accurate per-kind total, independent of whether the itemized blocker list was tr
 type AccountDeletionBlockerTotal {
   kind: AccountDeletionBlockerKind!
   total: Int!
+}
+
+"""A hosted Innovation Hub card: its identity, nameID and profile only."""
+type AccountHostedInnovationHub {
+  """The ID of the Innovation Hub."""
+  id: UUID!
+  """The nameID of the Innovation Hub."""
+  nameID: NameID!
+  """The profile of this Innovation Hub."""
+  profile: Profile!
+}
+
+"""Resources hosted by an Account, as the current viewer may see them."""
+type AccountHostedResources {
+  """The Innovation Hubs hosted by the Account."""
+  innovationHubs: [AccountHostedInnovationHub!]!
+  """Innovation Packs of the Account that the current viewer may see."""
+  innovationPacks: [InnovationPack!]!
+  """Virtual Contributors of the Account that the current viewer may see."""
+  virtualContributors: [AccountHostedVirtualContributor!]!
+}
+
+"""A hosted Virtual Contributor card: its identity and profile only."""
+type AccountHostedVirtualContributor {
+  """The ID of the Virtual Contributor."""
+  id: UUID!
+  """The public profile of this Virtual Contributor."""
+  profile: Profile!
 }
 
 type AccountLicensePlan {
@@ -2087,7 +2118,7 @@ type Callout {
   """
   reactionsSummary: CalloutReactionsSummary!
   """
-  The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned EMPTY to actors without UPDATE on the Callout, so an empty list is AMBIGUOUS by design: it means either that nothing is selected or that the selection is withheld from you, and the two are deliberately indistinguishable (workspace#084 AC6: a viewer must not learn which or how many spaces are hidden from them). Hold UPDATE and the list is exact. `framing.selection.mode` is always accurate.
+  The Callout Settings associated with this Callout. `framing.selection.selectedIds` is returned EMPTY to actors without UPDATE on the Callout, so an empty list is AMBIGUOUS by design: it means either that nothing is selected or that the selection is withheld from you, and the two are deliberately indistinguishable, because a viewer must not learn which or how many spaces are hidden from them. Hold UPDATE and the list is exact. `framing.selection.mode` is always accurate.
   """
   settings: CalloutSettings!
   """The sorting order for this Callout."""
@@ -4469,6 +4500,22 @@ type LookupQueryResults {
 }
 
 """
+Credentials for one Matrix chat session belonging to the current user's own actor.
+"""
+type MatrixSessionCredentials {
+  """
+  A LIVE Matrix access token for this session, returned once per mint. It is not stored by the platform and cannot be re-read.
+  """
+  accessToken: String!
+  """
+  The Matrix device id Synapse generated for this session. A fresh device per mint.
+  """
+  deviceId: String!
+  """The actor's Matrix user id (MXID), e.g. `@uuid:matrix.host`."""
+  userId: String!
+}
+
+"""
 Metadata for one MCP API key. The key value itself is never exposed here.
 """
 type McpApiKey {
@@ -5122,6 +5169,10 @@ type Mutation {
   """
   migrateLegacyWhiteboardContent: CollaborationMigrationResult!
   """
+  Mint a Matrix access token for the current user's own chat session. Takes no subject: the actor is the authenticated caller.
+  """
+  mintMatrixSession: MatrixSessionCredentials!
+  """
   Mint a new MCP API key for the current user. Returns the plaintext exactly once.
   """
   mintMcpApiKey(mintData: MintMcpApiKeyInput!): McpApiKeyMintResult!
@@ -5151,6 +5202,10 @@ type Mutation {
   Triggers a request to the backing AI Service to refresh the knowledge that is available to it.
   """
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
+  """
+  Bind a native device push token (FCM on Android, APNs on iOS) to the current user. If the token is already bound to another user, it is rebound to the caller.
+  """
+  registerDevicePushToken(registrationData: RegisterDevicePushTokenInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
@@ -5263,6 +5318,10 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
+  """
+  Unbind a native device push token from the current user. Unknown tokens, and tokens bound to another user, are no-ops.
+  """
+  unregisterDevicePushToken(registrationData: UnregisterDevicePushTokenInput!): Boolean!
   """
   Disable a push notification subscription for the current user. The subscription is retained but will not receive notifications until re-enabled.
   """
@@ -5479,6 +5538,8 @@ type Organization implements ActorFull & Groupable {
   group(ID: UUID!): UserGroup
   """Groups defined on this organization."""
   groups: [UserGroup!]
+  """Viewer-scoped hosted resources, null if anonymous. Single-profile use."""
+  hostedResources: AccountHostedResources
   """The ID of the Actor"""
   id: UUID!
   """Legal name - required if hosting an Space"""
@@ -7720,6 +7781,8 @@ type User implements ActorFull {
   """The email address for this User."""
   email: String!
   firstName: String!
+  """Viewer-scoped hosted resources, null if anonymous. Single-profile use."""
+  hostedResources: AccountHostedResources
   """The ID of the Actor"""
   id: UUID!
   """Can a message be sent to this User."""
@@ -10004,6 +10067,15 @@ input RefreshVirtualContributorBodyOfKnowledgeInput {
   virtualContributorID: UUID!
 }
 
+input RegisterDevicePushTokenInput {
+  """The native platform of the device: 'ios' or 'android'."""
+  platform: String!
+  """
+  The native push token for this device (FCM registration token on Android, APNs device token on iOS).
+  """
+  token: String!
+}
+
 input RemoveCommunityGuidelinesContentInput {
   """ID of the CommunityGuidelines that will be emptied"""
   communityGuidelinesID: UUID!
@@ -10309,6 +10381,11 @@ input TransferCalloutInput {
   calloutID: UUID!
   """The target CalloutsSet to which the Callout will be transferred."""
   targetCalloutsSetID: UUID!
+}
+
+input UnregisterDevicePushTokenInput {
+  """The native push token to unbind from the current user."""
+  token: String!
 }
 
 input UnsubscribeFromPushNotificationsInput {

@@ -15,7 +15,7 @@ export const MAX_MEMO_EDITOR_CONTENT_BYTES = 1_000_000;
 const assertWithinEditorContentLimit = (bytes: number) => {
   if (bytes > MAX_MEMO_EDITOR_CONTENT_BYTES)
     throw new ValidationException(
-      `Signing preview supports at most ${MAX_MEMO_EDITOR_CONTENT_BYTES.toLocaleString('en-US')} bytes of memo editor content`,
+      `Memo PDF supports at most ${MAX_MEMO_EDITOR_CONTENT_BYTES.toLocaleString('en-US')} bytes of memo editor content`,
       LogContext.MEMOS
     );
 };

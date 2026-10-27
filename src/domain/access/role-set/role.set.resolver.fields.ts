@@ -37,6 +37,7 @@ import {
   IVirtualContributorsInRoles,
 } from './dto/role.set.contributors.in.roles.interfaces';
 import { RoleSetRoleWithParentCredentials } from './dto/role.set.dto.role.with.parent.credentials';
+import { OrgCommunityGateService } from './org.community.gate.service';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
@@ -75,7 +76,8 @@ export class RoleSetResolverFields {
     private roleSetService: RoleSetService,
     private userService: UserService,
     private virtualActorLookupService: VirtualActorLookupService,
-    private authorizationService: AuthorizationService
+    private authorizationService: AuthorizationService,
+    private orgCommunityGate: OrgCommunityGateService
   ) {}
 
   // 027-platform-role-redesign (T051, A20/A20b, D9, sixth clarification
@@ -476,7 +478,8 @@ export class RoleSetResolverFields {
   // dialog has to see the outstanding invitations to avoid inviting the same
   // person twice. ROLESET_ENTRY_ROLE_INVITE is held by organization
   // admins/owners and Space admins (anyone who may assign may invite), by
-  // global admins/support on organizations, and by subspace admins only when
+  // Platform Support on organizations through its direct invite grant, and by
+  // subspace admins only when
   // the Space allows them to invite — never by plain members, and never via
   // the parent role set's READ, which every registered user (or every
   // registered user of a public Space) holds. Deliberate on BOTH role-set
@@ -511,16 +514,27 @@ export class RoleSetResolverFields {
   }
 
   // Pending applications carry the applicant's PII (their answers to the
-  // application form), so only those who decide them — GRANT holders — may
-  // read them. This is deliberately stricter than the invitation lists:
-  // being allowed to invite does not make someone an application decider.
-  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.GRANT)
+  // application form), so only those who decide them may read them: GRANT
+  // holders, and on an organization Platform Support through the shared
+  // Community-tab gate. This is deliberately stricter than the invitation
+  // lists: being allowed to invite does not make someone an application
+  // decider. A denied read throws, exactly as the privilege guard did — never
+  // an empty list.
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,
     description: 'Applications available for this RoleSet.',
   })
-  async applications(@Parent() roleSet: IRoleSet) {
+  async applications(
+    @CurrentActor() actorContext: ActorContext,
+    @Parent() roleSet: IRoleSet
+  ) {
+    this.orgCommunityGate.authorizeOrFail(
+      actorContext,
+      roleSet.authorization,
+      AuthorizationPrivilege.GRANT,
+      `read applications on roleSet: ${roleSet.id}`
+    );
     const apps = await this.roleSetService.getApplications(roleSet);
     return apps || [];
   }

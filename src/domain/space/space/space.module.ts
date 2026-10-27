@@ -36,6 +36,7 @@ import { SpaceAboutModule } from '../space.about/space.about.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
 import { SpaceLookupModule } from '../space.lookup/space.lookup.module';
 import { SpaceSettingsModule } from '../space.settings/space.settings.module';
+import { SpaceInvitationAcceptorsEventHandler } from './space.invitation.acceptors.event.handler';
 import { SpaceResolverSubscriptions } from './space.resolver.subscriptions';
 import { SpaceLicenseService } from './space.service.license';
 import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
@@ -83,6 +84,7 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
     SpaceResolverMutations,
     SpaceResolverSubscriptions,
     SpacePlatformRolesAccessService,
+    SpaceInvitationAcceptorsEventHandler,
   ],
   exports: [SpaceService, SpaceAuthorizationService, SpaceLicenseService],
 })

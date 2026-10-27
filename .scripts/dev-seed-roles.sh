@@ -6,6 +6,10 @@ set -euo pipefail
 #
 #   ./.scripts/dev-seed-roles.sh
 #
+# Also runs automatically as the `dev-seed-roles` service in
+# quickstart-services.yml (host network, SEED_WAIT_SECONDS set), so every
+# `pnpm run start:services` seeds once `pnpm start:dev` comes up.
+#
 # Why this exists
 # ---------------
 # An Alkemio login needs records in TWO systems: a Kratos identity (email +
@@ -119,10 +123,51 @@ gql() {
 guard_local_only
 command -v jq >/dev/null || fail "jq is required."
 
+# Readiness gate. Two signals, both required:
+#   1. /health/ready on the NestJS port (direct, not via traefik) — 200 only
+#      once the app has listened, which is AFTER BootstrapService.bootstrap()
+#      (main.server.ts), and while redis + JWKS are healthy.
+#   2. GraphQL through traefik on SERVER_URL — proves the proxy route the
+#      seeding calls actually use is wired up.
+# The compose `dev-seed-roles` service starts alongside the infra, long before
+# `pnpm start:dev` is up, so it sets SEED_WAIT_SECONDS; by hand it defaults to
+# a single check that fails fast with a clear message.
+HEALTH_URL="${HEALTH_URL:-http://localhost:4000/health/ready}"
+SEED_WAIT_SECONDS="${SEED_WAIT_SECONDS:-0}"
+
+server_ready() {
+  curl -sf -m 3 "$HEALTH_URL" >/dev/null 2>&1 \
+    && curl -sf -m 3 "$GQL_URL" -H 'Content-Type: application/json' \
+      -d '{"query":"{__typename}"}' >/dev/null 2>&1
+}
+
+if [ "$SEED_WAIT_SECONDS" -gt 0 ]; then
+  echo "Waiting up to ${SEED_WAIT_SECONDS}s for the server ($HEALTH_URL + $GQL_URL)..."
+  deadline=$((SECONDS + SEED_WAIT_SECONDS))
+  until server_ready; do
+    [ "$SECONDS" -lt "$deadline" ] || fail "Server not ready after ${SEED_WAIT_SECONDS}s. Is \`pnpm start:dev\` running?"
+    sleep 5
+  done
+  echo "Server ready."
+else
+  server_ready || fail "Server not ready ($HEALTH_URL / $GQL_URL). Start it with: pnpm start:dev"
+fi
+
 echo "Seeding dev role accounts against $SERVER_URL"
 echo
 
+# admin@alkem.io has an Alkemio user row from bootstrap but no Kratos identity
+# on a fresh database. Register it if it cannot log in yet — idempotent, so a
+# later reset or re-run is a no-op.
 ADMIN_TOKEN=$(login "$ADMIN_EMAIL" "$ADMIN_PASSWORD")
+if [ -z "$ADMIN_TOKEN" ]; then
+  echo "── $ADMIN_EMAIL cannot log in yet — registering"
+  printf '%s' "$ADMIN_PASSWORD" >/tmp/.register-password
+  "$SCRIPT_DIR/register-user.sh" "$ADMIN_EMAIL" "admin" "alkemio" >/tmp/.dev-seed-register.log 2>&1 \
+    || fail "Registering $ADMIN_EMAIL failed — see /tmp/.dev-seed-register.log"
+  ADMIN_TOKEN=$(login "$ADMIN_EMAIL" "$ADMIN_PASSWORD")
+  echo
+fi
 [ -n "$ADMIN_TOKEN" ] || fail "Could not log in as $ADMIN_EMAIL. Is the server up and the DB bootstrapped?"
 
 failures=0

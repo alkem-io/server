@@ -1,5 +1,5 @@
 import { CurrentActor } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { OrganizationAssociateEligibilityReason } from '@common/enums/organization.associate.eligibility.reason';
 import { getEmailDomain } from '@common/utils';
@@ -24,6 +24,11 @@ import { IUserGroup } from '@domain/community/user-group';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IAccount } from '@domain/space/account/account.interface';
+import {
+  HostedResourcesViewerScope,
+  IAccountHostedResources,
+} from '@domain/space/account/dto/account.hosted.resources';
+import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
@@ -33,6 +38,12 @@ import { isDomainJoinEligible } from './organization.domain.join.policy';
 import { Organization } from './organization.entity';
 import { OrganizationService } from './organization.service';
 
+const ORGANIZATION_ASSOCIATION_CREDENTIALS: AuthorizationCredential[] = [
+  AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+  AuthorizationCredential.ORGANIZATION_ADMIN,
+  AuthorizationCredential.ORGANIZATION_OWNER,
+];
+
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
   constructor(
@@ -40,7 +51,8 @@ export class OrganizationResolverFields {
     private organizationService: OrganizationService,
     private groupService: UserGroupService,
     private roleSetService: RoleSetService,
-    private userLookupService: UserLookupService
+    private userLookupService: UserLookupService,
+    private accountLookupService: AccountLookupService
   ) {}
 
   /**
@@ -235,31 +247,96 @@ export class OrganizationResolverFields {
     @Parent() organization: IOrganization,
     @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
-    const accountVisible = this.authorizationService.isAccessGranted(
-      actorContext,
-      organization.authorization,
-      AuthorizationPrivilege.UPDATE
-    );
-    if (accountVisible) {
-      return await this.organizationService.getAccount(organization);
-    }
-    // 027 R-F.3 (2026-09-18, server-C2-b advocate/skeptic debate): the
-    // Platform License Manager assigns plans to organization accounts (A12)
-    // but is no organization admin, and Resource Admin accepts
-    // account-transfer targets (A9) but is no organization admin either —
-    // both hold their real privilege on the account's OWN policy, not on
-    // the organization's. Open the account when the actor holds
-    // ACCOUNT_LICENSE_MANAGE or TRANSFER_RESOURCE_ACCEPT on it. READ is
-    // deliberately excluded: accounts grant READ to anonymous and
-    // registered users, so checking it here would expose every account id
-    // to anyone.
     const account = await this.organizationService.getAccount(organization);
-    if (this.accountOpenToPlatformRole(actorContext, account)) {
-      return account;
-    }
-    return undefined;
+    return this.canSeeFullAccount(organization, actorContext, account)
+      ? account
+      : undefined;
   }
 
+  // The resources hosted by this Organization's account as the current viewer
+  // may see them: PUBLIC Virtual Contributors and Innovation Packs to every
+  // registered viewer, ACCOUNT ones also to the organization's associates,
+  // admins and owners, HIDDEN ones only to its admins and owners and to the
+  // viewers who can see the account itself, and every Innovation Hub. Null for
+  // anonymous viewers. Intended for single-profile reads only.
+  @ResolveField('hostedResources', () => IAccountHostedResources, {
+    nullable: true,
+    description:
+      'Viewer-scoped hosted resources, null if anonymous. Single-profile use.',
+  })
+  async hostedResources(
+    @Parent() organization: IOrganization,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IAccountHostedResources | null> {
+    // No privilege decorator on purpose: every registered viewer must get an
+    // answer, scoped to what they may see. The enforcement point is the
+    // domain filter in AccountLookupService, driven by the scope computed
+    // here; anonymous viewers get nothing.
+    if (!actorContext.actorID || actorContext.isAnonymous) {
+      return null;
+    }
+    const account = await this.organizationService.getAccount(organization);
+    const scope: HostedResourcesViewerScope = this.canSeeFullAccount(
+      organization,
+      actorContext,
+      account
+    )
+      ? 'FULL'
+      : this.isOrganizationAssociate(organization, actorContext)
+        ? 'ORGANIZATION_ASSOCIATE'
+        : 'REGISTERED';
+    return this.accountLookupService.getHostedResourcesForViewer(
+      account.id,
+      scope
+    );
+  }
+
+  /**
+   * Whether the actor may see this organization's account itself: holders
+   * of UPDATE on the organization (its admins and owners), or a platform
+   * role holding its own privilege on the account (see
+   * `accountOpenToPlatformRole`).
+   */
+  private canSeeFullAccount(
+    organization: IOrganization,
+    actorContext: ActorContext,
+    account: IAccount
+  ): boolean {
+    return (
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        organization.authorization,
+        AuthorizationPrivilege.UPDATE
+      ) || this.accountOpenToPlatformRole(actorContext, account)
+    );
+  }
+
+  /**
+   * Whether the actor is associated with this organization, recognised by
+   * the same organization-scoped credentials its READ rule uses (associate,
+   * admin or owner) — read from the request's actor context, so the answer
+   * follows the current association on every request.
+   */
+  private isOrganizationAssociate(
+    organization: IOrganization,
+    actorContext: ActorContext
+  ): boolean {
+    return actorContext.credentials.some(
+      credential =>
+        ORGANIZATION_ASSOCIATION_CREDENTIALS.includes(
+          credential.type as AuthorizationCredential
+        ) && credential.resourceID === organization.id
+    );
+  }
+
+  // The Platform License Manager assigns plans to organization accounts but
+  // is no organization admin, and the Resource Admin accepts
+  // account-transfer targets but is no organization admin either — both
+  // hold their real privilege on the account's OWN policy, not on the
+  // organization's. Open the account when the actor holds
+  // ACCOUNT_LICENSE_MANAGE or TRANSFER_RESOURCE_ACCEPT on it. READ is
+  // deliberately excluded: accounts grant READ to anonymous and registered
+  // users, so checking it here would expose every account id to anyone.
   private accountOpenToPlatformRole(
     actorContext: ActorContext,
     account: IAccount

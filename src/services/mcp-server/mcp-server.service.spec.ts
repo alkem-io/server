@@ -4,10 +4,11 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { vi } from 'vitest';
 import { McpServerService } from './mcp-server.service';
 import { EditWhiteboardElementsTool } from './tools/edit-whiteboard-elements.tool';
+import { ImportWhiteboardSceneTool } from './tools/import-whiteboard-scene.tool';
 import { ToolRegistry } from './tools/tool.registry';
 
 describe('McpServerService registered tool schema rejection', () => {
-  it('returns typed invalid only for the edit tool without executing either rejected tool', async () => {
+  it('returns typed invalid for whiteboard execution tools before dispatch', async () => {
     const whiteboard = { getWhiteboardOrFail: vi.fn() };
     const executor = { execute: vi.fn() };
     const edit = new EditWhiteboardElementsTool(
@@ -16,6 +17,12 @@ describe('McpServerService registered tool schema rejection', () => {
       executor as any
     );
     const editExecute = vi.spyOn(edit, 'execute');
+    const importer = new ImportWhiteboardSceneTool(
+      whiteboard as any,
+      {} as any,
+      executor as any
+    );
+    const importExecute = vi.spyOn(importer, 'execute');
     const other = {
       getDefinition: () => ({
         name: 'other_tool',
@@ -37,7 +44,7 @@ describe('McpServerService registered tool schema rejection', () => {
     const gate = { checkToolAllowed: vi.fn() };
     const service = new McpServerService(
       {} as any,
-      new ToolRegistry([edit, other], logger),
+      new ToolRegistry([edit, importer, other], logger),
       {} as any,
       {} as any,
       gate as any,
@@ -62,6 +69,15 @@ describe('McpServerService registered tool schema rejection', () => {
     expect(rejected.content[0].text).toBe(
       JSON.stringify({ outcome: 'invalid' })
     );
+    const invalidImport = await call('import_whiteboard_scene', {
+      whiteboardId: '22222222-2222-4222-8222-222222222222',
+      scene: {},
+      mode: 'replace',
+    });
+    expect(invalidImport.content[0].text).toBe(
+      JSON.stringify({ outcome: 'invalid' })
+    );
+    expect(importExecute).not.toHaveBeenCalled();
     const unrelated = await call('other_tool', {});
     expect(unrelated.isError).toBe(true);
     expect(unrelated.content[0].text).toMatch(

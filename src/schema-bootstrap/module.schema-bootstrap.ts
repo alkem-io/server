@@ -16,10 +16,12 @@ import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
+import { MatrixSessionModule } from '@domain/communication/matrix-session/matrix.session.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { DevicePushTokenModule } from '@domain/device-push-token/device.push.token.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 // Domain/API modules that define GraphQL types (initial pass; extend incrementally if parity test reveals gaps)
 import { SpaceModule } from '@domain/space/space/space.module';
@@ -231,6 +233,8 @@ class SchemaBootstrapStubModule {}
     MeModule,
     TaskGraphqlModule,
     ActivityFeedModule,
+    DevicePushTokenModule,
+    MatrixSessionModule,
     PlatformRoleModule,
     TemplateApplierModule,
     AuthResetSubscriberModule,

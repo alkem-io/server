@@ -634,6 +634,53 @@ describe('InvitationService', () => {
     });
   });
 
+  describe('getActorIDsWithOpenInvitationOnRoleSet', () => {
+    const snapshot = (value: string) =>
+      JSON.stringify({
+        status: value === 'accepted' ? 'done' : 'active',
+        value,
+        historyValue: {},
+        context: {},
+        children: {},
+      });
+
+    it('returns the invitees of invited and accepting invitations only, read from the real xstate snapshots', async () => {
+      (service as any).invitationLifecycleService =
+        new InvitationLifecycleService(
+          new LifecycleService({} as any, MockWinstonProvider.useValue as any)
+        );
+      const rows = ['invited', 'accepting', 'accepted', 'rejected'].map(
+        state => ({
+          id: `inv-${state}`,
+          invitedActorID: `org-${state}`,
+          lifecycle: {
+            id: `lifecycle-${state}`,
+            machineState: snapshot(state),
+          },
+        })
+      );
+      const qb: any = {
+        innerJoin: vi.fn(() => qb),
+        where: vi.fn(() => qb),
+        andWhere: vi.fn(() => qb),
+        select: vi.fn(() => qb),
+        getMany: vi.fn().mockResolvedValue(rows),
+      };
+      vi.spyOn(invitationRepository, 'createQueryBuilder').mockReturnValue(qb);
+
+      const result = await service.getActorIDsWithOpenInvitationOnRoleSet(
+        'rs-1',
+        ActorType.ORGANIZATION
+      );
+
+      expect(result).toEqual(['org-invited', 'org-accepting']);
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'invitedActor.type = :actorType',
+        { actorType: ActorType.ORGANIZATION }
+      );
+    });
+  });
+
   describe('countOpenInvitationsForRoleSet', () => {
     const invitationRow = (
       id: string,

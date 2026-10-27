@@ -1,6 +1,7 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoomType } from '@common/enums/room.type';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -89,6 +90,34 @@ describe('RoomResolverMutations', () => {
       expect(roomLookupService.sendMessage).not.toHaveBeenCalled();
       expect(roomLookupService.sendMessageReply).not.toHaveBeenCalled();
     };
+    it('denies an actor without the message right before event publication', async () => {
+      const policy = { id: 'policy' };
+      const required =
+        operation === 'send'
+          ? AuthorizationPrivilege.CREATE_MESSAGE
+          : AuthorizationPrivilege.CREATE_MESSAGE_REPLY;
+      roomService.getRoomOrFail.mockResolvedValue({
+        id: 'room-1',
+        type: RoomType.CALLOUT,
+        authorization: policy,
+      } as any);
+      authorizationService.grantAccessOrFail.mockImplementation(
+        (_actor, authorization, privilege) => {
+          if (authorization === policy && privilege === required)
+            throw new ForbiddenAuthorizationPolicyException(
+              'denied',
+              privilege,
+              'policy',
+              actorContext.actorID
+            );
+          return true;
+        }
+      );
+      await expect(invoke()).rejects.toThrow(
+        ForbiddenAuthorizationPolicyException
+      );
+      noPublication();
+    });
     it('denies closed callout before event publication', async () => {
       roomService.getRoomOrFail.mockResolvedValue({
         id: 'room-1',
@@ -123,6 +152,72 @@ describe('RoomResolverMutations', () => {
   });
   it('should be defined', () => {
     expect(resolver).toBeDefined();
+  });
+
+  describe('sending text and an attachment', () => {
+    const room = {
+      id: 'room-1',
+      type: RoomType.UPDATES,
+      authorization: { id: 'auth-1' },
+    } as unknown as IRoom;
+    const media = {
+      media_id: 'media',
+      display_name: 'pic.png',
+      mime_type: 'image/png',
+      size: 7,
+    };
+    const attachmentUpload = {
+      externalReference: 'media',
+      displayName: 'pic.png',
+    };
+
+    beforeEach(() => {
+      roomService.getRoomOrFail.mockResolvedValue(room as any);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined as any);
+      (resolver as any).roomAttachments.existingMedia.mockResolvedValue(media);
+      roomLookupService.sendMessage.mockResolvedValue({ id: 'msg-1' } as any);
+      roomLookupService.sendMessageReply.mockResolvedValue({
+        id: 'reply-1',
+      } as any);
+    });
+
+    it('sends one message carrying both the text and the media reference', async () => {
+      const input = {
+        roomID: 'room-1',
+        message: 'look at this',
+        attachmentUpload,
+      };
+      await resolver.sendMessageToRoom(input, actorContext);
+      expect(roomLookupService.sendMessage).toHaveBeenCalledTimes(1);
+      expect(roomLookupService.sendMessage).toHaveBeenCalledWith(
+        room,
+        actorContext.actorID,
+        expect.objectContaining({ message: 'look at this' }),
+        media
+      );
+      expect(roomLookupService.sendMessageReply).not.toHaveBeenCalled();
+    });
+
+    it('sends one reply carrying both the text and the media reference', async () => {
+      const input = {
+        roomID: 'room-1',
+        threadID: '$parent',
+        message: 'look at this',
+        attachmentUpload,
+      };
+      await resolver.sendMessageReplyToRoom(input, actorContext);
+      expect(roomLookupService.sendMessageReply).toHaveBeenCalledTimes(1);
+      expect(roomLookupService.sendMessageReply).toHaveBeenCalledWith(
+        room,
+        actorContext.actorID,
+        expect.objectContaining({
+          message: 'look at this',
+          threadID: '$parent',
+        }),
+        media
+      );
+      expect(roomLookupService.sendMessage).not.toHaveBeenCalled();
+    });
   });
 
   describe('sendMessageToRoom', () => {

@@ -17,10 +17,12 @@ export enum SidebarWidget {
   GUIDELINES = 'guidelines',
   INDEX = 'index',
   SEARCH = 'search',
+  COMMUNITY = 'community',
+  ACTIVITY = 'activity',
 }
 
 registerEnumType(SidebarWidget, {
   name: 'SidebarWidget',
   description:
-    'The widgets available for the Space sidepanel, per InnovationFlow state (tab).',
+    'The widgets available for the Space sidepanel, per InnovationFlow state (tab/phase).',
 });

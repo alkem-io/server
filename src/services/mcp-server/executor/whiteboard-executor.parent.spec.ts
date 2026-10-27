@@ -1,11 +1,20 @@
 import { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
+import {
+  FileServiceAdapterException,
+  StorageServiceUnavailableException,
+} from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { vi } from 'vitest';
 import {
   executorConfig,
   WhiteboardExecutorParent,
 } from './whiteboard-executor.parent';
+import type { ImportInput } from './whiteboard-executor.protocol';
 
 class FakeChild extends EventEmitter {
   pid: number | undefined = 123;
@@ -37,6 +46,43 @@ function parent(n = 4, p = 1) {
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.useRealTimers();
+});
+const importInput = (): ImportInput => ({
+  scene: {
+    type: 'excalidraw',
+    version: 2,
+    elements: [
+      {
+        id: 'source',
+        type: 'rectangle',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        angle: 0 as ImportInput['scene']['elements'][number]['angle'],
+        strokeColor: '#000000',
+        backgroundColor: 'transparent',
+        fillStyle: 'solid',
+        strokeWidth: 1,
+        strokeStyle: 'solid',
+        roundness: null,
+        roughness: 0,
+        opacity: 100,
+        seed: 1,
+        version: 1,
+        versionNonce: 1,
+        index: 'a0' as ImportInput['scene']['elements'][number]['index'],
+        isDeleted: false,
+        groupIds: [],
+        frameId: null,
+        boundElements: null,
+        updated: 1,
+        link: null,
+        locked: false,
+      },
+    ],
+  },
+  targetFileIDs: {},
 });
 const operations = [{ op: 'addText' as const, text: 'hello' }];
 const progress = (child: FakeChild, type: string, more = {}) => {
@@ -99,6 +145,364 @@ describe('whiteboard-executor configuration', () => {
 });
 
 describe('whiteboard-executor parent admission and lifecycle', () => {
+  it('global capacity includes media preparation and rejects overflow without a queue', async () => {
+    const h = parent(2);
+    const input = importInput();
+    const settle: (() => void)[] = [];
+    const prepare = vi.fn(async () => {
+      await new Promise<void>(resolve => settle.push(resolve));
+      return input;
+    });
+    const callbacks = { prepare };
+    const active = [randomUUID(), randomUUID()].map(actor =>
+      h.execute(
+        randomUUID(),
+        actor,
+        { import: input } as any,
+        undefined,
+        callbacks
+      )
+    );
+    expect(prepare).toHaveBeenCalledTimes(2);
+    expect(
+      await h.execute(
+        randomUUID(),
+        randomUUID(),
+        { import: input } as any,
+        undefined,
+        callbacks
+      )
+    ).toEqual({ outcome: 'busy' });
+    expect(prepare).toHaveBeenCalledTimes(2);
+    h.onModuleDestroy();
+    settle.forEach(resolve => resolve());
+    expect(await Promise.all(active)).toEqual([
+      { outcome: 'cancelled-before-go' },
+      { outcome: 'cancelled-before-go' },
+    ]);
+    expect(h.children).toHaveLength(0);
+  });
+  it.each([
+    false,
+    true,
+  ])('IPC closure without child exit waits for the existing deadline afterGo=%s', async afterGo => {
+    vi.useFakeTimers();
+    const h = parent();
+    const actor = randomUUID();
+    const pending = h.execute(randomUUID(), actor, operations);
+    const settled = vi.fn();
+    void pending.then(settled);
+    const child = h.children[0];
+    child.kill.mockImplementation(() => true);
+    progress(child, 'SYNCED');
+    if (afterGo)
+      progress(child, 'PREPARED', {
+        updateDigest: 'a'.repeat(64),
+        byteLength: 2,
+        summary: [],
+      });
+    child.emit('disconnect');
+    await vi.advanceTimersByTimeAsync(9999);
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(settled).not.toHaveBeenCalled();
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(child.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
+    expect(settled).not.toHaveBeenCalled();
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    child.emit('exit', null, 'SIGKILL');
+    expect((await pending).outcome).toBe(
+      afterGo ? 'indeterminate-after-go' : 'timeout-before-go'
+    );
+    expect(child.eventNames()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    const next = h.execute(randomUUID(), actor, operations);
+    expect(h.children).toHaveLength(2);
+    h.onModuleDestroy();
+    await next;
+  });
+  it('preserves a source READ denial as forbidden without spawn', async () => {
+    const h = parent();
+    const input = importInput();
+    const preparation = {
+      prepare: vi
+        .fn()
+        .mockRejectedValue(
+          new ForbiddenAuthorizationPolicyException(
+            'Source read denied',
+            AuthorizationPrivilege.READ,
+            randomUUID(),
+            randomUUID()
+          )
+        ),
+    };
+    expect(
+      await h.execute(
+        randomUUID(),
+        randomUUID(),
+        { import: input } as any,
+        undefined,
+        preparation
+      )
+    ).toEqual({ outcome: 'forbidden' });
+    expect(h.children).toHaveLength(0);
+  });
+  it('releases admission after preparation failure without spawning or logging the exception', async () => {
+    const logger = { log: vi.fn(), warn: vi.fn() };
+    parent();
+    const h = new Parent({} as any, logger as any);
+    const actor = randomUUID();
+    const input = importInput();
+    const preparation = {
+      prepare: vi.fn(async () => {
+        throw new Error('PRIVATE_PREPARATION');
+      }),
+    };
+    expect(
+      await h.execute(
+        randomUUID(),
+        actor,
+        { import: input } as any,
+        undefined,
+        preparation
+      )
+    ).toEqual({ outcome: 'invalid' });
+    expect(h.children).toHaveLength(0);
+    expect(JSON.stringify(logger.log.mock.calls)).not.toContain('PRIVATE');
+    const next = h.execute(randomUUID(), actor, operations);
+    h.onModuleDestroy();
+    await next;
+  });
+  it.each([
+    [new StorageServiceUnavailableException('Unavailable'), 'unavailable'],
+    [
+      FileServiceAdapterException.fromTransportError(
+        'copyDocument',
+        new Error('PRIVATE')
+      ),
+      'unavailable',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 500),
+      'unavailable',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 504),
+      'unavailable',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 400),
+      'invalid',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 403),
+      'invalid',
+    ],
+    [
+      FileServiceAdapterException.fromHttpError('createDocument', 415),
+      'invalid',
+    ],
+    [new ForbiddenException('Denied', LogContext.STORAGE_BUCKET), 'forbidden'],
+  ] as const)('classifies preparation error %s as %s without spawn or retry', async (error, outcome) => {
+    const h = parent();
+    const actor = randomUUID();
+    const prepare = vi.fn().mockRejectedValue(error);
+    expect(
+      await h.execute(
+        randomUUID(),
+        actor,
+        { import: importInput() },
+        undefined,
+        { prepare }
+      )
+    ).toEqual({ outcome });
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(h.children).toHaveLength(0);
+    const next = h.execute(randomUUID(), actor, operations);
+    expect(h.children).toHaveLength(1);
+    h.onModuleDestroy();
+    await next;
+  });
+  it.each([
+    'disabled',
+    'busy',
+    'aborted',
+    'invalid',
+  ])('import %s never invokes preparation or spawns', async reason => {
+    const h = parent();
+    const actor = randomUUID();
+    const signal = new AbortController();
+    const active =
+      reason === 'busy'
+        ? h.execute(randomUUID(), actor, operations)
+        : undefined;
+    if (reason === 'aborted') signal.abort();
+    const instance =
+      reason === 'disabled'
+        ? (() => {
+            vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_ENABLED', 'false');
+            return new Parent({} as any, { log: vi.fn() } as any);
+          })()
+        : h;
+    const preparation = { prepare: vi.fn() };
+    const input = {
+      import: {
+        scene: {
+          type: 'excalidraw',
+          version: 2,
+          elements: [{ type: 'rectangle' }],
+        },
+        targetFileIDs: {},
+      },
+    };
+    const outcome = await instance.execute(
+      reason === 'invalid' ? '' : randomUUID(),
+      actor,
+      input as any,
+      signal.signal,
+      preparation
+    );
+    expect(outcome.outcome).toBe(
+      (
+        {
+          disabled: 'unavailable',
+          busy: 'busy',
+          aborted: 'cancelled-before-go',
+          invalid: 'invalid',
+        } as const
+      )[reason]
+    );
+    expect(preparation.prepare).not.toHaveBeenCalled();
+    expect(instance.children).toHaveLength(reason === 'busy' ? 1 : 0);
+    h.onModuleDestroy();
+    await active;
+  });
+  it.each([
+    false,
+    true,
+  ])('import failure preserves resolved file bindings and phase outcomes afterGo=%s', async afterGo => {
+    const h = parent();
+    const fresh = randomUUID();
+    const input = importInput();
+    input.scene.elements = [
+      {
+        ...input.scene.elements[0],
+        type: 'image',
+        fileId: 'asset' as Extract<
+          ImportInput['scene']['elements'][number],
+          { type: 'image' }
+        >['fileId'],
+        status: 'saved',
+        scale: [1, 1],
+        crop: null,
+      },
+    ];
+    input.targetFileIDs = { asset: fresh };
+    const preparation = {
+      prepare: vi.fn(async () => input),
+    };
+    const pending = h.execute(
+      randomUUID(),
+      randomUUID(),
+      { import: input } as any,
+      undefined,
+      preparation
+    );
+    await vi.waitFor(() => expect(h.children).toHaveLength(1));
+    const child = h.children[0];
+    expect(child.send.mock.calls[0][0].import).toEqual(input);
+    expect(child.send.mock.calls[0][0]).not.toHaveProperty('operations');
+    progress(child, 'SYNCED');
+    if (afterGo)
+      progress(child, 'PREPARED', {
+        updateDigest: 'a'.repeat(64),
+        byteLength: 2,
+        summary: [{ op: 'importScene', elementIds: ['fresh'] }],
+      });
+    child.emit('exit', 1);
+    expect((await pending).outcome).toBe(
+      afterGo ? 'indeterminate-after-go' : 'resource-exhausted-before-go'
+    );
+    expect(input.targetFileIDs).toEqual({ asset: fresh });
+  });
+  it('the deadline aborts media work but waits for settlement before releasing admission', async () => {
+    vi.useFakeTimers();
+    const h = parent();
+    const actor = randomUUID();
+    let settle!: () => void;
+    let context!: {
+      signal: AbortSignal;
+      deadlineAt: number;
+    };
+    const input = importInput();
+    const preparation = {
+      prepare: vi.fn(async c => {
+        context = c;
+        await new Promise<void>(resolve => {
+          settle = resolve;
+        });
+        throw new StorageServiceUnavailableException('Late upload failure');
+      }),
+    };
+    const pending = h.execute(
+      randomUUID(),
+      actor,
+      { import: input } as any,
+      undefined,
+      preparation
+    );
+    expect(context.deadlineAt).toBe(Date.now() + 10000);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(context.signal.aborted).toBe(true);
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    settle();
+    expect(await pending).toEqual({ outcome: 'timeout-before-go' });
+    expect(h.children).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it.each([
+    undefined,
+    new StorageServiceUnavailableException('Late upload failure'),
+    new ForbiddenException('Late source denial', LogContext.STORAGE_BUCKET),
+  ])('holds the actor slot through uncancellable materialization after abort and never spawns, late error=%s', async error => {
+    const h = parent();
+    const actor = randomUUID();
+    const controller = new AbortController();
+    let settle!: () => void;
+    const input = { import: importInput() };
+    const prepare = vi.fn(async () => {
+      await new Promise<void>(resolve => {
+        settle = resolve;
+      });
+      if (error) throw error;
+      return input.import;
+    });
+    const pending = h.execute(
+      randomUUID(),
+      actor,
+      input as any,
+      controller.signal,
+      { prepare }
+    );
+    expect(prepare).toHaveBeenCalledOnce();
+    controller.abort();
+    expect(await h.execute(randomUUID(), actor, operations)).toEqual({
+      outcome: 'busy',
+    });
+    expect(h.children).toHaveLength(0);
+    settle();
+    expect(await pending).toEqual({ outcome: 'cancelled-before-go' });
+    expect(h.children).toHaveLength(0);
+    const next = h.execute(randomUUID(), actor, operations);
+    h.onModuleDestroy();
+    await next;
+  });
   it.each([
     false,
     true,
@@ -162,7 +566,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     vi.stubEnv('MCP_WHITEBOARD_EXECUTOR_ENABLED', 'false');
     const h = new Parent({} as any, { log: vi.fn() } as any);
     expect(await h.execute(randomUUID(), randomUUID(), operations)).toEqual({
-      outcome: 'forbidden',
+      outcome: 'unavailable',
     });
     expect(await h.execute('', randomUUID(), operations)).toEqual({
       outcome: 'invalid',
@@ -188,18 +592,25 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         { code: 0, signal: null },
         { code: 1, signal: null },
         { code: null, signal: 'SIGABRT' },
-      ].map(exit => ({ phase, ...exit }))
+        { code: null, signal: 'SIGKILL' },
+      ].flatMap(exit =>
+        ['exit-only', 'disconnect-before-exit', 'exit-before-disconnect'].map(
+          order => ({ phase, ...exit, order })
+        )
+      )
     )
-  )('classifies disconnect then exit $code/$signal in $phase without replay', async ({
+  )('classifies exit $code/$signal in $phase ($order) without replay', async ({
     phase,
     code,
     signal,
+    order,
   }) => {
     vi.useFakeTimers();
     const h = parent();
     const actor = randomUUID();
     const pending = h.execute(randomUUID(), actor, operations);
     const child = h.children[0];
+    child.kill.mockImplementation(() => true);
     if (phase !== 'joining') progress(child, 'SYNCED');
     if (phase === 'go' || phase === 'published')
       progress(child, 'PREPARED', {
@@ -208,8 +619,12 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         summary: [],
       });
     if (phase === 'published') progress(child, 'PUBLISHED');
-    child.emit('disconnect');
+    if (order === 'disconnect-before-exit') child.emit('disconnect');
     child.emit('exit', code, signal);
+    if (order === 'exit-before-disconnect') child.emit('disconnect');
+    expect(
+      child.send.mock.calls.filter(([message]) => message.type === 'GO')
+    ).toHaveLength(phase === 'go' || phase === 'published' ? 1 : 0);
     expect((await pending).outcome).toBe(
       phase === 'go' || phase === 'published'
         ? 'indeterminate-after-go'
@@ -226,6 +641,57 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
     h.onModuleDestroy();
     await next;
     expect(vi.getTimerCount()).toBe(0);
+  });
+  it.each([
+    'caller',
+    'module',
+    'deadline',
+    'FAILED',
+    'DURABLE',
+  ])('preserves selected %s terminal through disconnect and signal exit', async owner => {
+    vi.useFakeTimers();
+    const h = parent();
+    const controller = new AbortController();
+    const pending = h.execute(
+      randomUUID(),
+      randomUUID(),
+      operations,
+      controller.signal
+    );
+    const child = h.children[0];
+    child.kill.mockImplementation(() => true);
+    progress(child, 'SYNCED');
+    if (owner === 'DURABLE') {
+      progress(child, 'PREPARED', {
+        updateDigest: 'a'.repeat(64),
+        byteLength: 2,
+        summary: [],
+      });
+      progress(child, 'DURABLE', {
+        result: { addedElementIds: [], summary: [] },
+      });
+    } else if (owner === 'FAILED') {
+      progress(child, 'FAILED', { typedOutcome: 'forbidden' });
+    } else if (owner === 'caller') controller.abort();
+    else if (owner === 'module') h.onModuleDestroy();
+    else await vi.advanceTimersByTimeAsync(10000);
+    child.emit('disconnect');
+    child.emit('exit', null, 'SIGKILL');
+    expect((await pending).outcome).toBe(
+      owner === 'DURABLE'
+        ? 'durable-success'
+        : owner === 'FAILED'
+          ? 'forbidden'
+          : owner === 'deadline'
+            ? 'timeout-before-go'
+            : 'cancelled-before-go'
+    );
+    expect(child.eventNames()).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(h.children).toHaveLength(1);
+    expect(
+      child.send.mock.calls.filter(([message]) => message.type === 'GO')
+    ).toHaveLength(owner === 'DURABLE' ? 1 : 0);
   });
   it.each([false, true])('caller cancellation afterGo=%s', async afterGo => {
     const h = parent();

@@ -1,12 +1,15 @@
-import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   getPaginationResults,
   PaginatedInAppNotifications,
   PaginationArgs,
 } from '@core/pagination';
+import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common/decorators';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -60,7 +63,8 @@ export class InAppNotificationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger,
     @InjectRepository(InAppNotification)
-    private readonly inAppNotificationRepo: Repository<InAppNotification>
+    private readonly inAppNotificationRepo: Repository<InAppNotification>,
+    private readonly authorizationService: AuthorizationService
   ) {}
 
   public createInAppNotification(
@@ -179,6 +183,67 @@ export class InAppNotificationService {
       // For simple pagination (first page), we can use the standard approach
       return await getPaginationResults(queryBuilder, paginationArgs, 'DESC');
     }
+  }
+
+  /**
+   * Drops the notifications whose Space the receiver cannot READ_ABOUT.
+   * Every Space-scoped payload resolves the non-null `space.about`, and the
+   * list is `[InAppNotification!]!`, so a single unreadable Space would
+   * otherwise null the receiver's entire notifications list.
+   */
+  public async filterNotificationsWithUnreadableSpace<
+    T extends Pick<InAppNotification, 'id' | 'spaceID'>,
+  >(actorContext: ActorContext, notifications: T[]): Promise<T[]> {
+    const spaceIDs = [
+      ...new Set(
+        notifications.flatMap(notification =>
+          notification.spaceID ? [notification.spaceID] : []
+        )
+      ),
+    ];
+    if (spaceIDs.length === 0) {
+      return notifications;
+    }
+
+    const spaces = await this.inAppNotificationRepo.manager.findBy(Space, {
+      id: In(spaceIDs),
+    });
+    const unreadableSpaceIDs = new Set(
+      spaces
+        .filter(
+          space =>
+            !space.authorization ||
+            !this.authorizationService.isAccessGranted(
+              actorContext,
+              space.authorization,
+              AuthorizationPrivilege.READ_ABOUT
+            )
+        )
+        .map(space => space.id)
+    );
+    if (unreadableSpaceIDs.size === 0) {
+      return notifications;
+    }
+
+    return notifications.filter(notification => {
+      if (
+        !notification.spaceID ||
+        !unreadableSpaceIDs.has(notification.spaceID)
+      ) {
+        return true;
+      }
+      this.logger.warn?.(
+        {
+          message:
+            'Hiding in-app notification: receiver cannot read the Space it references',
+          notificationId: notification.id,
+          spaceId: notification.spaceID,
+          receiverId: actorContext.actorID,
+        },
+        LogContext.IN_APP_NOTIFICATION
+      );
+      return false;
+    });
   }
 
   private async getPaginatedNotificationsWithTriggeredAtCursor(

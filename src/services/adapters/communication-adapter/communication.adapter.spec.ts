@@ -407,6 +407,40 @@ describe('CommunicationAdapter', () => {
       ]);
     });
 
+    it.each([
+      'send',
+      'reply',
+    ] as const)('%s puts the text and the media reference in one request', async operation => {
+      mockAmqpConnection.request.mockResolvedValue(
+        createSuccessResponse({ message_id: 'msg-cap', timestamp: 1 })
+      );
+      const existingMedia = {
+        media_id: 'media',
+        display_name: 'pic.png',
+        mime_type: 'image/png',
+        size: 7,
+      };
+      const input = {
+        roomID: 'room-uuid-123',
+        actorID: 'actor-uuid-456',
+        message: 'look at this',
+        existingMedia,
+      };
+
+      if (operation === 'send') await adapter.sendMessage(input);
+      else await adapter.sendMessageReply({ ...input, threadID: '$parent' });
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledTimes(1);
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            content: 'look at this',
+            existing_media: existingMedia,
+          }),
+        })
+      );
+    });
+
     it('should throw when roomID is empty', async () => {
       const messageInput: CommunicationSendMessageInput = {
         roomID: '',
@@ -743,6 +777,38 @@ describe('CommunicationAdapter', () => {
     });
   });
 
+  describe('createActorSession (workspace#091)', () => {
+    it('maps the wire triple onto the DTO triple, field for field', async () => {
+      // Load-bearing because all six fields are `string`: a crossed mapping
+      // (`userId: response.device_id`) TYPECHECKS, the service spec mocks
+      // this method outright, and the RPC contract's server legs are all
+      // request-side. A swap would namespace stored credentials by device id,
+      // so the app would mint a fresh device on every launch while chat
+      // worked in-session (FR-006b, SC-011).
+      mockAmqpConnection.request.mockResolvedValue(
+        createSuccessResponse({
+          user_id: '@u:hs',
+          device_id: 'DEV1',
+          access_token: 'tok',
+        })
+      );
+
+      const result = await adapter.createActorSession('actor-uuid-123');
+
+      expect(result).toEqual({
+        userId: '@u:hs',
+        deviceId: 'DEV1',
+        accessToken: 'tok',
+      });
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith({
+        exchange: '',
+        routingKey: MatrixAdapterEventType.COMMUNICATION_ACTOR_SESSION_CREATE,
+        payload: { actor_id: 'actor-uuid-123' },
+        timeout: expect.any(Number),
+      });
+    });
+  });
+
   describe('disabled communications', () => {
     let disabledAdapter: CommunicationAdapter;
 
@@ -768,6 +834,16 @@ describe('CommunicationAdapter', () => {
       }).compile();
 
       disabledAdapter = module.get<CommunicationAdapter>(CommunicationAdapter);
+    });
+
+    it('should THROW for createActorSession when disabled - never a blank credential (workspace#091, FR-026)', async () => {
+      // The one deliberate deviation from every neighbour in this file:
+      // there is no truthful empty Matrix credential, so a disabled
+      // environment must fail closed rather than hand back a blank triple.
+      await expect(
+        disabledAdapter.createActorSession('actor-id')
+      ).rejects.toThrow(CommunicationAdapterException);
+      expect(mockAmqpConnection.request).not.toHaveBeenCalled();
     });
 
     it('should return true for syncActor when disabled', async () => {
