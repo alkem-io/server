@@ -81,10 +81,18 @@ in_vol 'test -f /s/PG_VERSION' -v "$src":/s:ro || die "$src has no PG_VERSION: n
 src_ver=$(in_vol 'cat /s/PG_VERSION' -v "$src":/s:ro)
 say "moving the Postgres $src_ver cluster from volume $src into $NAMED"
 
-# Postgres must be stopped for a consistent file copy
+# Postgres must be stopped cleanly for a consistent file copy. A plain `docker stop` reaches postgres as
+# SIGTERM ("smart" shutdown), which waits for every client: on a running stack that hangs until the kill.
+# Fast shutdown disconnects clients and checkpoints in seconds. Restart policy is paused so docker
+# does not bring it back mid-copy; compose recreates the container (and its policy) right after.
 if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = true ]; then
-  say "stopping $CONTAINER"
-  docker stop -t 120 "$CONTAINER" >/dev/null
+  say "stopping $CONTAINER (fast shutdown, clients are disconnected)"
+  docker update --restart=no "$CONTAINER" >/dev/null
+  # The exec session dies with the container on success, so judge by the container state, not pg_ctl's exit code
+  docker exec -u postgres "$CONTAINER" sh -c 'pg_ctl stop -D "$PGDATA" -m fast -w -t 60' >/dev/null 2>&1 || true
+  sleep 1
+  [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER")" = true ] && say "fast shutdown did not finish, falling back to docker stop"
+  docker stop -t 60 "$CONTAINER" >/dev/null
 fi
 
 docker volume create "$NAMED" >/dev/null
