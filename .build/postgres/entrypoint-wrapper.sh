@@ -3,6 +3,15 @@ set -euo pipefail
 
 export PGPASSWORD="${POSTGRES_PASSWORD:-}"
 
+# Old layout guard: the named volume used to be mounted one level up, so an un-migrated one holds
+# only an empty `data/` mount point. Starting here would initdb an EMPTY cluster over your data.
+pgdata="${PGDATA:-/var/lib/postgresql/data}"
+if [ ! -f "$pgdata/PG_VERSION" ] && [ "$(ls -A "$pgdata" 2>/dev/null)" = "data" ]; then
+  echo "[ensure] $pgdata is an un-migrated volume (old layout). Run .scripts/migrate-postgres-volume.sh" >&2
+  echo "[ensure] or use 'pnpm run start:services', which runs it for you." >&2
+  exit 1
+fi
+
 # Preserve original command (defaults to "postgres")
 args=("$@")
 if [ ${#args[@]} -eq 0 ]; then
