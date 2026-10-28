@@ -97,6 +97,7 @@ enum AssistantCapabilityKind {
 }
 
 enum AuthenticationType {
+  APPLE
   CLEVERBASE
   EMAIL
   GITHUB
