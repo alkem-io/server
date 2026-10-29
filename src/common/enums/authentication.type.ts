@@ -5,6 +5,7 @@ export enum AuthenticationType {
   MICROSOFT = 'microsoft',
   GITHUB = 'github',
   CLEVERBASE = 'cleverbase',
+  APPLE = 'apple',
   EMAIL = 'email',
   PASSKEY = 'passkey',
   UNKNOWN = 'unknown',
