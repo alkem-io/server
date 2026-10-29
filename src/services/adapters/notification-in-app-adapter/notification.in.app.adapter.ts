@@ -12,6 +12,8 @@ import { QueryFailedError } from 'typeorm';
 
 @Injectable()
 export class NotificationInAppAdapter {
+  private static readonly COUNTER_UPDATE_CONCURRENCY = 10;
+
   private static readonly NOT_SUPPORTED_IN_APP_EVENTS: NotificationEvent[] = [
     NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM,
     // Email-only: the recipient of an organization email invitation has no
@@ -123,18 +125,34 @@ export class NotificationInAppAdapter {
         savedNotifications.map(notification => notification.receiverID)
       ),
     ];
-    const counterUpdateResults = await Promise.allSettled(
-      uniqueReceiverIDs.map(async receiverID => {
-        const count =
-          await this.inAppNotificationService.getNotificationsUnreadCountForReceiver(
-            receiverID
-          );
-        return this.subscriptionPublishService.publishInAppNotificationCounter(
-          receiverID,
-          count
-        );
-      })
-    );
+    // Each counter needs several queries (receiver context, grouped count,
+    // visibility), and a Space-wide event can target every member; bound the
+    // fan-out so it cannot take over the shared connection pool.
+    const counterUpdateResults: PromiseSettledResult<void>[] = [];
+    for (
+      let i = 0;
+      i < uniqueReceiverIDs.length;
+      i += NotificationInAppAdapter.COUNTER_UPDATE_CONCURRENCY
+    ) {
+      const batch = uniqueReceiverIDs.slice(
+        i,
+        i + NotificationInAppAdapter.COUNTER_UPDATE_CONCURRENCY
+      );
+      counterUpdateResults.push(
+        ...(await Promise.allSettled(
+          batch.map(async receiverID => {
+            const count =
+              await this.inAppNotificationService.getNotificationsUnreadCountForReceiver(
+                receiverID
+              );
+            await this.subscriptionPublishService.publishInAppNotificationCounter(
+              receiverID,
+              count
+            );
+          })
+        ))
+      );
+    }
 
     // Log any counter update failures without failing the entire operation
     counterUpdateResults.forEach((result, index) => {

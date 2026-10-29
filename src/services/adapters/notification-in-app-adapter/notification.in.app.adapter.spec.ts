@@ -249,5 +249,58 @@ describe('NotificationInAppAdapter', () => {
         subscriptionPublishService.publishInAppNotificationCounter
       ).toHaveBeenCalledTimes(1);
     });
+
+    it('should bound concurrent counter updates and update every receiver', async () => {
+      const receiverIDs = Array.from({ length: 25 }, (_, i) => `user-${i}`);
+      vi.mocked(
+        inAppNotificationService.createInAppNotification
+      ).mockReturnValue({} as any);
+      vi.mocked(
+        inAppNotificationService.saveInAppNotifications
+      ).mockResolvedValue(
+        receiverIDs.map((receiverID, i) => ({
+          id: `n-${i}`,
+          receiverID,
+        })) as any
+      );
+      vi.mocked(
+        subscriptionPublishService.publishInAppNotificationReceived
+      ).mockResolvedValue(undefined);
+      let inFlight = 0;
+      let maxInFlight = 0;
+      vi.mocked(
+        inAppNotificationService.getNotificationsUnreadCountForReceiver
+      ).mockImplementation(async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise(resolve => setTimeout(resolve, 5));
+        inFlight--;
+        return 1;
+      });
+      vi.mocked(
+        subscriptionPublishService.publishInAppNotificationCounter
+      ).mockImplementation(async receiverID => {
+        if (receiverID === 'user-3') throw new Error('publish failed');
+      });
+
+      await adapter.sendInAppNotifications(
+        NotificationEvent.USER_MESSAGE,
+        NotificationEventCategory.USER,
+        'user-x',
+        receiverIDs,
+        {} as any
+      );
+
+      expect(maxInFlight).toBeGreaterThan(1);
+      expect(maxInFlight).toBeLessThanOrEqual(10);
+      expect(
+        subscriptionPublishService.publishInAppNotificationCounter
+      ).toHaveBeenCalledTimes(25);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to update notification counter for user.',
+        expect.anything(),
+        expect.objectContaining({ receiverID: 'user-3' })
+      );
+    });
   });
 });
