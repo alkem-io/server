@@ -46,9 +46,7 @@ describe('InAppNotificationResolverMutations', () => {
       inAppNotificationService.updateNotificationState.mockResolvedValue(
         NotificationEventInAppState.READ
       );
-      inAppNotificationService.getRawNotificationsUnreadCount.mockResolvedValue(
-        3
-      );
+      inAppNotificationService.getNotificationsUnreadCount.mockResolvedValue(3);
       subscriptionPublishService.publishInAppNotificationCounter.mockResolvedValue(
         undefined as any
       );
@@ -91,9 +89,7 @@ describe('InAppNotificationResolverMutations', () => {
           affected: 5,
         } as any
       );
-      inAppNotificationService.getRawNotificationsUnreadCount.mockResolvedValue(
-        0
-      );
+      inAppNotificationService.getNotificationsUnreadCount.mockResolvedValue(0);
       subscriptionPublishService.publishInAppNotificationCounter.mockResolvedValue(
         undefined as any
       );
@@ -132,9 +128,7 @@ describe('InAppNotificationResolverMutations', () => {
           affected: 2,
         } as any
       );
-      inAppNotificationService.getRawNotificationsUnreadCount.mockResolvedValue(
-        1
-      );
+      inAppNotificationService.getNotificationsUnreadCount.mockResolvedValue(1);
       subscriptionPublishService.publishInAppNotificationCounter.mockResolvedValue(
         undefined as any
       );
@@ -160,9 +154,7 @@ describe('InAppNotificationResolverMutations', () => {
           affected: 3,
         } as any
       );
-      inAppNotificationService.getRawNotificationsUnreadCount.mockResolvedValue(
-        3
-      );
+      inAppNotificationService.getNotificationsUnreadCount.mockResolvedValue(3);
       subscriptionPublishService.publishInAppNotificationCounter.mockResolvedValue(
         undefined as any
       );

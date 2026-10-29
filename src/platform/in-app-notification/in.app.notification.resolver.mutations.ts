@@ -44,8 +44,8 @@ export class InAppNotificationResolverMutations {
 
     // Update counter for the user
     const count =
-      await this.inAppNotificationService.getRawNotificationsUnreadCount(
-        actorContext.actorID
+      await this.inAppNotificationService.getNotificationsUnreadCount(
+        actorContext
       );
     await this.subscriptionPublishService.publishInAppNotificationCounter(
       actorContext.actorID,
@@ -111,8 +111,8 @@ export class InAppNotificationResolverMutations {
     // Update counter for the user if any notifications were affected
     if ((result?.affected ?? 0) > 0) {
       const count =
-        await this.inAppNotificationService.getRawNotificationsUnreadCount(
-          actorContext.actorID
+        await this.inAppNotificationService.getNotificationsUnreadCount(
+          actorContext
         );
       await this.subscriptionPublishService.publishInAppNotificationCounter(
         actorContext.actorID,

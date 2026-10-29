@@ -1,3 +1,4 @@
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,6 +12,7 @@ import { InAppNotificationService } from './in.app.notification.service';
 
 @Module({
   imports: [
+    ActorContextModule,
     AuthorizationModule,
     InAppNotificationPayloadModule,
     SubscriptionServiceModule,

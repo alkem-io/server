@@ -1,4 +1,3 @@
-import { ActorType } from '@common/enums/actor.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import {
   DataLoaderCreator,
@@ -11,6 +10,7 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
+import { LOADABLE_ACTOR_TYPES } from './loadable.actor.types';
 
 @Injectable()
 export class ActorLoaderCreator implements DataLoaderCreator<IActor> {
@@ -37,11 +37,7 @@ export class ActorLoaderCreator implements DataLoaderCreator<IActor> {
     return this.manager.find(Actor, {
       where: {
         id: In([...keys]),
-        type: In([
-          ActorType.USER,
-          ActorType.ORGANIZATION,
-          ActorType.VIRTUAL_CONTRIBUTOR,
-        ]),
+        type: In(LOADABLE_ACTOR_TYPES),
       },
     });
   };

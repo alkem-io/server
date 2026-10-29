@@ -3,12 +3,16 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { LOADABLE_ACTOR_TYPES } from '@core/dataloader/creators/loader.creators/in-app-notification/loadable.actor.types';
 import {
   getPaginationResults,
   PaginatedInAppNotifications,
   PaginationArgs,
 } from '@core/pagination';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common/decorators';
@@ -57,6 +61,16 @@ import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
 import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
 import { IInAppNotification } from './in.app.notification.interface';
 
+/** The columns that decide whether a notification can be shown. */
+type NotificationVisibilityFields = {
+  spaceID?: string | null;
+  triggeredByID?: string | null;
+};
+
+const uniqueIDs = (ids: (string | null | undefined)[]): string[] => [
+  ...new Set(ids.filter((id): id is string => !!id)),
+];
+
 @Injectable()
 export class InAppNotificationService {
   constructor(
@@ -64,7 +78,9 @@ export class InAppNotificationService {
     private readonly logger: WinstonLogger,
     @InjectRepository(InAppNotification)
     private readonly inAppNotificationRepo: Repository<InAppNotification>,
-    private readonly authorizationService: AuthorizationService
+    private readonly authorizationService: AuthorizationService,
+    private readonly actorContextService: ActorContextService,
+    private readonly actorContextCacheService: ActorContextCacheService
   ) {}
 
   public createInAppNotification(
@@ -131,21 +147,74 @@ export class InAppNotificationService {
     });
   }
 
-  public getRawNotificationsUnreadCount(
-    receiverID: string,
+  /**
+   * The number of UNREAD notifications the receiver can see: a row
+   * `filterVisibleNotifications` would hide from the notifications list is not
+   * counted either. Rows are grouped by the two columns visibility depends on,
+   * so the checks run once per distinct Space and triggering actor, never per
+   * row.
+   */
+  public async getNotificationsUnreadCount(
+    actorContext: ActorContext,
     filter?: NotificationEventsFilterInput
   ): Promise<number> {
-    const where =
-      filter && filter.types && filter.types.length > 0
-        ? {
-            receiverID,
-            state: NotificationEventInAppState.UNREAD,
-            type: In(filter.types),
-          }
-        : { receiverID, state: NotificationEventInAppState.UNREAD };
-    return this.inAppNotificationRepo.count({
-      where,
-    });
+    const queryBuilder = this.inAppNotificationRepo
+      .createQueryBuilder('notification')
+      .select('notification.spaceID', 'spaceID')
+      .addSelect('notification.triggeredByID', 'triggeredByID')
+      .addSelect('COUNT(*)', 'count')
+      .where('notification.receiverID = :receiverID', {
+        receiverID: actorContext.actorID,
+      })
+      .andWhere('notification.state = :unreadState', {
+        unreadState: NotificationEventInAppState.UNREAD,
+      });
+
+    if (filter?.types && filter.types.length > 0) {
+      queryBuilder.andWhere('notification.type IN (:...types)', {
+        types: filter.types,
+      });
+    }
+
+    const groups = await queryBuilder
+      .groupBy('notification.spaceID')
+      .addGroupBy('notification.triggeredByID')
+      .getRawMany<{
+        spaceID: string | null;
+        triggeredByID: string | null;
+        count: string | number;
+      }>();
+
+    const visibleGroups = await this.selectVisible(actorContext, groups);
+    return visibleGroups.reduce(
+      (total, group) => total + Number(group.count),
+      0
+    );
+  }
+
+  /**
+   * The unread count for a receiver known only by ID (for example when a
+   * notification is created and there is no request). The receiver's
+   * ActorContext is the one their own requests use: the cached one when
+   * present, otherwise built from their credentials the same way the
+   * authentication path builds it. The built context is deliberately not
+   * written to the cache — notification fan-out would otherwise fill it with
+   * contexts of receivers who are not signed in, and race the invalidation
+   * that runs when credentials change.
+   */
+  public async getNotificationsUnreadCountForReceiver(
+    receiverID: string
+  ): Promise<number> {
+    let actorContext =
+      await this.actorContextCacheService.getByActorID(receiverID);
+    if (!actorContext) {
+      actorContext = new ActorContext();
+      await this.actorContextService.populateFromActorID(
+        actorContext,
+        receiverID
+      );
+    }
+    return this.getNotificationsUnreadCount(actorContext);
   }
 
   public async getPaginatedNotifications(
@@ -186,29 +255,83 @@ export class InAppNotificationService {
   }
 
   /**
-   * Drops the notifications whose Space the receiver cannot READ_ABOUT.
-   * Every Space-scoped payload resolves the non-null `space.about`, and the
-   * list is `[InAppNotification!]!`, so a single unreadable Space would
-   * otherwise null the receiver's entire notifications list.
+   * Drops the notifications the receiver cannot be shown:
+   * - the Space it references is not READ_ABOUT-able by the receiver. Every
+   *   Space-scoped payload resolves the non-null `space.about`, and the list
+   *   is `[InAppNotification!]!`, so a single unreadable Space would
+   *   otherwise null the receiver's entire notifications list;
+   * - the actor that triggered it no longer resolves (for example a deleted
+   *   user — `triggeredByID` carries no foreign key). `triggeredBy` would be
+   *   null and the notification has nobody to attribute it to.
+   * `getNotificationsUnreadCount` applies the same rules, so the unread count
+   * never includes a notification the list hides.
    */
-  public async filterNotificationsWithUnreadableSpace<
-    T extends Pick<InAppNotification, 'id' | 'spaceID'>,
+  public filterVisibleNotifications<
+    T extends Pick<InAppNotification, 'id' | 'spaceID' | 'triggeredByID'>,
   >(actorContext: ActorContext, notifications: T[]): Promise<T[]> {
-    const spaceIDs = [
-      ...new Set(
-        notifications.flatMap(notification =>
-          notification.spaceID ? [notification.spaceID] : []
+    return this.selectVisible(
+      actorContext,
+      notifications,
+      (notification, reason) =>
+        this.logger.warn?.(
+          {
+            message: `Hiding in-app notification: ${reason}`,
+            notificationId: notification.id,
+            spaceId: notification.spaceID,
+            triggeredById: notification.triggeredByID,
+            receiverId: actorContext.actorID,
+          },
+          LogContext.IN_APP_NOTIFICATION
         )
-      ),
-    ];
+    );
+  }
+
+  /**
+   * The single visibility rule shared by the notifications list and the
+   * unread count. Loads every referenced Space and triggering actor in one
+   * query each, whatever the number of rows.
+   */
+  private async selectVisible<T extends NotificationVisibilityFields>(
+    actorContext: ActorContext,
+    rows: T[],
+    onHidden?: (row: T, reason: string) => void
+  ): Promise<T[]> {
+    if (rows.length === 0) {
+      return rows;
+    }
+
+    const unreadableSpaceIDs = await this.getUnreadableSpaceIDs(
+      actorContext,
+      rows
+    );
+    const resolvableTriggerIDs = await this.getResolvableTriggerIDs(rows);
+
+    return rows.filter(row => {
+      if (!row.triggeredByID || !resolvableTriggerIDs.has(row.triggeredByID)) {
+        onHidden?.(row, 'the actor that triggered it cannot be resolved');
+        return false;
+      }
+      if (row.spaceID && unreadableSpaceIDs.has(row.spaceID)) {
+        onHidden?.(row, 'receiver cannot read the Space it references');
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private async getUnreadableSpaceIDs(
+    actorContext: ActorContext,
+    rows: NotificationVisibilityFields[]
+  ): Promise<Set<string>> {
+    const spaceIDs = uniqueIDs(rows.map(row => row.spaceID));
     if (spaceIDs.length === 0) {
-      return notifications;
+      return new Set();
     }
 
     const spaces = await this.inAppNotificationRepo.manager.findBy(Space, {
       id: In(spaceIDs),
     });
-    const unreadableSpaceIDs = new Set(
+    return new Set(
       spaces
         .filter(
           space =>
@@ -221,29 +344,23 @@ export class InAppNotificationService {
         )
         .map(space => space.id)
     );
-    if (unreadableSpaceIDs.size === 0) {
-      return notifications;
+  }
+
+  /** Resolvable means what the `triggeredBy` field's loader can load. */
+  private async getResolvableTriggerIDs(
+    rows: NotificationVisibilityFields[]
+  ): Promise<Set<string>> {
+    const triggerIDs = uniqueIDs(rows.map(row => row.triggeredByID));
+    if (triggerIDs.length === 0) {
+      return new Set();
     }
 
-    return notifications.filter(notification => {
-      if (
-        !notification.spaceID ||
-        !unreadableSpaceIDs.has(notification.spaceID)
-      ) {
-        return true;
-      }
-      this.logger.warn?.(
-        {
-          message:
-            'Hiding in-app notification: receiver cannot read the Space it references',
-          notificationId: notification.id,
-          spaceId: notification.spaceID,
-          receiverId: actorContext.actorID,
-        },
-        LogContext.IN_APP_NOTIFICATION
-      );
-      return false;
+    const actors = await this.inAppNotificationRepo.manager.find(Actor, {
+      select: { id: true },
+      where: { id: In(triggerIDs), type: In(LOADABLE_ACTOR_TYPES) },
+      loadEagerRelations: false,
     });
+    return new Set(actors.map(actor => actor.id));
   }
 
   private async getPaginatedNotificationsWithTriggeredAtCursor(

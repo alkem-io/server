@@ -77,11 +77,10 @@ export class MeResolverFields {
       pagination,
       filter
     );
-    page.items =
-      await this.inAppNotificationService.filterNotificationsWithUnreadableSpace(
-        actorContext,
-        page.items
-      );
+    page.items = await this.inAppNotificationService.filterVisibleNotifications(
+      actorContext,
+      page.items
+    );
     return page;
   }
 
@@ -100,8 +99,8 @@ export class MeResolverFields {
       return 0;
     }
     // Always return the total unread count, regardless of any filtering on notifications
-    return await this.inAppNotificationService.getRawNotificationsUnreadCount(
-      actorContext.actorID
+    return await this.inAppNotificationService.getNotificationsUnreadCount(
+      actorContext
     );
   }
 

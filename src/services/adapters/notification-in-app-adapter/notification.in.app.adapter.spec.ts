@@ -116,7 +116,7 @@ describe('NotificationInAppAdapter', () => {
         inAppNotificationService.saveInAppNotifications
       ).mockResolvedValue([mockNotification] as any);
       vi.mocked(
-        inAppNotificationService.getRawNotificationsUnreadCount
+        inAppNotificationService.getNotificationsUnreadCountForReceiver
       ).mockResolvedValue(5);
       vi.mocked(
         subscriptionPublishService.publishInAppNotificationReceived
@@ -160,7 +160,7 @@ describe('NotificationInAppAdapter', () => {
         inAppNotificationService.saveInAppNotifications
       ).mockResolvedValue(savedNotifications as any);
       vi.mocked(
-        inAppNotificationService.getRawNotificationsUnreadCount
+        inAppNotificationService.getNotificationsUnreadCountForReceiver
       ).mockResolvedValue(3);
       vi.mocked(
         subscriptionPublishService.publishInAppNotificationReceived
@@ -197,7 +197,7 @@ describe('NotificationInAppAdapter', () => {
         subscriptionPublishService.publishInAppNotificationReceived
       ).mockResolvedValue(undefined);
       vi.mocked(
-        inAppNotificationService.getRawNotificationsUnreadCount
+        inAppNotificationService.getNotificationsUnreadCountForReceiver
       ).mockResolvedValue(1);
       vi.mocked(
         subscriptionPublishService.publishInAppNotificationCounter
@@ -227,7 +227,7 @@ describe('NotificationInAppAdapter', () => {
         inAppNotificationService.saveInAppNotifications
       ).mockResolvedValue(savedNotifications as any);
       vi.mocked(
-        inAppNotificationService.getRawNotificationsUnreadCount
+        inAppNotificationService.getNotificationsUnreadCountForReceiver
       ).mockResolvedValue(2);
       vi.mocked(
         subscriptionPublishService.publishInAppNotificationReceived

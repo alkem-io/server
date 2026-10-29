@@ -52,9 +52,7 @@ describe('MeResolverFields', () => {
     inAppNotificationService.getPaginatedNotifications.mockResolvedValue({
       items: [],
     } as any);
-    inAppNotificationService.getRawNotificationsUnreadCount.mockResolvedValue(
-      5
-    );
+    inAppNotificationService.getNotificationsUnreadCount.mockResolvedValue(5);
 
     mcpApiKeyServiceMock = createMock<McpApiKeyService>();
     mcpApiKeyServiceMock.listUserKeysForProjection.mockResolvedValue([]);
@@ -172,7 +170,7 @@ describe('MeResolverFields', () => {
     it('should not call the in-app notification service when actorID is missing', async () => {
       await resolver.notificationsUnreadCount(anonymousActorContext);
       expect(
-        inAppNotificationService.getRawNotificationsUnreadCount
+        inAppNotificationService.getNotificationsUnreadCount
       ).not.toHaveBeenCalled();
     });
 
@@ -180,8 +178,8 @@ describe('MeResolverFields', () => {
       const result = await resolver.notificationsUnreadCount(actorContext);
       expect(result).toBe(5);
       expect(
-        inAppNotificationService.getRawNotificationsUnreadCount
-      ).toHaveBeenCalledWith(actorContext.actorID);
+        inAppNotificationService.getNotificationsUnreadCount
+      ).toHaveBeenCalledWith(actorContext);
     });
   });
 

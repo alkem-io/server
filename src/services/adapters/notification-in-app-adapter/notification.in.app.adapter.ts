@@ -126,7 +126,7 @@ export class NotificationInAppAdapter {
     const counterUpdateResults = await Promise.allSettled(
       uniqueReceiverIDs.map(async receiverID => {
         const count =
-          await this.inAppNotificationService.getRawNotificationsUnreadCount(
+          await this.inAppNotificationService.getNotificationsUnreadCountForReceiver(
             receiverID
           );
         return this.subscriptionPublishService.publishInAppNotificationCounter(

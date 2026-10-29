@@ -5,7 +5,10 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { LOADABLE_ACTOR_TYPES } from '@core/dataloader/creators/loader.creators/in-app-notification/loadable.actor.types';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -19,6 +22,8 @@ import { InAppNotificationService } from './in.app.notification.service';
 describe('InAppNotificationService', () => {
   let service: InAppNotificationService;
   let notificationRepo: MockType<Repository<InAppNotification>>;
+  let actorContextService: ActorContextService;
+  let actorContextCacheService: ActorContextCacheService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -36,6 +41,8 @@ describe('InAppNotificationService', () => {
 
     service = module.get(InAppNotificationService);
     notificationRepo = module.get(getRepositoryToken(InAppNotification));
+    actorContextService = module.get(ActorContextService);
+    actorContextCacheService = module.get(ActorContextCacheService);
   });
 
   describe('createInAppNotification', () => {
@@ -790,32 +797,6 @@ describe('InAppNotificationService', () => {
     });
   });
 
-  describe('getRawNotificationsUnreadCount', () => {
-    it('should count unread notifications without filter', async () => {
-      notificationRepo.count!.mockResolvedValue(5);
-
-      const result = await service.getRawNotificationsUnreadCount('user-1');
-
-      expect(notificationRepo.count).toHaveBeenCalledWith({
-        where: {
-          receiverID: 'user-1',
-          state: NotificationEventInAppState.UNREAD,
-        },
-      });
-      expect(result).toBe(5);
-    });
-
-    it('should count unread notifications with type filter', async () => {
-      notificationRepo.count!.mockResolvedValue(2);
-
-      const result = await service.getRawNotificationsUnreadCount('user-1', {
-        types: [NotificationEvent.USER_MESSAGE],
-      });
-
-      expect(result).toBe(2);
-    });
-  });
-
   describe('saveInAppNotifications', () => {
     it('should save entities in chunks of 100', async () => {
       const entities = [{ id: '1' }] as any;
@@ -1044,7 +1025,7 @@ describe('InAppNotificationService', () => {
     });
   });
 
-  describe('filterNotificationsWithUnreadableSpace', () => {
+  describe('notification visibility (list and unread count)', () => {
     const readAboutForInvitee = (spaceID: string) => ({
       id: `auth-${spaceID}`,
       type: 'space',
@@ -1075,54 +1056,234 @@ describe('InAppNotificationService', () => {
         ],
       }) as ActorContext;
 
+    // The Actor query only returns the actors that still exist with a type the
+    // triggeredBy loader resolves; 'deleted-user' is gone.
+    const resolvableActors = new Set(['alive']);
+
     let findBy: ReturnType<typeof vi.fn>;
+    let find: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
       findBy = vi.fn().mockResolvedValue([
         { id: 'readable', authorization: readAboutForInvitee('readable') },
         { id: 'private', authorization: readAboutForInvitee('private') },
       ]);
-      (notificationRepo as any).manager = { findBy };
+      find = vi
+        .fn()
+        .mockImplementation(async (_entity, options) =>
+          (options.where.id.value as string[])
+            .filter(id => resolvableActors.has(id))
+            .map(id => ({ id }))
+        );
+      (notificationRepo as any).manager = { findBy, find };
     });
 
-    it('drops only the notifications whose Space the receiver cannot READ_ABOUT', async () => {
-      const notifications = [
-        { id: 'n1', spaceID: 'readable' },
-        { id: 'n2', spaceID: 'private' },
-        { id: 'n3', spaceID: undefined },
-      ] as any[];
+    const mockUnreadGroups = (
+      groups: {
+        spaceID: string | null;
+        triggeredByID: string | null;
+        count: string;
+      }[]
+    ) => {
+      const qb: any = {};
+      for (const method of [
+        'select',
+        'addSelect',
+        'where',
+        'andWhere',
+        'groupBy',
+        'addGroupBy',
+      ]) {
+        qb[method] = vi.fn().mockReturnValue(qb);
+      }
+      qb.getRawMany = vi.fn().mockResolvedValue(groups);
+      notificationRepo.createQueryBuilder!.mockReturnValue(qb);
+      return qb;
+    };
 
-      const result = await service.filterNotificationsWithUnreadableSpace(
-        receiver('readable'),
-        notifications
-      );
+    describe('filterVisibleNotifications', () => {
+      it('drops the notifications whose Space the receiver cannot READ_ABOUT', async () => {
+        const notifications = [
+          { id: 'n1', spaceID: 'readable', triggeredByID: 'alive' },
+          { id: 'n2', spaceID: 'private', triggeredByID: 'alive' },
+          { id: 'n3', spaceID: undefined, triggeredByID: 'alive' },
+        ] as any[];
 
-      expect(result.map(n => n.id)).toEqual(['n1', 'n3']);
+        const result = await service.filterVisibleNotifications(
+          receiver('readable'),
+          notifications
+        );
+
+        expect(result.map(n => n.id)).toEqual(['n1', 'n3']);
+      });
+
+      it('drops the notifications whose triggering actor cannot be resolved', async () => {
+        const notifications = [
+          { id: 'n1', spaceID: undefined, triggeredByID: 'alive' },
+          { id: 'n2', spaceID: undefined, triggeredByID: 'deleted-user' },
+          { id: 'n3', spaceID: undefined, triggeredByID: null },
+        ] as any[];
+
+        const result = await service.filterVisibleNotifications(
+          receiver('readable'),
+          notifications
+        );
+
+        expect(result.map(n => n.id)).toEqual(['n1']);
+      });
+
+      it('only resolves the actor types the triggeredBy loader resolves', async () => {
+        await service.filterVisibleNotifications(receiver('readable'), [
+          { id: 'n1', spaceID: undefined, triggeredByID: 'alive' },
+        ] as any[]);
+
+        expect(find.mock.calls[0][1].where.type.value).toEqual(
+          LOADABLE_ACTOR_TYPES
+        );
+      });
+
+      it('loads every referenced Space and actor in a single query each', async () => {
+        await service.filterVisibleNotifications(receiver('readable'), [
+          { id: 'n1', spaceID: 'readable', triggeredByID: 'alive' },
+          { id: 'n2', spaceID: 'private', triggeredByID: 'deleted-user' },
+          { id: 'n3', spaceID: 'readable', triggeredByID: 'alive' },
+        ] as any[]);
+
+        expect(findBy).toHaveBeenCalledTimes(1);
+        expect(find).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not query Spaces when no notification references a Space', async () => {
+        const result = await service.filterVisibleNotifications(
+          receiver('readable'),
+          [{ id: 'n1', spaceID: undefined, triggeredByID: 'alive' }] as any[]
+        );
+
+        expect(result.map(n => n.id)).toEqual(['n1']);
+        expect(findBy).not.toHaveBeenCalled();
+      });
     });
 
-    it('loads every referenced Space in a single query', async () => {
-      await service.filterNotificationsWithUnreadableSpace(
-        receiver('readable'),
-        [
-          { id: 'n1', spaceID: 'readable' },
-          { id: 'n2', spaceID: 'private' },
-          { id: 'n3', spaceID: 'readable' },
-        ] as any[]
-      );
+    describe('getNotificationsUnreadCount', () => {
+      const unreadGroups = [
+        { spaceID: 'readable', triggeredByID: 'alive', count: '2' },
+        { spaceID: 'private', triggeredByID: 'alive', count: '3' },
+        { spaceID: null, triggeredByID: 'deleted-user', count: '4' },
+        { spaceID: null, triggeredByID: 'alive', count: '1' },
+      ];
 
-      expect(findBy).toHaveBeenCalledTimes(1);
+      it('does not count unread notifications the list hides', async () => {
+        mockUnreadGroups(unreadGroups);
+
+        const count = await service.getNotificationsUnreadCount(
+          receiver('readable')
+        );
+
+        // 2 on the readable Space + 1 with no Space; the 3 on the private
+        // Space and the 4 from the deleted user are hidden from the list.
+        expect(count).toBe(3);
+      });
+
+      it('equals the number of the same notifications the list returns', async () => {
+        mockUnreadGroups(unreadGroups);
+        const rows = unreadGroups.flatMap((group, groupIndex) =>
+          Array.from({ length: Number(group.count) }, (_, i) => ({
+            id: `n-${groupIndex}-${i}`,
+            spaceID: group.spaceID ?? undefined,
+            triggeredByID: group.triggeredByID,
+          }))
+        ) as any[];
+
+        const listed = await service.filterVisibleNotifications(
+          receiver('readable'),
+          rows
+        );
+        const count = await service.getNotificationsUnreadCount(
+          receiver('readable')
+        );
+
+        expect(count).toBe(listed.length);
+      });
+
+      it('counts only UNREAD notifications of the receiver, grouped by Space and trigger', async () => {
+        const qb = mockUnreadGroups([]);
+
+        const count = await service.getNotificationsUnreadCount(
+          receiver('readable')
+        );
+
+        expect(count).toBe(0);
+        expect(qb.where).toHaveBeenCalledWith(
+          'notification.receiverID = :receiverID',
+          { receiverID: 'receiver-1' }
+        );
+        expect(qb.andWhere).toHaveBeenCalledWith(
+          'notification.state = :unreadState',
+          { unreadState: NotificationEventInAppState.UNREAD }
+        );
+        expect(qb.groupBy).toHaveBeenCalledWith('notification.spaceID');
+        expect(qb.addGroupBy).toHaveBeenCalledWith(
+          'notification.triggeredByID'
+        );
+        expect(findBy).not.toHaveBeenCalled();
+        expect(find).not.toHaveBeenCalled();
+      });
+
+      it('applies the type filter when provided', async () => {
+        const qb = mockUnreadGroups([]);
+
+        await service.getNotificationsUnreadCount(receiver('readable'), {
+          types: [NotificationEvent.USER_MESSAGE],
+        });
+
+        expect(qb.andWhere).toHaveBeenCalledWith(
+          'notification.type IN (:...types)',
+          { types: [NotificationEvent.USER_MESSAGE] }
+        );
+      });
     });
 
-    it('does not query when no notification references a Space', async () => {
-      const notifications = [{ id: 'n1', spaceID: undefined }] as any[];
+    describe('getNotificationsUnreadCountForReceiver', () => {
+      it("uses the receiver's cached ActorContext when there is one", async () => {
+        mockUnreadGroups([
+          { spaceID: 'readable', triggeredByID: 'alive', count: '2' },
+          { spaceID: 'private', triggeredByID: 'alive', count: '3' },
+        ]);
+        vi.mocked(actorContextCacheService.getByActorID).mockResolvedValue(
+          receiver('readable')
+        );
 
-      const result = await service.filterNotificationsWithUnreadableSpace(
-        receiver('readable'),
-        notifications
-      );
+        const count =
+          await service.getNotificationsUnreadCountForReceiver('receiver-1');
 
-      expect(result).toBe(notifications);
-      expect(findBy).not.toHaveBeenCalled();
+        expect(count).toBe(2);
+        expect(actorContextService.populateFromActorID).not.toHaveBeenCalled();
+      });
+
+      it('builds the ActorContext from credentials on a cache miss, without caching it', async () => {
+        mockUnreadGroups([
+          { spaceID: 'readable', triggeredByID: 'alive', count: '2' },
+          { spaceID: 'private', triggeredByID: 'alive', count: '3' },
+        ]);
+        vi.mocked(actorContextCacheService.getByActorID).mockResolvedValue(
+          undefined
+        );
+        vi.mocked(actorContextService.populateFromActorID).mockImplementation(
+          async (ctx, actorID) => {
+            Object.assign(ctx, receiver('private'), { actorID });
+          }
+        );
+
+        const count =
+          await service.getNotificationsUnreadCountForReceiver('receiver-1');
+
+        expect(count).toBe(3);
+        expect(actorContextService.populateFromActorID).toHaveBeenCalledWith(
+          expect.any(ActorContext),
+          'receiver-1'
+        );
+        expect(actorContextCacheService.setByActorID).not.toHaveBeenCalled();
+      });
     });
   });
 });
