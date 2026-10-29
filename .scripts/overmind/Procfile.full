@@ -11,7 +11,7 @@
 #   overmind ps              # Show status
 
 # Docker infrastructure (postgres, kratos, rabbitmq, redis, etc.)
-infra: docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate 2>&1
+infra: bash .scripts/migrate-postgres-volume.sh && docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate 2>&1
 
 # TypeScript type checking
 ts: sleep 30 && pnpm exec tsc -w --noEmit --preserveWatchOutput 2>&1
