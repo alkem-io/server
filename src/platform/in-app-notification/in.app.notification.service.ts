@@ -153,10 +153,9 @@ export class InAppNotificationService {
    * row.
    */
   public async getNotificationsUnreadCount(
-    actorContext: ActorContext,
-    filter?: NotificationEventsFilterInput
+    actorContext: ActorContext
   ): Promise<number> {
-    const queryBuilder = this.inAppNotificationRepo
+    const groups = await this.inAppNotificationRepo
       .createQueryBuilder('notification')
       .select('notification.spaceID', 'spaceID')
       .addSelect('notification.triggeredByID', 'triggeredByID')
@@ -166,15 +165,7 @@ export class InAppNotificationService {
       })
       .andWhere('notification.state = :unreadState', {
         unreadState: NotificationEventInAppState.UNREAD,
-      });
-
-    if (filter?.types && filter.types.length > 0) {
-      queryBuilder.andWhere('notification.type IN (:...types)', {
-        types: filter.types,
-      });
-    }
-
-    const groups = await queryBuilder
+      })
       .groupBy('notification.spaceID')
       .addGroupBy('notification.triggeredByID')
       .getRawMany<{

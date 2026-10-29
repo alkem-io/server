@@ -1276,19 +1276,6 @@ describe('InAppNotificationService', () => {
         expect(findBy).not.toHaveBeenCalled();
         expect(find).not.toHaveBeenCalled();
       });
-
-      it('applies the type filter when provided', async () => {
-        const qb = mockUnreadGroups([]);
-
-        await service.getNotificationsUnreadCount(receiver('readable'), {
-          types: [NotificationEvent.USER_MESSAGE],
-        });
-
-        expect(qb.andWhere).toHaveBeenCalledWith(
-          'notification.type IN (:...types)',
-          { types: [NotificationEvent.USER_MESSAGE] }
-        );
-      });
     });
 
     describe('getNotificationsUnreadCountForReceiver', () => {

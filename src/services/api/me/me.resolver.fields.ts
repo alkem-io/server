@@ -98,7 +98,8 @@ export class MeResolverFields {
       );
       return 0;
     }
-    // Always return the total unread count, regardless of any filtering on notifications
+    // Counts unread notifications of every type; the list's type filter does
+    // not apply here, only the visibility rule the list uses.
     return await this.inAppNotificationService.getNotificationsUnreadCount(
       actorContext
     );
