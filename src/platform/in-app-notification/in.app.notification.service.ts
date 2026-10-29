@@ -3,8 +3,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
-import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
-import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LOADABLE_ACTOR_TYPES } from '@core/dataloader/creators/loader.creators/in-app-notification/loadable.actor.types';
 import {
@@ -79,8 +78,7 @@ export class InAppNotificationService {
     @InjectRepository(InAppNotification)
     private readonly inAppNotificationRepo: Repository<InAppNotification>,
     private readonly authorizationService: AuthorizationService,
-    private readonly actorContextService: ActorContextService,
-    private readonly actorContextCacheService: ActorContextCacheService
+    private readonly authenticationService: AuthenticationService
   ) {}
 
   public createInAppNotification(
@@ -194,26 +192,16 @@ export class InAppNotificationService {
 
   /**
    * The unread count for a receiver known only by ID (for example when a
-   * notification is created and there is no request). The receiver's
-   * ActorContext is the one their own requests use: the cached one when
-   * present, otherwise built from their credentials the same way the
-   * authentication path builds it. The built context is deliberately not
-   * written to the cache — notification fan-out would otherwise fill it with
-   * contexts of receivers who are not signed in, and race the invalidation
-   * that runs when credentials change.
+   * notification is created and there is no request), evaluated with the
+   * same ActorContext the receiver's own requests carry.
    */
   public async getNotificationsUnreadCountForReceiver(
     receiverID: string
   ): Promise<number> {
-    let actorContext =
-      await this.actorContextCacheService.getByActorID(receiverID);
-    if (!actorContext) {
-      actorContext = new ActorContext();
-      await this.actorContextService.populateFromActorID(
-        actorContext,
+    const actorContext =
+      await this.authenticationService.createActorContextWithoutCaching(
         receiverID
       );
-    }
     return this.getNotificationsUnreadCount(actorContext);
   }
 

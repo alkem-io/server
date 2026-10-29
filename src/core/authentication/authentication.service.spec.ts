@@ -208,6 +208,53 @@ describe('AuthenticationService', () => {
       expect(result).toEqual(anonymousContext);
     });
   });
+
+  describe('createActorContextWithoutCaching', () => {
+    it('returns the cached context when there is one', async () => {
+      actorContextCacheService.getByActorID.mockResolvedValue(mockActorContext);
+
+      const result = await service.createActorContextWithoutCaching('user-id');
+
+      expect(result).toBe(mockActorContext);
+      expect(actorContextService.populateFromActorID).not.toHaveBeenCalled();
+    });
+
+    // A cache read against a degraded Redis resolves to undefined (the
+    // shared cache store turns failed reads into misses), so this is also
+    // the Redis-outage path: the context is built from the database.
+    it('builds the context from credentials on a miss and never writes the cache', async () => {
+      actorContextCacheService.getByActorID.mockResolvedValue(undefined);
+      actorContextService.populateFromActorID.mockImplementation(
+        async (ctx, actorID) => {
+          ctx.actorID = actorID;
+          ctx.credentials = [{ type: 'global-registered', resourceID: '' }];
+        }
+      );
+
+      const result = await service.createActorContextWithoutCaching('user-id');
+
+      expect(actorContextService.populateFromActorID).toHaveBeenCalledWith(
+        expect.any(ActorContext),
+        'user-id'
+      );
+      expect(result.actorID).toBe('user-id');
+      expect(result.isAnonymous).toBe(false);
+      expect(actorContextCacheService.setByActorID).not.toHaveBeenCalled();
+    });
+
+    it('throws instead of falling back to anonymous when the actor is not found', async () => {
+      actorContextCacheService.getByActorID.mockResolvedValue(undefined);
+      actorContextService.populateFromActorID.mockRejectedValue(
+        new Error('Actor not found')
+      );
+
+      await expect(
+        service.createActorContextWithoutCaching('stale-actor-id')
+      ).rejects.toThrow();
+      expect(actorContextService.createAnonymous).not.toHaveBeenCalled();
+      expect(actorContextCacheService.setByActorID).not.toHaveBeenCalled();
+    });
+  });
 });
 
 const ConfigServiceMock = {

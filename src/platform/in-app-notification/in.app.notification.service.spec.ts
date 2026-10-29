@@ -7,6 +7,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LOADABLE_ACTOR_TYPES } from '@core/dataloader/creators/loader.creators/in-app-notification/loadable.actor.types';
 import { Space } from '@domain/space/space/space.entity';
@@ -34,6 +35,7 @@ describe('InAppNotificationService', () => {
       providers: [
         InAppNotificationService,
         AuthorizationService,
+        AuthenticationService,
         repositoryProviderMockFactory(InAppNotification),
         MockWinstonProvider,
       ],
@@ -1329,6 +1331,22 @@ describe('InAppNotificationService', () => {
           'receiver-1'
         );
         expect(actorContextCacheService.setByActorID).not.toHaveBeenCalled();
+      });
+
+      it('fails rather than counting as anonymous when the receiver cannot be loaded', async () => {
+        mockUnreadGroups([
+          { spaceID: null, triggeredByID: 'alive', count: '1' },
+        ]);
+        vi.mocked(actorContextCacheService.getByActorID).mockResolvedValue(
+          undefined
+        );
+        vi.mocked(actorContextService.populateFromActorID).mockRejectedValue(
+          new Error('Actor not found')
+        );
+
+        await expect(
+          service.getNotificationsUnreadCountForReceiver('receiver-1')
+        ).rejects.toThrow();
       });
     });
   });
