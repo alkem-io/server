@@ -300,11 +300,10 @@ export class InAppNotificationService {
       return rows;
     }
 
-    const unreadableSpaceIDs = await this.getUnreadableSpaceIDs(
-      actorContext,
-      rows
-    );
-    const resolvableTriggerIDs = await this.getResolvableTriggerIDs(rows);
+    const [unreadableSpaceIDs, resolvableTriggerIDs] = await Promise.all([
+      this.getUnreadableSpaceIDs(actorContext, rows),
+      this.getResolvableTriggerIDs(rows),
+    ]);
 
     return rows.filter(row => {
       if (!row.triggeredByID || !resolvableTriggerIDs.has(row.triggeredByID)) {
@@ -328,8 +327,21 @@ export class InAppNotificationService {
       return new Set();
     }
 
-    const spaces = await this.inAppNotificationRepo.manager.findBy(Space, {
-      id: In(spaceIDs),
+    // Only the Space's policy is needed: skip the eager relations and the
+    // Space's own columns.
+    const spaces = await this.inAppNotificationRepo.manager.find(Space, {
+      where: { id: In(spaceIDs) },
+      relations: { authorization: true },
+      select: {
+        id: true,
+        authorization: {
+          id: true,
+          type: true,
+          credentialRules: true,
+          privilegeRules: true,
+        },
+      },
+      loadEagerRelations: false,
     });
     return new Set(
       spaces

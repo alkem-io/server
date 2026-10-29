@@ -9,6 +9,7 @@ import { ActorContextCacheService } from '@core/actor-context/actor.context.cach
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LOADABLE_ACTOR_TYPES } from '@core/dataloader/creators/loader.creators/in-app-notification/loadable.actor.types';
+import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -16,6 +17,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import type { Mock } from 'vitest';
 import { InAppNotification } from './in.app.notification.entity';
 import { InAppNotificationService } from './in.app.notification.service';
 
@@ -1060,10 +1062,12 @@ describe('InAppNotificationService', () => {
     // triggeredBy loader resolves; 'deleted-user' is gone.
     const resolvableActors = new Set(['alive']);
 
-    let findBy: ReturnType<typeof vi.fn>;
-    let find: ReturnType<typeof vi.fn>;
+    let findBy: Mock<(entity: unknown, options: any) => Promise<any[]>>;
+    let find: Mock<(entity: unknown, options: any) => Promise<any[]>>;
 
     beforeEach(() => {
+      // `findBy` is the Space lookup, `find` the triggering-actor lookup; the
+      // service calls `manager.find` for both, dispatched here by entity.
       findBy = vi.fn().mockResolvedValue([
         { id: 'readable', authorization: readAboutForInvitee('readable') },
         { id: 'private', authorization: readAboutForInvitee('private') },
@@ -1075,7 +1079,10 @@ describe('InAppNotificationService', () => {
             .filter(id => resolvableActors.has(id))
             .map(id => ({ id }))
         );
-      (notificationRepo as any).manager = { findBy, find };
+      (notificationRepo as any).manager = {
+        find: (entity: unknown, options: any) =>
+          entity === Space ? findBy(entity, options) : find(entity, options),
+      };
     });
 
     const mockUnreadGroups = (
@@ -1140,6 +1147,45 @@ describe('InAppNotificationService', () => {
         expect(find.mock.calls[0][1].where.type.value).toEqual(
           LOADABLE_ACTOR_TYPES
         );
+      });
+
+      it('loads only the Space policy, without eager relations', async () => {
+        await service.filterVisibleNotifications(receiver('readable'), [
+          { id: 'n1', spaceID: 'readable', triggeredByID: 'alive' },
+        ] as any[]);
+
+        const options = findBy.mock.calls[0][1];
+        expect(options.loadEagerRelations).toBe(false);
+        expect(options.relations).toEqual({ authorization: true });
+        expect(options.select).toEqual({
+          id: true,
+          authorization: {
+            id: true,
+            type: true,
+            credentialRules: true,
+            privilegeRules: true,
+          },
+        });
+      });
+
+      it('runs the Space and actor lookups concurrently', async () => {
+        let releaseSpaces!: () => void;
+        findBy.mockImplementation(
+          () =>
+            new Promise(resolve => {
+              releaseSpaces = () => resolve([]);
+            })
+        );
+
+        const pending = service.filterVisibleNotifications(
+          receiver('readable'),
+          [{ id: 'n1', spaceID: 'readable', triggeredByID: 'alive' }] as any[]
+        );
+        await vi.waitFor(() => expect(find).toHaveBeenCalledTimes(1));
+        expect(findBy).toHaveBeenCalledTimes(1);
+
+        releaseSpaces();
+        await pending;
       });
 
       it('loads every referenced Space and actor in a single query each', async () => {
