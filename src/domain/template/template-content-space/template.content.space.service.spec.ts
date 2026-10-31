@@ -98,6 +98,32 @@ describe('TemplateContentSpaceService', () => {
         { allowFormFraming: true }
       );
     });
+
+    it.each([
+      ['omitted', {}],
+      ['null', { subspaces: null }],
+    ])('creates no subspaces when subspaces is %s', async (_label, subspacesInput) => {
+      spaceAboutService.createSpaceAbout.mockResolvedValue({
+        id: 'about-1',
+      } as any);
+      collaborationService.createCollaboration.mockResolvedValue({
+        id: 'collab-1',
+      } as any);
+      repository.save.mockImplementation(async (entity: any) => entity);
+
+      const result = await service.createTemplateContentSpace(
+        {
+          about: {},
+          collaborationData: { calloutsSetData: {} },
+          ...subspacesInput,
+        } as any,
+        {} as any,
+        {} as any
+      );
+
+      expect(result.subspaces).toEqual([]);
+      expect(repository.save).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('getTemplateContentSpaceOrFail', () => {
