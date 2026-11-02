@@ -186,17 +186,23 @@ on_error() {
   [ "$BASHPID" = "$$" ] || exit "$rc" # failures inside $(...) are handled once, by the main shell
   trap - ERR INT TERM
   cleanup_temps
+  local restored=true
   if $CONVERTING && [ -n "$BACKUP" ]; then
     echo "[pg-volume] conversion failed, restoring the original cluster into $NAMED" >&2
-    in_vol 'find /n -mindepth 1 -delete && cp -a /b/. /n/' -v "$BACKUP":/b:ro -v "$NAMED":/n \
-      && echo "[pg-volume] restored; your data is unchanged (copy kept in $BACKUP)" >&2
+    if in_vol 'find /n -mindepth 1 -delete && cp -a /b/. /n/' -v "$BACKUP":/b:ro -v "$NAMED":/n; then
+      echo "[pg-volume] restored; your data is unchanged (copy kept in $BACKUP)" >&2
+    else
+      restored=false
+      echo "[pg-volume] ERROR: restore failed, $NAMED is incomplete: do not start postgres. Your data is intact in $BACKUP" >&2
+    fi
   fi
-  # the old container still runs the old major on the (restored) named volume
-  if [ -n "$restart_policy" ]; then
+  # the old container still runs the old major on the restored named volume (never on a half-restored one)
+  if $restored && [ -n "$restart_policy" ]; then
     docker update --restart="$restart_policy" "$CONTAINER" >/dev/null 2>&1 || true
     docker start "$CONTAINER" >/dev/null 2>&1 || true
   fi
-  exit "$rc"
+  # INT/TERM can arrive with a zero status; a zero exit would let `&& docker compose up` run
+  exit $(( rc ? rc : 1 ))
 }
 
 # The init-time temporary server only listens on the socket, so a TCP pg_isready means the real server is up

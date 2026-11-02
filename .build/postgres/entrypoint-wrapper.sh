@@ -22,8 +22,10 @@ if [ -f "$pgdata/PG_VERSION" ]; then
   server_major="$(postgres -V | sed -E 's/[^0-9]*([0-9]+).*/\1/')"
   if [ "$data_major" != "$server_major" ]; then
     echo "[ensure] $pgdata holds Postgres $data_major data but this is Postgres $server_major." >&2
-    echo "[ensure] Run .scripts/migrate-postgres-volume.sh (or 'pnpm run start:services', which runs it):" >&2
+    echo "[ensure] quickstart: run .scripts/migrate-postgres-volume.sh (or 'pnpm run start:services', which runs it);" >&2
     echo "[ensure] it converts the data and keeps a copy of the old cluster." >&2
+    echo "[ensure] devcontainer: the script does not cover its 'postgres-data' volume; remove that volume to" >&2
+    echo "[ensure] start on a fresh cluster (dump anything you need first with the old postgres image)." >&2
     exit 1
   fi
 fi
