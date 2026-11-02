@@ -179,6 +179,25 @@ target_image() {
 image_major() { echo "$1" | sed -E 's/^[^:]*:([0-9]+).*/\1/'; }
 
 OLD_C=pgconv-old-$$ NEW_C=pgconv-new-$$ BACKUP="" CONVERTING=false
+# Lives outside PGDATA for the whole time the named volume does not hold a verified cluster, and names the
+# backup to recover from: a run killed outright (no trap) is put back to the backup by the next run
+STATE="${NAMED}_pgconv_state"
+# Old cluster copied back into the named volume; the state volume goes only once that has worked
+restore_backup() {
+  in_vol 'find /n -mindepth 1 -delete && cp -a /b/. /n/ && [ "$(cat /n/PG_VERSION)" = "$(cat /b/PG_VERSION)" ]' \
+    -v "$BACKUP":/b:ro -v "$NAMED":/n && docker volume rm "$STATE" >/dev/null
+}
+recover_conversion() {
+  docker volume inspect "$STATE" >/dev/null 2>&1 || return 0
+  BACKUP=$(in_vol 'cat /s/backup' -v "$STATE":/s:ro)
+  in_vol 'test -f /b/PG_VERSION' -v "$BACKUP":/b:ro 2>/dev/null \
+    || die "an earlier conversion of $NAMED was interrupted and its backup $BACKUP is missing; inspect the volumes before going on"
+  say "an earlier conversion of $NAMED was interrupted; restoring the original cluster from $BACKUP"
+  stop_postgres
+  trap - ERR INT TERM # a failure here keeps the state volume, so the next run tries again
+  restore_backup
+  say "restored; converting again"
+}
 cleanup_temps() { docker rm -f "$OLD_C" "$NEW_C" >/dev/null 2>&1 || true; }
 # Any failure after the named volume was wiped: put the untouched old-major copy back
 on_error() {
@@ -189,11 +208,12 @@ on_error() {
   local restored=true
   if $CONVERTING && [ -n "$BACKUP" ]; then
     echo "[pg-volume] conversion failed, restoring the original cluster into $NAMED" >&2
-    if in_vol 'find /n -mindepth 1 -delete && cp -a /b/. /n/' -v "$BACKUP":/b:ro -v "$NAMED":/n; then
+    if restore_backup; then
       echo "[pg-volume] restored; your data is unchanged (copy kept in $BACKUP)" >&2
     else
       restored=false
-      echo "[pg-volume] ERROR: restore failed, $NAMED is incomplete: do not start postgres. Your data is intact in $BACKUP" >&2
+      echo "[pg-volume] ERROR: restore failed, $NAMED is incomplete: do not start postgres. Your data is intact in $BACKUP;" >&2
+      echo "[pg-volume] running this script again retries the restore." >&2
     fi
   fi
   # the old container still runs the old major on the restored named volume (never on a half-restored one)
@@ -275,14 +295,25 @@ convert_major() {
   # Old major runs on the copy, read-only use; the new major is initialised in the (wiped) named volume
   docker run -d --name "$OLD_C" -e PGDATA="$PGDATA_PATH" -v "$BACKUP":"$PGDATA_PATH" "$old_img" >/dev/null
   wait_ready "$OLD_C"
-  IFS='|' read -r enc lcc lct < <(echo "SELECT pg_encoding_to_char(encoding), datcollate, datctype FROM pg_database WHERE datname = 'template1'" | psql_c "$OLD_C" postgres)
+  # Same encoding, libc locale and, for ICU/builtin, provider + locale (column names differ across majors)
+  IFS='|' read -r enc lcc lct prov loc < <(echo "SELECT pg_encoding_to_char(encoding), datcollate, datctype, datlocprovider,
+    coalesce(to_jsonb(d) ->> 'datlocale', to_jsonb(d) ->> 'daticulocale', '') FROM pg_database d WHERE datname = 'template1'" | psql_c "$OLD_C" postgres)
+  initdb_args="--encoding=$enc --lc-collate=$lcc --lc-ctype=$lct"
+  case $prov in
+    i) initdb_args+=" --locale-provider=icu --icu-locale=$loc" ;;
+    b) initdb_args+=" --locale-provider=builtin --builtin-locale=$loc" ;;
+  esac
 
+  docker volume create "$STATE" >/dev/null
+  in_vol 'echo "$B" > /s/backup' -e B="$BACKUP" -v "$STATE":/s
   CONVERTING=true
   in_vol 'find /n -mindepth 1 -delete' -v "$NAMED":/n
   docker run -d --name "$NEW_C" -e POSTGRES_USER="$PG_USER" -e POSTGRES_PASSWORD -e POSTGRES_DB=postgres \
-    -e PGDATA="$PGDATA_PATH" -e POSTGRES_INITDB_ARGS="--encoding=$enc --lc-collate=$lcc --lc-ctype=$lct" \
+    -e PGDATA="$PGDATA_PATH" -e POSTGRES_INITDB_ARGS="$initdb_args" \
     -v "$NAMED":"$PGDATA_PATH" "$target" >/dev/null
   wait_ready "$NEW_C"
+  # Until verified, the entrypoint wrapper refuses this cluster even if this run dies without its trap
+  docker exec "$NEW_C" touch "$PGDATA_PATH/$MARKER"
 
   # Roles (with their SCRAM hashes); the bootstrap superuser already exists after initdb
   docker exec "$OLD_C" pg_dumpall -U "$PG_USER" --globals-only \
@@ -309,13 +340,16 @@ convert_major() {
   fi
   say "verified: $(echo "$fp_new" | grep -vc '|seq:' || true) tables and $(echo "$fp_new" | grep -c '|seq:' || true) sequences identical on $data_ver and $target_ver"
 
+  docker exec "$NEW_C" rm "$PGDATA_PATH/$MARKER"
   docker stop -t 60 "$NEW_C" "$OLD_C" >/dev/null
   cleanup_temps
   CONVERTING=false
   trap - ERR INT TERM
+  docker volume rm "$STATE" >/dev/null
   say "done. The Postgres $data_ver copy is kept in $BACKUP; once everything runs fine on $target_ver, remove it with:"
   say "  docker volume rm $BACKUP"
 }
 
+recover_conversion
 migrate_layout
 convert_major
