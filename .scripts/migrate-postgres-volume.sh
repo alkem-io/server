@@ -182,6 +182,7 @@ OLD_C=pgconv-old-$$ NEW_C=pgconv-new-$$ BACKUP="" CONVERTING=false
 # Lives outside PGDATA for the whole time the named volume does not hold a verified cluster, and names the
 # backup to recover from: a run killed outright (no trap) is put back to the backup by the next run
 STATE="${NAMED}_pgconv_state"
+NEW_SUBDIR=pgconv-new
 # Old cluster copied back into the named volume; the state volume goes only once that has worked
 restore_backup() {
   in_vol 'find /n -mindepth 1 -delete && cp -a /b/. /n/ && [ "$(cat /n/PG_VERSION)" = "$(cat /b/PG_VERSION)" ]' \
@@ -307,13 +308,13 @@ convert_major() {
   docker volume create "$STATE" >/dev/null
   in_vol 'echo "$B" > /s/backup' -e B="$BACKUP" -v "$STATE":/s
   CONVERTING=true
-  in_vol 'find /n -mindepth 1 -delete' -v "$NAMED":/n
+  # The new cluster is built in a subdirectory and moved up only once verified; the marker at the root is
+  # written first and removed last, so the root never holds an unverified cluster the entrypoint would start
+  in_vol 'find /n -mindepth 1 -delete && touch /n/'"$MARKER" -v "$NAMED":/n
   docker run -d --name "$NEW_C" -e POSTGRES_USER="$PG_USER" -e POSTGRES_PASSWORD -e POSTGRES_DB=postgres \
-    -e PGDATA="$PGDATA_PATH" -e POSTGRES_INITDB_ARGS="$initdb_args" \
+    -e PGDATA="$PGDATA_PATH/$NEW_SUBDIR" -e POSTGRES_INITDB_ARGS="$initdb_args" \
     -v "$NAMED":"$PGDATA_PATH" "$target" >/dev/null
   wait_ready "$NEW_C"
-  # Until verified, the entrypoint wrapper refuses this cluster even if this run dies without its trap
-  docker exec "$NEW_C" touch "$PGDATA_PATH/$MARKER"
 
   # Roles (with their SCRAM hashes); the bootstrap superuser already exists after initdb
   docker exec "$OLD_C" pg_dumpall -U "$PG_USER" --globals-only \
@@ -340,8 +341,13 @@ convert_major() {
   fi
   say "verified: $(echo "$fp_new" | grep -vc '|seq:' || true) tables and $(echo "$fp_new" | grep -c '|seq:' || true) sequences identical on $data_ver and $target_ver"
 
-  docker exec "$NEW_C" rm "$PGDATA_PATH/$MARKER"
   docker stop -t 60 "$NEW_C" "$OLD_C" >/dev/null
+  in_vol 'set -e
+    find /n/'"$NEW_SUBDIR"' -mindepth 1 -maxdepth 1 -exec mv {} /n/ \;
+    rmdir /n/'"$NEW_SUBDIR"'
+    test -f /n/PG_VERSION
+    sync
+    rm /n/'"$MARKER" -v "$NAMED":/n
   cleanup_temps
   CONVERTING=false
   trap - ERR INT TERM
