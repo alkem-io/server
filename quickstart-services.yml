@@ -372,7 +372,9 @@ services:
     ports:
       - 5432
     volumes:
-      - alkemio_dev_postgres:/var/lib/postgresql
+      # Mount at PGDATA itself: the image declares VOLUME /var/lib/postgresql/data, so a mount one level
+      # up leaves the cluster in an anonymous volume that a container rm / down -v silently discards.
+      - alkemio_dev_postgres:/var/lib/postgresql/data
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
       - ./.build/postgres/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
     healthcheck:
