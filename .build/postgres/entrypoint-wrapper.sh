@@ -11,6 +11,10 @@ if [ ! -f "$pgdata/PG_VERSION" ] && [ "$(ls -A "$pgdata" 2>/dev/null)" = "data" 
   echo "[ensure] or use 'pnpm run start:services', which runs it for you." >&2
   exit 1
 fi
+if [ -f "$pgdata/.pg-volume-copy-incomplete" ]; then
+  echo "[ensure] $pgdata holds an interrupted copy. Run .scripts/migrate-postgres-volume.sh to redo it." >&2
+  exit 1
+fi
 
 # Preserve original command (defaults to "postgres")
 args=("$@")
