@@ -151,6 +151,7 @@ export class KratosService {
    *   - `linkedin`  -> `AuthenticationType.LINKEDIN`
    *   - `github`    -> `AuthenticationType.GITHUB`
    *   - `cleverbase` -> `AuthenticationType.CLEVERBASE`
+   *   - `apple`     -> `AuthenticationType.APPLE`
    * - If the identity has password credentials, it adds `AuthenticationType.EMAIL`.
    * - If the identity has passkey (or legacy webauthn) credentials, it adds
    *   `AuthenticationType.PASSKEY`.
@@ -168,6 +169,7 @@ export class KratosService {
       ['linkedin', AuthenticationType.LINKEDIN],
       ['github', AuthenticationType.GITHUB],
       ['cleverbase', AuthenticationType.CLEVERBASE],
+      ['apple', AuthenticationType.APPLE],
     ];
 
     const authTypes = new Set<AuthenticationType>();
