@@ -195,6 +195,11 @@ recover_conversion() {
     || die "an earlier conversion of $NAMED was interrupted and its backup $BACKUP is missing; inspect the volumes before going on"
   say "an earlier conversion of $NAMED was interrupted; restoring the original cluster from $BACKUP"
   stop_postgres
+  # A killed run leaves its temporary servers running on these volumes; only ours (by volume) are removed
+  local v
+  for v in "$NAMED" "$BACKUP"; do
+    docker ps -aq --filter name=pgconv- --filter volume="$v" | xargs -r docker rm -f >/dev/null
+  done
   trap - ERR INT TERM # a failure here keeps the state volume, so the next run tries again
   restore_backup
   say "restored; converting again"
