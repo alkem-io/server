@@ -59,12 +59,6 @@ named_state() {
 state=$(named_state)
 [ "$state" = cluster ] && { say "already migrated ($NAMED holds the cluster)"; exit 0; }
 [ "$state" = other ] && die "$NAMED holds unexpected files and no PG_VERSION; inspect it before starting postgres"
-# The source of an interrupted copy is never touched, so the partial target is safe to clear and redo
-if [ "$state" = partial ]; then
-  say "$NAMED holds an interrupted copy; clearing it to copy again"
-  in_vol 'find /v -mindepth 1 -delete' -v "$NAMED":/v
-  state=empty
-fi
 
 # Postgres must be stopped cleanly for a consistent file copy. A plain `docker stop` reaches postgres as
 # SIGTERM ("smart" shutdown), which waits for every client: on a running stack that hangs until the kill.
@@ -96,9 +90,9 @@ restore_postgres() {
 if $FRESH; then
   [ "$state" = empty ] && { say "fresh setup, nothing to migrate"; exit 0; }
   stop_postgres
-  in_vol 'rmdir /v/data' -v "$NAMED":/v
+  in_vol 'find /v -mindepth 1 -delete' -v "$NAMED":/v
   trap - ERR INT TERM
-  say "cleared the old empty mount point; postgres will initialise a fresh cluster"; exit 0
+  say "cleared $NAMED; postgres will initialise a fresh cluster"; exit 0
 fi
 
 # Source: explicit --from, else whatever the existing container has mounted at PGDATA
@@ -109,17 +103,18 @@ fi
 
 if [ -z "$src" ] || [ "$src" = "$NAMED" ]; then
   [ "$state" = empty ] && { say "fresh setup, nothing to migrate"; exit 0; }
-  # stub without a source container: old data, if any, is in a dangling volume
-  echo "[pg-volume] $NAMED is in the old layout but no container points at the old data." >&2
+  # stub or interrupted copy without a source container: old data, if any, is in a dangling volume
+  echo "[pg-volume] $NAMED is in the old layout or holds an interrupted copy, but no container points at the old data." >&2
   echo "[pg-volume] Dangling volumes that contain a Postgres cluster (newest first):" >&2
   for v in $(docker volume ls -q --filter dangling=true); do
-    info=$(in_vol '[ -f /d/PG_VERSION ] && echo "pg$(cat /d/PG_VERSION) $(du -sh /d | cut -f1)"' -v "$v":/d:ro 2>/dev/null || true)
+    info=$(in_vol '[ -f /d/PG_VERSION ] && [ ! -f /d/'"$MARKER"' ] && echo "pg$(cat /d/PG_VERSION) $(du -sh /d | cut -f1)"' -v "$v":/d:ro 2>/dev/null || true)
     if [ -n "$info" ]; then echo "$(docker volume inspect -f '{{.CreatedAt}}' "$v") $v $info"; fi
   done | sort -r | sed 's/^/    /' >&2
   die "pick one: $0 --from <volume>   or, to start empty: $0 --fresh"
 fi
 
 in_vol 'test -f /s/PG_VERSION' -v "$src":/s:ro || die "$src has no PG_VERSION: not a Postgres data directory"
+in_vol 'test ! -f /s/'"$MARKER" -v "$src":/s:ro || die "$src holds an interrupted copy itself, not a usable cluster"
 # Copying files under a live server gives an inconsistent cluster: only $CONTAINER is stopped below
 for c in $(docker ps -q --filter volume="$src"); do
   name=$(docker inspect -f '{{.Name}}' "$c"); name=${name#/}
@@ -131,6 +126,8 @@ say "moving the Postgres $src_ver cluster from volume $src into $NAMED"
 stop_postgres
 docker volume create "$NAMED" >/dev/null
 in_vol 'set -e
+  # an interrupted earlier copy: its source is never modified, so the partial target is safe to redo
+  if [ -f /n/'"$MARKER"' ]; then echo "[pg-volume] clearing an interrupted copy"; find /n -mindepth 1 -delete; fi
   [ -d /n/data ] && rmdir /n/data
   [ -z "$(ls -A /n)" ] || { echo "target not empty, refusing" >&2; exit 1; }
   touch /n/'"$MARKER"'
