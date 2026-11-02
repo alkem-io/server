@@ -97,6 +97,7 @@ enum AssistantCapabilityKind {
 }
 
 enum AuthenticationType {
+  APPLE
   CLEVERBASE
   EMAIL
   GITHUB
@@ -7814,7 +7815,7 @@ type UserAuthenticationResult {
   """When the Kratos Account for the user was created"""
   createdAt: DateTime
   """
-  The Authentication Methods used for this User. One of email, linkedin, microsoft, github or unknown
+  The Authentication Methods used for this User. One of apple, cleverbase, email, github, linkedin, microsoft, passkey or unknown
   """
   methods: [AuthenticationType!]!
 }
