@@ -44,6 +44,12 @@ fi
 project=$(docker compose -f quickstart-services.yml "${env_files[@]}" config 2>/dev/null | sed -n 's/^name: //p' | head -1)
 [ -n "$project" ] || die "cannot determine the compose project name"
 NAMED="${project}_alkemio_dev_postgres"
+# container_name is fixed but volumes are per project: a container from another checkout is not ours
+# to stop or to copy from
+own_container=false
+if [ "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$CONTAINER" 2>/dev/null)" = "$project" ]; then
+  own_container=true
+fi
 
 # Named volume state: "cluster" (already holds a database), "partial" (an interrupted copy),
 # "stub" (only the old empty data/ mount point), "empty"
@@ -67,7 +73,7 @@ state=$(named_state)
 # If the migration fails before compose runs, the trap puts the policy back and restarts it.
 restart_policy=""
 stop_postgres() {
-  [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER" 2>/dev/null)" = true ] || return 0
+  $own_container && [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER")" = true ] || return 0
   say "stopping $CONTAINER (fast shutdown, clients are disconnected)"
   restart_policy=$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$CONTAINER")
   trap restore_postgres ERR INT TERM
@@ -97,7 +103,7 @@ fi
 
 # Source: explicit --from, else whatever the existing container has mounted at PGDATA
 src=$FROM
-if [ -z "$src" ] && docker inspect "$CONTAINER" >/dev/null 2>&1; then
+if [ -z "$src" ] && $own_container; then
   src=$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"$PGDATA_PATH\"}}{{.Name}}{{end}}{{end}}" "$CONTAINER")
 fi
 
@@ -115,10 +121,10 @@ fi
 
 in_vol 'test -f /s/PG_VERSION' -v "$src":/s:ro || die "$src has no PG_VERSION: not a Postgres data directory"
 in_vol 'test ! -f /s/'"$MARKER" -v "$src":/s:ro || die "$src holds an interrupted copy itself, not a usable cluster"
-# Copying files under a live server gives an inconsistent cluster: only $CONTAINER is stopped below
+# Copying files under a live server gives an inconsistent cluster: only our own $CONTAINER is stopped below
 for c in $(docker ps -q --filter volume="$src"); do
   name=$(docker inspect -f '{{.Name}}' "$c"); name=${name#/}
-  [ "$name" = "$CONTAINER" ] || die "$src is in use by the running container $name; stop it first"
+  [ "$name" = "$CONTAINER" ] && $own_container || die "$src is in use by the running container $name; stop it first"
 done
 src_ver=$(in_vol 'cat /s/PG_VERSION' -v "$src":/s:ro)
 say "moving the Postgres $src_ver cluster from volume $src into $NAMED"
@@ -127,9 +133,13 @@ stop_postgres
 docker volume create "$NAMED" >/dev/null
 in_vol 'set -e
   # an interrupted earlier copy: its source is never modified, so the partial target is safe to redo
-  if [ -f /n/'"$MARKER"' ]; then echo "[pg-volume] clearing an interrupted copy"; find /n -mindepth 1 -delete; fi
+  # (the marker stays until the copy completes, so an interruption here is still recognised)
+  if [ -f /n/'"$MARKER"' ]; then
+    echo "[pg-volume] clearing an interrupted copy"
+    find /n -mindepth 1 -maxdepth 1 ! -name '"$MARKER"' -exec rm -rf -- {} +
+  fi
   [ -d /n/data ] && rmdir /n/data
-  [ -z "$(ls -A /n)" ] || { echo "target not empty, refusing" >&2; exit 1; }
+  [ -z "$(ls -A /n | grep -vxF '"$MARKER"')" ] || { echo "target not empty, refusing" >&2; exit 1; }
   touch /n/'"$MARKER"'
   cp -a /s/. /n/
   [ "$(cat /n/PG_VERSION)" = "$(cat /s/PG_VERSION)" ]
