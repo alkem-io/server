@@ -13,7 +13,7 @@ export const validateSearchParameters = (
   }
 ) => {
   const { maxSearchResults } = validationOptions;
-  const { tagsetNames, terms, filters = [] } = searchData;
+  const { tagsetNames, terms, filters = [], searchInSpaceFilter } = searchData;
   if (terms.length > SEARCH_TERM_LIMIT) {
     throw new ValidationException(
       `Maximum number of search terms is ${SEARCH_TERM_LIMIT}; supplied: ${searchData.terms.length}`,
@@ -28,11 +28,13 @@ export const validateSearchParameters = (
     );
   }
   // a counted Spaces search counts and pages one filter's hits; a second
-  // SPACES filter would add hits that the total and the cursor do not cover
+  // SPACES filter would add hits that the total and the cursor do not cover.
+  // A space-scoped search is never counted, so there is nothing to protect.
   const spacesFilters = filters.filter(
     ({ category }) => category === SearchCategory.SPACES
   );
   if (
+    !searchInSpaceFilter &&
     spacesFilters.length > 1 &&
     spacesFilters.some(({ countTotal }) => countTotal)
   ) {

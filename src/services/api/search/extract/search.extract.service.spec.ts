@@ -480,6 +480,25 @@ describe('SearchExtractService', () => {
     });
   });
 
+  describe('searchAllHits on a partial response', () => {
+    it('fails when shards failed, instead of counting partial hits', async () => {
+      mockClient.search.mockResolvedValue({
+        _shards: { total: 2, successful: 1, failed: 1 },
+        hits: { hits: [] },
+      });
+
+      await expect(
+        service.searchAllHits(
+          ['alpha'],
+          { category: SearchCategory.SPACES, size: 4 },
+          false,
+          1000,
+          'user-1'
+        )
+      ).rejects.toThrow('Search failed on 1 shard(s)');
+    });
+  });
+
   describe('getMatchedTerms', () => {
     const spacesFilter = { category: SearchCategory.SPACES, size: 4 };
 

@@ -264,6 +264,15 @@ export class SearchResultService {
     subspace: Space,
     actorContext: ActorContext
   ): boolean {
+    if (!subspace.authorization) {
+      // broken data: isAccessGranted would throw and fail the whole search
+      this.logger.error(
+        `Subspace ${subspace.id} has no authorization policy; left out of the search results`,
+        undefined,
+        LogContext.SEARCH_RESULT
+      );
+      return false;
+    }
     if (
       !this.authorizationService.isAccessGranted(
         actorContext,

@@ -128,6 +128,22 @@ describe('validateSearchParameters', () => {
     ).toThrow('Only one SPACES filter is allowed when countTotal is set');
   });
 
+  it('should allow several SPACES filters with countTotal in a space-scoped search', () => {
+    expect(() =>
+      validateSearchParameters(
+        {
+          terms: ['a'],
+          searchInSpaceFilter: 'space-1',
+          filters: [
+            { category: SearchCategory.SPACES, size: 5, countTotal: true },
+            { category: SearchCategory.SPACES, size: 5 },
+          ],
+        } as any,
+        validationOptions
+      )
+    ).not.toThrow();
+  });
+
   it('should allow several SPACES filters without countTotal', () => {
     expect(() =>
       validateSearchParameters(

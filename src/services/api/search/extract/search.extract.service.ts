@@ -335,6 +335,11 @@ export class SearchExtractService {
       highlight: options.highlight ? SEARCH_HIGHLIGHT : undefined,
       preference: options.preference,
     });
+    // a 200 can still carry partial results; counting them would undercount
+    const failedShards = response._shards?.failed ?? 0;
+    if (failedShards > 0) {
+      throw new Error(`Search failed on ${failedShards} shard(s)`);
+    }
 
     return this.processMultiSearchItem(response);
   }

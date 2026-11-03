@@ -100,6 +100,24 @@ describe('SearchResultService', () => {
       expect(visible).toEqual([hits[0], hits[2]]);
     });
 
+    it('leaves out a Subspace without an authorization policy, instead of failing the search', async () => {
+      const hits = [
+        hit('space', SearchResultType.SPACE),
+        hit('broken-subspace', SearchResultType.SUBSPACE),
+      ];
+      entityManager.find.mockImplementation(async (_entity, options) =>
+        [
+          { id: 'space' },
+          { id: 'broken-subspace', parentSpace: { id: 'space' } },
+        ].filter(space => options.where.id.value.includes(space.id))
+      );
+
+      const visible = await service.filterVisibleSpaceHits(hits, actorContext);
+
+      expect(visible).toEqual([hits[0]]);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
     it('loads only ids for Spaces, and authorization and the parent id only for Subspaces', async () => {
       entityManager.find.mockResolvedValue([]);
 
