@@ -13,7 +13,11 @@ import { ISearchResult, ISearchResults } from './dto/results';
 import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
 import { SearchCategory } from './search.category';
-import { paginateSearchHits, validateSearchParameters } from './util';
+import {
+  calculateSearchCursor,
+  paginateSearchHits,
+  validateSearchParameters,
+} from './util';
 
 const DEFAULT_RESULT_SIZE = 4;
 /**
@@ -66,12 +70,14 @@ export class SearchService {
     }
     // search only in the public available data if the user is not authenticated
     const onlyPublicResults = !actorContext.actorID;
-    // Spaces are counted and paginated exactly (see searchSpaces) — except in a
-    // space-scoped search, which resolves its Space hits differently.
+    // Spaces are counted and paginated exactly (see searchSpaces) only when
+    // asked for, as that scans every match — and never in a space-scoped
+    // search, which resolves its Space hits differently.
     const spacesFilter = searchData.searchInSpaceFilter
       ? undefined
       : searchData.filters.find(
-          filter => filter.category === SearchCategory.SPACES
+          filter =>
+            filter.category === SearchCategory.SPACES && filter.countTotal
         );
     const otherFilters = searchData.filters.filter(
       filter => filter !== spacesFilter
@@ -114,9 +120,11 @@ export class SearchService {
 
     if (spaces) {
       results.spaceResults.total = spaces.total;
-      if (!spaces.hasMore) {
-        results.spaceResults.cursor = undefined;
-      }
+      // from the page that was cut, not from what resolved of it: a hit that
+      // vanished in between must not end the pagination early
+      results.spaceResults.cursor = spaces.hasMore
+        ? calculateSearchCursor(spaces.page)
+        : undefined;
     }
 
     return results;
@@ -135,12 +143,28 @@ export class SearchService {
     onlyPublicResults: boolean,
     actorContext: ActorContext
   ): Promise<{ page: ISearchResult[]; total: number; hasMore: boolean }> {
-    const hits = await this.searchExtractService.searchAllHits(
-      terms,
-      filter,
-      onlyPublicResults,
-      SPACES_SCAN_LIMIT
-    );
+    // one requester's pages are served by the same shard copies (see searchAllHits)
+    const preference = actorContext.actorID || 'anonymous';
+    let hits: ISearchResult[];
+    try {
+      hits = await this.searchExtractService.searchAllHits(
+        terms,
+        filter,
+        onlyPublicResults,
+        SPACES_SCAN_LIMIT,
+        preference
+      );
+    } catch (error) {
+      // like any failed category: no results, the rest of the search goes on —
+      // but the total is unknown (-1), not zero
+      const { message, stack } = error as Error;
+      this.logger.error?.(
+        { message: 'Spaces search failed', error: message },
+        stack,
+        LogContext.SEARCH
+      );
+      return { page: [], total: -1, hasMore: false };
+    }
     if (hits.length === SPACES_SCAN_LIMIT) {
       this.logger.warn?.(
         `Spaces search reached the scan limit of ${SPACES_SCAN_LIMIT} hits; lower ranked hits are not counted`,
@@ -161,7 +185,8 @@ export class SearchService {
       terms,
       filter,
       onlyPublicResults,
-      page.map(hit => hit.result.id)
+      page.map(hit => hit.result.id),
+      preference
     );
 
     return {

@@ -31,4 +31,12 @@ export class SearchFilterInput {
     description: 'Which types to include. Defaults to all in the category.',
   })
   types?: SearchResultType[];
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Count every result the requester may see and paginate over them exactly (see `total`). Only honoured for the SPACES category in a search that is not scoped to a Space. Costs a full scan of the matching Spaces, so only ask for it when the total is shown.',
+    defaultValue: false,
+  })
+  countTotal?: boolean;
 }

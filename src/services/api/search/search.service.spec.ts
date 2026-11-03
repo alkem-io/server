@@ -260,7 +260,11 @@ describe('SearchService', () => {
       terms: [],
       result: { id: uuid(n) },
     });
-    const spacesFilter = { category: SearchCategory.SPACES, size: 1 };
+    const spacesFilter = {
+      category: SearchCategory.SPACES,
+      size: 1,
+      countTotal: true,
+    };
 
     it('counts the visible hits and resolves only the requested page, with its matched terms', async () => {
       const [first, hidden, second] = [hit(9, 3), hit(8, 2), hit(7, 1)];
@@ -286,7 +290,15 @@ describe('SearchService', () => {
         ['alpha'],
         spacesFilter,
         false,
-        [first.result.id]
+        [first.result.id],
+        'user-1'
+      );
+      expect(searchExtractService.searchAllHits).toHaveBeenCalledWith(
+        ['alpha'],
+        spacesFilter,
+        false,
+        1000,
+        'user-1'
       );
       expect(searchResultService.resolveSearchResults).toHaveBeenCalledWith(
         [{ ...first, terms: ['alpha'] }],
@@ -296,7 +308,56 @@ describe('SearchService', () => {
         { foldToCallouts: false }
       );
       expect(results.spaceResults.total).toBe(2);
-      expect(results.spaceResults.cursor).toBe('resolved-cursor');
+      // taken from the cut page, not from what resolved of it
+      expect(results.spaceResults.cursor).toBe(`9::${first.result.id}`);
+    });
+
+    it('keeps the cursor when the page did not resolve, so pagination does not end early', async () => {
+      const [first, second] = [hit(9, 2), hit(7, 1)];
+      searchExtractService.searchAllHits.mockResolvedValue([first, second]);
+      searchResultService.resolveSearchResults.mockResolvedValueOnce({
+        spaceResults: { results: [], cursor: undefined, total: -1 },
+      });
+
+      const results = await service.search(
+        { terms: ['alpha'], filters: [spacesFilter] } as any,
+        actorContext
+      );
+
+      expect(results.spaceResults.cursor).toBe(`9::${first.result.id}`);
+    });
+
+    it('reports an unknown total (-1), not zero, when the Spaces scan fails', async () => {
+      searchExtractService.searchAllHits.mockRejectedValue(
+        new Error('es down')
+      );
+
+      const results = await service.search(
+        { terms: ['alpha'], filters: [spacesFilter] } as any,
+        actorContext
+      );
+
+      expect(results.spaceResults.total).toBe(-1);
+      expect(results.spaceResults.cursor).toBeUndefined();
+      expect(searchExtractService.getMatchedTerms).not.toHaveBeenCalled();
+    });
+
+    it('does not scan or count the Spaces unless countTotal is set', async () => {
+      const filters = [{ category: SearchCategory.SPACES, size: 4 }];
+
+      await service.search({ terms: ['alpha'], filters } as any, actorContext);
+
+      expect(searchExtractService.searchAllHits).not.toHaveBeenCalled();
+      expect(searchExtractService.search).toHaveBeenCalledWith(
+        expect.objectContaining({ filters }),
+        false
+      );
+    });
+
+    it('does not scan the Spaces for the default filters', async () => {
+      await service.search({ terms: ['alpha'] } as any, actorContext);
+
+      expect(searchExtractService.searchAllHits).not.toHaveBeenCalled();
     });
 
     it('returns no cursor on the last page', async () => {

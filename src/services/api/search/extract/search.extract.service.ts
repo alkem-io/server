@@ -238,42 +238,71 @@ export class SearchExtractService {
    * to `limit`. Ids, types and scores only — no highlighting and no cursor — so
    * the whole result set can be authorized and counted before a page is cut
    * from it.
+   * `preference` routes every page of one requester to the same shard copies,
+   * so the scores the keyset cursor compares do not drift between replicas.
+   * @throws when Elasticsearch fails — the caller cannot count what it did not read
    */
   public searchAllHits(
     terms: string[],
     filter: SearchFilterInput,
     onlyPublicResults: boolean,
-    limit: number
+    limit: number,
+    preference: string
   ): Promise<ISearchResult[]> {
     return this.searchCategory(terms, filter, onlyPublicResults, {
       size: limit,
+      preference,
     });
   }
 
-  /** The matched terms (see `extractMatchedTerms`) of the given entities, keyed by entity id. */
+  /**
+   * The matched terms (see `extractMatchedTerms`) of the given entities, keyed
+   * by entity id. When the highlight request fails the map is empty: the hits
+   * are still returned, only without their matched terms.
+   */
   public async getMatchedTerms(
     terms: string[],
     filter: SearchFilterInput,
     onlyPublicResults: boolean,
-    entityIds: string[]
+    entityIds: string[],
+    preference: string
   ): Promise<Map<string, string[]>> {
     if (entityIds.length === 0) {
       return new Map();
     }
 
-    const hits = await this.searchCategory(terms, filter, onlyPublicResults, {
-      size: entityIds.length,
-      entityIds,
-      highlight: true,
-    });
-    return new Map(hits.map(hit => [hit.result.id, hit.terms]));
+    try {
+      const hits = await this.searchCategory(terms, filter, onlyPublicResults, {
+        size: entityIds.length,
+        entityIds,
+        highlight: true,
+        preference,
+      });
+      return new Map(hits.map(hit => [hit.result.id, hit.terms]));
+    } catch (error) {
+      const { message, stack } = error as Error;
+      this.logger.error(
+        {
+          message: 'Error response for the matched terms search request',
+          error: message,
+        },
+        stack,
+        LogContext.SEARCH_EXTRACT
+      );
+      return new Map();
+    }
   }
 
   private async searchCategory(
     terms: string[],
     filter: SearchFilterInput,
     onlyPublicResults: boolean,
-    options: { size: number; entityIds?: string[]; highlight?: boolean }
+    options: {
+      size: number;
+      preference: string;
+      entityIds?: string[];
+      highlight?: boolean;
+    }
   ): Promise<ISearchResult[]> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
@@ -294,33 +323,20 @@ export class SearchExtractService {
         }
       : textQuery;
 
-    try {
-      const response = await this.client.search<BaseSearchHit>({
-        index: indices.map(index => index.name),
-        query,
-        fields: ['id', 'type'],
-        _source: false,
-        size: options.size,
-        // the same order as the multi search, so the keyset cursor is interchangeable
-        sort: { _score: 'desc', id: 'desc' } as estypes.Sort,
-        track_total_hits: false,
-        highlight: options.highlight ? SEARCH_HIGHLIGHT : undefined,
-      });
+    const response = await this.client.search<BaseSearchHit>({
+      index: indices.map(index => index.name),
+      query,
+      fields: ['id', 'type'],
+      _source: false,
+      size: options.size,
+      // the same order as the multi search, so the keyset cursor is interchangeable
+      sort: { _score: 'desc', id: 'desc' } as estypes.Sort,
+      track_total_hits: false,
+      highlight: options.highlight ? SEARCH_HIGHLIGHT : undefined,
+      preference: options.preference,
+    });
 
-      return this.processMultiSearchItem(response);
-    } catch (error) {
-      // like a failed multi search item: this category has no results, the rest of the search goes on
-      const { message, stack } = error as Error;
-      this.logger.error(
-        {
-          message: 'Error response for category search request',
-          error: message,
-        },
-        stack,
-        LogContext.SEARCH_EXTRACT
-      );
-      return [];
-    }
+    return this.processMultiSearchItem(response);
   }
 
   private getIndices(

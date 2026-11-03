@@ -204,8 +204,9 @@ export class SearchResultService {
    * The Space / Subspace hits the actor would get back from
    * `getSpaceSearchResults` / `getSubspaceSearchResults`, in their original
    * order, without loading what those enrich the results with — so a whole
-   * result set can be counted and paginated cheaply. Same rules: a Space only
-   * has to still exist; a Subspace needs READ and its parent.
+   * result set can be counted and paginated cheaply. Same rules, shared with
+   * them: a Space only has to still exist; a Subspace must pass
+   * `isSubspaceVisible`. Only the columns those rules read are loaded.
    */
   public async filterVisibleSpaceHits(
     hits: ISearchResult[],
@@ -215,29 +216,80 @@ export class SearchResultService {
       return [];
     }
 
-    const spaces = await this.entityManager.find(Space, {
-      where: { id: In(hits.map(hit => hit.result.id)) },
-      relations: { parentSpace: true },
-    });
-    const spacesById = new Map(spaces.map(space => [space.id, space]));
-
-    return hits.filter(hit => {
-      const space = spacesById.get(hit.result.id);
-      if (!space) {
-        return false;
-      }
-      if (hit.type === SearchResultType.SPACE) {
-        return true;
-      }
-      return (
-        !!space.parentSpace &&
-        this.authorizationService.isAccessGranted(
-          actorContext,
-          space.authorization,
-          AuthorizationPrivilege.READ
-        )
+    const spaceIds: string[] = [];
+    const subspaceIds: string[] = [];
+    for (const hit of hits) {
+      (hit.type === SearchResultType.SPACE ? spaceIds : subspaceIds).push(
+        hit.result.id
       );
-    });
+    }
+
+    const [spaces, subspaces] = await Promise.all([
+      spaceIds.length > 0
+        ? this.entityManager.find(Space, {
+            where: { id: In(spaceIds) },
+            select: { id: true },
+            loadEagerRelations: false,
+          })
+        : [],
+      subspaceIds.length > 0
+        ? this.entityManager.find(Space, {
+            where: { id: In(subspaceIds) },
+            select: { id: true, level: true, parentSpace: { id: true } },
+            relations: { parentSpace: true, authorization: true },
+            loadEagerRelations: false,
+          })
+        : [],
+    ]);
+    const existingSpaceIds = new Set(spaces.map(space => space.id));
+    const visibleSubspaceIds = new Set(
+      subspaces
+        .filter(subspace => this.isSubspaceVisible(subspace, actorContext))
+        .map(subspace => subspace.id)
+    );
+
+    return hits.filter(hit =>
+      hit.type === SearchResultType.SPACE
+        ? existingSpaceIds.has(hit.result.id)
+        : visibleSubspaceIds.has(hit.result.id)
+    );
+  }
+
+  /**
+   * Whether a Subspace search hit is returned to the actor: it needs READ and
+   * a parent Space. `subspace` must have `authorization` and `parentSpace`
+   * loaded.
+   */
+  private isSubspaceVisible(
+    subspace: Space,
+    actorContext: ActorContext
+  ): boolean {
+    if (
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        subspace.authorization,
+        AuthorizationPrivilege.READ
+      )
+    ) {
+      return false;
+    }
+
+    if (!subspace.parentSpace) {
+      const error = new BaseException(
+        'Unable to find parent space for subspace while building search results',
+        LogContext.SEARCH,
+        AlkemioErrorStatus.NOT_FOUND,
+        {
+          subspaceId: subspace.id,
+          level: subspace.level,
+          cause: 'Relation is not loaded. Could be due to broken data',
+        }
+      );
+      this.logger.error(error, error.stack, LogContext.SEARCH_RESULT);
+      return false;
+    }
+
+    return true;
   }
 
   public async getSpaceSearchResults(
@@ -322,29 +374,7 @@ export class SearchResultService {
           return undefined;
         }
 
-        if (
-          !this.authorizationService.isAccessGranted(
-            actorContext,
-            subspace.authorization,
-            AuthorizationPrivilege.READ
-          )
-        ) {
-          return undefined;
-        }
-
-        if (!subspace.parentSpace) {
-          const error = new BaseException(
-            'Unable to find parent space for subspace while building search results',
-            LogContext.SEARCH,
-            AlkemioErrorStatus.NOT_FOUND,
-            {
-              subspaceId: subspace.id,
-              level: subspace.level,
-              cause: 'Relation is not loaded. Could be due to broken data',
-            }
-          );
-          this.logger.error(error, error.stack, LogContext.SEARCH_RESULT);
-
+        if (!this.isSubspaceVisible(subspace, actorContext)) {
           return undefined;
         }
 

@@ -21,7 +21,7 @@ export abstract class ISearchCategoryResult {
   @Field(() => Number, {
     nullable: false,
     description:
-      'The total number of results the requester may see in this category. Only computed for spaceResults, when the search is not scoped to a Space; -1 otherwise.',
+      'The total number of results the requester may see in this category. Only computed for spaceResults when the SPACES filter sets `countTotal` and the search is not scoped to a Space; -1 otherwise, or when the count failed. Only the 1000 best ranked Space / Subspace matches are counted (and reachable by the cursor), so the total never exceeds 1000.',
   })
   total!: number;
 }

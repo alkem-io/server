@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
 import { SearchInput } from '../dto/inputs';
+import { SearchCategory } from '../search.category';
 
 const SEARCH_TERM_LIMIT = 10;
 const TAGSET_NAMES_LIMIT = 2;
@@ -23,6 +24,20 @@ export const validateSearchParameters = (
   if (tagsetNames && tagsetNames.length > TAGSET_NAMES_LIMIT) {
     throw new ValidationException(
       `Maximum number of tagset names is ${TAGSET_NAMES_LIMIT}; supplied: ${tagsetNames.length}`,
+      LogContext.SEARCH
+    );
+  }
+  // a counted Spaces search counts and pages one filter's hits; a second
+  // SPACES filter would add hits that the total and the cursor do not cover
+  const spacesFilters = filters.filter(
+    ({ category }) => category === SearchCategory.SPACES
+  );
+  if (
+    spacesFilters.length > 1 &&
+    spacesFilters.some(({ countTotal }) => countTotal)
+  ) {
+    throw new ValidationException(
+      'Only one SPACES filter is allowed when countTotal is set',
       LogContext.SEARCH
     );
   }

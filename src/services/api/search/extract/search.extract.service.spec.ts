@@ -433,7 +433,8 @@ describe('SearchExtractService', () => {
         ['alpha'],
         { ...spacesFilter, cursor: '1::00000000-0000-4000-8000-000000000001' },
         false,
-        1000
+        1000,
+        'user-1'
       );
 
       const request = mockClient.search.mock.calls[0][0];
@@ -442,6 +443,7 @@ describe('SearchExtractService', () => {
       expect(request.sort).toEqual({ _score: 'desc', id: 'desc' });
       expect(request.highlight).toBeUndefined();
       expect(request.search_after).toBeUndefined();
+      expect(request.preference).toBe('user-1');
       expect(hits).toEqual([
         {
           id: 'doc-1',
@@ -460,7 +462,8 @@ describe('SearchExtractService', () => {
         ['alpha'],
         { ...spacesFilter, types: [SearchResultType.SUBSPACE] },
         false,
-        1000
+        1000,
+        'user-1'
       );
 
       expect(mockClient.search.mock.calls[0][0].index).toEqual([
@@ -468,12 +471,12 @@ describe('SearchExtractService', () => {
       ]);
     });
 
-    it('returns no hits when the search fails, instead of failing the whole search', async () => {
+    it('fails when the search fails, so the caller does not count an unread result set as empty', async () => {
       mockClient.search.mockRejectedValue(new Error('index_not_found'));
 
-      expect(
-        await service.searchAllHits(['alpha'], spacesFilter, false, 1000)
-      ).toEqual([]);
+      await expect(
+        service.searchAllHits(['alpha'], spacesFilter, false, 1000, 'user-1')
+      ).rejects.toThrow('index_not_found');
     });
   });
 
@@ -482,7 +485,13 @@ describe('SearchExtractService', () => {
 
     it('does not search without entities', async () => {
       expect(
-        await service.getMatchedTerms(['alpha'], spacesFilter, false, [])
+        await service.getMatchedTerms(
+          ['alpha'],
+          spacesFilter,
+          false,
+          [],
+          'user-1'
+        )
       ).toEqual(new Map());
       expect(mockClient.search).not.toHaveBeenCalled();
     });
@@ -505,7 +514,8 @@ describe('SearchExtractService', () => {
         ['alpha'],
         spacesFilter,
         false,
-        ['space-1']
+        ['space-1'],
+        'user-1'
       );
 
       const request = mockClient.search.mock.calls[0][0];
@@ -515,6 +525,20 @@ describe('SearchExtractService', () => {
         { terms: { id: ['space-1'] } },
       ]);
       expect(terms).toEqual(new Map([['space-1', ['alpha']]]));
+    });
+
+    it('returns no terms, instead of failing the search, when the highlight request fails', async () => {
+      mockClient.search.mockRejectedValue(new Error('timeout'));
+
+      expect(
+        await service.getMatchedTerms(
+          ['alpha'],
+          spacesFilter,
+          false,
+          ['space-1'],
+          'user-1'
+        )
+      ).toEqual(new Map());
     });
   });
 });

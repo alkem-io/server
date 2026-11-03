@@ -75,20 +75,22 @@ describe('SearchResultService', () => {
         hit('unreadable-subspace', SearchResultType.SUBSPACE),
         hit('orphan-subspace', SearchResultType.SUBSPACE),
       ];
-      entityManager.find.mockResolvedValue([
-        { id: 'space', authorization: { id: 'auth-denied' } },
-        {
-          id: 'readable-subspace',
-          parentSpace: { id: 'space' },
-          authorization: { id: 'auth-granted' },
-        },
-        {
-          id: 'unreadable-subspace',
-          parentSpace: { id: 'space' },
-          authorization: { id: 'auth-denied' },
-        },
-        { id: 'orphan-subspace', authorization: { id: 'auth-granted' } },
-      ]);
+      entityManager.find.mockImplementation(async (_entity, options) =>
+        [
+          { id: 'space' },
+          {
+            id: 'readable-subspace',
+            parentSpace: { id: 'space' },
+            authorization: { id: 'auth-granted' },
+          },
+          {
+            id: 'unreadable-subspace',
+            parentSpace: { id: 'space' },
+            authorization: { id: 'auth-denied' },
+          },
+          { id: 'orphan-subspace', authorization: { id: 'auth-granted' } },
+        ].filter(space => options.where.id.value.includes(space.id))
+      );
       authorizationService.isAccessGranted.mockImplementation(
         (_actor, authorization) => authorization.id === 'auth-granted'
       );
@@ -96,6 +98,34 @@ describe('SearchResultService', () => {
       const visible = await service.filterVisibleSpaceHits(hits, actorContext);
 
       expect(visible).toEqual([hits[0], hits[2]]);
+    });
+
+    it('loads only ids for Spaces, and authorization and the parent id only for Subspaces', async () => {
+      entityManager.find.mockResolvedValue([]);
+
+      await service.filterVisibleSpaceHits(
+        [
+          hit('space', SearchResultType.SPACE),
+          hit('subspace', SearchResultType.SUBSPACE),
+        ],
+        actorContext
+      );
+
+      expect(entityManager.find).toHaveBeenCalledTimes(2);
+      const [spacesOptions, subspacesOptions] =
+        entityManager.find.mock.calls.map(call => call[1]);
+      expect(spacesOptions).toMatchObject({
+        select: { id: true },
+        loadEagerRelations: false,
+      });
+      expect(spacesOptions.where.id.value).toEqual(['space']);
+      expect(spacesOptions.relations).toBeUndefined();
+      expect(subspacesOptions).toMatchObject({
+        select: { id: true, parentSpace: { id: true } },
+        relations: { parentSpace: true, authorization: true },
+        loadEagerRelations: false,
+      });
+      expect(subspacesOptions.where.id.value).toEqual(['subspace']);
     });
   });
 
