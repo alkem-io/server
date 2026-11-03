@@ -200,6 +200,46 @@ export class SearchResultService {
   }
 
   // todo: heavy copy-pasting below: must be refactored
+  /**
+   * The Space / Subspace hits the actor would get back from
+   * `getSpaceSearchResults` / `getSubspaceSearchResults`, in their original
+   * order, without loading what those enrich the results with — so a whole
+   * result set can be counted and paginated cheaply. Same rules: a Space only
+   * has to still exist; a Subspace needs READ and its parent.
+   */
+  public async filterVisibleSpaceHits(
+    hits: ISearchResult[],
+    actorContext: ActorContext
+  ): Promise<ISearchResult[]> {
+    if (hits.length === 0) {
+      return [];
+    }
+
+    const spaces = await this.entityManager.find(Space, {
+      where: { id: In(hits.map(hit => hit.result.id)) },
+      relations: { parentSpace: true },
+    });
+    const spacesById = new Map(spaces.map(space => [space.id, space]));
+
+    return hits.filter(hit => {
+      const space = spacesById.get(hit.result.id);
+      if (!space) {
+        return false;
+      }
+      if (hit.type === SearchResultType.SPACE) {
+        return true;
+      }
+      return (
+        !!space.parentSpace &&
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          space.authorization,
+          AuthorizationPrivilege.READ
+        )
+      );
+    });
+  }
+
   public async getSpaceSearchResults(
     rawSearchResults: ISearchResult[],
     spaceId?: string

@@ -4054,7 +4054,9 @@ type ISearchCategoryResult {
   cursor: SearchCursor
   """The ranked search results for this category, sorted by relevance"""
   results: [SearchResult!]!
-  """The total number of search results. Not implemented yet."""
+  """
+  The total number of results the requester may see in this category. Only computed for spaceResults, when the search is not scoped to a Space; -1 otherwise.
+  """
   total: Float!
 }
 

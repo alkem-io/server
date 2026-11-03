@@ -50,6 +50,55 @@ describe('SearchResultService', () => {
     actorLookupService = module.get(ActorLookupService) as any;
   });
 
+  describe('filterVisibleSpaceHits', () => {
+    const actorContext = { actorID: 'user-1', credentials: [] } as any;
+    const hit = (id: string, type: SearchResultType) => ({
+      id: `hit-${id}`,
+      score: 1,
+      type,
+      terms: [],
+      result: { id },
+    });
+
+    it('returns an empty array without querying when there are no hits', async () => {
+      expect(await service.filterVisibleSpaceHits([], actorContext)).toEqual(
+        []
+      );
+      expect(entityManager.find).not.toHaveBeenCalled();
+    });
+
+    it('keeps existing Spaces, and Subspaces with a parent the actor may read, in their original order', async () => {
+      const hits = [
+        hit('readable-subspace', SearchResultType.SUBSPACE),
+        hit('deleted-space', SearchResultType.SPACE),
+        hit('space', SearchResultType.SPACE),
+        hit('unreadable-subspace', SearchResultType.SUBSPACE),
+        hit('orphan-subspace', SearchResultType.SUBSPACE),
+      ];
+      entityManager.find.mockResolvedValue([
+        { id: 'space', authorization: { id: 'auth-denied' } },
+        {
+          id: 'readable-subspace',
+          parentSpace: { id: 'space' },
+          authorization: { id: 'auth-granted' },
+        },
+        {
+          id: 'unreadable-subspace',
+          parentSpace: { id: 'space' },
+          authorization: { id: 'auth-denied' },
+        },
+        { id: 'orphan-subspace', authorization: { id: 'auth-granted' } },
+      ]);
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor, authorization) => authorization.id === 'auth-granted'
+      );
+
+      const visible = await service.filterVisibleSpaceHits(hits, actorContext);
+
+      expect(visible).toEqual([hits[0], hits[2]]);
+    });
+  });
+
   describe('getSpaceSearchResults', () => {
     it('should return empty array when no raw results are provided', async () => {
       const result = await service.getSpaceSearchResults([]);

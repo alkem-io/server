@@ -13,7 +13,10 @@ import { SearchFilterInput, SearchInput } from '../dto/inputs';
 import { BaseSearchHit, ISearchResult } from '../dto/results';
 import { SearchCategory } from '../search.category';
 import { SearchResultType } from '../search.result.type';
-import { buildMultiSearchRequestItems } from './build.multi.search.request.items';
+import {
+  buildMultiSearchRequestItems,
+  SEARCH_HIGHLIGHT,
+} from './build.multi.search.request.items';
 import { buildSearchQuery } from './build.search.query';
 import { SearchIndex } from './search.index';
 
@@ -230,6 +233,96 @@ export class SearchExtractService {
     return this.processMultiSearchResponses(result.responses);
   }
 
+  /**
+   * Every hit of one category, ranked like `search` (score desc, id desc), up
+   * to `limit`. Ids, types and scores only — no highlighting and no cursor — so
+   * the whole result set can be authorized and counted before a page is cut
+   * from it.
+   */
+  public searchAllHits(
+    terms: string[],
+    filter: SearchFilterInput,
+    onlyPublicResults: boolean,
+    limit: number
+  ): Promise<ISearchResult[]> {
+    return this.searchCategory(terms, filter, onlyPublicResults, {
+      size: limit,
+    });
+  }
+
+  /** The matched terms (see `extractMatchedTerms`) of the given entities, keyed by entity id. */
+  public async getMatchedTerms(
+    terms: string[],
+    filter: SearchFilterInput,
+    onlyPublicResults: boolean,
+    entityIds: string[]
+  ): Promise<Map<string, string[]>> {
+    if (entityIds.length === 0) {
+      return new Map();
+    }
+
+    const hits = await this.searchCategory(terms, filter, onlyPublicResults, {
+      size: entityIds.length,
+      entityIds,
+      highlight: true,
+    });
+    return new Map(hits.map(hit => [hit.result.id, hit.terms]));
+  }
+
+  private async searchCategory(
+    terms: string[],
+    filter: SearchFilterInput,
+    onlyPublicResults: boolean,
+    options: { size: number; entityIds?: string[]; highlight?: boolean }
+  ): Promise<ISearchResult[]> {
+    if (!this.client) {
+      throw new Error('Elasticsearch client not initialized');
+    }
+
+    const indices = this.getIndices(onlyPublicResults, [filter]);
+    if (indices.length === 0) {
+      return [];
+    }
+
+    const textQuery = buildSearchQuery(terms.join(' '));
+    const query: estypes.QueryDslQueryContainer = options.entityIds
+      ? {
+          bool: {
+            must: [textQuery],
+            filter: [{ terms: { id: options.entityIds } }],
+          },
+        }
+      : textQuery;
+
+    try {
+      const response = await this.client.search<BaseSearchHit>({
+        index: indices.map(index => index.name),
+        query,
+        fields: ['id', 'type'],
+        _source: false,
+        size: options.size,
+        // the same order as the multi search, so the keyset cursor is interchangeable
+        sort: { _score: 'desc', id: 'desc' } as estypes.Sort,
+        track_total_hits: false,
+        highlight: options.highlight ? SEARCH_HIGHLIGHT : undefined,
+      });
+
+      return this.processMultiSearchItem(response);
+    } catch (error) {
+      // like a failed multi search item: this category has no results, the rest of the search goes on
+      const { message, stack } = error as Error;
+      this.logger.error(
+        {
+          message: 'Error response for category search request',
+          error: message,
+        },
+        stack,
+        LogContext.SEARCH_EXTRACT
+      );
+      return [];
+    }
+  }
+
   private getIndices(
     onlyPublicResults = false,
     filters?: SearchFilterInput[],
@@ -441,9 +534,9 @@ export class SearchExtractService {
     return results.filter(isDefined);
   }
 
-  private processMultiSearchItem(
-    item: estypes.MsearchMultiSearchItem<BaseSearchHit>
-  ): ISearchResult[] {
+  private processMultiSearchItem(item: {
+    hits: estypes.SearchHitsMetadata<BaseSearchHit>;
+  }): ISearchResult[] {
     return item.hits.hits.map<ISearchResult>(hit => {
       const entityId = hit.fields?.id?.[0];
       const type = hit.fields?.type?.[0];

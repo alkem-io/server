@@ -20,7 +20,8 @@ export abstract class ISearchCategoryResult {
 
   @Field(() => Number, {
     nullable: false,
-    description: 'The total number of search results. Not implemented yet.',
+    description:
+      'The total number of results the requester may see in this category. Only computed for spaceResults, when the search is not scoped to a Space; -1 otherwise.',
   })
   total!: number;
 }
