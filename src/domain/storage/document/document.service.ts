@@ -257,7 +257,6 @@ export class DocumentService {
   public isPubliclyAccessibleURL(url: string): boolean {
     const base = `${this.getDocumentsBaseUrlPath()}/`;
     return (
-      !!url &&
       url.startsWith(base) &&
       DocumentService.DOCUMENT_ID_PATTERN.test(url.slice(base.length))
     );
