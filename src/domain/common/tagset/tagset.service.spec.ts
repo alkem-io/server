@@ -674,6 +674,8 @@ describe('TagsetService', () => {
         { id: 'ts-1', tags: ['oldName'] },
       ] as unknown as ITagset[];
 
+      tagsetRepository.save!.mockResolvedValue({});
+
       await service.updateTagsetsSelectedValue(
         tagsets,
         ['newName', 'default'],
@@ -682,6 +684,9 @@ describe('TagsetService', () => {
       );
 
       expect(tagsets[0].tags).toEqual(['newName']);
+      // The template does not cascade to its tagsets, so the re-tag must be
+      // persisted here or the renamed phase loses its callouts on reload.
+      expect(tagsetRepository.save).toHaveBeenCalledWith(tagsets[0]);
     });
 
     it('should set to newDefaultValue when selected value is not allowed and not renamed', async () => {
