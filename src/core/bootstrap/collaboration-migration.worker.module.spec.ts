@@ -1,5 +1,6 @@
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { CollaborationClientModule } from '@services/collaboration-client/collaboration-client.module';
 import { CollaborationMigrationWorkerModule } from './collaboration-migration.worker.module';
 
 /**
@@ -29,5 +30,9 @@ describe('CollaborationMigrationWorkerModule', () => {
 
   it('imports GraphqlGuardModule so GraphqlGuard + ActorContextService resolve in the listener-less worker (regression: the worker MUST bootstrap)', () => {
     expect(imports).toContain(GraphqlGuardModule);
+  });
+
+  it('imports CollaborationClientModule so repairs use the live room persistence path', () => {
+    expect(imports).toContain(CollaborationClientModule);
   });
 });
