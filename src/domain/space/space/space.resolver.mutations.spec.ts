@@ -308,7 +308,7 @@ describe('SpaceResolverMutations', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('re-applying the current value succeeds (idempotent) but is not audited as a change', async () => {
+    it('re-applying the current value succeeds (idempotent) and is still audited', async () => {
       vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(
         loadedSpace(true)
       );
@@ -322,7 +322,15 @@ describe('SpaceResolverMutations', () => {
       expect(result.promote).toBe(true);
       expect(
         platformResourceAuditService.recordEventForActor
-      ).not.toHaveBeenCalled();
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+        resourceKind: 'space',
+        resourceId: 'space-1',
+        promote: true,
+        outcome: 'promote_changed',
+      });
     });
 
     it('un-promoting is a change and is audited with promote: false', async () => {

@@ -335,7 +335,7 @@ describe('VirtualContributorResolverMutations.adminUpdateVirtualContributorPromo
     ).not.toHaveBeenCalled();
   });
 
-  it('re-applying the current value succeeds (idempotent) but is not audited as a change', async () => {
+  it('re-applying the current value succeeds (idempotent) and is still audited', async () => {
     vi.mocked(service.getVirtualContributorByIdOrFail).mockResolvedValue(
       loaded(true)
     );
@@ -352,7 +352,15 @@ describe('VirtualContributorResolverMutations.adminUpdateVirtualContributorPromo
     expect(result.promote).toBe(true);
     expect(
       platformResourceAuditService.recordEventForActor
-    ).not.toHaveBeenCalled();
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+      resourceKind: 'virtual_contributor',
+      resourceId: 'res-1',
+      promote: true,
+      outcome: 'promote_changed',
+    });
   });
 
   it('changes nothing else on the resource and re-applies no authorization', async () => {

@@ -269,25 +269,22 @@ export class SpaceResolverMutations {
       `adminUpdateSpacePromote: ${space.id}`
     );
 
-    const changed = space.promote !== promoteData.promote;
     space.promote = promoteData.promote;
     const saved = await this.spaceService.save(space);
 
     // Single-path surface: every call reaching here was authorized by
-    // PLATFORM_PROMOTE_MANAGE. Re-applying the current value is accepted but
-    // is not a change, so it is not audited.
-    if (changed) {
-      await this.platformResourceAuditService.recordEventForActor(
-        actorContext,
-        A22_INTENDED_OWNERS,
-        {
-          resourceKind: 'space',
-          resourceId: saved.id,
-          promote: saved.promote,
-          outcome: 'promote_changed',
-        }
-      );
-    }
+    // PLATFORM_PROMOTE_MANAGE. Every successful call is audited, including
+    // re-applying the current value, so the trail records each admin action.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A22_INTENDED_OWNERS,
+      {
+        resourceKind: 'space',
+        resourceId: saved.id,
+        promote: saved.promote,
+        outcome: 'promote_changed',
+      }
+    );
 
     return saved;
   }
