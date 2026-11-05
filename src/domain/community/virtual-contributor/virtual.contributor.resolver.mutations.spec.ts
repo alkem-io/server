@@ -1,8 +1,11 @@
+import { A22_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { AuthorizationPrivilege } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -233,5 +236,147 @@ describe('VirtualContributorResolverMutations', () => {
         virtualContributorService.refreshBodyOfKnowledge
       ).toHaveBeenCalledWith(vc, actorContext);
     });
+  });
+});
+
+describe('VirtualContributorResolverMutations.adminUpdateVirtualContributorPromote', () => {
+  let module: TestingModule;
+  let resolver: VirtualContributorResolverMutations;
+  let service: VirtualContributorService;
+  let authorizationService: AuthorizationService;
+  let platformResourceAuditService: PlatformResourceAuditService;
+  const actorContext = { actorID: 'content-1' } as any;
+  const platformPolicy = { id: 'platform-auth' } as any;
+
+  const loaded = (promote: boolean) =>
+    ({
+      id: 'res-1',
+      promote,
+      authorization: { id: 'own-auth' },
+      listedInStore: true,
+      searchVisibility: 'public',
+      platformSettings: { promptGraphEditingEnabled: false },
+    }) as any;
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    module = await Test.createTestingModule({
+      providers: [
+        VirtualContributorResolverMutations,
+        MockCacheManager,
+        MockWinstonProvider,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    resolver = module.get(VirtualContributorResolverMutations);
+    service = module.get(VirtualContributorService);
+    authorizationService = module.get(AuthorizationService);
+    platformResourceAuditService = module.get(PlatformResourceAuditService);
+    vi.mocked(
+      module.get(PlatformAuthorizationPolicyService)
+        .getPlatformAuthorizationPolicy
+    ).mockResolvedValue(platformPolicy);
+    vi.mocked(service.save).mockImplementation(async entity => entity as any);
+  });
+
+  it('a PLATFORM_PROMOTE_MANAGE holder sets the flag, gated on the PLATFORM policy (not the resource policy), and it is audited', async () => {
+    vi.mocked(service.getVirtualContributorByIdOrFail).mockResolvedValue(
+      loaded(false)
+    );
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateVirtualContributorPromote(
+      actorContext,
+      {
+        virtualContributorID: 'res-1',
+        promote: true,
+      }
+    );
+
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+      actorContext,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE,
+      expect.any(String)
+    );
+    expect(service.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'res-1', promote: true })
+    );
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+      resourceKind: 'virtual_contributor',
+      resourceId: 'res-1',
+      promote: true,
+      outcome: 'promote_changed',
+    });
+    expect(result.promote).toBe(true);
+  });
+
+  it('a refused caller changes nothing and is not audited', async () => {
+    vi.mocked(service.getVirtualContributorByIdOrFail).mockResolvedValue(
+      loaded(false)
+    );
+    vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(() => {
+      throw new Error('forbidden');
+    });
+
+    await expect(
+      resolver.adminUpdateVirtualContributorPromote(actorContext, {
+        virtualContributorID: 'res-1',
+        promote: true,
+      })
+    ).rejects.toThrow('forbidden');
+    expect(service.save).not.toHaveBeenCalled();
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).not.toHaveBeenCalled();
+  });
+
+  it('re-applying the current value succeeds (idempotent) but is not audited as a change', async () => {
+    vi.mocked(service.getVirtualContributorByIdOrFail).mockResolvedValue(
+      loaded(true)
+    );
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateVirtualContributorPromote(
+      actorContext,
+      {
+        virtualContributorID: 'res-1',
+        promote: true,
+      }
+    );
+
+    expect(result.promote).toBe(true);
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).not.toHaveBeenCalled();
+  });
+
+  it('changes nothing else on the resource and re-applies no authorization', async () => {
+    vi.mocked(service.getVirtualContributorByIdOrFail).mockResolvedValue(
+      loaded(false)
+    );
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateVirtualContributorPromote(
+      actorContext,
+      {
+        virtualContributorID: 'res-1',
+        promote: true,
+      }
+    );
+
+    expect((result as any).listedInStore).toEqual(true);
+    expect((result as any).searchVisibility).toEqual('public');
+    expect((result as any).platformSettings).toEqual({
+      promptGraphEditingEnabled: false,
+    });
+    expect(
+      module.get(VirtualContributorAuthorizationService)
+        .applyAuthorizationPolicy
+    ).not.toHaveBeenCalled();
   });
 });

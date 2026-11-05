@@ -1,7 +1,9 @@
+import { A22_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -252,5 +254,131 @@ describe('InnovationPackResolverMutations', () => {
 
       expect(resourceAudit().recordEventForActor).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('InnovationPackResolverMutations.adminUpdateInnovationPackPromote', () => {
+  let module: TestingModule;
+  let resolver: InnovationPackResolverMutations;
+  let service: InnovationPackService;
+  let authorizationService: AuthorizationService;
+  let platformResourceAuditService: PlatformResourceAuditService;
+  const actorContext = { actorID: 'content-1' } as any;
+  const platformPolicy = { id: 'platform-auth' } as any;
+
+  const loaded = (promote: boolean) =>
+    ({
+      id: 'res-1',
+      promote,
+      authorization: { id: 'own-auth' },
+      listedInStore: true,
+      searchVisibility: 'public',
+    }) as any;
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    module = await Test.createTestingModule({
+      providers: [
+        InnovationPackResolverMutations,
+        MockCacheManager,
+        MockWinstonProvider,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    resolver = module.get(InnovationPackResolverMutations);
+    service = module.get(InnovationPackService);
+    authorizationService = module.get(AuthorizationService);
+    platformResourceAuditService = module.get(PlatformResourceAuditService);
+    vi.mocked(
+      module.get(PlatformAuthorizationPolicyService)
+        .getPlatformAuthorizationPolicy
+    ).mockResolvedValue(platformPolicy);
+    vi.mocked(service.save).mockImplementation(async entity => entity as any);
+  });
+
+  it('a PLATFORM_PROMOTE_MANAGE holder sets the flag, gated on the PLATFORM policy (not the resource policy), and it is audited', async () => {
+    vi.mocked(service.getInnovationPackOrFail).mockResolvedValue(loaded(false));
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateInnovationPackPromote(
+      actorContext,
+      {
+        innovationPackID: 'res-1',
+        promote: true,
+      }
+    );
+
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+      actorContext,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE,
+      expect.any(String)
+    );
+    expect(service.save).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'res-1', promote: true })
+    );
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+      resourceKind: 'innovation_pack',
+      resourceId: 'res-1',
+      promote: true,
+      outcome: 'promote_changed',
+    });
+    expect(result.promote).toBe(true);
+  });
+
+  it('a refused caller changes nothing and is not audited', async () => {
+    vi.mocked(service.getInnovationPackOrFail).mockResolvedValue(loaded(false));
+    vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(() => {
+      throw new Error('forbidden');
+    });
+
+    await expect(
+      resolver.adminUpdateInnovationPackPromote(actorContext, {
+        innovationPackID: 'res-1',
+        promote: true,
+      })
+    ).rejects.toThrow('forbidden');
+    expect(service.save).not.toHaveBeenCalled();
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).not.toHaveBeenCalled();
+  });
+
+  it('re-applying the current value succeeds (idempotent) but is not audited as a change', async () => {
+    vi.mocked(service.getInnovationPackOrFail).mockResolvedValue(loaded(true));
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateInnovationPackPromote(
+      actorContext,
+      {
+        innovationPackID: 'res-1',
+        promote: true,
+      }
+    );
+
+    expect(result.promote).toBe(true);
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).not.toHaveBeenCalled();
+  });
+
+  it('changes nothing else on the resource and re-applies no authorization', async () => {
+    vi.mocked(service.getInnovationPackOrFail).mockResolvedValue(loaded(false));
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateInnovationPackPromote(
+      actorContext,
+      {
+        innovationPackID: 'res-1',
+        promote: true,
+      }
+    );
+
+    expect((result as any).listedInStore).toEqual(true);
+    expect((result as any).searchVisibility).toEqual('public');
   });
 });
