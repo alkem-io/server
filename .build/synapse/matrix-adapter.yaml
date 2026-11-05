@@ -1,5 +1,12 @@
 id: alkemio-matrix-adapter
-url: http://host.docker.internal:8280
+# Synapse pushes appservice transactions to this URL. It must be reachable from
+# INSIDE the Synapse container: use the compose service name, which resolves on
+# alkemio_dev_net in both quickstart-services.yml and .devcontainer. Do not route
+# via host.docker.internal: Traefik publishes 8280 on 127.0.0.1 only (host tools),
+# and on Linux host.docker.internal is the bridge gateway, not loopback, so every
+# push is refused and no inbound Matrix event (messages, joins, leaves) reaches
+# the server.
+url: http://matrix-adapter:8280
 as_token: 52bdfc04ad3c6d1f66ee40535116a8e162b807f9521c6fdc984cd6343c5aa681
 hs_token: 547cb0f077cd1fedd0d759badcd0888e10616fa66f0f1df7b5b5081b8c83d3bb
 # Bot localpart must match MATRIX_BOT_ACTOR_ID (UUID format)
