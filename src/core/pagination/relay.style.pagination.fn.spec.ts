@@ -4,7 +4,7 @@ import {
   PaginationParameterNotFoundException,
 } from '@src/common/exceptions';
 import { IBaseAlkemio } from '@src/domain/common/entity/base-entity';
-import { type SelectQueryBuilder } from 'typeorm';
+import { Brackets, type SelectQueryBuilder } from 'typeorm';
 import { vi } from 'vitest';
 import { PaginationArgs } from './pagination.args';
 import {
@@ -386,6 +386,246 @@ describe('getRelayStylePaginationResults', () => {
           before: 'non-existent-id',
         } as PaginationArgs)
       ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
+  describe('leadingBooleanDesc', () => {
+    type Row = TestEntity & { promote: boolean };
+
+    const row = (rowId: number, promote: boolean): Row =>
+      ({ id: `id-${rowId}`, rowId, promote }) as any;
+
+    /**
+     * A recording builder: every clone shares one call log, the page result,
+     * the cursor lookup and a queue of counts, so the test can inspect the
+     * ORDER BY and keyset predicates the helper builds on any clone.
+     */
+    function createRecordingBuilder(opts: {
+      page: Row[];
+      cursorEntity?: Row | null;
+      counts?: number[];
+    }) {
+      const counts = [...(opts.counts ?? [0, 0])];
+      const log: {
+        orderBy: unknown[][];
+        addOrderBy: unknown[][];
+        predicates: { sql: string; parameters: Record<string, unknown> }[];
+        take: unknown[];
+      } = { orderBy: [], addOrderBy: [], predicates: [], take: [] };
+
+      const recordWhere = (condition: unknown) => {
+        if (condition instanceof Brackets) {
+          condition.whereFactory({
+            where: (sql: string, parameters: Record<string, unknown>) => {
+              log.predicates.push({ sql, parameters });
+              return undefined;
+            },
+          } as any);
+        }
+      };
+
+      const make = (): any => {
+        const qb: any = {
+          alias: 'space',
+          expressionMap: { orderBys: {}, wheres: [] },
+          orderBy: vi.fn((...args: unknown[]) => {
+            log.orderBy.push(args);
+            return qb;
+          }),
+          addOrderBy: vi.fn((...args: unknown[]) => {
+            log.addOrderBy.push(args);
+            return qb;
+          }),
+          where: vi.fn((condition: unknown) => {
+            recordWhere(condition);
+            qb.expressionMap.wheres.push(condition);
+            return qb;
+          }),
+          andWhere: vi.fn((condition: unknown) => {
+            recordWhere(condition);
+            qb.expressionMap.wheres.push(condition);
+            return qb;
+          }),
+          take: vi.fn((n: unknown) => {
+            log.take.push(n);
+            return qb;
+          }),
+          clone: vi.fn(() => make()),
+          getOne: vi.fn(async () => opts.cursorEntity ?? null),
+          getMany: vi.fn(async () => [...opts.page]),
+          getCount: vi.fn(async () => counts.shift() ?? 0),
+        };
+        return qb;
+      };
+
+      return { qb: make() as SelectQueryBuilder<Row>, log };
+    }
+
+    it('orders by the flag DESC first, then rowId in the requested direction', async () => {
+      const { qb, log } = createRecordingBuilder({ page: [row(3, true)] });
+
+      await getRelayStylePaginationResults(
+        qb,
+        { first: 2 } as PaginationArgs,
+        'ASC',
+        undefined,
+        { leadingBooleanDesc: 'promote' }
+      );
+
+      expect(log.orderBy).toEqual([['space.promote', 'DESC']]);
+      expect(log.addOrderBy).toEqual([['space.rowId', 'ASC']]);
+      expect(log.take).toEqual([2]);
+    });
+
+    it('with `after`, continues from the cursor with the composite (flag, rowId) keyset', async () => {
+      const cursor = row(5, true);
+      const { qb, log } = createRecordingBuilder({
+        page: [row(9, true), row(1, false)],
+        cursorEntity: cursor,
+      });
+
+      await getRelayStylePaginationResults(
+        qb,
+        { first: 2, after: cursor.id } as PaginationArgs,
+        'ASC',
+        undefined,
+        { leadingBooleanDesc: 'promote' }
+      );
+
+      const cursorPredicate = log.predicates.find(p =>
+        p.sql.includes(':keysetFlag_cursor')
+      );
+      expect(cursorPredicate?.sql).toBe(
+        '(space.promote < :keysetFlag_cursor OR (space.promote = :keysetFlag_cursor AND space.rowId > :keysetRowId_cursor))'
+      );
+      expect(cursorPredicate?.parameters).toEqual({
+        keysetFlag_cursor: true,
+        keysetRowId_cursor: 5,
+      });
+    });
+
+    it('with sort DESC, the rowId half of the keyset is reversed', async () => {
+      const cursor = row(5, false);
+      const { qb, log } = createRecordingBuilder({
+        page: [row(4, false)],
+        cursorEntity: cursor,
+      });
+
+      await getRelayStylePaginationResults(
+        qb,
+        { first: 2, after: cursor.id } as PaginationArgs,
+        'DESC',
+        undefined,
+        { leadingBooleanDesc: 'promote' }
+      );
+
+      expect(log.addOrderBy).toEqual([['space.rowId', 'DESC']]);
+      expect(
+        log.predicates.find(p => p.sql.includes(':keysetFlag_cursor'))?.sql
+      ).toBe(
+        '(space.promote < :keysetFlag_cursor OR (space.promote = :keysetFlag_cursor AND space.rowId < :keysetRowId_cursor))'
+      );
+    });
+
+    it('with `last`/`before`, reads the preceding rows in reverse order and returns them in forward order', async () => {
+      const cursor = row(2, false);
+      // The DB returns the reverse order: nearest preceding row first.
+      const { qb, log } = createRecordingBuilder({
+        page: [row(1, false), row(9, true)],
+        cursorEntity: cursor,
+      });
+
+      const result = await getRelayStylePaginationResults(
+        qb,
+        { last: 2, before: cursor.id } as PaginationArgs,
+        'ASC',
+        undefined,
+        { leadingBooleanDesc: 'promote' }
+      );
+
+      expect(log.orderBy).toEqual([['space.promote', 'ASC']]);
+      expect(log.addOrderBy).toEqual([['space.rowId', 'DESC']]);
+      expect(
+        log.predicates.find(p => p.sql.includes(':keysetFlag_cursor'))?.sql
+      ).toBe(
+        '(space.promote > :keysetFlag_cursor OR (space.promote = :keysetFlag_cursor AND space.rowId < :keysetRowId_cursor))'
+      );
+      expect(result.edges.map(e => e.node.rowId)).toEqual([9, 1]);
+      expect(result.pageInfo.startCursor).toBe('id-9');
+      expect(result.pageInfo.endCursor).toBe('id-1');
+    });
+
+    it('computes hasPreviousPage / hasNextPage with the keyset of the first / last row of the page', async () => {
+      const { qb, log } = createRecordingBuilder({
+        page: [row(7, true), row(2, false)],
+        counts: [1, 0],
+      });
+
+      const result = await getRelayStylePaginationResults(
+        qb,
+        { first: 2 } as PaginationArgs,
+        'ASC',
+        undefined,
+        { leadingBooleanDesc: 'promote' }
+      );
+
+      expect(log.predicates).toEqual([
+        {
+          sql: '(space.promote > :keysetFlag_start OR (space.promote = :keysetFlag_start AND space.rowId < :keysetRowId_start))',
+          parameters: { keysetFlag_start: true, keysetRowId_start: 7 },
+        },
+        {
+          sql: '(space.promote < :keysetFlag_end OR (space.promote = :keysetFlag_end AND space.rowId > :keysetRowId_end))',
+          parameters: { keysetFlag_end: false, keysetRowId_end: 2 },
+        },
+      ]);
+      expect(result.pageInfo.hasPreviousPage).toBe(true);
+      expect(result.pageInfo.hasNextPage).toBe(false);
+    });
+
+    it('an empty page has no cursors and no further pages, without counting', async () => {
+      const { qb, log } = createRecordingBuilder({ page: [] });
+
+      const result = await getRelayStylePaginationResults(
+        qb,
+        {} as PaginationArgs,
+        'ASC',
+        undefined,
+        { leadingBooleanDesc: 'promote' }
+      );
+
+      expect(log.take).toEqual([25]);
+      expect(log.predicates).toEqual([]);
+      expect(result.pageInfo).toEqual({
+        startCursor: undefined,
+        endCursor: undefined,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
+    });
+
+    it('throws EntityNotFoundException for an unknown cursor', async () => {
+      const { qb } = createRecordingBuilder({ page: [], cursorEntity: null });
+
+      await expect(
+        getRelayStylePaginationResults(
+          qb,
+          { first: 2, after: 'missing' } as PaginationArgs,
+          'ASC',
+          undefined,
+          { leadingBooleanDesc: 'promote' }
+        )
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('without the option, the existing single-key path is used unchanged', async () => {
+      const { qb, log } = createRecordingBuilder({ page: [row(1, true)] });
+
+      await getRelayStylePaginationResults(qb, { first: 2 } as PaginationArgs);
+
+      expect(log.orderBy).toEqual([[{ 'space.rowId': 'ASC' }]]);
+      expect(log.addOrderBy).toEqual([]);
+      expect(log.predicates).toEqual([]);
     });
   });
 });

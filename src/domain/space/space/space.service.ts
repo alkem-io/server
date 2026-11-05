@@ -766,7 +766,11 @@ export class SpaceService {
       });
     }
 
-    return getPaginationResults(qb, paginationArgs);
+    // Promoted spaces first, then creation order (oldest first) within each
+    // group. Ordering only: the visibility filter above decides membership.
+    return getPaginationResults(qb, paginationArgs, 'ASC', {
+      leadingBooleanDesc: 'promote',
+    });
   }
 
   private async getSpacesWithSortOrderDefault(

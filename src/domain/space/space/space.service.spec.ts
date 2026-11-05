@@ -425,6 +425,56 @@ describe('SpaceService', () => {
     });
   });
 
+  describe('getPaginatedSpaces (promoted first)', () => {
+    const fakeQueryBuilder = () => {
+      const qb: any = {
+        alias: 'space',
+        expressionMap: { orderBys: {}, wheres: [] as unknown[] },
+        leftJoinAndSelect: vi.fn(() => qb),
+        where: vi.fn((condition: unknown) => {
+          qb.expressionMap.wheres.push(condition);
+          return qb;
+        }),
+        andWhere: vi.fn((condition: unknown) => {
+          qb.expressionMap.wheres.push(condition);
+          return qb;
+        }),
+        orderBy: vi.fn(() => qb),
+        addOrderBy: vi.fn(() => qb),
+        take: vi.fn(() => qb),
+        clone: vi.fn(() => qb),
+        getCount: vi.fn().mockResolvedValue(0),
+        getMany: vi.fn().mockResolvedValue([]),
+      };
+      return qb;
+    };
+
+    it('orders promoted spaces first, then by rowId ascending (creation order)', async () => {
+      const qb = fakeQueryBuilder();
+      (spaceRepository as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedSpaces({ first: 10 } as any);
+
+      expect(qb.orderBy).toHaveBeenCalledWith('space.promote', 'DESC');
+      expect(qb.addOrderBy).toHaveBeenCalledWith('space.rowId', 'ASC');
+    });
+
+    it('keeps the visibility filter: promotion never widens the list', async () => {
+      const qb = fakeQueryBuilder();
+      (spaceRepository as any).createQueryBuilder = vi.fn(() => qb);
+      const spaceFilterService = (service as any).spacesFilterService;
+      spaceFilterService.getAllowedVisibilities = vi.fn(() => [
+        SpaceVisibility.ACTIVE,
+      ]);
+
+      await service.getPaginatedSpaces({ first: 10 } as any);
+
+      expect(qb.where).toHaveBeenCalledWith(
+        expect.objectContaining({ level: SpaceLevel.L0 })
+      );
+    });
+  });
+
   describe('invalidateUrlCacheForSpaceSubtree', () => {
     // A space as the sweep loads it: the actor profile, the about profile, the
     // community guidelines profile and the innovation flow profile hanging off
