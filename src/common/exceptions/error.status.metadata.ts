@@ -239,6 +239,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 111,
     userMessage: 'userMessages.validation.paginationParamNotFound',
   },
+  [AlkemioErrorStatus.VISUAL_URI_NOT_ALLOWED]: {
+    category: ErrorCategory.VALIDATION,
+    specificCode: 112,
+    userMessage: 'userMessages.validation.visualUriNotAllowed',
+  },
   [AlkemioErrorStatus.FORUM_DISCUSSION_CATEGORY]: {
     category: ErrorCategory.VALIDATION,
     specificCode: 113,
