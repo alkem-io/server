@@ -1,6 +1,7 @@
 import {
   A5_INTENDED_OWNERS,
   A12_INTENDED_OWNERS,
+  A22_INTENDED_OWNERS,
   ORGANIZATION_COMMUNITY_INTENDED_OWNERS,
 } from '@common/constants/authorization/audit.intended.owners';
 import { A13_INTENDED_OWNERS } from '@common/constants/authorization/license.definition.policy';
@@ -68,6 +69,16 @@ const AUDITED_SURFACES: readonly {
       'adminLicensePolicyUpdateCredentialRule',
       'adminLicensePolicyCreateCredentialRule',
       'createLicensePlan',
+    ],
+  },
+  {
+    constant: 'A22_INTENDED_OWNERS',
+    owners: A22_INTENDED_OWNERS,
+    row: 'A22',
+    members: [
+      'adminUpdateSpacePromote',
+      'adminUpdateInnovationPackPromote',
+      'adminUpdateVirtualContributorPromote',
     ],
   },
 ];
