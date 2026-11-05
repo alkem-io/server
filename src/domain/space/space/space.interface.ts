@@ -75,6 +75,11 @@ export class ISpace extends IActor implements IActorFull {
   })
   pinned!: boolean;
 
+  // Platform-promote flag. Deliberately NOT a plain @Field: it is exposed
+  // through a gated resolve field that returns null to anyone without
+  // PLATFORM_PROMOTE_MANAGE.
+  promote?: boolean;
+
   sortMode?: SpaceSortMode;
 
   templatesManager?: ITemplatesManager;

@@ -2454,6 +2454,7 @@ const getSubspacesMock = (
       levelZeroSpaceID: spaceId,
       sortOrder: i,
       pinned: false,
+      promote: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -2617,6 +2618,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       levelZeroSpaceID: subsubspaceId,
       sortOrder: i,
       pinned: false,
+      promote: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -2788,6 +2790,7 @@ const getSpaceMock = ({
     levelZeroSpaceID: '',
     sortOrder: 0,
     pinned: false,
+    promote: false,
     platformRolesAccess: {
       roles: [],
     },

@@ -26,3 +26,10 @@ export const ORGANIZATION_COMMUNITY_INTENDED_OWNERS: readonly AuthorizationCrede
 export const A12_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
   AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
 ];
+
+/** A22 — the platform-promote flag on spaces, innovation packs and virtual
+ * contributors (the PLATFORM_PROMOTE_MANAGE grant on the platform policy). */
+export const A22_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+];
