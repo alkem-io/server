@@ -12,6 +12,7 @@ import {
   BatchRemoveSpaceMemberRequest,
   // Type-safe command registry types
   CommandTopic,
+  CreateActorSessionRequest,
   CreateRoomRequest,
   CreateSpaceRequest,
   DeleteMessageRequest,
@@ -64,6 +65,7 @@ import { LogContext } from '@common/enums';
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
 import { getRandomId } from '@common/utils/random.id.generator.util';
 import { stringifyWithoutAuthorizationMetaInfo } from '@common/utils/stringify.util';
+import { MatrixSessionCredentials } from '@domain/communication/matrix-session/dto/matrix.session.credentials';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { IRoomWithReadState } from '@domain/communication/room/room.with.read.state.interface';
@@ -283,6 +285,45 @@ export class CommunicationAdapter {
     });
 
     return response?.success ?? false;
+  }
+
+  /**
+   * Mint a Matrix access token for an actor's own chat session
+   * (workspace#091, FR-026). Synapse generates a fresh device per call.
+   *
+   * `enabled === false` means this environment has no Matrix at all, and is
+   * the ONE place in this file that throws instead of returning a benign
+   * sentinel: there is no truthful empty credential to return, so a silent
+   * success here would hand the app a blank triple it would store and keep
+   * reusing.
+   */
+  async createActorSession(
+    actorID: AlkemioActorID
+  ): Promise<MatrixSessionCredentials> {
+    if (!this.enabled) {
+      throw CommunicationAdapterException.fromAdapterError(
+        'createActorSession',
+        {
+          code: 'ErrCodeInvalidParam',
+          message:
+            'Communications are disabled in this environment - cannot mint a Matrix session',
+        }
+      );
+    }
+
+    const response = await this.sendCommand({
+      operation: 'createActorSession',
+      topic: MatrixAdapterEventType.COMMUNICATION_ACTOR_SESSION_CREATE,
+      payload: { actor_id: actorID } satisfies CreateActorSessionRequest,
+      errorContext: { actorID },
+      ensureSuccess: true,
+    });
+
+    return {
+      userId: response!.user_id,
+      deviceId: response!.device_id,
+      accessToken: response!.access_token,
+    };
   }
 
   // ============================================================================

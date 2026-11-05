@@ -279,9 +279,10 @@ export class ContributionsAnalyzeTool implements McpTool {
         break;
 
       case 'space':
-        // Join through collaboration to space
+        // The callouts set owns the collaboration relation.
         queryBuilder
-          .leftJoin('callout.collaboration', 'collaboration')
+          .leftJoin('callout.calloutsSet', 'calloutsSet')
+          .leftJoin('calloutsSet.collaboration', 'collaboration')
           .leftJoin('collaboration.space', 'space')
           .where('space.id = :spaceId', { spaceId: scope.spaceId });
         break;

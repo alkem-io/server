@@ -13,7 +13,10 @@ import { SearchFilterInput, SearchInput } from '../dto/inputs';
 import { BaseSearchHit, ISearchResult } from '../dto/results';
 import { SearchCategory } from '../search.category';
 import { SearchResultType } from '../search.result.type';
-import { buildMultiSearchRequestItems } from './build.multi.search.request.items';
+import {
+  buildMultiSearchRequestItems,
+  SEARCH_HIGHLIGHT,
+} from './build.multi.search.request.items';
 import { buildSearchQuery } from './build.search.query';
 import { SearchIndex } from './search.index';
 
@@ -230,6 +233,117 @@ export class SearchExtractService {
     return this.processMultiSearchResponses(result.responses);
   }
 
+  /**
+   * Every hit of one category, ranked like `search` (score desc, id desc), up
+   * to `limit`. Ids, types and scores only — no highlighting and no cursor — so
+   * the whole result set can be authorized and counted before a page is cut
+   * from it.
+   * `preference` routes every page of one requester to the same shard copies,
+   * so the scores the keyset cursor compares do not drift between replicas.
+   * @throws when Elasticsearch fails — the caller cannot count what it did not read
+   */
+  public searchAllHits(
+    terms: string[],
+    filter: SearchFilterInput,
+    onlyPublicResults: boolean,
+    limit: number,
+    preference: string
+  ): Promise<ISearchResult[]> {
+    return this.searchCategory(terms, filter, onlyPublicResults, {
+      size: limit,
+      preference,
+    });
+  }
+
+  /**
+   * The matched terms (see `extractMatchedTerms`) of the given entities, keyed
+   * by entity id. When the highlight request fails the map is empty: the hits
+   * are still returned, only without their matched terms.
+   */
+  public async getMatchedTerms(
+    terms: string[],
+    filter: SearchFilterInput,
+    onlyPublicResults: boolean,
+    entityIds: string[],
+    preference: string
+  ): Promise<Map<string, string[]>> {
+    if (entityIds.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const hits = await this.searchCategory(terms, filter, onlyPublicResults, {
+        size: entityIds.length,
+        entityIds,
+        highlight: true,
+        preference,
+      });
+      return new Map(hits.map(hit => [hit.result.id, hit.terms]));
+    } catch (error) {
+      const { message, stack } = error as Error;
+      this.logger.error(
+        {
+          message: 'Error response for the matched terms search request',
+          error: message,
+        },
+        stack,
+        LogContext.SEARCH_EXTRACT
+      );
+      return new Map();
+    }
+  }
+
+  private async searchCategory(
+    terms: string[],
+    filter: SearchFilterInput,
+    onlyPublicResults: boolean,
+    options: {
+      size: number;
+      preference: string;
+      entityIds?: string[];
+      highlight?: boolean;
+    }
+  ): Promise<ISearchResult[]> {
+    if (!this.client) {
+      throw new Error('Elasticsearch client not initialized');
+    }
+
+    const indices = this.getIndices(onlyPublicResults, [filter]);
+    if (indices.length === 0) {
+      return [];
+    }
+
+    const textQuery = buildSearchQuery(terms.join(' '));
+    const query: estypes.QueryDslQueryContainer = options.entityIds
+      ? {
+          bool: {
+            must: [textQuery],
+            filter: [{ terms: { id: options.entityIds } }],
+          },
+        }
+      : textQuery;
+
+    const response = await this.client.search<BaseSearchHit>({
+      index: indices.map(index => index.name),
+      query,
+      fields: ['id', 'type'],
+      _source: false,
+      size: options.size,
+      // the same order as the multi search, so the keyset cursor is interchangeable
+      sort: { _score: 'desc', id: 'desc' } as estypes.Sort,
+      track_total_hits: false,
+      highlight: options.highlight ? SEARCH_HIGHLIGHT : undefined,
+      preference: options.preference,
+    });
+    // a 200 can still carry partial results; counting them would undercount
+    const failedShards = response._shards?.failed ?? 0;
+    if (failedShards > 0) {
+      throw new Error(`Search failed on ${failedShards} shard(s)`);
+    }
+
+    return this.processMultiSearchItem(response);
+  }
+
   private getIndices(
     onlyPublicResults = false,
     filters?: SearchFilterInput[],
@@ -441,9 +555,9 @@ export class SearchExtractService {
     return results.filter(isDefined);
   }
 
-  private processMultiSearchItem(
-    item: estypes.MsearchMultiSearchItem<BaseSearchHit>
-  ): ISearchResult[] {
+  private processMultiSearchItem(item: {
+    hits: estypes.SearchHitsMetadata<BaseSearchHit>;
+  }): ISearchResult[] {
     return item.hits.hits.map<ISearchResult>(hit => {
       const entityId = hit.fields?.id?.[0];
       const type = hit.fields?.type?.[0];

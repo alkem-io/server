@@ -32,6 +32,7 @@ interface LooseSearchResult {
   };
   post?: { id: string; nameID?: string; profile?: { displayName?: string } };
   memo?: { id: string; nameID?: string; profile?: { displayName?: string } };
+  collaboraDocument?: { id: string; profile?: { displayName?: string } };
   callout?: { id: string; framing?: { profile?: { displayName?: string } } };
   space?: { id: string; about?: { profile?: { displayName?: string } } };
   user?: { id: string; nameID?: string; profile?: { displayName?: string } };
@@ -188,7 +189,13 @@ export class SearchContentTool implements McpTool {
     calloutId?: string;
     url?: string;
   }> {
-    const entity = r.whiteboard ?? r.post ?? r.memo ?? r.user ?? r.organization;
+    const entity =
+      r.whiteboard ??
+      r.post ??
+      r.memo ??
+      r.collaboraDocument ??
+      r.user ??
+      r.organization;
     const displayName =
       entity?.profile?.displayName ??
       r.callout?.framing?.profile?.displayName ??
@@ -201,6 +208,7 @@ export class SearchContentTool implements McpTool {
       r.whiteboard?.id ??
       r.post?.id ??
       r.memo?.id ??
+      r.collaboraDocument?.id ??
       r.callout?.id ??
       r.space?.id ??
       r.user?.id ??

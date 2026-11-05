@@ -28,6 +28,7 @@ export const ASSISTANT_CAPABILITY_CLASSIFICATION: Readonly<
   create_whiteboard: AssistantCapabilityKind.WRITE_ADDITIVE,
   create_whiteboard_in_space: AssistantCapabilityKind.WRITE_ADDITIVE,
   edit_whiteboard_elements: AssistantCapabilityKind.WRITE_ADDITIVE,
+  import_whiteboard_scene: AssistantCapabilityKind.WRITE_ADDITIVE,
   // every other current tool is READ:
   search_content: AssistantCapabilityKind.READ,
   list_whiteboards: AssistantCapabilityKind.READ,

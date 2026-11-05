@@ -16,7 +16,7 @@ describe('SearchResultService', () => {
   let entityManager: {
     findBy: Mock;
     find: Mock;
-    findOneByOrFail: Mock;
+    findOneOrFail: Mock;
     findOne: Mock;
   };
 
@@ -28,7 +28,7 @@ describe('SearchResultService', () => {
     entityManager = {
       findBy: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue([]),
-      findOneByOrFail: vi.fn(),
+      findOneOrFail: vi.fn(),
       findOne: vi.fn(),
     };
 
@@ -50,6 +50,103 @@ describe('SearchResultService', () => {
     actorLookupService = module.get(ActorLookupService) as any;
   });
 
+  describe('filterVisibleSpaceHits', () => {
+    const actorContext = { actorID: 'user-1', credentials: [] } as any;
+    const hit = (id: string, type: SearchResultType) => ({
+      id: `hit-${id}`,
+      score: 1,
+      type,
+      terms: [],
+      result: { id },
+    });
+
+    it('returns an empty array without querying when there are no hits', async () => {
+      expect(await service.filterVisibleSpaceHits([], actorContext)).toEqual(
+        []
+      );
+      expect(entityManager.find).not.toHaveBeenCalled();
+    });
+
+    it('keeps existing Spaces, and Subspaces with a parent the actor may read, in their original order', async () => {
+      const hits = [
+        hit('readable-subspace', SearchResultType.SUBSPACE),
+        hit('deleted-space', SearchResultType.SPACE),
+        hit('space', SearchResultType.SPACE),
+        hit('unreadable-subspace', SearchResultType.SUBSPACE),
+        hit('orphan-subspace', SearchResultType.SUBSPACE),
+      ];
+      entityManager.find.mockImplementation(async (_entity, options) =>
+        [
+          { id: 'space' },
+          {
+            id: 'readable-subspace',
+            parentSpace: { id: 'space' },
+            authorization: { id: 'auth-granted' },
+          },
+          {
+            id: 'unreadable-subspace',
+            parentSpace: { id: 'space' },
+            authorization: { id: 'auth-denied' },
+          },
+          { id: 'orphan-subspace', authorization: { id: 'auth-granted' } },
+        ].filter(space => options.where.id.value.includes(space.id))
+      );
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor, authorization) => authorization.id === 'auth-granted'
+      );
+
+      const visible = await service.filterVisibleSpaceHits(hits, actorContext);
+
+      expect(visible).toEqual([hits[0], hits[2]]);
+    });
+
+    it('leaves out a Subspace without an authorization policy, instead of failing the search', async () => {
+      const hits = [
+        hit('space', SearchResultType.SPACE),
+        hit('broken-subspace', SearchResultType.SUBSPACE),
+      ];
+      entityManager.find.mockImplementation(async (_entity, options) =>
+        [
+          { id: 'space' },
+          { id: 'broken-subspace', parentSpace: { id: 'space' } },
+        ].filter(space => options.where.id.value.includes(space.id))
+      );
+
+      const visible = await service.filterVisibleSpaceHits(hits, actorContext);
+
+      expect(visible).toEqual([hits[0]]);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
+    it('loads only ids for Spaces, and authorization and the parent id only for Subspaces', async () => {
+      entityManager.find.mockResolvedValue([]);
+
+      await service.filterVisibleSpaceHits(
+        [
+          hit('space', SearchResultType.SPACE),
+          hit('subspace', SearchResultType.SUBSPACE),
+        ],
+        actorContext
+      );
+
+      expect(entityManager.find).toHaveBeenCalledTimes(2);
+      const [spacesOptions, subspacesOptions] =
+        entityManager.find.mock.calls.map(call => call[1]);
+      expect(spacesOptions).toMatchObject({
+        select: { id: true },
+        loadEagerRelations: false,
+      });
+      expect(spacesOptions.where.id.value).toEqual(['space']);
+      expect(spacesOptions.relations).toBeUndefined();
+      expect(subspacesOptions).toMatchObject({
+        select: { id: true, parentSpace: { id: true } },
+        relations: { parentSpace: true, authorization: true },
+        loadEagerRelations: false,
+      });
+      expect(subspacesOptions.where.id.value).toEqual(['subspace']);
+    });
+  });
+
   describe('getSpaceSearchResults', () => {
     it('should return empty array when no raw results are provided', async () => {
       const result = await service.getSpaceSearchResults([]);
@@ -68,7 +165,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
       const space = { id: 'space-1', name: 'Test Space' };
-      entityManager.findOneByOrFail.mockResolvedValue(space);
+      entityManager.findOneOrFail.mockResolvedValue(space);
 
       const result = await service.getSpaceSearchResults(rawResults, 'space-1');
 
@@ -92,7 +189,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
       const spaces = [{ id: 'space-1' }, { id: 'space-2' }];
-      entityManager.findBy.mockResolvedValue(spaces);
+      entityManager.find.mockResolvedValueOnce(spaces);
 
       const result = await service.getSpaceSearchResults(rawResults);
 
@@ -108,7 +205,7 @@ describe('SearchResultService', () => {
           result: { id: 'space-1' },
         },
       ] as any[];
-      entityManager.findBy.mockResolvedValue([{ id: 'space-999' }]);
+      entityManager.find.mockResolvedValueOnce([{ id: 'space-999' }]);
 
       const result = await service.getSpaceSearchResults(rawResults);
 
@@ -248,7 +345,7 @@ describe('SearchResultService', () => {
           result: { id: 'user-2' },
         },
       ] as any[];
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'user-1' },
         { id: 'user-2' },
       ]);
@@ -278,7 +375,7 @@ describe('SearchResultService', () => {
         .mockResolvedValueOnce(['user-1'])
         .mockResolvedValueOnce([]);
 
-      entityManager.findBy.mockResolvedValue([{ id: 'user-1' }]);
+      entityManager.find.mockResolvedValueOnce([{ id: 'user-1' }]);
 
       const result = await service.getUserSearchResults(rawResults, 'space-1');
 
@@ -295,7 +392,7 @@ describe('SearchResultService', () => {
           result: { id: 'user-1' },
         },
       ] as any[];
-      entityManager.findBy.mockResolvedValue([{ id: 'user-other' }]);
+      entityManager.find.mockResolvedValueOnce([{ id: 'user-other' }]);
 
       const result = await service.getUserSearchResults(rawResults);
 
@@ -322,7 +419,7 @@ describe('SearchResultService', () => {
           result: { id: 'org-1' },
         },
       ] as any[];
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'org-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(false);
@@ -344,7 +441,7 @@ describe('SearchResultService', () => {
           result: { id: 'org-1' },
         },
       ] as any[];
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'org-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -379,7 +476,7 @@ describe('SearchResultService', () => {
         .mockResolvedValueOnce([]) // SPACE_ADMIN
         .mockResolvedValueOnce([]); // SPACE_LEAD
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'org-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -412,7 +509,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'post-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(false);
@@ -435,7 +532,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'post-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -527,9 +624,9 @@ describe('SearchResultService', () => {
       ] as any[];
 
       // Mock space query
-      entityManager.findBy.mockImplementation((_entity: any, opts: any) => {
+      entityManager.find.mockImplementation((_entity: any, opts: any) => {
         // Return the entity based on input IDs
-        const ids = opts?.id?.value ?? [];
+        const ids = opts?.where?.id?.value ?? [];
         if (ids.includes('space-1')) {
           return Promise.resolve([{ id: 'space-1' }]);
         }
@@ -651,7 +748,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'wb-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(false);
@@ -674,7 +771,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'wb-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -728,7 +825,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'wb-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -1021,7 +1118,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'memo-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(false);
@@ -1044,7 +1141,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'memo-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -1097,7 +1194,7 @@ describe('SearchResultService', () => {
         },
       ] as any[];
 
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'memo-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -1161,7 +1258,7 @@ describe('SearchResultService', () => {
     });
 
     it('does NOT leak a document the actor cannot READ (FR-009, SC-004)', async () => {
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'cd-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(false);
@@ -1175,7 +1272,7 @@ describe('SearchResultService', () => {
     });
 
     it('returns a FRAMING document with isContribution=false (SC-002)', async () => {
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'cd-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -1219,7 +1316,7 @@ describe('SearchResultService', () => {
     });
 
     it('returns a CONTRIBUTION document with isContribution=true (SC-002)', async () => {
-      entityManager.findBy.mockResolvedValue([
+      entityManager.find.mockResolvedValueOnce([
         { id: 'cd-1', authorization: { id: 'auth-1' } },
       ]);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -1339,5 +1436,75 @@ describe('SearchResultService', () => {
       expect(framingIds).not.toContain('cd-contrib');
       expect(contributionIds).not.toContain('cd-framing');
     });
+  });
+});
+
+describe('SearchResultService explicit display-name loading', () => {
+  const actor = { actorID: 'actor', credentials: [] } as any;
+  const hit = [
+    {
+      id: 'hit',
+      type: SearchResultType.SPACE,
+      result: { id: 'entity' },
+      score: 1,
+    },
+  ] as any;
+  const setup = () => {
+    const manager = {
+      find: vi.fn().mockResolvedValue([]),
+      findBy: vi.fn().mockResolvedValue([]),
+      findOneByOrFail: vi.fn().mockResolvedValue({ id: 'entity' }),
+      findOneOrFail: vi.fn().mockResolvedValue({ id: 'entity' }),
+    };
+    const service = new SearchResultService(
+      manager as any,
+      {} as any,
+      { isAccessGranted: vi.fn().mockReturnValue(true) } as any,
+      {} as any
+    );
+    return { service, manager };
+  };
+
+  it.each([
+    undefined,
+    'entity',
+  ])('loads space about.profile with scope %s', async scope => {
+    const { service, manager } = setup();
+    await service.getSpaceSearchResults(hit, scope);
+    const call = (
+      scope ? manager.findOneOrFail.mock.calls[0] : manager.find.mock.calls[0]
+    ) as any;
+    expect(call?.[1]).toMatchObject({
+      where: { id: expect.anything() },
+      relations: { about: { profile: true } },
+    });
+  });
+
+  it.each([
+    [
+      'getSubspaceSearchResults',
+      { about: { profile: true }, parentSpace: true },
+    ],
+    ['getUserSearchResults', { profile: true }],
+    ['getOrganizationSearchResults', { profile: true }],
+    ['getPostSearchResults', { profile: true }],
+    ['getWhiteboardSearchResults', { profile: true }],
+    ['getMemoSearchResults', { profile: true }],
+    ['getCollaboraDocumentSearchResults', { profile: true }],
+    ['getCalloutSearchResult', { framing: { profile: true } }],
+  ])('loads names in %s without formatter fetches', async (method, relations) => {
+    const { service, manager } = setup();
+    await (service as any)[method](
+      hit,
+      method === 'getUserSearchResults' ? undefined : actor
+    );
+    expect((manager.find.mock.calls[0] as any)?.[1]).toMatchObject({
+      relations,
+    });
+    if (method === 'getCalloutSearchResult') {
+      expect((manager.find.mock.calls[0] as any)?.[1]).toMatchObject({
+        select: { framing: { profile: { displayName: true } } },
+      });
+    }
   });
 });

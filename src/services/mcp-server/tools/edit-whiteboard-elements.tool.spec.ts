@@ -45,6 +45,53 @@ describe('EditWhiteboardElementsTool executor boundary', () => {
     expect(h.executor.execute).not.toHaveBeenCalled();
     expect(h.whiteboard.getWhiteboardOrFail).not.toHaveBeenCalled();
   });
+  it.each([
+    undefined,
+    null,
+    0,
+    10,
+  ])('rejects supplied addText height %s before lookup or admission', async height => {
+    const h = setup();
+    for (const dimensions of [{ height }, { width: 100, height }]) {
+      const result = await h.tool.execute(
+        {
+          ...h.args,
+          operations: [{ op: 'addText', text: 'hello', ...dimensions }],
+        },
+        h.actor
+      );
+      expect(JSON.parse(result.content[0].text!)).toEqual({
+        outcome: 'invalid',
+      });
+    }
+    expect(h.executor.execute).not.toHaveBeenCalled();
+    expect(h.whiteboard.getWhiteboardOrFail).not.toHaveBeenCalled();
+  });
+  it('retains explicit addShape height and addText width', async () => {
+    const h = setup();
+    const operations = [
+      { op: 'addShape', shape: 'rectangle', width: 200, height: 100 },
+      { op: 'addText', text: 'wrap me', width: 100 },
+    ];
+    const result = await h.tool.execute({ ...h.args, operations }, h.actor);
+    expect(result.isError).toBeUndefined();
+    expect(h.executor.execute).toHaveBeenCalledWith(
+      h.args.whiteboardId,
+      h.actor.actorID,
+      operations,
+      undefined
+    );
+  });
+  it('reports disabled execution as unavailable without an updated claim', async () => {
+    const h = setup();
+    h.executor.execute.mockResolvedValueOnce({ outcome: 'unavailable' } as any);
+    const result = await h.tool.execute(h.args, h.actor);
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0].text!)).toEqual({
+      outcome: 'unavailable',
+    });
+    expect(h.executor.execute).toHaveBeenCalledOnce();
+  });
   it('passes exactly the resolved actor and cancellation signal, returning only durable success', async () => {
     const h = setup();
     const signal = new AbortController().signal;

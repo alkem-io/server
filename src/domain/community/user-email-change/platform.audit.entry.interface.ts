@@ -266,6 +266,16 @@ export interface OrganizationAdministrationAuditDetails {
 }
 
 /**
+ * Matrix-session category payload (workspace#091). The device id is
+ * Synapse-generated per mint, so it is the only field that cannot be
+ * reconstructed later — it is what ties this row to the token it issued.
+ * NEVER carries the token itself.
+ */
+export interface MatrixSessionAuditDetails {
+  deviceId?: string;
+}
+
+/**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
  * `UserPasswordChangeAuditService`, ...) enforces which keys it writes for
@@ -282,6 +292,7 @@ export type PlatformAuditDetails = EmailChangeAuditDetails &
   PlatformResourceAuditDetails &
   McpApiKeyAuditDetails &
   AccountDeletionAuditDetails &
+  MatrixSessionAuditDetails &
   // `action` and `reason` are already open strings on other categories; the
   // closed unions are enforced by the organisation-administration writer.
   Partial<Omit<OrganizationAdministrationAuditDetails, 'action' | 'reason'>>;

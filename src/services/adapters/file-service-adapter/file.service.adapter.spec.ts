@@ -1,7 +1,9 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AxiosError, AxiosHeaders, AxiosResponse } from 'axios';
+import axios, { AxiosError, AxiosHeaders, AxiosResponse } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { defer, of, throwError } from 'rxjs';
 import { PassThrough, Readable } from 'stream';
@@ -380,6 +382,46 @@ describe('FileServiceAdapter', () => {
       await expect(sent!).rejects.toThrow(/exceeds the maximum allowed size/);
       // Rejected partway through, not after the whole 12.5 MiB was read.
       expect(seen).toBeLessThan(TOTAL_CHUNKS);
+    });
+
+    it('preserves the local size diagnostic through real Axios stream failure without replay', async () => {
+      const server = createServer(request => request.resume());
+      await new Promise<void>(resolve =>
+        server.listen(0, '127.0.0.1', resolve)
+      );
+      const { port } = server.address() as AddressInfo;
+      const http = new HttpService(axios.create({ proxy: false }));
+      const post = vi.spyOn(http, 'post');
+      const local = new FileServiceAdapter(
+        http,
+        {
+          get: (key: string) =>
+            key === 'storage.file_service.url'
+              ? `http://127.0.0.1:${port}`
+              : mockConfigValues[key],
+        } as any,
+        mockLogger as any
+      );
+      try {
+        await expect(
+          local.createDocumentFromStream(
+            Readable.from([Buffer.from('abcd')]),
+            metadata,
+            3
+          )
+        ).rejects.toMatchObject({
+          message: 'Upload exceeds the maximum allowed size',
+          operation: 'createDocumentFromStream',
+          httpStatus: 413,
+          details: { maxBytes: 3 },
+        });
+        expect(post).toHaveBeenCalledOnce();
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve, reject) =>
+          server.close(error => (error ? reject(error) : resolve()))
+        );
+      }
     });
 
     it('issues exactly ONE attempt on a 503 — a consumed stream must never be replayed', async () => {
@@ -800,8 +842,12 @@ describe('FileServiceAdapter', () => {
           headers: { 'content-type': 'image/png', 'content-length': length },
         })
       );
-      await expect(adapter.getReferenceMetadata('media')).rejects.toThrow(
-        FileServiceAdapterException
+      await expect(adapter.getReferenceMetadata('media')).rejects.toMatchObject(
+        {
+          message: 'Invalid reference metadata response',
+          operation: 'getReferenceMetadata',
+          httpStatus: 502,
+        }
       );
     });
   });
@@ -1087,5 +1133,42 @@ describe('FileServiceAdapter', () => {
         StorageServiceUnavailableException
       );
     });
+  });
+});
+
+describe('FileServiceAdapter local transport logging', () => {
+  it('records useful redacted socket diagnostics in the adapter owner', async () => {
+    const error = Object.assign(new Error('http://secret/scene token'), {
+      code: 'ECONNREFUSED',
+      syscall: 'connect',
+      address: '127.0.0.1',
+      port: 4003,
+    });
+    const logger = { verbose: vi.fn(), warn: vi.fn() };
+    const adapter = new FileServiceAdapter(
+      { request: () => throwError(() => error) } as any,
+      {
+        get: (key: string) =>
+          key === 'storage.file_service.retries' ? 0 : mockConfigValues[key],
+      } as any,
+      logger as any
+    );
+    await expect(adapter.getDocumentContent('file-id')).rejects.toMatchObject({
+      message: 'File service transport error',
+    });
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'File service transport error',
+        transportCause: {
+          code: 'ECONNREFUSED',
+          syscall: 'connect',
+          address: '127.0.0.1',
+          port: 4003,
+        },
+      }),
+      expect.any(String)
+    );
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('secret');
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain('token');
   });
 });

@@ -97,6 +97,7 @@ enum AssistantCapabilityKind {
 }
 
 enum AuthenticationType {
+  APPLE
   CLEVERBASE
   EMAIL
   GITHUB
@@ -1267,7 +1268,9 @@ interface SearchResult {
   id: UUID!
   """The score for this search result; more matches means a higher score."""
   score: Float!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -4053,7 +4056,9 @@ type ISearchCategoryResult {
   cursor: SearchCursor
   """The ranked search results for this category, sorted by relevance"""
   results: [SearchResult!]!
-  """The total number of search results. Not implemented yet."""
+  """
+  The total number of results the requester may see in this category. Only computed for spaceResults when the SPACES filter sets `countTotal` and the search is not scoped to a Space; -1 otherwise, or when the count failed. Only the 1000 best ranked Space / Subspace matches are counted (and reachable by the cursor), so the total never exceeds 1000.
+  """
   total: Float!
 }
 
@@ -4497,6 +4502,22 @@ type LookupQueryResults {
   virtualContributor(ID: UUID!): VirtualContributor
   """Lookup the specified Whiteboard"""
   whiteboard(ID: UUID!): Whiteboard
+}
+
+"""
+Credentials for one Matrix chat session belonging to the current user's own actor.
+"""
+type MatrixSessionCredentials {
+  """
+  A LIVE Matrix access token for this session, returned once per mint. It is not stored by the platform and cannot be re-read.
+  """
+  accessToken: String!
+  """
+  The Matrix device id Synapse generated for this session. A fresh device per mint.
+  """
+  deviceId: String!
+  """The actor's Matrix user id (MXID), e.g. `@uuid:matrix.host`."""
+  userId: String!
 }
 
 """
@@ -5152,6 +5173,10 @@ type Mutation {
   Migrates pending legacy Whiteboard documents and independently normalizes every legacy Whiteboard contribution default, including defaults stored by Callout templates. Idempotent: repeated calls process only unmigrated documents and non-canonical defaults.
   """
   migrateLegacyWhiteboardContent: CollaborationMigrationResult!
+  """
+  Mint a Matrix access token for the current user's own chat session. Takes no subject: the actor is the authenticated caller.
+  """
+  mintMatrixSession: MatrixSessionCredentials!
   """
   Mint a new MCP API key for the current user. Returns the plaintext exactly once.
   """
@@ -6911,7 +6936,9 @@ type SearchResultCallout implements SearchResult {
   score: Float!
   """The parent Space of the Callout."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -6934,7 +6961,9 @@ type SearchResultCollaboraDocument implements SearchResult {
   score: Float!
   """The Space of the Collabora document."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -6955,7 +6984,9 @@ type SearchResultMemo implements SearchResult {
   score: Float!
   """The Space of the Memo."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -6970,7 +7001,9 @@ type SearchResultOrganization implements SearchResult {
   organization: Organization!
   """The score for this search result; more matches means a higher score."""
   score: Float!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -6989,7 +7022,9 @@ type SearchResultPost implements SearchResult {
   score: Float!
   """The Space of the Post."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7006,7 +7041,9 @@ type SearchResultSpace implements SearchResult {
   score: Float!
   """The Space that was found."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7019,7 +7056,9 @@ type SearchResultUser implements SearchResult {
   id: UUID!
   """The score for this search result; more matches means a higher score."""
   score: Float!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7042,7 +7081,9 @@ type SearchResultWhiteboard implements SearchResult {
   score: Float!
   """The Space of the Whiteboard."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7794,7 +7835,7 @@ type UserAuthenticationResult {
   """When the Kratos Account for the user was created"""
   createdAt: DateTime
   """
-  The Authentication Methods used for this User. One of email, linkedin, microsoft, github or unknown
+  The Authentication Methods used for this User. One of apple, cleverbase, email, github, linkedin, microsoft, passkey or unknown
   """
   methods: [AuthenticationType!]!
 }
@@ -10220,6 +10261,10 @@ input RoomSendMessageReplyInput {
 input SearchFilterInput {
   """Include this category in the search results."""
   category: SearchCategory!
+  """
+  Count the Space and Subspace results the requester may see among the 1000 best ranked matches, and paginate over them exactly (see `total`); lower ranked matches are neither counted nor reachable. Only honoured for the SPACES category in a search that is not scoped to a Space. Costs a scan of up to 1000 matches, so only ask for it when the total is shown.
+  """
+  countTotal: Boolean = false
   """
   The cursor after which we want results (offset) - pass this from your previous search to request additional results. Useful for paginating results.
   """

@@ -195,3 +195,72 @@ describe('SearchContentTool — emits a real web url, never alkemio://', () => {
     expect(matches[0].url).toBeUndefined();
   });
 });
+
+describe('SearchContentTool display names from hydrated results', () => {
+  it.each<[string, object, string]>([
+    [
+      'space',
+      {
+        space: {
+          id: 'entity',
+          about: { profile: { displayName: 'Space name' } },
+        },
+      },
+      'Space name',
+    ],
+    [
+      'subspace',
+      {
+        space: {
+          id: 'entity',
+          about: { profile: { displayName: 'Subspace name' } },
+        },
+      },
+      'Subspace name',
+    ],
+    [
+      'callout',
+      {
+        callout: {
+          id: 'entity',
+          framing: { profile: { displayName: 'Callout name' } },
+        },
+      },
+      'Callout name',
+    ],
+    ...['whiteboard', 'post', 'memo', 'user', 'organization'].map<
+      [string, object, string]
+    >(type => [
+      type,
+      { [type]: { id: 'entity', profile: { displayName: `${type} name` } } },
+      `${type} name`,
+    ]),
+    [
+      'collabora_document',
+      {
+        collaboraDocument: {
+          id: 'entity',
+          profile: { displayName: 'Document name' },
+        },
+      },
+      'Document name',
+    ],
+  ])('formats %s without extra data fetches', async (type, entity, displayName) => {
+    const search = vi.fn().mockResolvedValue({
+      framingResults: {
+        results: [{ id: 'es-id', score: 1, type, ...(entity as object) }],
+      },
+    });
+    const tool = new SearchContentTool(
+      { search } as any,
+      { get: () => 40 } as any,
+      {} as any,
+      {} as any
+    );
+    const result = await tool.execute({ query: 'name' }, new ActorContext());
+    expect(JSON.parse(result.content[0].text ?? '').matches).toEqual([
+      expect.objectContaining({ id: 'entity', displayName }),
+    ]);
+    expect(search).toHaveBeenCalledOnce();
+  });
+});

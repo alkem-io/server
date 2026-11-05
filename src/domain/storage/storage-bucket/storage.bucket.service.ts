@@ -364,9 +364,17 @@ export class StorageBucketService {
     userID?: string,
     temporaryLocation = false,
     skipDedup = false,
-    allowedMimeTypesOverride?: string[]
+    allowedMimeTypesOverride?: string[],
+    options?: {
+      composeAuthorization?: boolean;
+    }
   ): Promise<IDocument> {
-    const storage = await this.getStorageBucketOrFail(storageBucketId);
+    const storage = await this.getStorageBucketOrFail(
+      storageBucketId,
+      options?.composeAuthorization
+        ? { relations: { authorization: true, directStorageOwner: true } }
+        : undefined
+    );
 
     const effectiveAllowedMimes =
       allowedMimeTypesOverride ?? storage.allowedMimeTypes;
@@ -395,7 +403,11 @@ export class StorageBucketService {
           allowedMimeTypes: effectiveAllowedMimes.join(','),
           maxFileSize: storage.maxFileSize,
           skipDedup: effectiveSkipDedup || undefined,
-        })
+        }),
+      options?.composeAuthorization ? storage.authorization : undefined,
+      options?.composeAuthorization
+        ? { createdBy: userID, destinationBucket: storage }
+        : undefined
     );
   }
 
@@ -414,7 +426,10 @@ export class StorageBucketService {
     sourceDocument: IDocument,
     userID?: string,
     skipDedup = false,
-    options?: { externalReference?: string; displayName?: string }
+    options?: {
+      externalReference?: string;
+      displayName?: string;
+    }
   ): Promise<IDocument> {
     const destination = await this.getStorageBucketOrFail(destinationBucketId, {
       // The direct owner scopes the document creator rule; see

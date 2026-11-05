@@ -12,6 +12,7 @@ describe('stringifyWithoutAuthorizationMetaInfo', () => {
     'visuals',
     'issuer',
     'expires',
+    'access_token',
   ] as const;
 
   it.each(
@@ -60,6 +61,26 @@ describe('stringifyWithoutAuthorizationMetaInfo', () => {
     const result = JSON.parse(stringifyWithoutAuthorizationMetaInfo(input));
     expect(result.user).not.toHaveProperty('credentials');
     expect(result.user.profile).toEqual({ name: 'Alice' });
+  });
+
+  it('should drop access_token from an adapter response payload (workspace#091, FR-011)', () => {
+    // The real leak path: `logResponsePayload` stringifies the whole
+    // CreateActorSessionResponse, so the token sits one level down beside
+    // fields that must survive.
+    const input = {
+      success: true,
+      response: {
+        user_id: '@u:hs',
+        device_id: 'DEV1',
+        access_token: 'syt_live_token',
+      },
+    };
+    const serialized = stringifyWithoutAuthorizationMetaInfo(input);
+    expect(serialized).not.toContain('syt_live_token');
+    expect(JSON.parse(serialized)).toEqual({
+      success: true,
+      response: { user_id: '@u:hs', device_id: 'DEV1' },
+    });
   });
 
   it('should handle empty objects', () => {

@@ -159,6 +159,17 @@ describe('KratosService', () => {
       expect(result).toEqual([AuthenticationType.CLEVERBASE]);
     });
 
+    it('should return APPLE when oidc identifier starts with apple', () => {
+      const identity = {
+        credentials: {
+          oidc: { identifiers: ['apple:001234.abcdef0123456789.0123'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toEqual([AuthenticationType.APPLE]);
+    });
+
     it('should return both MICROSOFT and EMAIL when both are present', () => {
       const identity = {
         credentials: {

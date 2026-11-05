@@ -10,7 +10,10 @@ export function stringifyWithoutAuthorizationMetaInfo(object: any): string {
       key === 'storageBucket' ||
       key === 'visuals' ||
       key === 'issuer' ||
-      key === 'expires'
+      key === 'expires' ||
+      // workspace#091: the minted Matrix access token. `logResponsePayload`
+      // runs every adapter response through here at verbose level.
+      key === 'access_token'
     ) {
       return undefined;
     }

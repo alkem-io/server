@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { parseParentMessage } from './whiteboard-executor.protocol';
+import {
+  parseChildMessage,
+  parseParentMessage,
+} from './whiteboard-executor.protocol';
 
 describe('whiteboard-executor launch messages', () => {
   const start = () => ({
@@ -18,6 +21,51 @@ describe('whiteboard-executor launch messages', () => {
     expect(parseParentMessage(start()).success).toBe(true);
     expect(
       parseParentMessage({ ...start(), jobId: randomUUID() }).success
+    ).toBe(false);
+  });
+
+  it('accepts import metadata exclusively and rejects embedded bytes on IPC', () => {
+    const { operations: _operations, ...base } = start();
+    const input = {
+      scene: {
+        type: 'excalidraw',
+        version: 2,
+        elements: [{ type: 'rectangle' }],
+      },
+      targetFileIDs: {},
+    };
+    expect(parseParentMessage({ ...base, import: input }).success).toBe(true);
+    expect(parseParentMessage({ ...start(), import: input }).success).toBe(
+      false
+    );
+    expect(parseParentMessage(base).success).toBe(false);
+    expect(
+      parseParentMessage({
+        ...base,
+        import: { ...input, scene: { ...input.scene, files: {} } },
+      }).success
+    ).toBe(false);
+    expect(
+      parseParentMessage({ ...base, import: { ...input, sourceFiles: {} } })
+        .success
+    ).toBe(false);
+  });
+
+  it('accepts import summaries through the existing result envelope', () => {
+    const identity = { jobId: randomUUID(), generationId: 1 };
+    const result = {
+      addedElementIds: ['fresh'],
+      summary: [{ op: 'importScene', elementIds: ['fresh'] }],
+    };
+    expect(
+      parseChildMessage({ type: 'DURABLE', ...identity, result }).success
+    ).toBe(true);
+    expect(
+      parseChildMessage({
+        type: 'DURABLE',
+        ...identity,
+        result: { ...result, scene: {} },
+      }).success
     ).toBe(false);
   });
 

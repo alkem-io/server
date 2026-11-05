@@ -4,6 +4,7 @@ import { ContributionsAnalyzeTool } from './contributions-analyze.tool';
 import { CreateWhiteboardTool } from './create-whiteboard.tool';
 import { CreateWhiteboardInSpaceTool } from './create-whiteboard-in-space.tool';
 import { EditWhiteboardElementsTool } from './edit-whiteboard-elements.tool';
+import { ImportWhiteboardSceneTool } from './import-whiteboard-scene.tool';
 import { SearchContentTool } from './search-content.tool';
 import { TemplateNavigatorTool } from './template-navigator.tool';
 import { WhiteboardAnalyzeTool } from './whiteboard-analyze.tool';
@@ -31,5 +32,6 @@ export const TOOL_PROVIDERS = [
   CreateWhiteboardTool,
   CreateWhiteboardInSpaceTool,
   EditWhiteboardElementsTool,
+  ImportWhiteboardSceneTool,
   SearchContentTool,
 ] as const;

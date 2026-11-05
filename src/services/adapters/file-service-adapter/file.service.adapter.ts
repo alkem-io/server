@@ -129,15 +129,22 @@ export class FileServiceAdapter extends HttpClientBase {
     this.checkEnabledAndCircuit('createDocumentFromStream');
 
     let bytesSeen = 0;
+    let sizeLimitError: FileServiceAdapterException | undefined;
     const cap = new Transform({
       transform(chunk, _encoding, callback) {
         bytesSeen += chunk.length;
         if (maxBytes > 0 && bytesSeen > maxBytes) {
-          callback(
-            new Error(
-              `upload exceeds the maximum allowed size of ${maxBytes} bytes`
-            )
+          sizeLimitError = new FileServiceAdapterException(
+            'Upload exceeds the maximum allowed size',
+            'createDocumentFromStream',
+            413,
+            {
+              maxBytes,
+              storageBucketId: metadata.storageBucketId,
+              displayName: metadata.displayName,
+            }
           );
+          callback(sizeLimitError);
           return;
         }
         callback(null, chunk);
@@ -177,10 +184,14 @@ export class FileServiceAdapter extends HttpClientBase {
       return response.data;
     } catch (error) {
       this.circuitBreaker.onFailure();
-      throw this.handleError('createDocumentFromStream', error, {
-        storageBucketId: metadata.storageBucketId,
-        displayName: metadata.displayName,
-      });
+      throw this.handleError(
+        'createDocumentFromStream',
+        sizeLimitError ?? error,
+        {
+          storageBucketId: metadata.storageBucketId,
+          displayName: metadata.displayName,
+        }
+      );
     } finally {
       readStream.destroy();
     }
@@ -447,7 +458,11 @@ export class FileServiceAdapter extends HttpClientBase {
       const mimeType = String(response.headers['content-type'] ?? '');
       const size = Number(length);
       if (!/^\d+$/.test(length) || !Number.isSafeInteger(size) || !mimeType)
-        throw new Error('Invalid reference metadata response');
+        throw new FileServiceAdapterException(
+          'Invalid reference metadata response',
+          'getReferenceMetadata',
+          502
+        );
       this.circuitBreaker.onSuccess();
       const width = Number(response.headers['x-alkemio-image-width']);
       const height = Number(response.headers['x-alkemio-image-height']);
@@ -546,6 +561,11 @@ export class FileServiceAdapter extends HttpClientBase {
     error: unknown,
     context?: Record<string, unknown>
   ): FileServiceAdapterException | StorageServiceUnavailableException {
+    if (
+      error instanceof FileServiceAdapterException ||
+      error instanceof StorageServiceUnavailableException
+    )
+      return error;
     if (isAxiosError(error) && error.response) {
       const status = error.response.status;
       if (status === 503) {
@@ -563,10 +583,20 @@ export class FileServiceAdapter extends HttpClientBase {
     }
 
     const cause = error instanceof Error ? error : new Error(String(error));
-    return FileServiceAdapterException.fromTransportError(
+    const exception = FileServiceAdapterException.fromTransportError(
       operation,
       cause,
       context
     );
+    this.logger.warn?.(
+      {
+        message: exception.message,
+        operation,
+        errorName: exception.details?.errorName,
+        transportCause: exception.details?.transportCause,
+      },
+      this.logContext
+    );
+    return exception;
   }
 }

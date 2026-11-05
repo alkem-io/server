@@ -1,0 +1,42 @@
+{
+  "status": "authored-unvalidated-against-published-importer",
+  "origin": "Hand-authored sanitized current editor-format review-to-publication workflow; geometry and relationships follow the producer scene-import-fixture pattern, without executing or copying a producer execution engine. Not an actual browser-export capture.",
+  "customerData": false,
+  "sceneSha256": "c561efd92f84f7f0de944af5f80d3c78013fe7f9b9db70896471fb43b9813344",
+  "liveElements": 9,
+  "elementTypes": {
+    "arrow": 1,
+    "frame": 1,
+    "freedraw": 1,
+    "image": 1,
+    "rectangle": 2,
+    "text": 3
+  },
+  "asset": {
+    "role": "Approval status icon overlapping the publish node to exercise stacking",
+    "mimeType": "image/png",
+    "width": 16,
+    "height": 16,
+    "decodedBytes": 93,
+    "sha256": "2782047c11f0b5e1ac1d80b3331d1b206dc9bcc5f8400cdf22b5aba6a74f14c4"
+  },
+  "compactCompleteDecodedRequestBytes": 5398,
+  "requestSizeMethod": "Compact JSON-RPC tools/call request, numeric id=1, 36-byte board ID field reserved at runtime; includes base64 and complete envelope overhead. This is fixture sizing, not a live accepted-envelope result.",
+  "canonicalNormalization": "Pending published prepareSceneImport; no restoreElements/drop/repair substitute. Arrow bindings use current fixedPoint/mode representation.",
+  "graphExpectations": [
+    "Frame membership and workflow-group remapped coherently",
+    "Three bound labels remain bound to their containers",
+    "Arrow endpoints bind to imported review and publish nodes",
+    "Free draw points and pressure preserved",
+    "Fresh image scene-local fileId references target logical fileID",
+    "Fractional stacking order appended; source coordinates retained",
+    "Destination appState and independent edits survive"
+  ],
+  "validationRequired": [
+    "Published registry package strict validation",
+    "Real editor/browser serialization and usefulness",
+    "Target-owned logical image readback",
+    "Cold checkpoint and canonical browser text parity"
+  ],
+  "scenarioIds": ["US1-AS1", "US1-AS2", "US1-AS3", "US1-AS4", "US1-AS5"]
+}

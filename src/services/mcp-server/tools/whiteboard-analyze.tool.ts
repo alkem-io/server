@@ -245,6 +245,9 @@ export class WhiteboardAnalyzeTool implements McpTool {
         width: el.width,
         height: el.height,
         text: el.type === 'text' ? el.text : undefined,
+        ...(el.type === 'text'
+          ? { fontSize: el.fontSize, containerId: el.containerId ?? null }
+          : {}),
         strokeColor: el.strokeColor,
         backgroundColor: el.backgroundColor,
       })),
