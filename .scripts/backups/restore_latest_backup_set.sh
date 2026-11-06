@@ -110,6 +110,9 @@ yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
 # Path to your existing script
 SCRIPT_PATH='restore_latest_backup.sh'
 
+# Stop at the first database that fails to restore
+set -e
+
 # Call the existing script for alkemio (pass NON_INTERACTIVE mode)
 bash $SCRIPT_PATH alkemio $ENV $NON_INTERACTIVE
 

@@ -11,7 +11,7 @@ This folder contains Dev Container configurations for the Alkemio Server.
 
 The default configuration uses `docker-compose.yml` to start all required services automatically:
 
-- PostgreSQL 17.5
+- PostgreSQL 18.6
 - Redis
 - RabbitMQ
 - Ory Kratos & Oathkeeper (authentication)
