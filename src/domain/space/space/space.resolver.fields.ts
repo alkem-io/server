@@ -5,8 +5,10 @@ import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   ActorLoaderCreator,
+  PlatformAuthorizationPolicyLoaderCreator,
   SpaceAboutLoaderCreator,
   SpaceActivityScoreLoaderCreator,
   SpaceCollaborationLoaderCreator,
@@ -20,6 +22,7 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { IActor, IActorFull } from '@domain/actor/actor/actor.interface';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { NameID } from '@domain/common/scalars';
@@ -48,8 +51,52 @@ export class SpaceResolverFields {
   constructor(
     private spaceService: SpaceService,
     private spaceLookupService: SpaceLookupService,
-    private actorLookupService: ActorLookupService
+    private actorLookupService: ActorLookupService,
+    private authorizationService: AuthorizationService
   ) {}
+
+  /**
+   * The platform-promote flag, visible only to PLATFORM_PROMOTE_MANAGE
+   * holders (Content Full Access, License Manager). Everyone else gets null —
+   * never an error, so a broad selection keeps working — while still seeing
+   * the promoted-first order on Explore Spaces. The platform policy comes
+   * from a per-request loader, so a list of N spaces costs one lookup. A
+   * parent loaded without the column is re-read by id (managers only).
+   */
+  @ResolveField('promote', () => Boolean, {
+    nullable: true,
+    description:
+      'Whether this Space is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).',
+  })
+  async promote(
+    @Parent() space: ISpace,
+    @CurrentActor() actorContext: ActorContext,
+    @Loader(PlatformAuthorizationPolicyLoaderCreator)
+    loader: ILoader<IAuthorizationPolicy>
+  ): Promise<boolean | null> {
+    const platformPolicy = await loader.load(
+      PlatformAuthorizationPolicyLoaderCreator.KEY
+    );
+    if (
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        platformPolicy,
+        AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE
+      )
+    ) {
+      return null;
+    }
+    if (space.promote !== undefined) {
+      return space.promote;
+    }
+    // Some producers (e.g. the post / callout search parents) select the
+    // Space without `promote`; read the stored flag rather than return null,
+    // which would read as "not visible to you".
+    const stored = await this.spaceLookupService.getSpaceOrFail(space.id, {
+      select: { id: true, promote: true },
+    });
+    return stored.promote ?? null;
+  }
 
   @ResolveField('activityScore', () => Int, {
     nullable: false,

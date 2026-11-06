@@ -242,6 +242,7 @@ enum AuthorizationPrivilege {
   PLATFORM_FORUM_MANAGE
   PLATFORM_LICENSING_LISTS_READ
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_PROMOTE_MANAGE
   PLATFORM_ROLE_HOLDERS_READ
   PLATFORM_ROLES_ASSIGN
   PLATFORM_SETTINGS_ADMIN
@@ -3985,6 +3986,10 @@ type InnovationPack {
   nameID: NameID!
   """The Profile for this InnovationPack."""
   profile: Profile!
+  """
+  Whether this InnovationPack is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """The InnovationPack provider."""
   provider: Actor!
   """Visibility of the InnovationPack in searches."""
@@ -4907,8 +4912,20 @@ type Mutation {
   adminUpdateContributorAvatars(profileID: UUID!): Profile!
   """Updates the GeoLocation data where required on the platform."""
   adminUpdateGeoLocationData: Boolean!
+  """
+  Sets the platform-promote flag of an InnovationPack. Platform Content Full Access or Platform License Manager only.
+  """
+  adminUpdateInnovationPackPromote(promoteData: AdminUpdateInnovationPackPromoteInput!): InnovationPack!
+  """
+  Sets the platform-promote flag of a Space (any level). Platform Content Full Access or Platform License Manager only.
+  """
+  adminUpdateSpacePromote(promoteData: AdminUpdateSpacePromoteInput!): Space!
   """Update the visibility of the specified Space."""
   adminUpdateSpaceVisibility(updateData: AdminUpdateSpaceVisibilityInput!): Space!
+  """
+  Sets the platform-promote flag of a VirtualContributor. Platform Content Full Access or Platform License Manager only.
+  """
+  adminUpdateVirtualContributorPromote(promoteData: AdminUpdateVirtualContributorPromoteInput!): VirtualContributor!
   """
   Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.
   """
@@ -6561,6 +6578,10 @@ type RelayPaginatedSpace implements ActorFull {
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
+  """
+  Whether this Space is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """The settings for this Space."""
   settings: SpaceSettings!
   """
@@ -7160,6 +7181,10 @@ type Space implements ActorFull {
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
+  """
+  Whether this Space is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """The settings for this Space."""
   settings: SpaceSettings!
   """
@@ -8268,6 +8293,10 @@ type VirtualContributor implements ActorFull {
   platformSettings: VirtualContributorPlatformSettings!
   """The profile for this Actor."""
   profile: Profile
+  """
+  Whether this VirtualContributor is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """Prompt graph definition for this Virtual Contributor."""
   promptGraphDefinition: PromptGraphDefinition
   """The Virtual Contributor provider."""
@@ -8594,11 +8623,34 @@ input AdminTemplateFileRepairInput {
   templateIDs: [UUID!]
 }
 
+input AdminUpdateInnovationPackPromoteInput {
+  """The InnovationPack whose promote flag is to be set."""
+  innovationPackID: UUID!
+  """True to list this InnovationPack first in the Innovation Library."""
+  promote: Boolean!
+}
+
+input AdminUpdateSpacePromoteInput {
+  """True to list this Space first on Explore Spaces."""
+  promote: Boolean!
+  """The Space (any level) whose promote flag is to be set."""
+  spaceID: UUID!
+}
+
 input AdminUpdateSpaceVisibilityInput {
   """The Space whose visibility is to be updated."""
   spaceID: UUID!
   """Visibility of the Space, only on L0 spaces."""
   visibility: SpaceVisibility!
+}
+
+input AdminUpdateVirtualContributorPromoteInput {
+  """
+  True to list this VirtualContributor first on the platform-wide listings.
+  """
+  promote: Boolean!
+  """The VirtualContributor whose promote flag is to be set."""
+  virtualContributorID: UUID!
 }
 
 input AdminUserEmailChangeDriftResolveInput {

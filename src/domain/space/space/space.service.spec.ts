@@ -46,7 +46,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
@@ -422,6 +422,59 @@ describe('SpaceService', () => {
 
       // Assert
       expect(revokeUrlCacheSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getPaginatedSpaces (promoted first)', () => {
+    const fakeQueryBuilder = () => {
+      const qb: any = {
+        alias: 'space',
+        expressionMap: { orderBys: {}, wheres: [] as unknown[] },
+        leftJoinAndSelect: vi.fn(() => qb),
+        where: vi.fn((condition: unknown) => {
+          qb.expressionMap.wheres.push(condition);
+          return qb;
+        }),
+        andWhere: vi.fn((condition: unknown) => {
+          qb.expressionMap.wheres.push(condition);
+          return qb;
+        }),
+        orderBy: vi.fn(() => qb),
+        addOrderBy: vi.fn(() => qb),
+        take: vi.fn(() => qb),
+        clone: vi.fn(() => qb),
+        getCount: vi.fn().mockResolvedValue(0),
+        getMany: vi.fn().mockResolvedValue([]),
+      };
+      return qb;
+    };
+
+    it('orders promoted spaces first, then by rowId ascending (creation order)', async () => {
+      const qb = fakeQueryBuilder();
+      (spaceRepository as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedSpaces({ first: 10 } as any);
+
+      expect(qb.orderBy).toHaveBeenCalledWith('space.promote', 'DESC');
+      expect(qb.addOrderBy).toHaveBeenCalledWith('space.rowId', 'ASC');
+    });
+
+    it('keeps the visibility filter: promotion never widens the list', async () => {
+      const qb = fakeQueryBuilder();
+      (spaceRepository as any).createQueryBuilder = vi.fn(() => qb);
+      const spaceFilterService = (service as any).spacesFilterService;
+      spaceFilterService.getAllowedVisibilities = vi.fn(() => [
+        SpaceVisibility.ACTIVE,
+      ]);
+
+      await service.getPaginatedSpaces({ first: 10 } as any);
+
+      expect(qb.where).toHaveBeenCalledWith(
+        expect.objectContaining({
+          level: SpaceLevel.L0,
+          visibility: In([SpaceVisibility.ACTIVE]),
+        })
+      );
     });
   });
 
@@ -2454,6 +2507,7 @@ const getSubspacesMock = (
       levelZeroSpaceID: spaceId,
       sortOrder: i,
       pinned: false,
+      promote: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -2617,6 +2671,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       levelZeroSpaceID: subsubspaceId,
       sortOrder: i,
       pinned: false,
+      promote: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -2788,6 +2843,7 @@ const getSpaceMock = ({
     levelZeroSpaceID: '',
     sortOrder: 0,
     pinned: false,
+    promote: false,
     platformRolesAccess: {
       roles: [],
     },

@@ -5,7 +5,7 @@ import {
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -19,7 +19,11 @@ describe('VirtualActorLookupService', () => {
     findOne: ReturnType<typeof vi.fn>;
     find: ReturnType<typeof vi.fn>;
   };
-  let actorLookupService: { getActorAuthorizationOrFail: Mock };
+  let actorLookupService: {
+    getActorAuthorizationOrFail: Mock;
+    getActorIDsWithCredential: Mock;
+  };
+  let virtualContributorRepository: { createQueryBuilder: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -46,6 +50,65 @@ describe('VirtualActorLookupService', () => {
 
     service = module.get(VirtualActorLookupService);
     actorLookupService = module.get(ActorLookupService) as any;
+    virtualContributorRepository = module.get(
+      getRepositoryToken(VirtualContributor)
+    ) as any;
+  });
+
+  describe('getPaginatedAvailableEntryRoleVCs (promoted first)', () => {
+    const fakeQueryBuilder = () => {
+      const qb: any = {
+        alias: 'virtual_contributor',
+        expressionMap: { orderBys: {}, wheres: [] as unknown[] },
+      };
+      for (const method of [
+        'leftJoinAndSelect',
+        'leftJoin',
+        'addSelect',
+        'select',
+        'setParameters',
+        'orderBy',
+        'addOrderBy',
+        'take',
+        'clone',
+      ]) {
+        qb[method] = vi.fn(() => qb);
+      }
+      for (const method of ['where', 'andWhere']) {
+        qb[method] = vi.fn((condition: unknown) => {
+          qb.expressionMap.wheres.push(condition);
+          return qb;
+        });
+      }
+      qb.getCount = vi.fn().mockResolvedValue(0);
+      qb.getMany = vi.fn().mockResolvedValue([]);
+      return qb;
+    };
+
+    it('orders promoted VCs first, then by rowId ascending, and still excludes current members', async () => {
+      const qb = fakeQueryBuilder();
+      virtualContributorRepository.createQueryBuilder = vi.fn(() => qb);
+      actorLookupService.getActorIDsWithCredential.mockResolvedValue([
+        'member-vc',
+      ]);
+
+      await service.getPaginatedAvailableEntryRoleVCs(
+        { role: { type: 'space-member', resourceID: 'rs-1' } } as any,
+        { first: 5 } as any
+      );
+
+      expect(qb.orderBy).toHaveBeenCalledWith(
+        'virtual_contributor.promote',
+        'DESC'
+      );
+      expect(qb.addOrderBy).toHaveBeenCalledWith(
+        'virtual_contributor.rowId',
+        'ASC'
+      );
+      expect(qb.where).toHaveBeenCalledWith(
+        'NOT virtual_contributor.id IN (:...memberVirtualContributors)'
+      );
+    });
   });
 
   describe('getVirtualContributorOrFail', () => {

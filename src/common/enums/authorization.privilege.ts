@@ -60,6 +60,7 @@ export enum AuthorizationPrivilege {
   // --- 027-platform-role-redesign: eleven new privileges (Slice A, additive) ---
   FEATURE_ROLE_ASSIGN = 'feature-role-assign', // low-risk Feature-role assignment (Users Admin + Roles Admin)
   PLATFORM_CONTENT_FULL_ACCESS = 'platform-content-full-access', // controlled replacement for the root CRUD cascade — read + this privilege only
+  PLATFORM_PROMOTE_MANAGE = 'platform-promote-manage', // read + write of the platform-promote flag on spaces, packs and VCs; platform-anchored, non-cascading
   PLATFORM_USERS_ADMIN = 'platform-users-admin', // user-record family: email change, identity/account delete, PII read
   PLATFORM_SUPPORT_ORG_RESOURCES = 'platform-support-org-resources', // A7 — org-owned packs/hubs update + full template CRUD
   // Organisation Community-tab membership actions (invite with offered roles,

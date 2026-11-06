@@ -11,6 +11,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_FORUM_MANAGE,
   CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN,
+  CREDENTIAL_RULE_TYPES_PLATFORM_PROMOTE_MANAGE,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLES_ASSIGN,
@@ -405,6 +406,27 @@ export class PlatformAuthorizationService {
       );
     platformLicensingListsRead.cascade = false;
     credentialRules.push(platformLicensingListsRead);
+
+    // The platform-promote flag (spaces at every level, innovation packs,
+    // virtual contributors): read AND write, for exactly Content Full Access
+    // and License Manager. Anchored here rather than on the resources because
+    // License Manager holds nothing reusable on pack or VC policies (its
+    // ACCOUNT_LICENSE_MANAGE is non-cascading on the account, and the VC tree
+    // is a direct root inheritor, not an account child). One platform rule
+    // means a rollout needs only `authorizationPolicyResetOnPlatform`, never a
+    // reset of every stored policy. Non-cascading: every promote gate checks
+    // the platform policy itself.
+    const platformPromoteManage =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE],
+        [
+          AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+          AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_PROMOTE_MANAGE
+      );
+    platformPromoteManage.cascade = false;
+    credentialRules.push(platformPromoteManage);
 
     // 027-platform-role-redesign (T073, Slice B): the `global-support`
     // platform-SUBTREE cascade that stood here — cascading CRUD over
