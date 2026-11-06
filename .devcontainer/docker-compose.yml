@@ -66,9 +66,10 @@ services:
       - LOCAL_STORAGE_PATH=/workspaces/server/.storage
 
   postgres:
-    image: postgres:17.5
+    image: postgres:18.6-trixie@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
     restart: unless-stopped
     environment:
+      - PGDATA=/var/lib/postgresql/data
       - POSTGRES_DB=synapse
       - POSTGRES_USER=synapse
       - POSTGRES_PASSWORD=synapse
