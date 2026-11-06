@@ -4,6 +4,7 @@ import {
   getRelayStylePaginationResults,
   PaginationArgs,
   Paginationable,
+  PaginationOptions,
 } from './';
 import { IPaginatedType } from './paginated.type';
 
@@ -12,13 +13,16 @@ export const getPaginationResults = async <
 >(
   query: SelectQueryBuilder<T>,
   paginationArgs: PaginationArgs,
-  sort?: 'ASC' | 'DESC'
+  sort?: 'ASC' | 'DESC',
+  options?: PaginationOptions
 ): Promise<IPaginatedType<T>> => {
   const total = await query.getCount();
   const result = await getRelayStylePaginationResults(
     query,
     paginationArgs,
-    sort
+    sort,
+    undefined,
+    options
   );
 
   return {

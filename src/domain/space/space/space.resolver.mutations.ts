@@ -1,3 +1,4 @@
+import { A22_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
@@ -13,12 +14,14 @@ import {
 } from '@domain/space/space';
 import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { AdminUpdateSpacePromoteInput } from './dto/space.dto.admin.update.promote';
 import { AdminUpdateSpaceVisibilityInput } from './dto/space.dto.admin.update.visibility';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
@@ -43,7 +46,8 @@ export class SpaceResolverMutations {
     private subspaceCreatedSubscription: PubSubEngine,
     private spaceLicenseService: SpaceLicenseService,
     private licenseService: LicenseService,
-    private readonly platformResourceAuditService: PlatformResourceAuditService
+    private readonly platformResourceAuditService: PlatformResourceAuditService,
+    private readonly platformAuthorizationPolicyService: PlatformAuthorizationPolicyService
   ) {}
 
   @Mutation(() => ISpace, {
@@ -238,6 +242,51 @@ export class SpaceResolverMutations {
     }
 
     return await this.spaceService.getSpaceOrFail(space.id);
+  }
+
+  /**
+   * The platform-promote flag: promoted L0 spaces are listed first on Explore
+   * Spaces. Accepted at every level (subspaces carry the flag but nothing
+   * orders by it yet). Gated on the PLATFORM policy, not the space's own: the
+   * space's admins must not be able to promote their own space. The flag is
+   * not part of any authorization policy, so nothing is re-applied.
+   */
+  @Mutation(() => ISpace, {
+    description:
+      'Sets the platform-promote flag of a Space (any level). Platform Content Full Access or Platform License Manager only.',
+  })
+  async adminUpdateSpacePromote(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('promoteData') promoteData: AdminUpdateSpacePromoteInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(promoteData.spaceID);
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE,
+      `adminUpdateSpacePromote: ${space.id}`
+    );
+
+    await this.spaceService.setPromote(space.id, promoteData.promote);
+    space.promote = promoteData.promote;
+
+    // Single-path surface: every call reaching here was authorized by
+    // PLATFORM_PROMOTE_MANAGE. Every successful call is audited, including
+    // re-applying the current value, so the trail records each admin action.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A22_INTENDED_OWNERS,
+      {
+        resourceKind: 'space',
+        resourceId: space.id,
+        promote: space.promote,
+        outcome: 'promote_changed',
+      }
+    );
+
+    return space;
   }
 
   @Mutation(() => ISpace, {

@@ -342,6 +342,16 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
   A21: {
     gateSpecs: ['src/domain/community/user/user.service.spec.ts'],
   },
+  A22: {
+    gateSpecs: [
+      'src/domain/space/space/space.resolver.mutations.spec.ts',
+      'src/library/innovation-pack/innovation.pack.resolver.mutations.spec.ts',
+      'src/domain/community/virtual-contributor/virtual.contributor.resolver.mutations.spec.ts',
+      'src/domain/space/space/space.resolver.fields.spec.ts',
+      'src/library/innovation-pack/innovation.pack.resolver.fields.spec.ts',
+      'src/domain/community/virtual-contributor/virtual.contributor.resolver.fields.spec.ts',
+    ],
+  },
 };
 
 /** qual-server-10 fix: `AuthorizationPrivilege` is a string enum whose
@@ -462,6 +472,11 @@ export const PRIVILEGE_COVERAGE: Record<
   },
   // R-F.3 (2026-09-18) — the License Manager's console list read, platform-anchored.
   [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
+    ruleSpec: PLATFORM_POLICY_SPEC,
+    grantSetSpec: PLATFORM_POLICY_SPEC,
+  },
+  // A22 — the platform-promote flag, platform-anchored.
+  [AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE]: {
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,
   },

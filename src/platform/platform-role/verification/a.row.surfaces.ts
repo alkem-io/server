@@ -5,7 +5,7 @@ import type { GateExpr } from './gate.model';
 
 /**
  * The machine-readable census: every GraphQL mutation / field / MCP tool the
- * 21 live global-role families (A1-A21, minus the removed A18) actually gate,
+ * 22 live global-role families (A1-A22, minus the removed A18) actually gate,
  * one entry per surface. It is the single source for this repo's unit-coverage
  * inventory (`unit.coverage.inventory.ts`) and drift detector
  * (`surface.drift.spec.ts`). `test-suites` keeps its own hand-maintained
@@ -13,7 +13,7 @@ import type { GateExpr } from './gate.model';
  * imports or generates from it.
  *
  * `A20` (all upper-case) is intentionally NOT part of `ARowId` as written —
- * it IS: `ARowId` is `'A1' … 'A21' | 'A20b'`, 22 members. `A20b` re-uses
+ * it IS: `ARowId` is `'A1' … 'A22' | 'A20b'`, 23 members. `A20b` re-uses
  * `A20`'s four resolvers for the `feature-*` half of the same holder-list
  * read (privilege-map.md §"A20/A20b are one surface, two privileges").
  */
@@ -39,7 +39,8 @@ export type ARowId =
   | 'A19'
   | 'A20'
   | 'A20b'
-  | 'A21';
+  | 'A21'
+  | 'A22';
 
 export interface SurfaceRef {
   /** Repo-relative path of the file where the gate is ENFORCED — not
@@ -193,6 +194,11 @@ const ORG_COMMUNITY_GATE_FILE =
 
 const ROOT_CASCADE_COMMUNITY_REASON =
   'Pre-existing reach, recorded rather than ruled on (the open QA finding census-deletePlatformInvitation covers this root-cascade class): the inheritance root cascades full CRUD into every organization tree, so Content Full Access satisfies the plain DELETE/UPDATE owner branch (revoke an invitation, reject an application) exactly as before the Community-tab dual path existed. It gains no GRANT, invite or entry privilege, so it still cannot assign, remove, approve, invite or resend, and its actions are never audited as Support actions.';
+
+const A22_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+  AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+];
 
 export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
   // ===== A1 — assign/revoke a PLATFORM role =====================
@@ -1659,6 +1665,62 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.SET_SERVICE_PROFILE },
       intendedOwners: [AuthorizationCredential.PLATFORM_ROLES_ADMIN],
+    },
+  ],
+  // ===== A22 — the platform-promote flag (spaces, packs, VCs) =====
+  // Read AND write through one platform-anchored, non-cascading privilege
+  // owned by Content Full Access and License Manager. The three `promote`
+  // fields return null (never an error) to everyone else; the three
+  // mutations refuse. Listing order is applied for every viewer and is not a
+  // gated surface.
+  A22: [
+    {
+      file: 'src/domain/space/space/space.resolver.mutations.ts',
+      member: 'adminUpdateSpacePromote',
+      kind: 'graphql-mutation',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE },
+      intendedOwners: A22_OWNERS,
+    },
+    {
+      file: 'src/library/innovation-pack/innovation.pack.resolver.mutations.ts',
+      member: 'adminUpdateInnovationPackPromote',
+      kind: 'graphql-mutation',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE },
+      intendedOwners: A22_OWNERS,
+    },
+    {
+      file: 'src/domain/community/virtual-contributor/virtual.contributor.resolver.mutations.ts',
+      member: 'adminUpdateVirtualContributorPromote',
+      kind: 'graphql-mutation',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE },
+      intendedOwners: A22_OWNERS,
+    },
+    {
+      file: 'src/domain/space/space/space.resolver.fields.ts',
+      member: 'promote',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE },
+      intendedOwners: A22_OWNERS,
+    },
+    {
+      file: 'src/library/innovation-pack/innovation.pack.resolver.fields.ts',
+      member: 'promote',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE },
+      intendedOwners: A22_OWNERS,
+    },
+    {
+      file: 'src/domain/community/virtual-contributor/virtual.contributor.resolver.fields.ts',
+      member: 'promote',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE },
+      intendedOwners: A22_OWNERS,
     },
   ],
 };
