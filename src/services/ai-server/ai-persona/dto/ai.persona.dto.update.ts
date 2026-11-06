@@ -2,6 +2,8 @@ import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
 import { Field, InputType } from '@nestjs/graphql';
 import { PromptGraph } from '@services/ai-server/prompt-graph/dto/prompt.graph.dto';
+import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
 import { IExternalConfig } from './external.config';
 
 @InputType()
@@ -16,5 +18,7 @@ export class UpdateAiPersonaInput extends UpdateBaseAlkemioInput {
   externalConfig?: IExternalConfig;
 
   @Field(() => PromptGraph, { nullable: true })
+  @ValidateNested()
+  @Type(() => PromptGraph)
   promptGraph?: PromptGraph | null;
 }
