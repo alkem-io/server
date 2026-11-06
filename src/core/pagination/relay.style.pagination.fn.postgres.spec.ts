@@ -92,8 +92,19 @@ describePostgres('leadingBooleanDesc pagination (PostgreSQL)', () => {
 
   afterAll(async () => {
     if (dataSource?.isInitialized) {
-      await dataSource.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
       await dataSource.destroy();
+    }
+    // An independent connection, so the schema is dropped even when the
+    // fixture's initialize (synchronize) failed after CREATE SCHEMA.
+    const cleanup = new DataSource({
+      type: 'postgres',
+      url: migrationDatabaseUrl,
+    });
+    await cleanup.initialize();
+    try {
+      await cleanup.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    } finally {
+      await cleanup.destroy();
     }
   });
 

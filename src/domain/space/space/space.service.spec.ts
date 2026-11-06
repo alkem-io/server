@@ -46,7 +46,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Brackets, Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
@@ -470,7 +470,10 @@ describe('SpaceService', () => {
       await service.getPaginatedSpaces({ first: 10 } as any);
 
       expect(qb.where).toHaveBeenCalledWith(
-        expect.objectContaining({ level: SpaceLevel.L0 })
+        expect.objectContaining({
+          level: SpaceLevel.L0,
+          visibility: In([SpaceVisibility.ACTIVE]),
+        })
       );
     });
   });

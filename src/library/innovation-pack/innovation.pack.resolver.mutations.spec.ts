@@ -328,6 +328,30 @@ describe('InnovationPackResolverMutations.adminUpdateInnovationPackPromote', () 
     expect(result.promote).toBe(true);
   });
 
+  it('un-promoting writes false and is audited with promote: false', async () => {
+    vi.mocked(service.getInnovationPackOrFail).mockResolvedValue(loaded(true));
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateInnovationPackPromote(
+      actorContext,
+      {
+        innovationPackID: 'res-1',
+        promote: false,
+      }
+    );
+
+    expect(service.setPromote).toHaveBeenCalledWith('res-1', false);
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+      resourceKind: 'innovation_pack',
+      resourceId: 'res-1',
+      promote: false,
+      outcome: 'promote_changed',
+    });
+    expect(result.promote).toBe(false);
+  });
+
   it('a refused caller changes nothing and is not audited', async () => {
     vi.mocked(service.getInnovationPackOrFail).mockResolvedValue(loaded(false));
     vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(() => {

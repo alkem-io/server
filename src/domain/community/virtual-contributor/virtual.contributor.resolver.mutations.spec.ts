@@ -313,6 +313,32 @@ describe('VirtualContributorResolverMutations.adminUpdateVirtualContributorPromo
     expect(result.promote).toBe(true);
   });
 
+  it('un-promoting writes false and is audited with promote: false', async () => {
+    vi.mocked(service.getVirtualContributorByIdOrFail).mockResolvedValue(
+      loaded(true)
+    );
+    vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+    const result = await resolver.adminUpdateVirtualContributorPromote(
+      actorContext,
+      {
+        virtualContributorID: 'res-1',
+        promote: false,
+      }
+    );
+
+    expect(service.setPromote).toHaveBeenCalledWith('res-1', false);
+    expect(
+      platformResourceAuditService.recordEventForActor
+    ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+      resourceKind: 'virtual_contributor',
+      resourceId: 'res-1',
+      promote: false,
+      outcome: 'promote_changed',
+    });
+    expect(result.promote).toBe(false);
+  });
+
   it('a refused caller changes nothing and is not audited', async () => {
     vi.mocked(service.getVirtualContributorByIdOrFail).mockResolvedValue(
       loaded(false)
