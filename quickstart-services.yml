@@ -22,6 +22,8 @@ services:
     ports:
       - 8888:8080
       - 8088:8088
+      # matrix-adapter for HOST tools only (loopback). Synapse reaches the adapter
+      # by service name inside the network - see .build/synapse/matrix-adapter.yaml.
       - 127.0.0.1:8280:8280
       - 3000:80
       - 5432:5432
