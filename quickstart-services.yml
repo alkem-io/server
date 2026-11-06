@@ -22,6 +22,8 @@ services:
     ports:
       - 8888:8080
       - 8088:8088
+      # matrix-adapter for HOST tools only (loopback). Synapse reaches the adapter
+      # by service name inside the network - see .build/synapse/matrix-adapter.yaml.
       - 127.0.0.1:8280:8280
       - 3000:80
       - 5432:5432
@@ -372,7 +374,9 @@ services:
     ports:
       - 5432
     volumes:
-      - alkemio_dev_postgres:/var/lib/postgresql
+      # Mount at PGDATA itself: the image declares VOLUME /var/lib/postgresql/data, so a mount one level
+      # up leaves the cluster in an anonymous volume that a container rm / down -v silently discards.
+      - alkemio_dev_postgres:/var/lib/postgresql/data
       - ./.build/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
       - ./.build/postgres/entrypoint-wrapper.sh:/usr/local/bin/entrypoint-wrapper.sh:ro
     healthcheck:

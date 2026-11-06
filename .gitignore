@@ -106,6 +106,7 @@ subscriptions.log
 !.scripts/gql-request-interactive.sh
 !.scripts/check-vendor-lib-pins.sh
 !.scripts/calls-stack-check.sh
+!.scripts/migrate-postgres-volume.sh
 .scripts/overmind/.overmind.sock
 .scripts/**/*.psql
 .storage/
