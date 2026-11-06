@@ -87,6 +87,25 @@ case $ENV in
         ;;
 esac
 
+# Path to your existing script
+SCRIPT_PATH='restore_latest_backup.sh'
+
+# Stop at the first database that fails to restore
+set -e
+
+# Call the existing script for alkemio (pass NON_INTERACTIVE mode)
+bash $SCRIPT_PATH alkemio $ENV $NON_INTERACTIVE
+
+# Conditionally restore kratos database based on the RESTORE_KRATOS flag
+if [[ "$RESTORE_KRATOS" == "true" ]]; then
+    echo "Restoring kratos database..."
+    bash $SCRIPT_PATH kratos $ENV $NON_INTERACTIVE
+else
+    echo "Skipping kratos database restore (use 4th argument 'true' to enable)."
+fi
+
+# Only switch Synapse to the new server name once the earlier restores succeeded: a failure above must
+# not leave the new name configured against the old Synapse database
 # Update the .env.docker file with the new server name
 if grep -q "SYNAPSE_HOMESERVER_NAME" $ENV_FILE_PATH; then
     sed_inplace "s/^SYNAPSE_HOMESERVER_NAME=.*/SYNAPSE_HOMESERVER_NAME=$SERVER_NAME/" $ENV_FILE_PATH
@@ -106,23 +125,6 @@ echo $HOMESERVER_FILE_PATH
 echo $SERVER_NAME
 # Update the server_name in the YAML file using yq
 yq e ".server_name = \"$SERVER_NAME\"" -i $HOMESERVER_FILE_PATH
-
-# Path to your existing script
-SCRIPT_PATH='restore_latest_backup.sh'
-
-# Stop at the first database that fails to restore
-set -e
-
-# Call the existing script for alkemio (pass NON_INTERACTIVE mode)
-bash $SCRIPT_PATH alkemio $ENV $NON_INTERACTIVE
-
-# Conditionally restore kratos database based on the RESTORE_KRATOS flag
-if [[ "$RESTORE_KRATOS" == "true" ]]; then
-    echo "Restoring kratos database..."
-    bash $SCRIPT_PATH kratos $ENV $NON_INTERACTIVE
-else
-    echo "Skipping kratos database restore (use 4th argument 'true' to enable)."
-fi
 
 # Call the existing script for synapse (pass NON_INTERACTIVE mode)
 bash $SCRIPT_PATH synapse $ENV $NON_INTERACTIVE

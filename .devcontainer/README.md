@@ -21,6 +21,32 @@ The default configuration uses `docker-compose.yml` to start all required servic
 - Traefik (reverse proxy)
 - Whiteboard, file, document, and notification services
 
+### Upgrading from PostgreSQL 17
+
+An existing `postgres-data` volume from PostgreSQL 17 stops the `postgres` container from starting. Restarting does not help, and `.scripts/migrate-postgres-volume.sh` only covers the quickstart stack. If you have no data worth keeping, remove the volume and skip the dump and restore steps.
+
+Otherwise, stop the dev container, then run these from the repository root. Find the volume name with `docker volume ls | grep postgres-data`.
+
+```bash
+docker compose -f .devcontainer/docker-compose.yml down
+VOLUME=<project>_postgres-data
+
+# Dump everything with PostgreSQL 17
+docker run -d --name pg17-dump -v "$VOLUME":/var/lib/postgresql/data postgres:17.5
+until docker exec pg17-dump pg_isready -q -U synapse; do sleep 1; done
+docker exec pg17-dump pg_dumpall -U synapse --clean --if-exists > pg17-dump.sql
+
+# Replace the volume, only after checking that pg17-dump.sql holds your data
+docker rm -f pg17-dump
+docker volume rm "$VOLUME"
+
+# Restore into PostgreSQL 18
+docker compose -f .devcontainer/docker-compose.yml up -d --no-deps --wait postgres
+docker compose -f .devcontainer/docker-compose.yml exec -T postgres psql -q -U synapse -d postgres < pg17-dump.sql
+```
+
+The restore reports `current user cannot be dropped` and `role "synapse" already exists`. Both are expected. Reopen the dev container afterwards. If your dev container runs under a different compose project name, pass the same `-p` to the compose commands so they find the same volume.
+
 ### Verifying Service Health
 
 After the dev container starts, verify that all services are running correctly:
