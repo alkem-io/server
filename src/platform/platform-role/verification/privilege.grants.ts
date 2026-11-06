@@ -56,6 +56,8 @@ export type ManagedPrivilege =
   // list read for spaces / organizations / users. Same disposition — no
   // census gate, grant set spec-covered through `PRIVILEGE_COVERAGE`.
   | AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ
+  // A22 — the platform-promote flag's read + write, platform-anchored.
+  | AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE
   | AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
   | AuthorizationPrivilege.DELETE_ORGANIZATION
   | AuthorizationPrivilege.PLATFORM_AUDIT_READ
@@ -172,6 +174,15 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
   [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
     anchor: 'platform',
     owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+  },
+  // --- A22 — one non-cascading rule on the platform policy
+  // (`platform.service.authorization.ts`).
+  [AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE]: {
+    anchor: 'platform',
+    owningCredentials: [
+      AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+      AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+    ],
   },
   // --- A15 forum.
   [AuthorizationPrivilege.PLATFORM_FORUM_MANAGE]: {

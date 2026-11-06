@@ -603,6 +603,20 @@ export class VirtualContributorService {
     return this.virtualContributorRepository.save(virtualContributor);
   }
 
+  /** Writes only the promote column, so a concurrent change to any other column is never overwritten. */
+  async setPromote(
+    virtualContributorID: string,
+    promote: boolean
+  ): Promise<void> {
+    // Repository.update() rejects CTI child entities; the query builder does not.
+    await this.virtualContributorRepository
+      .createQueryBuilder()
+      .update(VirtualContributor)
+      .set({ promote })
+      .whereInIds([virtualContributorID])
+      .execute();
+  }
+
   public async getProvider(
     virtualContributor: IVirtualContributor
   ): Promise<IActor> {

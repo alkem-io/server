@@ -3,7 +3,7 @@
 #
 # Mechanically asserts the `server-migration-entrypoint` contract (US2-AS1):
 # runs the compiled TypeORM CLI migration path — zero shell involvement —
-# against a fresh, throwaway PostgreSQL 17.5 container, and confirms:
+# against a fresh, throwaway PostgreSQL 18.6 container, and confirms:
 #   - `migration:run` exits 0
 #   - `migrations_typeorm` row count == number of compiled dist/migrations/*.js
 #   - a subsequent `migration:show` reports zero pending migrations
@@ -36,9 +36,9 @@ echo "== distroless-migration-smoke: $IMAGE =="
 docker network create "$NET_NAME" >/dev/null
 docker run -d --name "$PG_NAME" --network "$NET_NAME" \
   -e POSTGRES_USER=alkemio -e POSTGRES_PASSWORD="$PG_PASSWORD" -e POSTGRES_DB=alkemio \
-  postgres:17.5 >/dev/null
+  postgres:18.6-trixie@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4 >/dev/null
 
-echo "waiting for PostgreSQL 17.5 to accept connections..."
+echo "waiting for PostgreSQL 18.6 to accept connections..."
 for _ in $(seq 1 60); do
   if docker exec "$PG_NAME" pg_isready -U alkemio >/dev/null 2>&1; then
     break
@@ -46,8 +46,8 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 docker exec "$PG_NAME" pg_isready -U alkemio >/dev/null 2>&1 ||
-  fail "postgres:17.5 did not become ready in time"
-pass "fresh PostgreSQL 17.5 is ready"
+  fail "postgres:18.6 did not become ready in time"
+pass "fresh PostgreSQL 18.6 is ready"
 
 DB_ENV=(-e DATABASE_HOST="$PG_NAME" -e DATABASE_PORT=5432 -e DATABASE_USERNAME=alkemio \
   -e DATABASE_PASSWORD="$PG_PASSWORD" -e DATABASE_NAME=alkemio)

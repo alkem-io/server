@@ -45,21 +45,23 @@ All share `AUTH_ADMIN_PASSWORD` from `.env` (override with `DEV_SEED_PASSWORD`):
 
 | Account | Role | Notes |
 |---|---|---|
-| `admin@alkem.io` | `global-admin` + `platform-roles-admin` | bootstrap-seeded; full legacy powers for all of Slice A |
+| `admin@alkem.io` | `platform-roles-admin` + `platform-operations-admin` + `platform-users-admin` + `platform-settings-admin` | bootstrap-seeded (`users.json`) |
 | `ops@alkem.io` | `platform-operations-admin` | authorization reset |
 | `users-admin@alkem.io` | `platform-users-admin` | |
 | `support@alkem.io` | `platform-support` | |
 | `content@alkem.io` | `platform-content-full-access` | |
 
-`admin@alkem.io` can still do everything it could before 027 — Slice A is
-additive, and `test-suites` runs as this account at 878 sites. The per-role
-accounts each hold **exactly one** role, which is what makes separation of
-duties observable: use them to check what a role can *and cannot* do.
+There is no `global-admin` any more — Slice B (#6582) removed the legacy
+`global-*` roles (migration `DropLegacyPlatformRoles`). `admin@alkem.io` is
+not a god account: it holds the four admin roles above and nothing else. The
+per-role accounts each hold **exactly one** role, which is what makes
+separation of duties observable: use them to check what a role can *and
+cannot* do.
 
 Each of the 13 roles is genuinely narrow. `platform-roles-admin`, for example,
 is assignment-only — on its own it cannot reset authorization, cannot grant
-itself a role (rule `self-assignment`), and cannot grant the legacy `global-*`
-roles at all. That is the feature working, not a misconfiguration.
+itself a role (rule `self-assignment`). That is the feature working, not a
+misconfiguration.
 
 Step 6 grants through `assignPlatformRoleToUser`, never SQL, so a regression in
 the assignment rule engine surfaces as a seeding failure instead of being
@@ -78,4 +80,5 @@ Report each step's outcome to the user. If the script fails, show the failing st
 - **Volume not found** — Safe to ignore; volumes were already removed.
 - **Admin registration fails** — Check `docker logs alkemio_dev_seed_roles` and `/tmp/alkemio-dev-server.log`.
 - **Role seeding fails (step 6)** — The reset itself succeeded, but the script stops its dev server on exit. Start `pnpm start:dev` (if not already running), wait for it to come up, then re-run `pnpm run dev:seed-roles`. A `grant REJECTED (rule: …)` line is a **real finding** in the assignment rule engine, not a script bug — report it rather than working around it.
-- **`unable to grant '<privilege>'` as `admin@alkem.io`** — Check the account actually holds `global-admin`: `SELECT type FROM credential c JOIN "user" u ON u.id = c."actorId" WHERE u.email = 'admin@alkem.io';`. If it is missing, the seed regressed and `test-suites` cannot run at all — 83% of its spec files act as this user.
+- **`grant REJECTED (rule: assigner-capability)` / `unable to grant '<privilege>'` as `admin@alkem.io`** — Check the account holds `platform-roles-admin`: `SELECT type FROM credential c JOIN "user" u ON u.id = c."actorId" WHERE u.email = 'admin@alkem.io';`. If it only has `account-admin` / `global-registered` / `user-self`, bootstrap never ran on the fresh DB (also: `SELECT count(*) FROM organization` returns 0). Restart the dev server so bootstrap runs — its credential grant loop runs on every start — then re-run `pnpm run dev:seed-roles`.
+- **Port 4000 already taken before the reset** — Check `ss -ltnp | grep :4000` first. A pre-existing `pnpm start:dev` watcher keeps serving, the script's own server fails to bind, and the step-5 health checks pass against the stale server — so bootstrap never runs on the new DB and step 6 fails as above. Stop it before resetting.

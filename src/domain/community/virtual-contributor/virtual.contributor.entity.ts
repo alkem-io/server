@@ -66,6 +66,11 @@ export class VirtualContributor extends Actor implements IVirtualContributor {
   @Column({ nullable: false })
   listedInStore!: boolean;
 
+  // Platform-promote: listed first on the platform-wide VC listings. Read
+  // and written only through PLATFORM_PROMOTE_MANAGE.
+  @Column('boolean', { nullable: false, default: false })
+  promote!: boolean;
+
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,

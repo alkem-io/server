@@ -31,4 +31,12 @@ export class SearchFilterInput {
     description: 'Which types to include. Defaults to all in the category.',
   })
   types?: SearchResultType[];
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Count the Space and Subspace results the requester may see among the 1000 best ranked matches, and paginate over them exactly (see `total`); lower ranked matches are neither counted nor reachable. Only honoured for the SPACES category in a search that is not scoped to a Space. Costs a scan of up to 1000 matches, so only ask for it when the total is shown.',
+    defaultValue: false,
+  })
+  countTotal?: boolean;
 }
