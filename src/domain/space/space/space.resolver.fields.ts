@@ -60,7 +60,8 @@ export class SpaceResolverFields {
    * holders (Content Full Access, License Manager). Everyone else gets null —
    * never an error, so a broad selection keeps working — while still seeing
    * the promoted-first order on Explore Spaces. The platform policy comes
-   * from a per-request loader, so a list of N spaces costs one lookup.
+   * from a per-request loader, so a list of N spaces costs one lookup. A
+   * parent loaded without the column is re-read by id (managers only).
    */
   @ResolveField('promote', () => Boolean, {
     nullable: true,
@@ -85,7 +86,16 @@ export class SpaceResolverFields {
     ) {
       return null;
     }
-    return space.promote ?? null;
+    if (space.promote !== undefined) {
+      return space.promote;
+    }
+    // Some producers (e.g. the post / callout search parents) select the
+    // Space without `promote`; read the stored flag rather than return null,
+    // which would read as "not visible to you".
+    const stored = await this.spaceLookupService.getSpaceOrFail(space.id, {
+      select: { id: true, promote: true },
+    });
+    return stored.promote ?? null;
   }
 
   @ResolveField('activityScore', () => Int, {

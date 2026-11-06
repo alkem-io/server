@@ -85,6 +85,34 @@ describe('SpaceResolverFields', () => {
       );
     });
 
+    it('a holder gets the stored value when the parent Space was selected without promote', async () => {
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue({
+        id: 'space-1',
+        promote: true,
+      } as any);
+
+      await expect(
+        resolver.promote({ id: 'space-1' } as any, actorContext, policyLoader())
+      ).resolves.toBe(true);
+      expect(spaceLookupService.getSpaceOrFail).toHaveBeenCalledWith(
+        'space-1',
+        { select: { id: true, promote: true } }
+      );
+    });
+
+    it('a loaded parent is not re-read', async () => {
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      await resolver.promote(
+        { id: 'space-1', promote: false } as any,
+        actorContext,
+        policyLoader()
+      );
+
+      expect(spaceLookupService.getSpaceOrFail).not.toHaveBeenCalled();
+    });
+
     it('anyone else gets null (absent, not false) and no error', async () => {
       vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
 
