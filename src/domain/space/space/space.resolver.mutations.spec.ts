@@ -250,9 +250,6 @@ describe('SpaceResolverMutations', () => {
       vi.mocked(
         platformAuthorizationPolicyService.getPlatformAuthorizationPolicy
       ).mockResolvedValue(platformPolicy);
-      vi.mocked(spaceService.save).mockImplementation(
-        async space => space as any
-      );
     });
 
     it('a PLATFORM_PROMOTE_MANAGE holder sets the flag, gated on the PLATFORM policy (not the space policy), and it is audited', async () => {
@@ -272,9 +269,8 @@ describe('SpaceResolverMutations', () => {
         expect.any(String)
       );
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
-      expect(spaceService.save).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'space-1', promote: true })
-      );
+      expect(spaceService.setPromote).toHaveBeenCalledWith('space-1', true);
+      expect(spaceService.save).not.toHaveBeenCalled();
       expect(
         platformResourceAuditService.recordEventForActor
       ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
@@ -302,7 +298,7 @@ describe('SpaceResolverMutations', () => {
           promote: true,
         })
       ).rejects.toThrow('forbidden');
-      expect(spaceService.save).not.toHaveBeenCalled();
+      expect(spaceService.setPromote).not.toHaveBeenCalled();
       expect(
         platformResourceAuditService.recordEventForActor
       ).not.toHaveBeenCalled();
@@ -383,7 +379,7 @@ describe('SpaceResolverMutations', () => {
           promote: true,
         })
       ).rejects.toThrow('not found');
-      expect(spaceService.save).not.toHaveBeenCalled();
+      expect(spaceService.setPromote).not.toHaveBeenCalled();
       expect(
         platformResourceAuditService.recordEventForActor
       ).not.toHaveBeenCalled();

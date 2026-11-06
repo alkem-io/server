@@ -51,8 +51,11 @@ export class InnovationPackResolverMutations {
       `adminUpdateInnovationPackPromote: ${innovationPack.id}`
     );
 
+    await this.innovationPackService.setPromote(
+      innovationPack.id,
+      promoteData.promote
+    );
     innovationPack.promote = promoteData.promote;
-    const saved = await this.innovationPackService.save(innovationPack);
 
     // Single-path surface: every call reaching here was authorized by
     // PLATFORM_PROMOTE_MANAGE. Every successful call is audited, including
@@ -62,13 +65,13 @@ export class InnovationPackResolverMutations {
       A22_INTENDED_OWNERS,
       {
         resourceKind: 'innovation_pack',
-        resourceId: saved.id,
-        promote: saved.promote,
+        resourceId: innovationPack.id,
+        promote: innovationPack.promote,
         outcome: 'promote_changed',
       }
     );
 
-    return saved;
+    return innovationPack;
   }
 
   @Mutation(() => IInnovationPack, {

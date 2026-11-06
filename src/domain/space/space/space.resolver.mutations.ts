@@ -269,8 +269,8 @@ export class SpaceResolverMutations {
       `adminUpdateSpacePromote: ${space.id}`
     );
 
+    await this.spaceService.setPromote(space.id, promoteData.promote);
     space.promote = promoteData.promote;
-    const saved = await this.spaceService.save(space);
 
     // Single-path surface: every call reaching here was authorized by
     // PLATFORM_PROMOTE_MANAGE. Every successful call is audited, including
@@ -280,13 +280,13 @@ export class SpaceResolverMutations {
       A22_INTENDED_OWNERS,
       {
         resourceKind: 'space',
-        resourceId: saved.id,
-        promote: saved.promote,
+        resourceId: space.id,
+        promote: space.promote,
         outcome: 'promote_changed',
       }
     );
 
-    return saved;
+    return space;
   }
 
   @Mutation(() => ISpace, {

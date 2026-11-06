@@ -193,8 +193,11 @@ export class VirtualContributorResolverMutations {
       `adminUpdateVirtualContributorPromote: ${virtualContributor.id}`
     );
 
+    await this.virtualContributorService.setPromote(
+      virtualContributor.id,
+      promoteData.promote
+    );
     virtualContributor.promote = promoteData.promote;
-    const saved = await this.virtualContributorService.save(virtualContributor);
 
     // Single-path surface: every call reaching here was authorized by
     // PLATFORM_PROMOTE_MANAGE. Every successful call is audited, including
@@ -204,13 +207,13 @@ export class VirtualContributorResolverMutations {
       A22_INTENDED_OWNERS,
       {
         resourceKind: 'virtual_contributor',
-        resourceId: saved.id,
-        promote: saved.promote,
+        resourceId: virtualContributor.id,
+        promote: virtualContributor.promote,
         outcome: 'promote_changed',
       }
     );
 
-    return saved;
+    return virtualContributor;
   }
 
   @Mutation(() => IVirtualContributor, {

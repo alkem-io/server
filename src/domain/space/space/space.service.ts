@@ -506,6 +506,17 @@ export class SpaceService {
     return await this.spaceRepository.save(space);
   }
 
+  /** Writes only the promote column, so a concurrent change to any other column is never overwritten. */
+  async setPromote(spaceID: string, promote: boolean): Promise<void> {
+    // Repository.update() rejects CTI child entities; the query builder does not.
+    await this.spaceRepository
+      .createQueryBuilder()
+      .update(Space)
+      .set({ promote })
+      .whereInIds([spaceID])
+      .execute();
+  }
+
   async deleteSpaceOrFail(deleteData: DeleteSpaceInput): Promise<ISpace> {
     const space = await this.getSpaceOrFail(deleteData.ID, {
       relations: {

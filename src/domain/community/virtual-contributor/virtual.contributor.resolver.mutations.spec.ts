@@ -277,7 +277,6 @@ describe('VirtualContributorResolverMutations.adminUpdateVirtualContributorPromo
       module.get(PlatformAuthorizationPolicyService)
         .getPlatformAuthorizationPolicy
     ).mockResolvedValue(platformPolicy);
-    vi.mocked(service.save).mockImplementation(async entity => entity as any);
   });
 
   it('a PLATFORM_PROMOTE_MANAGE holder sets the flag, gated on the PLATFORM policy (not the resource policy), and it is audited', async () => {
@@ -301,9 +300,8 @@ describe('VirtualContributorResolverMutations.adminUpdateVirtualContributorPromo
       AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE,
       expect.any(String)
     );
-    expect(service.save).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'res-1', promote: true })
-    );
+    expect(service.setPromote).toHaveBeenCalledWith('res-1', true);
+    expect(service.save).not.toHaveBeenCalled();
     expect(
       platformResourceAuditService.recordEventForActor
     ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
@@ -329,7 +327,7 @@ describe('VirtualContributorResolverMutations.adminUpdateVirtualContributorPromo
         promote: true,
       })
     ).rejects.toThrow('forbidden');
-    expect(service.save).not.toHaveBeenCalled();
+    expect(service.setPromote).not.toHaveBeenCalled();
     expect(
       platformResourceAuditService.recordEventForActor
     ).not.toHaveBeenCalled();
