@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Register and verify a new user via Kratos + MailSlurper
+# Register and verify a new user via Kratos + Swarmail. It reads the
+# verification mail through Swarmail's MailSlurper-compatible API on :4437
+# (quickstart-services.yml), so the MailSlurper API calls below are unchanged.
 #
 # Usage: ./register-user.sh <email> [firstName] [lastName]
 #

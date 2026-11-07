@@ -158,8 +158,9 @@ pnpm run test:ci contract-tests/
   - 8008 (synapse server)
   - 4444 (hydra public)
   - 4445 (hydra admin)
-  - 4436 (mailslurper UI)
-  - 4437 (mailslurper API)
+  - 4436 (Swarmail UI and REST API: the mail Kratos and notifications send)
+  - 4437 (Swarmail's MailSlurper-compatible API, e.g. `http://localhost:4437/mail`)
+  - 1025 (Swarmail SMTP, plain)
   - 5672 (rabbitMQ amqp)
   - 15672 (rabbitMQ management UI)
 
