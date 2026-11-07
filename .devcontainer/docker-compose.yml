@@ -115,11 +115,18 @@ services:
       timeout: 10s
       retries: 5
 
-  mailslurper:
-    image: oryd/mailslurper:latest-smtps
+  # Mail sink (Swarmail, which replaced MailSlurper), on MailSlurper's ports:
+  # 4436 is Swarmail's UI and REST API (its port 8025), 4437 the
+  # MailSlurper-compatible API, 1025 plain SMTP. Mail is kept in memory.
+  swarmail:
+    image: ghcr.io/feedback-loop-ai/swarmail:0.4.0
     restart: unless-stopped
+    stop_grace_period: 30s
+    environment:
+      - SWARMAIL_MAILSLURPER_LISTEN=0.0.0.0:4437
+      - SWARMAIL_MAX_PER_INBOX=2000
     ports:
-      - "4436:4436"
+      - "4436:8025"
       - "4437:4437"
       - "1025:1025"
 
@@ -324,10 +331,11 @@ services:
       - RABBITMQ_PASSWORD=alkemio!
       - LOGGING_CONSOLE_ENABLED=true
       - LOGGING_LEVEL_CONSOLE=verbose
-      - EMAIL_SMTP_HOST=mailslurper
+      - EMAIL_SMTP_HOST=swarmail
       - EMAIL_MULTI_PROVIDER_STRATEGY=fallback
       - EMAIL_SMTP_SECURE=false
       - EMAIL_SMTP_PORT=1025
+      - EMAIL_SMTP_USER=default
       - ENVIRONMENT=dev
       - ALKEMIO_SERVER_ENDPOINT=http://app:4000/graphql
       - ALKEMIO_WEBCLIENT_ENDPOINT=http://localhost:3000

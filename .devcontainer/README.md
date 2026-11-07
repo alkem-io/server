@@ -17,7 +17,7 @@ The default configuration uses `docker-compose.yml` to start all required servic
 - Ory Kratos & Oathkeeper (authentication)
 - Ory Hydra (OAuth2)
 - Matrix Synapse & adapter (communication)
-- Mailslurper (email testing)
+- Swarmail (email testing; UI on http://localhost:4436, MailSlurper-compatible API on :4437)
 - Traefik (reverse proxy)
 - Whiteboard, file, document, and notification services
 
