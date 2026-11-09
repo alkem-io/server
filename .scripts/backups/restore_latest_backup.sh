@@ -219,23 +219,45 @@ echo "Using local file: $local_file"
 case "$DATABASE" in
     alkemio)
         db_name="${POSTGRES_ALKEMIO_DB}"
+        db_clients=(alkemio_dev_oidc_service alkemio_dev_matrix_adapter alkemio_dev_file_service alkemio_dev_file_backup_service alkemio_dev_authorization_evaluation alkemio_dev_wopi_service)
         ;;
     kratos)
         db_name="${POSTGRES_KRATOS_DB}"
+        db_clients=(alkemio_dev_kratos)
         ;;
     synapse)
         db_name="${POSTGRES_SYNAPSE_DB}"
+        db_clients=(alkemio_dev_synapse)
         ;;
 esac
 
 # Restore snapshot using PostgreSQL
 echo "Restoring PostgreSQL database '$db_name' from $local_file..."
 
+# Keep the database's clients down until the restore succeeds: one that reconnects could write to the new
+# empty database (Synapse would initialise its schema there and the restore would then fail). A failed
+# restore leaves them down for the same reason. Clients outside compose, like a dev server, are not stopped.
+stopped_clients=()
+report_stopped_clients() {
+    local rc=$?
+    if [[ $rc -ne 0 && ${#stopped_clients[@]} -gt 0 ]]; then
+        echo "Left stopped because the restore failed: ${stopped_clients[*]}" >&2
+    fi
+}
+trap report_stopped_clients EXIT
+for client in "${db_clients[@]}"; do
+    if [[ "$(docker inspect -f '{{.State.Running}}' "$client" 2>/dev/null)" == "true" ]]; then
+        echo "Stopping $client for the restore..."
+        docker stop "$client" > /dev/null
+        stopped_clients+=("$client")
+    fi
+done
+
 # Terminate existing connections
 docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '${db_name}' AND pid <> pg_backend_pid();"
 
 # Drop the existing database
-docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "DROP DATABASE IF EXISTS ${db_name};"
+docker exec -i alkemio_dev_postgres psql -U ${POSTGRES_USER} -d postgres -c "DROP DATABASE IF EXISTS ${db_name} WITH (FORCE);"
 
 # Create the database with appropriate settings
 # Synapse requires LC_COLLATE=C and LC_CTYPE=C for proper Unicode handling
@@ -249,6 +271,16 @@ fi
 # Copy the backup file to the container and restore
 # Use sed to remove OWNER TO statements and GRANT/REVOKE statements to avoid permission issues
 docker cp "$local_file" alkemio_dev_postgres:/tmp/backup.sql
-docker exec -i alkemio_dev_postgres bash -c "sed -e 's/OWNER TO [^;]*;/OWNER TO ${POSTGRES_USER};/g' -e '/^GRANT /d' -e '/^REVOKE /d' /tmp/backup.sql | psql -U ${POSTGRES_USER} -d ${db_name} --set ON_ERROR_STOP=off"
+# ON_ERROR_STOP and pipefail make any failed statement fail the whole restore
+if ! docker exec -i alkemio_dev_postgres bash -c "set -o pipefail; sed -e 's/OWNER TO [^;]*;/OWNER TO ${POSTGRES_USER};/g' -e '/^GRANT /d' -e '/^REVOKE /d' /tmp/backup.sql | psql -U ${POSTGRES_USER} -d ${db_name} --set ON_ERROR_STOP=on"; then
+    docker exec -i alkemio_dev_postgres rm -f /tmp/backup.sql
+    echo "PostgreSQL database '$db_name' restore FAILED: see the first error above." >&2
+    exit 1
+fi
 docker exec -i alkemio_dev_postgres rm /tmp/backup.sql
 echo "PostgreSQL database '$db_name' restored successfully!"
+
+if [[ ${#stopped_clients[@]} -gt 0 ]]; then
+    echo "Starting the stopped clients: ${stopped_clients[*]}"
+    docker start "${stopped_clients[@]}" > /dev/null
+fi

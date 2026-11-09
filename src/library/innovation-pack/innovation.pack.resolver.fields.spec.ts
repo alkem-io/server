@@ -1,3 +1,6 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { PlatformAuthorizationPolicyLoaderCreator } from '@core/dataloader/creators';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -61,5 +64,57 @@ describe('InnovationPackResolverFields', () => {
       expect(innovationPackService.getProvider).toHaveBeenCalledWith('pack-1');
       expect(result).toBe(provider);
     });
+  });
+});
+
+describe('InnovationPackResolverFields.promote', () => {
+  let resolver: InnovationPackResolverFields;
+  let authorizationService: AuthorizationService;
+  const platformPolicy = { id: 'platform-auth' } as any;
+  const actorContext = { actorID: 'actor-1' } as any;
+  const policyLoader = () =>
+    ({ load: vi.fn().mockResolvedValue(platformPolicy) }) as any;
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        InnovationPackResolverFields,
+        MockCacheManager,
+        MockWinstonProvider,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    resolver = module.get(InnovationPackResolverFields);
+    authorizationService = module.get(AuthorizationService);
+  });
+
+  it('a PLATFORM_PROMOTE_MANAGE holder reads the stored value (true and false alike), checked against the PLATFORM policy', async () => {
+    vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+    const loader = policyLoader();
+
+    expect(
+      await resolver.promote({ promote: true } as any, actorContext, loader)
+    ).toBe(true);
+    expect(
+      await resolver.promote({ promote: false } as any, actorContext, loader)
+    ).toBe(false);
+    expect(loader.load).toHaveBeenCalledWith(
+      PlatformAuthorizationPolicyLoaderCreator.KEY
+    );
+    expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+      actorContext,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE
+    );
+  });
+
+  it('anyone else gets null (absent, not false) and no error', async () => {
+    vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
+
+    await expect(
+      resolver.promote({ promote: true } as any, actorContext, policyLoader())
+    ).resolves.toBeNull();
   });
 });

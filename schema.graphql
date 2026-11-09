@@ -242,6 +242,7 @@ enum AuthorizationPrivilege {
   PLATFORM_FORUM_MANAGE
   PLATFORM_LICENSING_LISTS_READ
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_PROMOTE_MANAGE
   PLATFORM_ROLE_HOLDERS_READ
   PLATFORM_ROLES_ASSIGN
   PLATFORM_SETTINGS_ADMIN
@@ -1268,7 +1269,9 @@ interface SearchResult {
   id: UUID!
   """The score for this search result; more matches means a higher score."""
   score: Float!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -3983,6 +3986,10 @@ type InnovationPack {
   nameID: NameID!
   """The Profile for this InnovationPack."""
   profile: Profile!
+  """
+  Whether this InnovationPack is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """The InnovationPack provider."""
   provider: Actor!
   """Visibility of the InnovationPack in searches."""
@@ -4054,7 +4061,9 @@ type ISearchCategoryResult {
   cursor: SearchCursor
   """The ranked search results for this category, sorted by relevance"""
   results: [SearchResult!]!
-  """The total number of search results. Not implemented yet."""
+  """
+  The total number of results the requester may see in this category. Only computed for spaceResults when the SPACES filter sets `countTotal` and the search is not scoped to a Space; -1 otherwise, or when the count failed. Only the 1000 best ranked Space / Subspace matches are counted (and reachable by the cursor), so the total never exceeds 1000.
+  """
   total: Float!
 }
 
@@ -4903,8 +4912,20 @@ type Mutation {
   adminUpdateContributorAvatars(profileID: UUID!): Profile!
   """Updates the GeoLocation data where required on the platform."""
   adminUpdateGeoLocationData: Boolean!
+  """
+  Sets the platform-promote flag of an InnovationPack. Platform Content Full Access or Platform License Manager only.
+  """
+  adminUpdateInnovationPackPromote(promoteData: AdminUpdateInnovationPackPromoteInput!): InnovationPack!
+  """
+  Sets the platform-promote flag of a Space (any level). Platform Content Full Access or Platform License Manager only.
+  """
+  adminUpdateSpacePromote(promoteData: AdminUpdateSpacePromoteInput!): Space!
   """Update the visibility of the specified Space."""
   adminUpdateSpaceVisibility(updateData: AdminUpdateSpaceVisibilityInput!): Space!
+  """
+  Sets the platform-promote flag of a VirtualContributor. Platform Content Full Access or Platform License Manager only.
+  """
+  adminUpdateVirtualContributorPromote(promoteData: AdminUpdateVirtualContributorPromoteInput!): VirtualContributor!
   """
   Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.
   """
@@ -6557,6 +6578,10 @@ type RelayPaginatedSpace implements ActorFull {
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
+  """
+  Whether this Space is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """The settings for this Space."""
   settings: SpaceSettings!
   """
@@ -6932,7 +6957,9 @@ type SearchResultCallout implements SearchResult {
   score: Float!
   """The parent Space of the Callout."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -6955,7 +6982,9 @@ type SearchResultCollaboraDocument implements SearchResult {
   score: Float!
   """The Space of the Collabora document."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -6976,7 +7005,9 @@ type SearchResultMemo implements SearchResult {
   score: Float!
   """The Space of the Memo."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -6991,7 +7022,9 @@ type SearchResultOrganization implements SearchResult {
   organization: Organization!
   """The score for this search result; more matches means a higher score."""
   score: Float!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7010,7 +7043,9 @@ type SearchResultPost implements SearchResult {
   score: Float!
   """The Space of the Post."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7027,7 +7062,9 @@ type SearchResultSpace implements SearchResult {
   score: Float!
   """The Space that was found."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7040,7 +7077,9 @@ type SearchResultUser implements SearchResult {
   id: UUID!
   """The score for this search result; more matches means a higher score."""
   score: Float!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7063,7 +7102,9 @@ type SearchResultWhiteboard implements SearchResult {
   score: Float!
   """The Space of the Whiteboard."""
   space: Space!
-  """The terms that were matched for this result"""
+  """
+  The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.
+  """
   terms: [String!]!
   """The type of returned result for this search."""
   type: SearchResultType!
@@ -7140,6 +7181,10 @@ type Space implements ActorFull {
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
+  """
+  Whether this Space is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """The settings for this Space."""
   settings: SpaceSettings!
   """
@@ -8248,6 +8293,10 @@ type VirtualContributor implements ActorFull {
   platformSettings: VirtualContributorPlatformSettings!
   """The profile for this Actor."""
   profile: Profile
+  """
+  Whether this VirtualContributor is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).
+  """
+  promote: Boolean
   """Prompt graph definition for this Virtual Contributor."""
   promptGraphDefinition: PromptGraphDefinition
   """The Virtual Contributor provider."""
@@ -8574,11 +8623,34 @@ input AdminTemplateFileRepairInput {
   templateIDs: [UUID!]
 }
 
+input AdminUpdateInnovationPackPromoteInput {
+  """The InnovationPack whose promote flag is to be set."""
+  innovationPackID: UUID!
+  """True to list this InnovationPack first in the Innovation Library."""
+  promote: Boolean!
+}
+
+input AdminUpdateSpacePromoteInput {
+  """True to list this Space first on Explore Spaces."""
+  promote: Boolean!
+  """The Space (any level) whose promote flag is to be set."""
+  spaceID: UUID!
+}
+
 input AdminUpdateSpaceVisibilityInput {
   """The Space whose visibility is to be updated."""
   spaceID: UUID!
   """Visibility of the Space, only on L0 spaces."""
   visibility: SpaceVisibility!
+}
+
+input AdminUpdateVirtualContributorPromoteInput {
+  """
+  True to list this VirtualContributor first on the platform-wide listings.
+  """
+  promote: Boolean!
+  """The VirtualContributor whose promote flag is to be set."""
+  virtualContributorID: UUID!
 }
 
 input AdminUserEmailChangeDriftResolveInput {
@@ -10241,6 +10313,10 @@ input RoomSendMessageReplyInput {
 input SearchFilterInput {
   """Include this category in the search results."""
   category: SearchCategory!
+  """
+  Count the Space and Subspace results the requester may see among the 1000 best ranked matches, and paginate over them exactly (see `total`); lower ranked matches are neither counted nor reachable. Only honoured for the SPACES category in a search that is not scoped to a Space. Costs a scan of up to 1000 matches, so only ask for it when the total is shown.
+  """
+  countTotal: Boolean = false
   """
   The cursor after which we want results (offset) - pass this from your previous search to request additional results. Useful for paginating results.
   """

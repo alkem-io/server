@@ -63,6 +63,11 @@ export class IVirtualContributor extends IActor implements IActorFull {
   })
   listedInStore!: boolean;
 
+  // Platform-promote flag. Deliberately NOT a plain @Field: it is exposed
+  // through a gated resolve field that returns null to anyone without
+  // PLATFORM_PROMOTE_MANAGE.
+  promote?: boolean;
+
   @Field(() => IVirtualContributorSettings, {
     nullable: false,
     description: 'The settings of this Virtual Contributor.',

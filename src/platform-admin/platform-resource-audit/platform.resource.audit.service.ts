@@ -28,19 +28,23 @@ export interface RecordResourceEventInput {
   calloutId?: string;
   formId?: string;
   respondentUserId?: string;
+  /** Promote changes only: the flag value just stored. */
+  promote?: boolean;
   outcome:
     | 'moved'
     | 'deleted'
     | 'visibility_changed'
     | 'license_assigned'
     | 'license_revoked'
+    | 'promote_changed'
     | 'failure';
 }
 
 /**
  * Audit trail for the `platform_resource` category (A8/A9/A12/A14,
  * 027-platform-role-redesign, T024, data-model.md §6): resource moves,
- * container deletions, visibility changes, license-usage assignment.
+ * container deletions, visibility changes, license-usage assignment, and
+ * platform-promote flag changes on spaces, packs and virtual contributors.
  *
  * **Write boundary (FR-018a, T058)**: on a DUAL-PATH surface (A8), the
  * caller MUST invoke this only when the authorization result shows the
@@ -118,6 +122,7 @@ export class PlatformResourceAuditService {
         calloutId: input.calloutId,
         formId: input.formId,
         respondentUserId: input.respondentUserId,
+        promote: input.promote,
       };
       const outcome = this.mapOutcome(input.outcome);
       const entry = this.auditRepository.create({
@@ -157,6 +162,10 @@ export class PlatformResourceAuditService {
         return PlatformAuditOutcome.LICENSE_ASSIGNED;
       case 'license_revoked':
         return PlatformAuditOutcome.LICENSE_REVOKED;
+      // A promote change is a platform-level attribute change on the resource;
+      // it reuses the existing outcome rather than extending the enum.
+      case 'promote_changed':
+        return PlatformAuditOutcome.CONFIGURATION_CHANGED;
       case 'failure':
         return PlatformAuditOutcome.OPERATION_FAILED;
     }

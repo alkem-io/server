@@ -10,7 +10,7 @@ import { SearchExtractService } from './search.extract.service';
 
 describe('SearchExtractService', () => {
   let service: SearchExtractService;
-  let mockClient: { msearch: Mock };
+  let mockClient: { msearch: Mock; search: Mock };
 
   const configServiceMock = {
     get: vi.fn((key: string) => {
@@ -25,6 +25,7 @@ describe('SearchExtractService', () => {
 
     mockClient = {
       msearch: vi.fn(),
+      search: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -409,6 +410,154 @@ describe('SearchExtractService', () => {
       // Should still return the result despite ignored fields
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('hit-1');
+    });
+  });
+
+  describe('searchAllHits', () => {
+    const spacesFilter = { category: SearchCategory.SPACES, size: 4 };
+
+    it('reads every hit of the category, ranked, without highlighting or a cursor', async () => {
+      mockClient.search.mockResolvedValue({
+        hits: {
+          hits: [
+            {
+              _id: 'doc-1',
+              _score: 3,
+              fields: { id: ['space-1'], type: [SearchResultType.SPACE] },
+            },
+          ],
+        },
+      });
+
+      const hits = await service.searchAllHits(
+        ['alpha'],
+        { ...spacesFilter, cursor: '1::00000000-0000-4000-8000-000000000001' },
+        false,
+        1000,
+        'user-1'
+      );
+
+      const request = mockClient.search.mock.calls[0][0];
+      expect(request.index).toEqual(['test-spaces', 'test-subspaces']);
+      expect(request.size).toBe(1000);
+      expect(request.sort).toEqual({ _score: 'desc', id: 'desc' });
+      expect(request.highlight).toBeUndefined();
+      expect(request.search_after).toBeUndefined();
+      expect(request.preference).toBe('user-1');
+      expect(hits).toEqual([
+        {
+          id: 'doc-1',
+          score: 3,
+          type: SearchResultType.SPACE,
+          terms: [],
+          result: { id: 'space-1' },
+        },
+      ]);
+    });
+
+    it('searches only the indices of the requested types', async () => {
+      mockClient.search.mockResolvedValue({ hits: { hits: [] } });
+
+      await service.searchAllHits(
+        ['alpha'],
+        { ...spacesFilter, types: [SearchResultType.SUBSPACE] },
+        false,
+        1000,
+        'user-1'
+      );
+
+      expect(mockClient.search.mock.calls[0][0].index).toEqual([
+        'test-subspaces',
+      ]);
+    });
+
+    it('fails when the search fails, so the caller does not count an unread result set as empty', async () => {
+      mockClient.search.mockRejectedValue(new Error('index_not_found'));
+
+      await expect(
+        service.searchAllHits(['alpha'], spacesFilter, false, 1000, 'user-1')
+      ).rejects.toThrow('index_not_found');
+    });
+  });
+
+  describe('searchAllHits on a partial response', () => {
+    it('fails when shards failed, instead of counting partial hits', async () => {
+      mockClient.search.mockResolvedValue({
+        _shards: { total: 2, successful: 1, failed: 1 },
+        hits: { hits: [] },
+      });
+
+      await expect(
+        service.searchAllHits(
+          ['alpha'],
+          { category: SearchCategory.SPACES, size: 4 },
+          false,
+          1000,
+          'user-1'
+        )
+      ).rejects.toThrow('Search failed on 1 shard(s)');
+    });
+  });
+
+  describe('getMatchedTerms', () => {
+    const spacesFilter = { category: SearchCategory.SPACES, size: 4 };
+
+    it('does not search without entities', async () => {
+      expect(
+        await service.getMatchedTerms(
+          ['alpha'],
+          spacesFilter,
+          false,
+          [],
+          'user-1'
+        )
+      ).toEqual(new Map());
+      expect(mockClient.search).not.toHaveBeenCalled();
+    });
+
+    it('highlights only the given entities and returns their terms by id', async () => {
+      mockClient.search.mockResolvedValue({
+        hits: {
+          hits: [
+            {
+              _id: 'doc-1',
+              _score: 3,
+              fields: { id: ['space-1'], type: [SearchResultType.SPACE] },
+              highlight: { 'profile.displayName': ['<em>Alpha</em> team'] },
+            },
+          ],
+        },
+      });
+
+      const terms = await service.getMatchedTerms(
+        ['alpha'],
+        spacesFilter,
+        false,
+        ['space-1'],
+        'user-1'
+      );
+
+      const request = mockClient.search.mock.calls[0][0];
+      expect(request.size).toBe(1);
+      expect(request.highlight).toBeDefined();
+      expect(request.query.bool.filter).toEqual([
+        { terms: { id: ['space-1'] } },
+      ]);
+      expect(terms).toEqual(new Map([['space-1', ['alpha']]]));
+    });
+
+    it('returns no terms, instead of failing the search, when the highlight request fails', async () => {
+      mockClient.search.mockRejectedValue(new Error('timeout'));
+
+      expect(
+        await service.getMatchedTerms(
+          ['alpha'],
+          spacesFilter,
+          false,
+          ['space-1'],
+          'user-1'
+        )
+      ).toEqual(new Map());
     });
   });
 });

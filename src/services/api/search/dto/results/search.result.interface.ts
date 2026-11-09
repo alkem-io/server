@@ -62,7 +62,8 @@ export abstract class ISearchResult {
 
   @Field(() => [String], {
     nullable: false,
-    description: 'The terms that were matched for this result',
+    description:
+      'The terms that were matched for this result. Empty when they could not be determined, e.g. when highlighting the matches failed.',
   })
   terms!: string[];
 

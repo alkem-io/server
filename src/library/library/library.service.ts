@@ -62,11 +62,14 @@ export class LibraryService {
   }
 
   public async getListedVirtualContributors(): Promise<IVirtualContributor[]> {
+    // Promoted VCs first, then creation order. Ordering only: the filter
+    // decides membership.
     return this.entityManager.find(VirtualContributor, {
       where: {
         listedInStore: true,
         searchVisibility: SearchVisibility.PUBLIC,
       },
+      order: { promote: 'DESC', rowId: 'ASC' },
     });
   }
 
@@ -93,11 +96,20 @@ export class LibraryService {
       },
     });
 
-    return await this.sortAndFilterInnovationPacks(
+    // Promoted packs first, each group in the requested order (RANDOM
+    // shuffles within each group). Partitioned here rather than inside
+    // `sortAndFilterInnovationPacks`, which also orders the platform-admin
+    // list, and before the limit so a limited listing keeps promoted packs.
+    const sorted = await this.sortAndFilterInnovationPacks(
       innovationPacks,
-      limit,
+      undefined,
       orderBy
     );
+    const promotedFirst = [
+      ...sorted.filter(pack => pack.promote),
+      ...sorted.filter(pack => !pack.promote),
+    ];
+    return limit && limit > 0 ? promotedFirst.slice(0, limit) : promotedFirst;
   }
 
   public async sortAndFilterInnovationPacks(
@@ -184,8 +196,8 @@ export class LibraryService {
 
   /**
    * Paginated listed InnovationPacks, following the documented relay-style
-   * cursor pattern (docs/Pagination.md). Pages by the `rowId` cursor,
-   * newest-first.
+   * cursor pattern (docs/Pagination.md). Promoted packs first, then
+   * newest-first by `rowId`, on a composite (promote, rowId) cursor.
    */
   public async getPaginatedListedInnovationPacks(
     paginationArgs: PaginationArgs,
@@ -203,7 +215,13 @@ export class LibraryService {
 
     this.applySearchTerm(qb, 'innovationPack', filter?.searchTerm);
 
-    return getPaginationResults(qb, this.clampPageSize(paginationArgs), 'DESC');
+    // Promoted packs first, then newest first, with or without a search term.
+    return getPaginationResults(
+      qb,
+      this.clampPageSize(paginationArgs),
+      'DESC',
+      { leadingBooleanDesc: 'promote' }
+    );
   }
 
   /**

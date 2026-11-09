@@ -50,6 +50,103 @@ describe('SearchResultService', () => {
     actorLookupService = module.get(ActorLookupService) as any;
   });
 
+  describe('filterVisibleSpaceHits', () => {
+    const actorContext = { actorID: 'user-1', credentials: [] } as any;
+    const hit = (id: string, type: SearchResultType) => ({
+      id: `hit-${id}`,
+      score: 1,
+      type,
+      terms: [],
+      result: { id },
+    });
+
+    it('returns an empty array without querying when there are no hits', async () => {
+      expect(await service.filterVisibleSpaceHits([], actorContext)).toEqual(
+        []
+      );
+      expect(entityManager.find).not.toHaveBeenCalled();
+    });
+
+    it('keeps existing Spaces, and Subspaces with a parent the actor may read, in their original order', async () => {
+      const hits = [
+        hit('readable-subspace', SearchResultType.SUBSPACE),
+        hit('deleted-space', SearchResultType.SPACE),
+        hit('space', SearchResultType.SPACE),
+        hit('unreadable-subspace', SearchResultType.SUBSPACE),
+        hit('orphan-subspace', SearchResultType.SUBSPACE),
+      ];
+      entityManager.find.mockImplementation(async (_entity, options) =>
+        [
+          { id: 'space' },
+          {
+            id: 'readable-subspace',
+            parentSpace: { id: 'space' },
+            authorization: { id: 'auth-granted' },
+          },
+          {
+            id: 'unreadable-subspace',
+            parentSpace: { id: 'space' },
+            authorization: { id: 'auth-denied' },
+          },
+          { id: 'orphan-subspace', authorization: { id: 'auth-granted' } },
+        ].filter(space => options.where.id.value.includes(space.id))
+      );
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actor, authorization) => authorization.id === 'auth-granted'
+      );
+
+      const visible = await service.filterVisibleSpaceHits(hits, actorContext);
+
+      expect(visible).toEqual([hits[0], hits[2]]);
+    });
+
+    it('leaves out a Subspace without an authorization policy, instead of failing the search', async () => {
+      const hits = [
+        hit('space', SearchResultType.SPACE),
+        hit('broken-subspace', SearchResultType.SUBSPACE),
+      ];
+      entityManager.find.mockImplementation(async (_entity, options) =>
+        [
+          { id: 'space' },
+          { id: 'broken-subspace', parentSpace: { id: 'space' } },
+        ].filter(space => options.where.id.value.includes(space.id))
+      );
+
+      const visible = await service.filterVisibleSpaceHits(hits, actorContext);
+
+      expect(visible).toEqual([hits[0]]);
+      expect(authorizationService.isAccessGranted).not.toHaveBeenCalled();
+    });
+
+    it('loads only ids for Spaces, and authorization and the parent id only for Subspaces', async () => {
+      entityManager.find.mockResolvedValue([]);
+
+      await service.filterVisibleSpaceHits(
+        [
+          hit('space', SearchResultType.SPACE),
+          hit('subspace', SearchResultType.SUBSPACE),
+        ],
+        actorContext
+      );
+
+      expect(entityManager.find).toHaveBeenCalledTimes(2);
+      const [spacesOptions, subspacesOptions] =
+        entityManager.find.mock.calls.map(call => call[1]);
+      expect(spacesOptions).toMatchObject({
+        select: { id: true },
+        loadEagerRelations: false,
+      });
+      expect(spacesOptions.where.id.value).toEqual(['space']);
+      expect(spacesOptions.relations).toBeUndefined();
+      expect(subspacesOptions).toMatchObject({
+        select: { id: true, parentSpace: { id: true } },
+        relations: { parentSpace: true, authorization: true },
+        loadEagerRelations: false,
+      });
+      expect(subspacesOptions.where.id.value).toEqual(['subspace']);
+    });
+  });
+
   describe('getSpaceSearchResults', () => {
     it('should return empty array when no raw results are provided', async () => {
       const result = await service.getSpaceSearchResults([]);

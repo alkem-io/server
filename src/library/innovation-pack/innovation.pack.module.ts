@@ -5,6 +5,7 @@ import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup
 import { TemplatesSetModule } from '@domain/template/templates-set/templates.set.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { InnovationPackDefaultsModule } from './innovation.pack.defaults/innovation.pack.defaults.module';
 import { InnovationPack } from './innovation.pack.entity';
@@ -21,6 +22,7 @@ import { InnovationPackAuthorizationService } from './innovation.pack.service.au
     ProfileModule,
     TemplatesSetModule,
     AccountLookupModule,
+    PlatformAuthorizationPolicyModule,
     PlatformResourceAuditModule,
     TypeOrmModule.forFeature([InnovationPack]),
   ],
