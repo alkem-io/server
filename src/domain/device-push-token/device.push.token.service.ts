@@ -1,8 +1,10 @@
 import { DevicePushToken } from '@domain/device-push-token/device.push.token.entity';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { AlkemioConfig } from '@src/types';
+import type { Redis } from 'ioredis';
 import { In, Repository } from 'typeorm';
 import { RegisterDevicePushTokenInput } from './dto/device.push.token.dto.register.input';
 
@@ -13,7 +15,8 @@ export class DevicePushTokenService {
   constructor(
     @InjectRepository(DevicePushToken)
     private devicePushTokenRepository: Repository<DevicePushToken>,
-    configService: ConfigService<AlkemioConfig, true>
+    configService: ConfigService<AlkemioConfig, true>,
+    @Inject(MESSAGING_REDIS_CLIENT) private readonly redis: Redis
   ) {
     this.maxTokensPerUser = configService.get<number>(
       'notifications.push.max_subscriptions_per_user' as any
@@ -97,5 +100,21 @@ export class DevicePushTokenService {
    */
   async deleteByToken(token: string): Promise<void> {
     await this.devicePushTokenRepository.delete({ token });
+  }
+
+  /**
+   * The iOS app icon count. EXPIRE runs on every increment, unlike
+   * `PushThrottleService`: the 30 days count from the last push, so a fixed
+   * TTL would zero the badge of an active user mid-run.
+   */
+  async incrementBadgeCount(userId: string): Promise<number> {
+    return (await this.redis.eval(
+      `local c = redis.call('INCR', KEYS[1])
+       redis.call('EXPIRE', KEYS[1], ARGV[1])
+       return c`,
+      1,
+      `push:badge:${userId}`,
+      '2592000'
+    )) as number;
   }
 }

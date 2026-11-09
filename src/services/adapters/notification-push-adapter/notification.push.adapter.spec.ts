@@ -22,6 +22,7 @@ const mockPushSubscriptionService = {
 
 const mockDevicePushTokenService = {
   getTokensForUsers: vi.fn(),
+  incrementBadgeCount: vi.fn(),
 };
 
 const mockPushThrottleService = {
@@ -41,6 +42,7 @@ describe('NotificationPushAdapter', () => {
     vi.clearAllMocks();
     // Default: no device tokens, so every pre-existing case keeps its counts.
     mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([]);
+    mockDevicePushTokenService.incrementBadgeCount.mockResolvedValue(3);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -235,6 +237,7 @@ describe('NotificationPushAdapter', () => {
         platform: 'ios',
         token: 'device-token-1',
         payload: webMessage.payload,
+        badge: 3,
       });
     });
 
@@ -258,6 +261,125 @@ describe('NotificationPushAdapter', () => {
       expect(message).toMatchObject({
         platform: 'ios',
         token: 'device-token-1',
+      });
+    });
+  });
+
+  describe('the iOS badge counter', () => {
+    const token = (userId: string, name: string, platform: string) => ({
+      id: `row-${name}`,
+      userId,
+      token: name,
+      platform,
+    });
+    const send = (userIds: string[]) =>
+      adapter.sendPushNotifications(
+        userIds.map(createUser),
+        NotificationEvent.USER_MENTIONED,
+        { title: 'Test', body: 'Test body', url: '/test' }
+      );
+    const publishedFor = (tokenValue: string) =>
+      mockAmqpConnection.publish.mock.calls
+        .map(([, , message]) => message)
+        .find(message => message.token === tokenValue);
+
+    beforeEach(() => {
+      mockPushThrottleService.isAllowed.mockResolvedValue(true);
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([]);
+    });
+
+    it('counts one per user per dispatch across several iOS tokens', async () => {
+      mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([
+        token('user-1', 'phone', 'ios'),
+        token('user-1', 'tablet', 'ios'),
+      ]);
+
+      await send(['user-1']);
+
+      expect(
+        mockDevicePushTokenService.incrementBadgeCount
+      ).toHaveBeenCalledTimes(1);
+      expect(publishedFor('phone').badge).toBe(3);
+      expect(publishedFor('tablet').badge).toBe(3);
+    });
+
+    it('does not count a user with no iOS token', async () => {
+      mockPushSubscriptionService.getActiveSubscriptions.mockResolvedValue([
+        {
+          id: 'sub-1',
+          userId: 'user-web',
+          endpoint: 'https://push.example.com/1',
+          p256dh: 'key1',
+          auth: 'auth1',
+        },
+      ]);
+      mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([
+        token('user-android', 'pixel', 'android'),
+      ]);
+
+      await send(['user-android', 'user-web']);
+
+      expect(
+        mockDevicePushTokenService.incrementBadgeCount
+      ).not.toHaveBeenCalled();
+      expect(publishedFor('pixel').badge).toBeUndefined();
+      const [, , webMessage] = mockAmqpConnection.publish.mock.calls[0];
+      expect(webMessage.badge).toBeUndefined();
+    });
+
+    it('counts on the messaging entry point too', async () => {
+      mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([
+        token('user-1', 'phone', 'ios'),
+      ]);
+
+      await adapter.sendMessagingPushNotifications(
+        [createUser('user-1')],
+        NotificationEvent.USER_CONVERSATION_MESSAGE_DIRECT,
+        { title: 'Alice', body: 'sent you 1 message', url: '/?chat=1' }
+      );
+
+      expect(
+        mockDevicePushTokenService.incrementBadgeCount
+      ).toHaveBeenCalledWith('user-1');
+      expect(publishedFor('phone').badge).toBe(3);
+    });
+
+    it('counts only iOS holders in a mixed dispatch', async () => {
+      mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([
+        token('user-ios', 'iphone', 'ios'),
+        token('user-android', 'pixel', 'android'),
+        token('user-both', 'both-ios', 'ios'),
+        token('user-both', 'both-android', 'android'),
+      ]);
+
+      await send(['user-ios', 'user-android', 'user-both']);
+
+      const counted =
+        mockDevicePushTokenService.incrementBadgeCount.mock.calls.map(
+          ([userId]) => userId
+        );
+      expect(counted.sort()).toEqual(['user-both', 'user-ios']);
+      expect(publishedFor('pixel').badge).toBeUndefined();
+    });
+
+    it('still publishes without a badge when the counter fails', async () => {
+      mockDevicePushTokenService.getTokensForUsers.mockResolvedValue([
+        token('user-1', 'phone', 'ios'),
+      ]);
+      mockDevicePushTokenService.incrementBadgeCount.mockRejectedValue(
+        new Error('redis down')
+      );
+      const logger = (adapter as any).logger;
+      const errorSpy = vi.spyOn(logger, 'error');
+
+      await send(['user-1']);
+
+      expect(mockAmqpConnection.publish).toHaveBeenCalledTimes(1);
+      expect(publishedFor('phone').badge).toBeUndefined();
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0][0]).toMatchObject({
+        userId: 'user-1',
+        error: 'redis down',
       });
     });
   });
