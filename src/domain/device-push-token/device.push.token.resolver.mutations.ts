@@ -56,4 +56,22 @@ export class DevicePushTokenResolverMutations {
     );
     return true;
   }
+
+  @Mutation(() => Boolean, {
+    description:
+      'Reset the current user’s app icon badge counter to zero. Called by the iOS app when it is opened.',
+  })
+  @Profiling.api
+  async resetPushBadgeCount(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<boolean> {
+    if (!actorContext.actorID) {
+      throw new ForbiddenException(
+        'Authentication required to reset the push badge count',
+        LogContext.PUSH_NOTIFICATION
+      );
+    }
+    await this.devicePushTokenService.resetBadgeCount(actorContext.actorID);
+    return true;
+  }
 }

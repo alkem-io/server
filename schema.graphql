@@ -5292,6 +5292,10 @@ type Mutation {
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Boolean!
+  """
+  Reset the current user’s app icon badge counter to zero. Called by the iOS app when it is opened.
+  """
+  resetPushBadgeCount: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Revokes the specified LicensePlan on an Account."""

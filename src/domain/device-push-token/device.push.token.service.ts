@@ -117,4 +117,8 @@ export class DevicePushTokenService {
       '2592000'
     )) as number;
   }
+
+  async resetBadgeCount(userId: string): Promise<void> {
+    await this.redis.del(`push:badge:${userId}`);
+  }
 }

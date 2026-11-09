@@ -17,7 +17,7 @@ const mockConfigService = {
   }),
 };
 
-const redis = { eval: vi.fn() };
+const redis = { eval: vi.fn(), del: vi.fn() };
 
 describe('DevicePushTokenService', () => {
   let service: DevicePushTokenService;
@@ -59,6 +59,13 @@ describe('DevicePushTokenService', () => {
       'push:badge:user-1',
       '2592000'
     );
+  });
+
+  it('resetBadgeCount deletes the key of that user', async () => {
+    await service.resetBadgeCount('user-1');
+
+    expect(redis.del).toHaveBeenCalledTimes(1);
+    expect(redis.del).toHaveBeenCalledWith('push:badge:user-1');
   });
 
   describe('register (SC-001)', () => {
