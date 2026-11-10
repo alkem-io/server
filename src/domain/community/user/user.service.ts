@@ -775,6 +775,22 @@ export class UserService {
       identityDeletionSucceeded: false,
     };
 
+    try {
+      await this.communicationAdapter.revokeActorSessions(id);
+    } catch (error: any) {
+      outcomes.sessionRevocationSucceeded = false;
+      this.logger.error?.(
+        {
+          message:
+            'Failed to revoke Matrix sessions during user deletion; the deletion still stands',
+          userID: id,
+          error: redactError(error),
+        },
+        redactStack(error),
+        LogContext.AUTH
+      );
+    }
+
     if (!user.authenticationID) {
       return outcomes;
     }
@@ -811,22 +827,6 @@ export class UserService {
             'Failed to invalidate Kratos identity sessions during user deletion; the deletion still stands',
           userID: id,
           authenticationID: user.authenticationID,
-          error: redactError(error),
-        },
-        redactStack(error),
-        LogContext.AUTH
-      );
-    }
-
-    try {
-      await this.communicationAdapter.revokeActorSessions(id);
-    } catch (error: any) {
-      outcomes.sessionRevocationSucceeded = false;
-      this.logger.error?.(
-        {
-          message:
-            'Failed to revoke Matrix sessions during user deletion; the deletion still stands',
-          userID: id,
           error: redactError(error),
         },
         redactStack(error),

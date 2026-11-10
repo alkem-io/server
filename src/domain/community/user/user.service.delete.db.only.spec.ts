@@ -351,7 +351,7 @@ describe('UserService — account-deletion saga methods', () => {
       expect(outcome.identityDeletionSucceeded).toBe(false);
     });
 
-    it('is a no-op returning all-success when the user has no authenticationID', async () => {
+    it("skips the Kratos-keyed legs but still revokes the user's Matrix sessions when the user has no authenticationID", async () => {
       const user = buildUser({ authenticationID: null as any });
 
       const outcome = await service.revokeUserSessionsAndIdentity(user, {
@@ -368,6 +368,9 @@ describe('UserService — account-deletion saga methods', () => {
         oidcSessionRevocationService.revokeAllForSub
       ).not.toHaveBeenCalled();
       expect(kratosService.deleteIdentityById).not.toHaveBeenCalled();
+      expect(communicationAdapter.revokeActorSessions).toHaveBeenCalledWith(
+        'user-1'
+      );
     });
   });
 });
