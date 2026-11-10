@@ -183,6 +183,9 @@ export class NativePushSenderService {
                 title: message.payload.title,
                 body: message.payload.body,
               },
+              // `JSON.stringify` drops it when the message carries no count,
+              // and an absent key leaves the icon as it is.
+              badge: message.badge,
             },
             // The tap target, as a TOP-LEVEL sibling of `aps` — deliberately
             // NOT nested inside `aps`, and NOT wrapped in a `data` object.
@@ -200,9 +203,9 @@ export class NativePushSenderService {
             // (E11). It is carried NOW because the consumer is the next slice
             // of work and the server release window closes first — see the
             // CMP-208 amendment in the feature spec. No APNs field that
-            // changes delivery or presentation (`content-available`,
-            // `mutable-content`, `category`, `thread-id`) is added with it,
-            // so the notification a device shows is unchanged.
+            // changes delivery (`content-available`, `mutable-content`,
+            // `category`, `thread-id`) is added with it. `aps.badge` above is
+            // the one presentation field, and it only sets the icon count.
             url: message.payload.url,
           })
         );
