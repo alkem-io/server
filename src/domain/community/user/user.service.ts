@@ -93,9 +93,10 @@ import { IUser } from './user.interface';
  * that "something" failed.
  */
 export interface UserPostDeletionLegOutcomes {
-  /** False if EITHER the OIDC session revocation or the Kratos SSO session
-   * invalidation call failed. Both share one outcome value on the audit
-   * trail (`session_revocation_completed` / the existing
+  /** False if ANY of the OIDC session revocation, the Kratos SSO session
+   * invalidation or the Matrix device revocation (workspace#091, FR-017)
+   * failed. All three share one outcome value on the audit trail
+   * (`session_revocation_completed` / the existing
    * `session_invalidation_failed`). */
   sessionRevocationSucceeded: boolean;
   /** True iff Kratos identity deletion was attempted (gated on
@@ -810,6 +811,22 @@ export class UserService {
             'Failed to invalidate Kratos identity sessions during user deletion; the deletion still stands',
           userID: id,
           authenticationID: user.authenticationID,
+          error: redactError(error),
+        },
+        redactStack(error),
+        LogContext.AUTH
+      );
+    }
+
+    try {
+      await this.communicationAdapter.revokeActorSessions(id);
+    } catch (error: any) {
+      outcomes.sessionRevocationSucceeded = false;
+      this.logger.error?.(
+        {
+          message:
+            'Failed to revoke Matrix sessions during user deletion; the deletion still stands',
+          userID: id,
           error: redactError(error),
         },
         redactStack(error),

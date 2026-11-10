@@ -16,6 +16,7 @@ import { AccountLookupService } from '@domain/space/account.lookup/account.looku
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -53,6 +54,7 @@ describe('UserService — account-deletion saga methods', () => {
     clearIdentityActorMetadata: Mock;
   };
   let oidcSessionRevocationService: { revokeAllForSub: Mock };
+  let communicationAdapter: { revokeActorSessions: Mock };
   let logger: { error: Mock };
 
   const buildUser = (overrides: Partial<IUser> = {}): IUser =>
@@ -103,6 +105,7 @@ describe('UserService — account-deletion saga methods', () => {
     oidcSessionRevocationService = module.get(
       OidcSessionRevocationService
     ) as any;
+    communicationAdapter = module.get(CommunicationAdapter) as any;
     logger = module.get(WINSTON_MODULE_NEST_PROVIDER) as any;
 
     accountLookupService.areResourcesInAccount.mockResolvedValue(false);
@@ -291,6 +294,43 @@ describe('UserService — account-deletion saga methods', () => {
       expect(outcome.sessionRevocationSucceeded).toBe(false);
       expect(logger.error).toHaveBeenCalledWith(
         expect.objectContaining({ userID: 'user-1' }),
+        expect.anything(),
+        LogContext.AUTH
+      );
+    });
+
+    it("revokes the user's Matrix sessions when the user is deleted", async () => {
+      const outcome = await service.revokeUserSessionsAndIdentity(buildUser(), {
+        ID: 'user-1',
+      });
+
+      expect(communicationAdapter.revokeActorSessions).toHaveBeenCalledWith(
+        'user-1'
+      );
+      expect(outcome.sessionRevocationSucceeded).toBe(true);
+    });
+
+    it('a failed Matrix revocation marks session revocation failed and the deletion still stands', async () => {
+      communicationAdapter.revokeActorSessions.mockRejectedValue(
+        new Error('matrix-adapter unreachable')
+      );
+
+      const outcome = await service.revokeUserSessionsAndIdentity(buildUser(), {
+        ID: 'user-1',
+        deleteIdentity: true,
+      });
+
+      expect(outcome).toEqual({
+        sessionRevocationSucceeded: false,
+        identityDeletionAttempted: true,
+        identityDeletionSucceeded: true,
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message:
+            'Failed to revoke Matrix sessions during user deletion; the deletion still stands',
+          userID: 'user-1',
+        }),
         expect.anything(),
         LogContext.AUTH
       );

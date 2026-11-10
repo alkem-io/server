@@ -46,6 +46,7 @@ import {
   RemoveReactionRequest,
   RequestFor,
   ResponseFor,
+  RevokeActorSessionsRequest,
   RoomType,
   // Room type constants
   RoomTypeCommunity,
@@ -324,6 +325,24 @@ export class CommunicationAdapter {
       deviceId: response!.device_id,
       accessToken: response!.access_token,
     };
+  }
+
+  /**
+   * Delete every Matrix device of an actor, which ends all of its access and
+   * refresh tokens (workspace#091, FR-017). Returns how many were deleted.
+   */
+  async revokeActorSessions(actorID: AlkemioActorID): Promise<number> {
+    if (!this.enabled) return 0;
+
+    const response = await this.sendCommand({
+      operation: 'revokeActorSessions',
+      topic: MatrixAdapterEventType.COMMUNICATION_ACTOR_SESSIONS_REVOKE,
+      payload: { actor_id: actorID } satisfies RevokeActorSessionsRequest,
+      errorContext: { actorID },
+      ensureSuccess: true,
+    });
+
+    return response!.devices_revoked;
   }
 
   // ============================================================================
