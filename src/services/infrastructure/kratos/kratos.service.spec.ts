@@ -217,15 +217,16 @@ describe('KratosService', () => {
       expect(result).toEqual([AuthenticationType.PASSKEY]);
     });
 
-    it('should return PASSKEY for legacy webauthn credentials', () => {
+    it('does not report a security key used as a second factor as a sign-in method', () => {
       const identity = {
         credentials: {
-          webauthn: { type: 'webauthn', identifiers: ['legacy-key'] },
+          password: { type: 'password' },
+          webauthn: { type: 'webauthn', identifiers: ['security-key'] },
         },
       } as unknown as Identity;
 
       const result = service.mapAuthenticationType(identity);
-      expect(result).toEqual([AuthenticationType.PASSKEY]);
+      expect(result).toEqual([AuthenticationType.EMAIL]);
     });
 
     it('should include PASSKEY alongside oidc and password (issue #9773 follow-up)', () => {
@@ -813,6 +814,116 @@ describe('KratosService', () => {
         id: 'id-1',
       } as Identity);
       expect(result).toBeUndefined();
+    });
+  });
+});
+
+describe('KratosService — second-factor admin calls', () => {
+  let service: KratosService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        KratosService,
+        MockWinstonProvider,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((key: string) =>
+              key === 'identity.authentication.providers.ory'
+                ? {
+                    kratos_public_base_url_server: 'http://kratos-public:4433',
+                    kratos_admin_base_url_server: 'http://kratos-admin:4434',
+                    admin_service_account: {
+                      username: 'admin',
+                      password: 'password',
+                    },
+                  }
+                : 'http://kratos-public:4433'
+            ),
+          },
+        },
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    service = module.get(KratosService);
+  });
+
+  describe('deleteIdentityCredential', () => {
+    it('deletes the given type with the per-call timeout', async () => {
+      const spy = vi
+        .spyOn(service.kratosIdentityClient, 'deleteIdentityCredentials')
+        .mockResolvedValue({} as any);
+
+      await service.deleteIdentityCredential('identity-1', 'lookup_secret', {
+        timeoutMs: 5000,
+      });
+
+      expect(spy).toHaveBeenCalledWith(
+        { id: 'identity-1', type: 'lookup_secret' },
+        { timeout: 5000 }
+      );
+    });
+
+    it('resolves when the credential is already absent (404)', async () => {
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'deleteIdentityCredentials'
+      ).mockRejectedValue({ response: { status: 404 } });
+
+      await expect(
+        service.deleteIdentityCredential('identity-1', 'totp')
+      ).resolves.toBeUndefined();
+    });
+
+    it.each([
+      [
+        'a timeout',
+        Object.assign(new Error('timeout of 5000ms exceeded'), {
+          code: 'ECONNABORTED',
+        }),
+      ],
+      [
+        'an HTTP error',
+        { response: { status: 500 }, message: 'Request failed' },
+      ],
+    ])('rethrows %s', async (_label, failure) => {
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'deleteIdentityCredentials'
+      ).mockRejectedValue(failure);
+
+      await expect(
+        service.deleteIdentityCredential('identity-1', 'webauthn')
+      ).rejects.toBe(failure);
+    });
+  });
+
+  describe('invalidateAllIdentitySessions', () => {
+    it('passes the per-call timeout', async () => {
+      const spy = vi
+        .spyOn(service.kratosIdentityClient, 'deleteIdentitySessions')
+        .mockResolvedValue({} as any);
+
+      await service.invalidateAllIdentitySessions('identity-1', {
+        timeoutMs: 5000,
+      });
+
+      expect(spy).toHaveBeenCalledWith({ id: 'identity-1' }, { timeout: 5000 });
+    });
+
+    it('sets no timeout for existing callers', async () => {
+      const spy = vi
+        .spyOn(service.kratosIdentityClient, 'deleteIdentitySessions')
+        .mockResolvedValue({} as any);
+
+      await service.invalidateAllIdentitySessions('identity-1');
+
+      expect(spy).toHaveBeenCalledWith(
+        { id: 'identity-1' },
+        { timeout: undefined }
+      );
     });
   });
 });

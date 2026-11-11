@@ -163,7 +163,7 @@ services:
       - URLS_SELF_ADMIN=http://hydra:4445/
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_ADMIN_CORS_ENABLED=true
-      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name,alkemio_actor_id
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name,alkemio_actor_id,acr
       - STRATEGIES_ACCESS_TOKEN=jwt
       # FR-006/006a — Hydra calls oidc-service on every token issuance
       # (auth-code + refresh) to (re)inject `alkemio_actor_id` into the id_token.
@@ -285,7 +285,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: alkemio/oidc-service:v0.8.0
+    image: ${OIDC_SERVICE_IMAGE:-alkemio/oidc-service:v0.8.0}
     depends_on:
       - hydra
       - kratos
@@ -845,7 +845,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_kratos_hooks
     hostname: kratos-hooks
-    image: alkemio/kratos-webhooks:v0.2.3
+    image: ${KRATOS_WEBHOOKS_IMAGE:-alkemio/kratos-webhooks:v0.2.3}
     depends_on:
       rabbitmq:
         condition: service_healthy

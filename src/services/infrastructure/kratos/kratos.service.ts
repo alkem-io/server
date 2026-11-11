@@ -11,6 +11,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   Configuration,
+  DeleteIdentityCredentialsTypeEnum,
   FrontendApi,
   type GetIdentityIncludeCredentialEnum,
   Identity,
@@ -24,6 +25,12 @@ import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
 
 export const CLEVERBASE_SIGNING_CERTIFICATE_CLAIM =
   'com.cleverbase.signing_certificate';
+
+/** The three second-factor credential types a support reset removes. */
+export type SecondFactorCredentialType =
+  | typeof DeleteIdentityCredentialsTypeEnum.Totp
+  | typeof DeleteIdentityCredentialsTypeEnum.Webauthn
+  | typeof DeleteIdentityCredentialsTypeEnum.LookupSecret;
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system:
@@ -153,7 +160,7 @@ export class KratosService {
    *   - `cleverbase` -> `AuthenticationType.CLEVERBASE`
    *   - `apple`     -> `AuthenticationType.APPLE`
    * - If the identity has password credentials, it adds `AuthenticationType.EMAIL`.
-   * - If the identity has passkey (or legacy webauthn) credentials, it adds
+   * - If the identity has passkey credentials, it adds
    *   `AuthenticationType.PASSKEY`.
    * - If none of the above conditions are met, it adds `AuthenticationType.UNKNOWN`.
    */
@@ -187,10 +194,11 @@ export class KratosService {
       authTypes.add(AuthenticationType.EMAIL);
     }
 
-    // Passkeys are a separate Kratos credential type (`passkey`, with `webauthn`
-    // as the legacy key) — not OIDC and not password — so they must be detected
-    // explicitly or they never surface as an authentication method.
-    if (identity.credentials.passkey || identity.credentials.webauthn) {
+    // Passkeys are a separate Kratos credential type — not OIDC and not
+    // password — so they must be detected explicitly or they never surface as
+    // an authentication method. A `webauthn` credential is a security key used
+    // as a second factor, not a sign-in method.
+    if (identity.credentials.passkey) {
       authTypes.add(AuthenticationType.PASSKEY);
     }
 
@@ -366,15 +374,17 @@ export class KratosService {
    * `UserEmailChangeService.applyAdminEmailChange`.
    */
   public async invalidateAllIdentitySessions(
-    identityId: string
+    identityId: string,
+    opts?: { timeoutMs?: number }
   ): Promise<void> {
     // The @ory/kratos-client v26 admin API exposes session invalidation via
     // `deleteIdentitySessions` (revokes ALL active sessions for the identity in
     // a single call). Earlier client versions called this `disableIdentitySessions`.
     try {
-      await this.kratosIdentityClient.deleteIdentitySessions({
-        id: identityId,
-      });
+      await this.kratosIdentityClient.deleteIdentitySessions(
+        { id: identityId },
+        { timeout: opts?.timeoutMs }
+      );
     } catch (error) {
       // Kratos returns 404 when the identity has no active sessions to revoke.
       // The post-condition "no active sessions exist" is already satisfied, so
@@ -386,6 +396,30 @@ export class KratosService {
           `No active Kratos sessions to invalidate for identity ${identityId}`,
           LogContext.KRATOS
         );
+        return;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Removes one credential type (a second factor) from an identity through
+   * the admin API. A 404 means it is already absent: resolves.
+   */
+  public async deleteIdentityCredential(
+    identityId: string,
+    type: SecondFactorCredentialType,
+    opts?: { timeoutMs?: number }
+  ): Promise<void> {
+    try {
+      await this.kratosIdentityClient.deleteIdentityCredentials(
+        { id: identityId, type },
+        { timeout: opts?.timeoutMs }
+      );
+    } catch (error) {
+      if (
+        (error as { response?: { status?: number } })?.response?.status === 404
+      ) {
         return;
       }
       throw error;
