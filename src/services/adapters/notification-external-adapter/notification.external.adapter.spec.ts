@@ -52,6 +52,22 @@ describe('NotificationExternalAdapter', () => {
     expect(adapter).toBeDefined();
   });
 
+  describe('publishSecondFactorChangeSecuritySignal', () => {
+    it('publishes the second-factor signal with the payload unchanged', async () => {
+      const payload = {
+        recipientEmail: 'member@example.com',
+        observedAtISO8601: '2026-11-11T10:00:00.000Z',
+      };
+
+      await adapter.publishSecondFactorChangeSecuritySignal(payload);
+
+      expect(notificationsClient.emit).toHaveBeenCalledWith(
+        NotificationEvent.USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL,
+        payload
+      );
+    });
+  });
+
   describe('sendExternalNotifications', () => {
     it('should emit event to notifications client', async () => {
       const payload = { test: 'data' };

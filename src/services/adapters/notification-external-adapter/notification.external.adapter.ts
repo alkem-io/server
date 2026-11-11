@@ -195,6 +195,19 @@ export class NotificationExternalAdapter {
     );
   }
 
+  /**
+   * Sent to the user's current email address whenever their second factor is
+   * changed, by themselves or by a support reset.
+   */
+  public async publishSecondFactorChangeSecuritySignal(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL,
+      payload
+    );
+  }
+
   async buildSpaceCommunityApplicationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,

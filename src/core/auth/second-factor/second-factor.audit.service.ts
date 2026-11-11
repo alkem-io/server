@@ -10,6 +10,7 @@ import {
   SecondFactorResetFailedStep,
   SecondFactorRuleAuditDetails,
 } from '@domain/community/user-email-change/platform.audit.entry.interface';
+import { SecuritySignalFailureReason } from '@domain/community/user-password-change/user.password.change.observer.service';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import {
@@ -25,14 +26,6 @@ export type SecondFactorResetFailureReason =
   | 'sessions_incomplete'
   | 'marker_not_written'
   | 'unknown';
-
-/** The password-change observer's closed set for a notice that failed. */
-export type SecondFactorSignalFailureReason =
-  | 'timeout'
-  | 'broker_unreachable'
-  | 'network_error'
-  | 'operation_failed'
-  | 'unknown_error';
 
 export type SecondFactorMethod = 'totp' | 'webauthn' | 'lookup_secret';
 
@@ -204,7 +197,7 @@ export class SecondFactorAuditService {
   async recordSignalFailed(
     user: SecondFactorSubject,
     input: {
-      failureReason: SecondFactorSignalFailureReason;
+      failureReason: SecuritySignalFailureReason;
       correlationId: string;
     }
   ): Promise<void> {

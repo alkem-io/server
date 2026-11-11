@@ -91,6 +91,10 @@ export enum NotificationEvent {
   // a Kratos-side password change is observed). Kratos owns the credential;
   // the platform only records and notifies.
   USER_PASSWORD_CHANGE_SECURITY_SIGNAL = 'USER_PASSWORD_CHANGE_SECURITY_SIGNAL',
+
+  // A member's second factor changed (their own change, reported by Kratos,
+  // or a support reset): an always-sent email to the current address.
+  USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL = 'USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL',
 }
 
 registerEnumType(NotificationEvent, {
