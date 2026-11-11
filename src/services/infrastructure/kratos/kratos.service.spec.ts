@@ -1019,9 +1019,12 @@ describe('KratosService — second-factor admin calls', () => {
         identity({ updated_at: '2026-01-01T00:00:00Z' }),
         identity({ updated_at: readTime }),
       ]);
-      vi.spyOn(service.kratosIdentityClient, 'updateIdentity').mockResolvedValue(
-        { data: identity({ updated_at: '2026-11-11T09:59:59Z' }) } as any
-      );
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'updateIdentity'
+      ).mockResolvedValue({
+        data: identity({ updated_at: '2026-11-11T09:59:59Z' }),
+      } as any);
 
       await expect(
         service.replacePasswordWithUnusableSecret('identity-1', {
@@ -1059,9 +1062,10 @@ describe('KratosService — second-factor admin calls', () => {
       ],
     ])('rethrows %s of the update', async (_label, failure) => {
       arrange([identity({ updated_at: 'a' })]);
-      vi.spyOn(service.kratosIdentityClient, 'updateIdentity').mockRejectedValue(
-        failure
-      );
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'updateIdentity'
+      ).mockRejectedValue(failure);
 
       await expect(
         service.replacePasswordWithUnusableSecret('identity-1')

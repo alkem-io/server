@@ -215,10 +215,8 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
   describe('with invalidatePassword', () => {
     const completedDetails = (audit: {
       recordResetCompleted: { mock: { calls: unknown[][] } };
-    }) => audit.recordResetCompleted.mock.calls[0]?.[2] as Record<
-      string,
-      unknown
-    >;
+    }) =>
+      audit.recordResetCompleted.mock.calls[0]?.[2] as Record<string, unknown>;
 
     it('replaces the password before the removals and again after the second pass, and records the second time', async () => {
       const { service, calls, kratos, audit } = build();
@@ -241,17 +239,17 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
         .calls as unknown[][]) {
         expect(call).toEqual([TARGET.authenticationID, { timeoutMs: 5000 }]);
       }
-      expect(audit.recordResetStarted.mock.calls[0]?.[2]).toMatchObject({
-        invalidatePassword: true,
-      });
+      expect(
+        (audit.recordResetStarted.mock.calls[0] as unknown[])[2]
+      ).toMatchObject({ invalidatePassword: true });
       const completed = completedDetails(audit);
       expect(completed).toMatchObject({
         passwordInvalidated: true,
         passwordLastChangedAt: 'password-time-2',
       });
-      expect(JSON.stringify(audit.recordResetCompleted.mock.calls)).not.toContain(
-        'password-time-1'
-      );
+      expect(
+        JSON.stringify(audit.recordResetCompleted.mock.calls)
+      ).not.toContain('password-time-1');
       expect(result.passwordInvalidated).toBe(true);
     });
 
@@ -355,7 +353,9 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
 
       await expect(
         service.resetSecondFactor(admin, TARGET.id, true)
-      ).rejects.toMatchObject({ details: { failedStep: 'kratos_credentials' } });
+      ).rejects.toMatchObject({
+        details: { failedStep: 'kratos_credentials' },
+      });
 
       expect(kratos.replacePasswordWithUnusableSecret).toHaveBeenCalledTimes(1);
       expect(audit.recordResetFailed).toHaveBeenCalledWith(
@@ -421,9 +421,9 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
       recordStarted: () => Promise.reject(new Error('db down')),
     });
 
-    await expect(service.resetSecondFactor(admin, TARGET.id, false)).rejects.toThrow(
-      'db down'
-    );
+    await expect(
+      service.resetSecondFactor(admin, TARGET.id, false)
+    ).rejects.toThrow('db down');
     expect(kratos.deleteIdentityCredential).not.toHaveBeenCalled();
     expect(revocation.revokeAllForSub).not.toHaveBeenCalled();
   });
@@ -467,7 +467,9 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
       invalidateSessions: () => Promise.reject(httpError(503)),
     });
 
-    await expect(service.resetSecondFactor(admin, TARGET.id, false)).rejects.toThrow();
+    await expect(
+      service.resetSecondFactor(admin, TARGET.id, false)
+    ).rejects.toThrow();
 
     expect(audit.recordResetFailed).toHaveBeenCalledWith(
       admin,
@@ -490,7 +492,9 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
       },
     });
 
-    await expect(service.resetSecondFactor(admin, TARGET.id, false)).rejects.toThrow();
+    await expect(
+      service.resetSecondFactor(admin, TARGET.id, false)
+    ).rejects.toThrow();
 
     expect(audit.recordResetFailed).toHaveBeenCalledWith(
       admin,
@@ -519,7 +523,9 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
       revoke: async () => report(overrides),
     });
 
-    await expect(service.resetSecondFactor(admin, TARGET.id, false)).rejects.toThrow();
+    await expect(
+      service.resetSecondFactor(admin, TARGET.id, false)
+    ).rejects.toThrow();
 
     expect(audit.recordResetFailed).toHaveBeenCalledWith(
       admin,
