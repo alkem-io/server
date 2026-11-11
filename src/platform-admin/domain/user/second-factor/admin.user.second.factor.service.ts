@@ -8,6 +8,7 @@ import { BaseException } from '@common/exceptions/base.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { OidcSessionRevocationService } from '@core/auth/oidc/revocation/oidc-session-revocation.service';
 import {
+  SECOND_FACTOR_METHODS,
   SecondFactorAuditService,
   SecondFactorResetFailureReason,
 } from '@core/auth/second-factor/second-factor.audit.service';
@@ -15,17 +16,9 @@ import { SecondFactorChangeObserverService } from '@core/auth/second-factor/seco
 import { SecondFactorResetFailedStep } from '@domain/community/user-email-change/platform.audit.entry.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import {
-  KratosService,
-  SecondFactorCredentialType,
-} from '@services/infrastructure/kratos/kratos.service';
+import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
-const SECOND_FACTOR_TYPES: SecondFactorCredentialType[] = [
-  'totp',
-  'webauthn',
-  'lookup_secret',
-];
 const KRATOS_TIMEOUT_MS = 5000;
 
 export type SecondFactorResetResult = {
@@ -172,7 +165,7 @@ export class AdminUserSecondFactorService {
       );
     }
 
-    const removedCredentialTypes = SECOND_FACTOR_TYPES.filter(type =>
+    const removedCredentialTypes = SECOND_FACTOR_METHODS.filter(type =>
       removed.has(type)
     );
     await this.auditService.recordResetCompleted(actor, target, {
@@ -216,7 +209,7 @@ export class AdminUserSecondFactorService {
   /** One pass over the three second-factor types; resolves what it removed. */
   private async removeSecondFactors(identityId: string): Promise<Set<string>> {
     const removed = new Set<string>();
-    for (const type of SECOND_FACTOR_TYPES) {
+    for (const type of SECOND_FACTOR_METHODS) {
       const wasPresent = await this.step('kratos_credentials', () =>
         this.kratosService.deleteIdentityCredential(identityId, type, {
           timeoutMs: KRATOS_TIMEOUT_MS,

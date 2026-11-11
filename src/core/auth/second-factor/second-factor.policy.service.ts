@@ -59,23 +59,15 @@ export class SecondFactorPolicyService {
    */
   async assertNotRefused(actor: ActorContext, now: Date): Promise<void> {
     if (!actor.secondFactor) return;
-    const coverage = await this.coverage(actor.credentials);
-    if (this.isRefused(coverage, actor.secondFactor.satisfied, now)) {
-      throw new SecondFactorRequiredError();
-    }
-  }
-
-  private isRefused(
-    { covered, deadline }: SecondFactorCoverage,
-    satisfied: boolean,
-    now: Date
-  ): boolean {
-    return (
+    const { covered, deadline } = await this.coverage(actor.credentials);
+    if (
       covered &&
-      !satisfied &&
+      !actor.secondFactor.satisfied &&
       deadline !== null &&
       now.getTime() >= deadline.getTime()
-    );
+    ) {
+      throw new SecondFactorRequiredError();
+    }
   }
 
   private async platformRuleSince(

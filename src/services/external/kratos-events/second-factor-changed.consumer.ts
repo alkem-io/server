@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
-import { SecondFactorMethod } from '@core/auth/second-factor/second-factor.audit.service';
+import {
+  SECOND_FACTOR_METHODS,
+  SecondFactorMethod,
+} from '@core/auth/second-factor/second-factor.audit.service';
 import { SecondFactorChangeObserverService } from '@core/auth/second-factor/second-factor.change.observer.service';
 import { Controller, Inject, LoggerService } from '@nestjs/common';
 import {
@@ -24,11 +27,7 @@ const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';
 const USER_AGENT_MAX_LENGTH = 256;
 
-const METHODS: ReadonlySet<string> = new Set<SecondFactorMethod>([
-  'totp',
-  'webauthn',
-  'lookup_secret',
-]);
+const METHODS: ReadonlySet<string> = new Set(SECOND_FACTOR_METHODS);
 
 interface SecondFactorChangedEventData {
   eventType?: string;

@@ -27,7 +27,7 @@ export const CLEVERBASE_SIGNING_CERTIFICATE_CLAIM =
   'com.cleverbase.signing_certificate';
 
 /** The three second-factor credential types a support reset removes. */
-export type SecondFactorCredentialType =
+type SecondFactorCredentialType =
   | typeof DeleteIdentityCredentialsTypeEnum.Totp
   | typeof DeleteIdentityCredentialsTypeEnum.Webauthn
   | typeof DeleteIdentityCredentialsTypeEnum.LookupSecret;
@@ -419,11 +419,7 @@ export class KratosService {
       );
       return true;
     } catch (error) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
-        return false;
-      }
+      if (isNotFound(error)) return false;
       throw error;
     }
   }
@@ -481,11 +477,7 @@ export class KratosService {
       );
       return data;
     } catch (error) {
-      if (
-        (error as { response?: { status?: number } })?.response?.status === 404
-      ) {
-        return null;
-      }
+      if (isNotFound(error)) return null;
       throw error;
     }
   }
@@ -807,4 +799,10 @@ export class KratosService {
 
     return this.mapAuthenticationType(identity);
   }
+}
+
+function isNotFound(error: unknown): boolean {
+  return (
+    (error as { response?: { status?: number } })?.response?.status === 404
+  );
 }

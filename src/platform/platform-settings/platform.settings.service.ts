@@ -1,18 +1,11 @@
 import { LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
+import type { SecondFactorRuleTransition } from '@core/auth/second-factor/second-factor.audit.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdatePlatformSettingsInput } from './dto/platform.settings.dto.update';
 import { IPlatformSettings } from './platform.settings.interface';
 import { platformSecuritySettings } from './platform.settings.security.defaults';
-
-/** An off→on or on→off of the platform second-factor rule. */
-export type PlatformSecurityTransition = {
-  from: boolean;
-  to: boolean;
-  /** The ISO switch-on time in force after the transition. */
-  since: string | null;
-};
 
 @Injectable()
 export class PlatformSettingsService {
@@ -25,7 +18,7 @@ export class PlatformSettingsService {
     updateData: UpdatePlatformSettingsInput
   ): {
     settings: IPlatformSettings;
-    transition?: PlatformSecurityTransition;
+    transition?: SecondFactorRuleTransition;
   } {
     const updatedSettings = {
       ...settings,

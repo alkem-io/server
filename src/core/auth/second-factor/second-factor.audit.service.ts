@@ -27,9 +27,23 @@ export type SecondFactorResetFailureReason =
   | 'marker_not_written'
   | 'unknown';
 
-export type SecondFactorMethod = 'totp' | 'webauthn' | 'lookup_secret';
+export const SECOND_FACTOR_METHODS = [
+  'totp',
+  'webauthn',
+  'lookup_secret',
+] as const;
+
+export type SecondFactorMethod = (typeof SECOND_FACTOR_METHODS)[number];
 
 export type SecondFactorSubject = { id: string };
+
+/** An off→on or on→off of a second-factor rule. */
+export type SecondFactorRuleTransition = {
+  from: boolean;
+  to: boolean;
+  /** The ISO switch-on time in force after the transition. */
+  since: string | null;
+};
 
 type ResetIds = { kratosIdentityId: string; correlationId: string };
 
@@ -53,12 +67,9 @@ export class SecondFactorAuditService {
   async recordRuleTransition(
     manager: EntityManager,
     actor: ActorContext,
-    input: {
+    input: SecondFactorRuleTransition & {
       scope: 'platform' | 'organization';
       organizationId?: string;
-      from: boolean;
-      to: boolean;
-      since: string | null;
     }
   ): Promise<void> {
     const actorCredentialTypes = credentialTypes(actor);

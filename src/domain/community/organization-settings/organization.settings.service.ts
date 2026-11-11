@@ -1,15 +1,8 @@
+import type { SecondFactorRuleTransition } from '@core/auth/second-factor/second-factor.audit.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateOrganizationSettingsEntityInput } from './dto/organization.settings.dto.update';
 import { IOrganizationSettings } from './organization.settings.interface';
-
-/** An off→on or on→off of an organisation's second-factor rule. */
-export type OrganizationSecurityTransition = {
-  from: boolean;
-  to: boolean;
-  /** The ISO switch-on time in force after the transition. */
-  since: string | null;
-};
 
 @Injectable()
 export class OrganizationSettingsService {
@@ -22,7 +15,7 @@ export class OrganizationSettingsService {
     updateData: UpdateOrganizationSettingsEntityInput
   ): {
     settings: IOrganizationSettings;
-    transition?: OrganizationSecurityTransition;
+    transition?: SecondFactorRuleTransition;
   } {
     // Every field below is `Boolean` (nullable) on the input type and carries
     // `@IsOptional()`, which skips validation for null as well as undefined.
