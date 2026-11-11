@@ -4,6 +4,15 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdatePlatformSettingsInput } from './dto/platform.settings.dto.update';
 import { IPlatformSettings } from './platform.settings.interface';
+import { platformSecuritySettings } from './platform.settings.security.defaults';
+
+/** An off→on or on→off of the platform second-factor rule. */
+export type PlatformSecurityTransition = {
+  from: boolean;
+  to: boolean;
+  /** The ISO switch-on time in force after the transition. */
+  since: string | null;
+};
 
 @Injectable()
 export class PlatformSettingsService {
@@ -14,7 +23,10 @@ export class PlatformSettingsService {
   public updateSettings(
     settings: IPlatformSettings,
     updateData: UpdatePlatformSettingsInput
-  ): IPlatformSettings {
+  ): {
+    settings: IPlatformSettings;
+    transition?: PlatformSecurityTransition;
+  } {
     const updatedSettings = {
       ...settings,
       integration: {
@@ -34,7 +46,26 @@ export class PlatformSettingsService {
           updateData.integration.notificationEmailBlacklist;
       }
     }
-    return updatedSettings;
+
+    const requested = updateData.security?.secondFactorRequiredForPlatformRoles;
+    const from =
+      platformSecuritySettings(settings).secondFactorRequiredForPlatformRoles;
+    if (typeof requested !== 'boolean' || requested === from) {
+      return { settings: updatedSettings };
+    }
+    // Only an off→on moves the switch-on time; any other save keeps the
+    // stored value exactly as it is.
+    const since = requested
+      ? new Date().toISOString()
+      : (settings.security?.secondFactorRequiredForPlatformRolesSince ?? null);
+    updatedSettings.security = {
+      secondFactorRequiredForPlatformRoles: requested,
+      secondFactorRequiredForPlatformRolesSince: since,
+    };
+    return {
+      settings: updatedSettings,
+      transition: { from, to: requested, since },
+    };
   }
 
   public addIframeAllowedURLOrFail(

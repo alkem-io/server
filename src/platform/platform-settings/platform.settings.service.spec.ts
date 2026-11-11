@@ -29,7 +29,7 @@ describe('PlatformSettingsService', () => {
         },
       } as IPlatformSettings;
 
-      const result = service.updateSettings(settings, {
+      const { settings: result } = service.updateSettings(settings, {
         integration: {
           iframeAllowedUrls: ['https://new.com', 'https://another.com'],
         },
@@ -49,7 +49,7 @@ describe('PlatformSettingsService', () => {
         },
       } as IPlatformSettings;
 
-      const result = service.updateSettings(settings, {
+      const { settings: result } = service.updateSettings(settings, {
         integration: {
           notificationEmailBlacklist: ['blocked@example.com'],
         } as any,
@@ -68,7 +68,7 @@ describe('PlatformSettingsService', () => {
         },
       } as IPlatformSettings;
 
-      const result = service.updateSettings(settings, {});
+      const { settings: result } = service.updateSettings(settings, {});
 
       expect(result.integration.iframeAllowedUrls).toEqual([
         'https://keep.com',
@@ -86,7 +86,7 @@ describe('PlatformSettingsService', () => {
         },
       } as IPlatformSettings;
 
-      const result = service.updateSettings(settings, {});
+      const { settings: result } = service.updateSettings(settings, {});
 
       expect(result.integration.notificationEmailBlacklist).toEqual([]);
     });
@@ -355,5 +355,86 @@ describe('PlatformSettingsService', () => {
         )
       ).toThrow('not found in blacklist');
     });
+  });
+});
+
+describe('PlatformSettingsService — the second-factor rule switch', () => {
+  const service = new PlatformSettingsService({} as never);
+  const STORED_SINCE = '2026-10-01T08:00:00Z';
+  const integration = { iframeAllowedUrls: [], notificationEmailBlacklist: [] };
+  const withRule = (on: boolean, since: string | null): IPlatformSettings => ({
+    integration,
+    security: {
+      secondFactorRequiredForPlatformRoles: on,
+      secondFactorRequiredForPlatformRolesSince: since,
+    },
+  });
+  const turn = (on: boolean) => ({
+    security: { secondFactorRequiredForPlatformRoles: on },
+  });
+
+  it('records now as the switch-on time on off→on, with the transition', () => {
+    const before = Date.now();
+
+    const { settings, transition } = service.updateSettings(
+      withRule(false, null),
+      turn(true)
+    );
+
+    const since = settings.security?.secondFactorRequiredForPlatformRolesSince;
+    expect(settings.security?.secondFactorRequiredForPlatformRoles).toBe(true);
+    expect(new Date(since as string).getTime()).toBeGreaterThanOrEqual(before);
+    expect(transition).toEqual({ from: false, to: true, since });
+  });
+
+  it('keeps the stored switch-on time exactly on on→on, with no transition', () => {
+    const { settings, transition } = service.updateSettings(
+      withRule(true, STORED_SINCE),
+      turn(true)
+    );
+
+    expect(settings.security).toEqual({
+      secondFactorRequiredForPlatformRoles: true,
+      secondFactorRequiredForPlatformRolesSince: STORED_SINCE,
+    });
+    expect(transition).toBeUndefined();
+  });
+
+  it('keeps the stored switch-on time on on→off, with the transition', () => {
+    const { settings, transition } = service.updateSettings(
+      withRule(true, STORED_SINCE),
+      turn(false)
+    );
+
+    expect(settings.security).toEqual({
+      secondFactorRequiredForPlatformRoles: false,
+      secondFactorRequiredForPlatformRolesSince: STORED_SINCE,
+    });
+    expect(transition).toEqual({
+      from: true,
+      to: false,
+      since: STORED_SINCE,
+    });
+  });
+
+  it('reads a settings value without the block as off, and switches it on', () => {
+    const { settings, transition } = service.updateSettings(
+      { integration } as IPlatformSettings,
+      turn(true)
+    );
+
+    expect(settings.security?.secondFactorRequiredForPlatformRoles).toBe(true);
+    expect(transition?.from).toBe(false);
+  });
+
+  it('leaves the block untouched, with no transition, when the input does not name the rule', () => {
+    const stored = withRule(true, STORED_SINCE);
+
+    const { settings, transition } = service.updateSettings(stored, {
+      integration: { iframeAllowedUrls: ['https://x.example'] },
+    });
+
+    expect(settings.security).toEqual(stored.security);
+    expect(transition).toBeUndefined();
   });
 });
