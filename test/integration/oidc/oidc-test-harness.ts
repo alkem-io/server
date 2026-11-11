@@ -231,6 +231,7 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
           existing?.refresh_failure_streak_started_at ?? null,
         last_refreshed_at: existing?.last_refreshed_at ?? null,
         created_at: existing?.created_at ?? Date.now(),
+        acr: null,
         client_id: existing?.client_id ?? context?.client_id ?? '',
         request_context_cache: null,
         terminated_at: Date.now(),

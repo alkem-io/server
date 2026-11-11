@@ -36,6 +36,7 @@ describe('CookieSessionStrategy self-healing subject index', () => {
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: NOW_S - 3600,
+    acr: null,
     client_id: 'alkemio-web',
     ...overrides,
   });

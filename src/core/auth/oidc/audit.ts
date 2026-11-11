@@ -20,6 +20,9 @@ export type AuditEvent = {
   // server#6315 — closed-set cause of a subject-scoped revocation. Present only
   // on the `session.revocation.*` / `session.revoked` event types.
   reason?: SessionRevocationReason | null;
+  // The served sign-in's assurance level. Present only on
+  // `auth.login.completed`.
+  acr?: 'aal1' | 'aal2' | null;
 };
 
 export type AuditEventType =

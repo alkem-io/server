@@ -174,6 +174,7 @@ function seedPayload(sid: string): AlkemioSessionPayload {
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: nowS,
+    acr: null,
     client_id: 'alkemio-web',
     // Reserved and never populated in production (see the field's declaration
     // in `session-store.redis.ts`). Seeded here only so the tombstone's
