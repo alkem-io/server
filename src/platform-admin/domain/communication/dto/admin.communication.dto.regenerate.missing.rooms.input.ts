@@ -6,7 +6,7 @@ export class CommunicationAdminRegenerateMissingRoomsInput {
   @Field(() => [UUID], {
     nullable: true,
     description:
-      'Limit the pass to these Rooms. When omitted, every Room is checked against the rooms known to the messaging platform.',
+      'Limit the pass to these Rooms; an empty list checks nothing. When omitted, every Room is checked against the rooms known to the messaging platform.',
   })
   roomIDs?: string[];
 }

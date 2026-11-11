@@ -27,6 +27,12 @@ import { RoomUnreadCounts } from './dto/room.dto.unread.counts';
 import { Room } from './room.entity';
 import { IRoom } from './room.interface';
 
+/** The owner-derived part of a room creation request; the rest comes from the Room row. */
+export type ExternalRoomContext = Omit<
+  CreateRoomInput,
+  'displayName' | 'type' | 'avatarUrl'
+>;
+
 @Injectable()
 export class RoomService {
   constructor(
@@ -68,7 +74,8 @@ export class RoomService {
   /**
    * Make sure the Matrix room behind an existing Room row exists, creating it
    * from the row (id, type, display name, avatar) plus the owner-derived
-   * `context` when it does not. Idempotent: an existing Matrix room is left
+   * `context` when it does not. A `context` function is only called when the
+   * Matrix room turns out to be missing. Idempotent: an existing Matrix room is left
    * untouched.
    *
    * @returns true when the Matrix room had to be created, false when it was
@@ -76,13 +83,14 @@ export class RoomService {
    */
   async ensureExternalRoom(
     room: IRoom,
-    context: Omit<CreateRoomInput, 'displayName' | 'type' | 'avatarUrl'> = {}
+    context: ExternalRoomContext | (() => Promise<ExternalRoomContext>) = {}
   ): Promise<boolean> {
     try {
-      // getRoom is the operation known to answer ROOM_NOT_FOUND for a row
-      // whose Matrix room is missing; anything else (including a transport
-      // error) is not evidence of absence and must not trigger a create.
-      await this.communicationAdapter.getRoom(room.id);
+      // The members lookup resolves the room the same way every read does and
+      // answers ROOM_NOT_FOUND for a row whose Matrix room is missing, without
+      // fetching its messages. Anything else (including a transport error) is
+      // not evidence of absence and must not trigger a create.
+      await this.communicationAdapter.getRoomMembers(room.id);
       return false;
     } catch (error: unknown) {
       if (!isRoomNotFoundError(error)) {
@@ -90,8 +98,10 @@ export class RoomService {
       }
     }
 
+    const resolvedContext =
+      typeof context === 'function' ? await context() : context;
     await this.createExternalCommunicationRoom(room, {
-      ...context,
+      ...resolvedContext,
       displayName: room.displayName,
       type: room.type,
       avatarUrl: room.avatarUrl,
@@ -147,14 +157,20 @@ export class RoomService {
   }
 
   private async deleteExternalRoomBestEffort(roomId: string): Promise<void> {
+    // The adapter reports a failed delete as `false` rather than throwing.
+    let cause: string | undefined;
+    let deleted = false;
     try {
-      await this.communicationAdapter.deleteRoom(roomId);
+      deleted = await this.communicationAdapter.deleteRoom(roomId);
     } catch (error: unknown) {
+      cause = (error as Error)?.message;
+    }
+    if (!deleted) {
       this.logger.warn?.(
         {
           message:
             'Unable to delete the Matrix room of a rolled-back room; if it was created after all it shows up as an orphaned room',
-          details: { roomId, cause: (error as Error)?.message },
+          details: { roomId, cause },
         },
         LogContext.COMMUNICATION
       );

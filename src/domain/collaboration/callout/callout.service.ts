@@ -837,9 +837,25 @@ export class CalloutService {
       } catch (error) {
         // createRoom fails when the Matrix room cannot be created; drop the
         // whiteboard default documents materialized above before propagating.
-        await this.contributionDefaultsService.deleteMaterializedWhiteboardDocuments(
-          materializedWhiteboardDocumentIDs
-        );
+        // A failed cleanup must not replace the creation error.
+        try {
+          await this.contributionDefaultsService.deleteMaterializedWhiteboardDocuments(
+            materializedWhiteboardDocumentIDs
+          );
+        } catch (cleanupError: unknown) {
+          this.logger.error(
+            {
+              message:
+                'Unable to delete the whiteboard default documents after the comments room creation failed',
+              details: {
+                calloutId: callout.id,
+                documentIds: materializedWhiteboardDocumentIDs,
+              },
+            },
+            (cleanupError as Error)?.stack,
+            LogContext.COLLABORATION
+          );
+        }
         throw error;
       }
     }

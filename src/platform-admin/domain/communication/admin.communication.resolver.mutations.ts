@@ -182,7 +182,8 @@ export class AdminCommunicationResolverMutations {
           failed: result.failed,
           aborted: result.aborted,
         },
-        outcome: 'success',
+        // An aborted pass left Rooms unchecked: not a completed operation.
+        outcome: result.aborted ? 'failure' : 'success',
       });
       return result;
     } catch (error) {

@@ -493,6 +493,35 @@ describe('AdminCommunicationResolverMutations', () => {
       );
     });
 
+    it('adminCommunicationRegenerateMissingRooms records an aborted pass as a failure, keeping what it did', async () => {
+      adminCommunicationService.regenerateMissingRooms.mockResolvedValue({
+        regenerated: 1,
+        alreadyExisted: 0,
+        failed: 1,
+        aborted: true,
+        rooms: [
+          { roomID: 'room-1', outcome: 'regenerated' },
+          { roomID: 'room-2', outcome: 'failed' },
+        ],
+      });
+
+      await resolver.adminCommunicationRegenerateMissingRooms(
+        {} as any,
+        actorContext
+      );
+
+      expect(operationsAudit().recordOperation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'adminCommunicationRegenerateMissingRooms',
+          outcome: 'failure',
+          target: expect.objectContaining({
+            regeneratedRoomIDs: ['room-1'],
+            aborted: true,
+          }),
+        })
+      );
+    });
+
     it.each(
       CASES
     )('%s records a FAILURE operation and rethrows', async (action, dep, invoke) => {

@@ -2711,7 +2711,7 @@ type CommunicationAdminRegenerateMissingRoomsResult {
   """
   regenerated: Int!
   """
-  Per-Room outcome for every Room examined individually: all requested Rooms when roomIDs is given, otherwise the Rooms the messaging platform did not list.
+  Per-Room outcome for every Room examined individually: all requested Rooms when roomIDs is given, otherwise the Rooms the messaging platform did not list. When aborted is true, Rooms not reached before the pass stopped have no entry.
   """
   rooms: [CommunicationAdminRoomRegenerationResult!]!
 }
@@ -8807,7 +8807,7 @@ input CommunicationAdminMembershipInput {
 
 input CommunicationAdminRegenerateMissingRoomsInput {
   """
-  Limit the pass to these Rooms. When omitted, every Room is checked against the rooms known to the messaging platform.
+  Limit the pass to these Rooms; an empty list checks nothing. When omitted, every Room is checked against the rooms known to the messaging platform.
   """
   roomIDs: [UUID!]
 }

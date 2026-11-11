@@ -165,10 +165,18 @@ describe('AdminCommunicationService', () => {
     let roomService: { ensureExternalRoom: Mock };
     let entityManager: { find: Mock; createQueryBuilder: Mock };
     let getRawOne: Mock;
+    // what ensureExternalRoom would send for a room that turned out missing
+    let creationContexts: unknown[];
 
     beforeEach(() => {
       roomService = module.get(RoomService) as unknown as typeof roomService;
-      roomService.ensureExternalRoom.mockResolvedValue(true);
+      creationContexts = [];
+      roomService.ensureExternalRoom.mockImplementation(
+        async (_room: unknown, context: () => Promise<unknown>) => {
+          creationContexts.push(await context());
+          return true;
+        }
+      );
       entityManager = module.get(
         EntityManager
       ) as unknown as typeof entityManager;
@@ -206,8 +214,9 @@ describe('AdminCommunicationService', () => {
         expect(roomService.ensureExternalRoom).toHaveBeenCalledTimes(1);
         expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(
           missing,
-          {}
+          expect.any(Function)
         );
+        expect(creationContexts).toEqual([{}]);
         expect(result).toMatchObject({
           regenerated: 1,
           alreadyExisted: 1,
@@ -230,8 +239,10 @@ describe('AdminCommunicationService', () => {
 
         await service.regenerateMissingRooms({});
 
-        const createdBefore: Date =
-          entityManager.find.mock.calls[0][1].where.createdDate.value;
+        const createdDate =
+          entityManager.find.mock.calls[0][1].where.createdDate;
+        expect(createdDate.type).toBe('lessThan');
+        const createdBefore: Date = createdDate.value;
         expect(createdBefore.getTime()).toBeLessThanOrEqual(
           before - 5 * 60 * 1000 + 1000
         );
@@ -263,6 +274,20 @@ describe('AdminCommunicationService', () => {
         expect(communicationAdapter.listRooms).not.toHaveBeenCalled();
         expect(roomService.ensureExternalRoom).toHaveBeenCalledTimes(1);
         expect(result.regenerated).toBe(1);
+      });
+
+      it('checks nothing for an explicitly empty list instead of scanning every room', async () => {
+        const result = await service.regenerateMissingRooms({ roomIDs: [] });
+
+        expect(entityManager.find).not.toHaveBeenCalled();
+        expect(communicationAdapter.listRooms).not.toHaveBeenCalled();
+        expect(roomService.ensureExternalRoom).not.toHaveBeenCalled();
+        expect(result).toMatchObject({
+          regenerated: 0,
+          alreadyExisted: 0,
+          failed: 0,
+          rooms: [],
+        });
       });
 
       it('reports an unknown room ID as failed', async () => {
@@ -337,18 +362,23 @@ describe('AdminCommunicationService', () => {
 
         const { room } = await regenerateOne(type);
 
-        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(room, {
-          parentContextId: 'space-1',
-        });
+        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(
+          room,
+          expect.any(Function)
+        );
+        expect(creationContexts).toEqual([{ parentContextId: 'space-1' }]);
       });
 
       it('re-creates forum discussion rooms as public', async () => {
         const { room } = await regenerateOne(RoomType.DISCUSSION_FORUM);
 
-        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(room, {
-          joinRule: 'public',
-          isPublic: true,
-        });
+        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(
+          room,
+          expect.any(Function)
+        );
+        expect(creationContexts).toEqual([
+          { joinRule: 'public', isPublic: true },
+        ]);
       });
 
       it('re-creates a direct conversation room with both members', async () => {
@@ -362,10 +392,13 @@ describe('AdminCommunicationService', () => {
 
         const { room } = await regenerateOne(RoomType.CONVERSATION_DIRECT);
 
-        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(room, {
-          senderActorID: 'actor-1',
-          receiverActorID: 'actor-2',
-        });
+        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(
+          room,
+          expect.any(Function)
+        );
+        expect(creationContexts).toEqual([
+          { senderActorID: 'actor-1', receiverActorID: 'actor-2' },
+        ]);
       });
 
       it('re-creates a group conversation room with all its members', async () => {
@@ -380,8 +413,27 @@ describe('AdminCommunicationService', () => {
 
         const { room } = await regenerateOne(RoomType.CONVERSATION_GROUP);
 
-        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(room, {
-          memberActorIDs: ['actor-1', 'actor-2', 'actor-3'],
+        expect(roomService.ensureExternalRoom).toHaveBeenCalledWith(
+          room,
+          expect.any(Function)
+        );
+        expect(creationContexts).toEqual([
+          { memberActorIDs: ['actor-1', 'actor-2', 'actor-3'] },
+        ]);
+      });
+
+      it('fails a group conversation room with no members rather than create it empty', async () => {
+        conversationService.findConversationByRoomId.mockResolvedValue({
+          id: 'conv-1',
+        });
+        conversationService.getConversationMembers.mockResolvedValue([]);
+
+        const { result } = await regenerateOne(RoomType.CONVERSATION_GROUP);
+
+        expect(creationContexts).toEqual([]);
+        expect(result).toMatchObject({
+          failed: 1,
+          rooms: [{ outcome: 'failed' }],
         });
       });
 
@@ -395,7 +447,7 @@ describe('AdminCommunicationService', () => {
 
         const { result } = await regenerateOne(RoomType.CONVERSATION_DIRECT);
 
-        expect(roomService.ensureExternalRoom).not.toHaveBeenCalled();
+        expect(creationContexts).toEqual([]);
         expect(result).toMatchObject({
           failed: 1,
           rooms: [{ outcome: 'failed' }],
@@ -410,15 +462,28 @@ describe('AdminCommunicationService', () => {
 
         const { result } = await regenerateOne(type);
 
-        expect(roomService.ensureExternalRoom).not.toHaveBeenCalled();
+        expect(creationContexts).toEqual([]);
         expect(result.failed).toBe(1);
       });
 
       it('refuses legacy conversation rooms rather than guess their shape', async () => {
         const { result } = await regenerateOne(RoomType.CONVERSATION);
 
-        expect(roomService.ensureExternalRoom).not.toHaveBeenCalled();
+        expect(creationContexts).toEqual([]);
         expect(result.failed).toBe(1);
+      });
+
+      it('reports a room it could not re-create as already existed when its Matrix room is there', async () => {
+        // an existing room never asks for the creation context
+        roomService.ensureExternalRoom.mockResolvedValue(false);
+
+        const { result } = await regenerateOne(RoomType.CONVERSATION);
+
+        expect(result).toMatchObject({
+          alreadyExisted: 1,
+          failed: 0,
+          rooms: [{ outcome: 'already-existed' }],
+        });
       });
     });
   });

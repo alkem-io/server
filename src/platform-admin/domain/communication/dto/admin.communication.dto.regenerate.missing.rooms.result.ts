@@ -64,7 +64,7 @@ export class CommunicationAdminRegenerateMissingRoomsResult {
 
   @Field(() => [CommunicationAdminRoomRegenerationResult], {
     description:
-      'Per-Room outcome for every Room examined individually: all requested Rooms when roomIDs is given, otherwise the Rooms the messaging platform did not list.',
+      'Per-Room outcome for every Room examined individually: all requested Rooms when roomIDs is given, otherwise the Rooms the messaging platform did not list. When aborted is true, Rooms not reached before the pass stopped have no entry.',
   })
   rooms: CommunicationAdminRoomRegenerationResult[] = [];
 }

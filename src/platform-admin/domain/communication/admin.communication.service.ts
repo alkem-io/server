@@ -207,10 +207,10 @@ export class AdminCommunicationService {
 
     for (const room of candidates) {
       try {
-        const context = await this.getRoomCreationContext(room);
-        const created = await this.roomService.ensureExternalRoom(
-          room,
-          context
+        // The context is resolved only once the room is known to be missing,
+        // so a room that cannot be re-created but exists is not a failure.
+        const created = await this.roomService.ensureExternalRoom(room, () =>
+          this.getRoomCreationContext(room)
         );
         if (created) {
           result.regenerated++;
@@ -272,8 +272,13 @@ export class AdminCommunicationService {
     result: CommunicationAdminRegenerateMissingRoomsResult
   ): Promise<Room[]> {
     const requestedIDs = regenerateData.roomIDs;
-    if (requestedIDs && requestedIDs.length > 0) {
+    // An explicit list - even an empty one - never widens to the platform-wide
+    // scan; only an omitted list does.
+    if (requestedIDs) {
       const uniqueIDs = [...new Set(requestedIDs)];
+      if (uniqueIDs.length === 0) {
+        return [];
+      }
       const rooms = await this.entityManager.find(Room, {
         where: { id: In(uniqueIDs) },
         loadEagerRelations: false,
@@ -398,6 +403,15 @@ export class AdminCommunicationService {
     const memberActorIDs = members.map(member => member.actorID);
 
     if (room.type === RoomType.CONVERSATION_GROUP) {
+      // The adapter's create is idempotent on the room alias, so a room
+      // created with nobody in it would never get its members from a later pass.
+      if (memberActorIDs.length === 0) {
+        throw new ValidationException(
+          'Unable to regenerate group conversation room: no members',
+          LogContext.COMMUNICATION_CONVERSATION,
+          { roomId: room.id, conversationId: conversation.id }
+        );
+      }
       return { memberActorIDs };
     }
     if (memberActorIDs.length !== 2) {

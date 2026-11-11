@@ -272,6 +272,22 @@ describe('SpaceMoveRoomsService', () => {
       });
     });
 
+    it('should keep the old updates room when the new one cannot be created', async () => {
+      roomService.createRoom.mockRejectedValue(new Error('Matrix is down'));
+
+      await service.recreateUpdatesRooms([
+        {
+          communicationId: 'comm-1',
+          updatesRoomId: 'old-room-1',
+          spaceId: 'space-1',
+          displayName: 'TestSpace',
+        },
+      ]);
+
+      expect(roomService.deleteRoom).not.toHaveBeenCalled();
+      expect(communicationService.save).not.toHaveBeenCalled();
+    });
+
     it('should update Communication entity with new room reference', async () => {
       const communications = [
         {
@@ -316,9 +332,9 @@ describe('SpaceMoveRoomsService', () => {
     });
 
     it('should continue with remaining spaces when one fails', async () => {
-      roomService.deleteRoom
-        .mockRejectedValueOnce(new Error('Delete failed'))
-        .mockResolvedValueOnce({ id: 'old-2' } as IRoom);
+      roomService.createRoom
+        .mockRejectedValueOnce(new Error('Create failed'))
+        .mockResolvedValueOnce(mockNewRoom);
 
       const communications = [
         {
@@ -338,9 +354,10 @@ describe('SpaceMoveRoomsService', () => {
       await service.recreateUpdatesRooms(communications);
 
       // First failed, second succeeded
-      expect(roomService.deleteRoom).toHaveBeenCalledTimes(2);
-      // createRoom only called for the second (first failed at delete)
-      expect(roomService.createRoom).toHaveBeenCalledTimes(1);
+      expect(roomService.createRoom).toHaveBeenCalledTimes(2);
+      // deleteRoom only called for the second (first failed at create)
+      expect(roomService.deleteRoom).toHaveBeenCalledTimes(1);
+      expect(roomService.deleteRoom).toHaveBeenCalledWith({ roomID: 'old-2' });
     });
 
     it('should be a no-op for empty communications list', async () => {
