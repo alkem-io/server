@@ -257,6 +257,10 @@ export class OrganizationService {
         // Note: not currently used but will be near term.
         contributionRolesPubliclyVisible: true,
       },
+      security: {
+        secondFactorRequired: false,
+        secondFactorRequiredSince: null,
+      },
     };
     return settings;
   }
