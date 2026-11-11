@@ -1,6 +1,9 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
-import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
+import {
+  assertSignInNotRefused,
+  SecondFactorPolicyService,
+} from '@core/auth/second-factor/second-factor.policy.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { getCorrelationId } from '@core/middleware/correlation-id.middleware';
 import { Inject, Injectable, LoggerService, Optional } from '@nestjs/common';
@@ -26,10 +29,7 @@ import type {
   AlkemioSessionPayload,
   SessionStoreHandle,
 } from '../session-store.redis';
-import {
-  CookieSessionInvalidError,
-  SecondFactorRequiredError,
-} from './auth.errors';
+import { CookieSessionInvalidError } from './auth.errors';
 import {
   CookieSessionContext,
   SESSION_STORE_HANDLE,
@@ -250,22 +250,12 @@ export class CookieSessionStrategy extends PassportStrategy(
       issuedAt: payload.created_at * 1000,
       secondFactor: { satisfied: payload.acr === 'aal2' },
     });
-    try {
-      await this.secondFactorPolicy.assertNotRefused(actor, new Date());
-    } catch (error) {
-      if (error instanceof SecondFactorRequiredError) {
-        emitAudit({
-          event_type: 'auth.second_factor.refused',
-          outcome: 'failure',
-          sub: payload.sub || null,
-          client_id: payload.client_id || null,
-          correlation_id: correlationId,
-          request_id: requestId,
-          error_code: 'second_factor_required',
-        });
-      }
-      throw error;
-    }
+    await assertSignInNotRefused(this.secondFactorPolicy, actor, {
+      sub: payload.sub || null,
+      client_id: payload.client_id || null,
+      correlation_id: correlationId,
+      request_id: requestId,
+    });
     return actor;
   }
 

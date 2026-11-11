@@ -1,6 +1,7 @@
 import { AuthorizationCredential } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { isPlatformCredentialType } from '@core/actor-context/actor.context.service';
+import { AuditInput, emitAudit } from '@core/auth/oidc/audit';
 import { SecondFactorRequiredError } from '@core/auth/oidc/strategies/auth.errors';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { Organization } from '@domain/community/organization/organization.entity';
@@ -106,5 +107,26 @@ export class SecondFactorPolicyService {
       .map(security =>
         new Date(security?.secondFactorRequiredSince ?? 0).getTime()
       );
+  }
+}
+
+/** `assertNotRefused` for a sign-in strategy: a refusal is audited, then rethrown. */
+export async function assertSignInNotRefused(
+  policy: Pick<SecondFactorPolicyService, 'assertNotRefused'>,
+  actor: ActorContext,
+  audit: Pick<AuditInput, 'sub' | 'client_id' | 'correlation_id' | 'request_id'>
+): Promise<void> {
+  try {
+    await policy.assertNotRefused(actor, new Date());
+  } catch (error) {
+    if (error instanceof SecondFactorRequiredError) {
+      emitAudit({
+        event_type: 'auth.second_factor.refused',
+        outcome: 'failure',
+        ...audit,
+        error_code: 'second_factor_required',
+      });
+    }
+    throw error;
   }
 }

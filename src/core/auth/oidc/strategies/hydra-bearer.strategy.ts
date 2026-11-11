@@ -1,5 +1,8 @@
 import { ActorContext } from '@core/actor-context/actor.context';
-import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
+import {
+  assertSignInNotRefused,
+  SecondFactorPolicyService,
+} from '@core/auth/second-factor/second-factor.policy.service';
 import {
   CORRELATION_ID_REQUEST_KEY,
   getCorrelationId,
@@ -9,8 +12,6 @@ import { PassportStrategy } from '@nestjs/passport';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
 import { Strategy } from 'passport-custom';
-import { emitAudit } from '../audit';
-import { SecondFactorRequiredError } from './auth.errors';
 import {
   HydraBearerContext,
   HydraBearerValidator,
@@ -73,22 +74,12 @@ export class HydraBearerStrategy extends PassportStrategy(
     const actor = Object.assign(new ActorContext(), result.actorContext, {
       secondFactor: { satisfied: result.ctx.acr === 'aal2' },
     });
-    try {
-      await this.secondFactorPolicy.assertNotRefused(actor, new Date());
-    } catch (error) {
-      if (error instanceof SecondFactorRequiredError) {
-        emitAudit({
-          event_type: 'auth.second_factor.refused',
-          outcome: 'failure',
-          sub: result.ctx.sub || null,
-          client_id: result.ctx.client_id || null,
-          correlation_id: correlationId,
-          request_id: correlationId,
-          error_code: 'second_factor_required',
-        });
-      }
-      throw error;
-    }
+    await assertSignInNotRefused(this.secondFactorPolicy, actor, {
+      sub: result.ctx.sub || null,
+      client_id: result.ctx.client_id || null,
+      correlation_id: correlationId,
+      request_id: correlationId,
+    });
     return actor;
   }
 }
