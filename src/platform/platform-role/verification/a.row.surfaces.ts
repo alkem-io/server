@@ -1162,6 +1162,14 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
           'adminCommunicationRemoveOrphanedRoom',
           'communication-admin-synthetic',
         ],
+        // Regenerates Room rows whose Matrix room is missing — same file, same
+        // `communicationGlobalAdminPolicy`, same literal
+        // PLATFORM_OPERATIONS_ADMIN check as its siblings.
+        [
+          'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
+          'adminCommunicationRegenerateMissingRooms',
+          'communication-admin-synthetic',
+        ],
         [
           'src/platform-admin/domain/communication/admin.communication.resolver.mutations.ts',
           'adminCommunicationUpdateRoomState',

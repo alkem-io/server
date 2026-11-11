@@ -8,6 +8,10 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import {
+  isRoomNotFoundError,
+  isTransportError,
+} from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IMessage } from '../message/message.interface';
@@ -47,9 +51,114 @@ export class RoomService {
     // Save first to get the ID assigned by the database
     const savedRoom = await this.save(room);
 
-    // Now create the external room with the assigned ID
-    await this.createExternalCommunicationRoom(savedRoom, roomData);
+    // Now create the external room with the assigned ID. A room row without
+    // its Matrix room is unusable (every read throws ROOM_NOT_FOUND) and no
+    // caller can tell it apart from a healthy one, so creation is all-or-
+    // nothing: on failure the row is removed and the error propagates to the
+    // caller, whose own rollback / user-facing error then applies.
+    try {
+      await this.createExternalCommunicationRoom(savedRoom, roomData);
+    } catch (error: unknown) {
+      await this.removeRoomAfterFailedExternalCreate(savedRoom, error);
+      throw error;
+    }
     return savedRoom;
+  }
+
+  /**
+   * Make sure the Matrix room behind an existing Room row exists, creating it
+   * from the row (id, type, display name, avatar) plus the owner-derived
+   * `context` when it does not. Idempotent: an existing Matrix room is left
+   * untouched.
+   *
+   * @returns true when the Matrix room had to be created, false when it was
+   *   already there.
+   */
+  async ensureExternalRoom(
+    room: IRoom,
+    context: Omit<CreateRoomInput, 'displayName' | 'type' | 'avatarUrl'> = {}
+  ): Promise<boolean> {
+    try {
+      // getRoom is the operation known to answer ROOM_NOT_FOUND for a row
+      // whose Matrix room is missing; anything else (including a transport
+      // error) is not evidence of absence and must not trigger a create.
+      await this.communicationAdapter.getRoom(room.id);
+      return false;
+    } catch (error: unknown) {
+      if (!isRoomNotFoundError(error)) {
+        throw error;
+      }
+    }
+
+    await this.createExternalCommunicationRoom(room, {
+      ...context,
+      displayName: room.displayName,
+      type: room.type,
+      avatarUrl: room.avatarUrl,
+    });
+    return true;
+  }
+
+  /**
+   * Roll back the Room row saved by `createRoom` when its Matrix room could
+   * not be created. Never throws: the original creation error is what the
+   * caller must see.
+   */
+  private async removeRoomAfterFailedExternalCreate(
+    room: IRoom,
+    creationError: unknown
+  ): Promise<void> {
+    // Capture ID before removal - TypeORM's remove() clears the entity's id field
+    const roomId = room.id;
+    this.logger.error(
+      {
+        message:
+          'Unable to create the Matrix room for a new room; removing the room row',
+        details: { roomId, roomType: room.type },
+      },
+      (creationError as Error)?.stack,
+      LogContext.COMMUNICATION
+    );
+
+    try {
+      if (room.authorization) {
+        await this.authorizationPolicyService.delete(room.authorization);
+      }
+      await this.roomRepository.remove(room as Room);
+    } catch (cleanupError: unknown) {
+      this.logger.error(
+        {
+          message:
+            'Unable to remove the room row after its Matrix room creation failed; the row has no Matrix room until regenerated with adminCommunicationRegenerateMissingRooms',
+          details: { roomId, roomType: room.type },
+        },
+        (cleanupError as Error)?.stack,
+        LogContext.COMMUNICATION
+      );
+    }
+
+    // A transport failure (e.g. RPC timeout) is ambiguous: the adapter may
+    // still complete the create after we gave up. Ask it to drop the room so
+    // no Matrix room outlives its deleted row. Not awaited - the adapter is
+    // likely unresponsive and the caller has already waited one full timeout.
+    if (isTransportError(creationError)) {
+      void this.deleteExternalRoomBestEffort(roomId);
+    }
+  }
+
+  private async deleteExternalRoomBestEffort(roomId: string): Promise<void> {
+    try {
+      await this.communicationAdapter.deleteRoom(roomId);
+    } catch (error: unknown) {
+      this.logger.warn?.(
+        {
+          message:
+            'Unable to delete the Matrix room of a rolled-back room; if it was created after all it shows up as an orphaned room',
+          details: { roomId, cause: (error as Error)?.message },
+        },
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   /**
@@ -230,8 +339,10 @@ export class RoomService {
     let initialMembers: string[] | undefined;
     if (isDirect) {
       if (!roomData.senderActorID || !roomData.receiverActorID) {
-        throw new Error(
-          `Missing senderActorID or receiverActorID for direct messaging room creation: ${roomData.displayName}`
+        throw new ValidationException(
+          'Missing senderActorID or receiverActorID for direct messaging room creation',
+          LogContext.COMMUNICATION_CONVERSATION,
+          { roomId: room.id }
         );
       }
       initialMembers = [roomData.senderActorID, roomData.receiverActorID];
@@ -246,37 +357,30 @@ export class RoomService {
         ? LogContext.COMMUNICATION_CONVERSATION
         : LogContext.COMMUNICATION;
 
-    try {
-      this.logger.verbose?.(
-        `Creating ${isDirect ? 'direct message' : 'group message'} room via Matrix: ${roomData.displayName}`,
-        logContext
-      );
+    this.logger.verbose?.(
+      `Creating ${roomData.type} room via Matrix: ${roomData.displayName}`,
+      logContext
+    );
 
-      // Conversation rooms are visible in Element; all other rooms are hidden
-      const isConversation = isConversationLegacy || isDirect || isGroup;
-      const customState = {
-        'io.alkemio.visibility': { visible: isConversation },
-      };
+    // Conversation rooms are visible in Element; all other rooms are hidden
+    const isConversation = isConversationLegacy || isDirect || isGroup;
+    const customState = {
+      'io.alkemio.visibility': { visible: isConversation },
+    };
 
-      await this.communicationAdapter.createRoom(
-        room.id,
-        roomData.type,
-        roomData.displayName, // Empty string = "do not set" (Matrix adapter treats "" as no-op)
-        initialMembers,
-        roomData.parentContextId,
-        roomData.avatarUrl,
-        roomData.joinRule,
-        roomData.isPublic,
-        customState
-      );
-    } catch (error: unknown) {
-      const err = error as Error;
-      this.logger.error(
-        `Unable to initialize communication room (${roomData.displayName})`,
-        err.stack,
-        LogContext.COMMUNICATION
-      );
-    }
+    // Errors propagate: the callers decide what a missing Matrix room means
+    // (createRoom rolls the row back, ensureExternalRoom reports the failure).
+    await this.communicationAdapter.createRoom(
+      room.id,
+      roomData.type,
+      roomData.displayName, // Empty string = "do not set" (Matrix adapter treats "" as no-op)
+      initialMembers,
+      roomData.parentContextId,
+      roomData.avatarUrl,
+      roomData.joinRule,
+      roomData.isPublic,
+      customState
+    );
   }
 
   async addReactionToMessage(

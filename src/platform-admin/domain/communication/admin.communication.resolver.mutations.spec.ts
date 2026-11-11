@@ -95,6 +95,49 @@ describe('AdminCommunicationResolverMutations', () => {
     });
   });
 
+  describe('adminCommunicationRegenerateMissingRooms', () => {
+    it('should return the per-room result and audit which rooms were regenerated', async () => {
+      const regenerateData = { roomIDs: ['room-1', 'room-2'] } as any;
+      const passResult = {
+        regenerated: 1,
+        alreadyExisted: 1,
+        failed: 0,
+        aborted: false,
+        rooms: [
+          { roomID: 'room-1', outcome: 'regenerated' },
+          { roomID: 'room-2', outcome: 'already-existed' },
+        ],
+      };
+      adminCommunicationService.regenerateMissingRooms.mockResolvedValue(
+        passResult
+      );
+
+      const result = await resolver.adminCommunicationRegenerateMissingRooms(
+        regenerateData,
+        actorContext
+      );
+
+      expect(
+        adminCommunicationService.regenerateMissingRooms
+      ).toHaveBeenCalledWith(regenerateData);
+      expect(result).toBe(passResult);
+      expect(
+        (module.get(PlatformOperationsAuditService) as any).recordOperation
+      ).toHaveBeenCalledWith({
+        actorID: actorContext.actorID,
+        action: 'adminCommunicationRegenerateMissingRooms',
+        target: {
+          requestedRoomIDs: ['room-1', 'room-2'],
+          regeneratedRoomIDs: ['room-1'],
+          alreadyExisted: 1,
+          failed: 0,
+          aborted: false,
+        },
+        outcome: 'success',
+      });
+    });
+  });
+
   describe('adminCommunicationUpdateRoomState', () => {
     it('should check authorization and update room state', async () => {
       const roomStateData = {
@@ -325,6 +368,15 @@ describe('AdminCommunicationResolverMutations', () => {
         () => adminCommunicationService.removeOrphanedRoom,
       ],
       [
+        'adminCommunicationRegenerateMissingRooms',
+        () =>
+          resolver.adminCommunicationRegenerateMissingRooms(
+            {} as any,
+            actorContext
+          ),
+        () => adminCommunicationService.regenerateMissingRooms,
+      ],
+      [
         'adminCommunicationMigrateOrphanedConversations',
         () =>
           resolver.adminCommunicationMigrateOrphanedConversations(actorContext),
@@ -387,6 +439,19 @@ describe('AdminCommunicationResolverMutations', () => {
             actorContext
           ),
         true,
+      ],
+      [
+        'adminCommunicationRegenerateMissingRooms',
+        () => adminCommunicationService.regenerateMissingRooms,
+        r =>
+          r.adminCommunicationRegenerateMissingRooms({} as any, actorContext),
+        {
+          regenerated: 0,
+          alreadyExisted: 0,
+          failed: 0,
+          aborted: false,
+          rooms: [],
+        },
       ],
       [
         'adminCommunicationUpdateRoomState',

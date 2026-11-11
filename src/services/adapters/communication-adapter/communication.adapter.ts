@@ -332,6 +332,7 @@ export class CommunicationAdapter {
 
   /**
    * Create a new room in Matrix.
+   * Throws on transport errors and on adapter-reported failures.
    * @param alkemioRoomId - Required: The Alkemio room UUID (must be saved to DB first)
    */
   async createRoom(
@@ -370,6 +371,9 @@ export class CommunicationAdapter {
         custom_state: customState,
       } satisfies CreateRoomRequest,
       errorContext: { alkemioRoomId, roomType },
+      // An adapter-reported failure must surface with its error code rather
+      // than collapse into a bare `false` that callers historically ignored.
+      ensureSuccess: true,
     });
 
     if (response?.success) {

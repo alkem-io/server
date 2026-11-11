@@ -181,6 +181,19 @@ describe('CommunicationAdapter', () => {
       expect(result).toBe(true);
     });
 
+    it('should throw with the adapter error code when the adapter reports a createRoom failure', async () => {
+      mockAmqpConnection.request.mockResolvedValue(
+        createErrorResponse('MATRIX_ERROR', 'synapse unavailable')
+      );
+
+      await expect(
+        adapter.createRoom('room-id', AlkemioRoomType.CALLOUT)
+      ).rejects.toMatchObject({
+        operation: 'createRoom',
+        adapterError: { code: 'MATRIX_ERROR' },
+      });
+    });
+
     it('should map CONVERSATION_DIRECT to RoomTypeDirect', async () => {
       const response = createSuccessResponse({});
       mockAmqpConnection.request.mockResolvedValue(response);
