@@ -809,6 +809,24 @@ describe('CommunicationAdapter', () => {
     });
   });
 
+  describe('revokeActorSessions (workspace#091, FR-017)', () => {
+    it('revokeActorSessions sends the actor id on the sessions revoke topic', async () => {
+      mockAmqpConnection.request.mockResolvedValue(
+        createSuccessResponse({ devices_revoked: 2 })
+      );
+
+      const result = await adapter.revokeActorSessions('actor-uuid-123');
+
+      expect(result).toBe(2);
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith({
+        exchange: '',
+        routingKey: MatrixAdapterEventType.COMMUNICATION_ACTOR_SESSIONS_REVOKE,
+        payload: { actor_id: 'actor-uuid-123' },
+        timeout: expect.any(Number),
+      });
+    });
+  });
+
   describe('disabled communications', () => {
     let disabledAdapter: CommunicationAdapter;
 
