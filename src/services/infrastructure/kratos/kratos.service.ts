@@ -1,4 +1,4 @@
-import { X509Certificate } from 'node:crypto';
+import { randomBytes, X509Certificate } from 'node:crypto';
 import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import {
@@ -423,6 +423,68 @@ export class KratosService {
         (error as { response?: { status?: number } })?.response?.status === 404
       ) {
         return false;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Replaces an identity's password with a random secret that is kept
+   * nowhere, so the old password stops signing in while recovery still works.
+   * Resolves `null` when the identity is gone or has no password; otherwise
+   * the password's last-change time as an admin read straight after the write
+   * returns it (the update's own answer carries a zero time, not the write's).
+   *
+   * Errors are rethrown as they are and may carry the request body: whoever
+   * catches one logs its `message` only.
+   */
+  public async replacePasswordWithUnusableSecret(
+    identityId: string,
+    opts?: { timeoutMs?: number }
+  ): Promise<{ lastChangedAt?: string } | null> {
+    const identity = await this.readIdentityWithPassword(identityId, opts);
+    if (!identity?.credentials?.password) return null;
+
+    // A PUT replaces every field but the credentials, so everything is carried as read.
+    await this.kratosIdentityClient.updateIdentity(
+      {
+        id: identityId,
+        updateIdentityBody: {
+          schema_id: identity.schema_id,
+          state: identity.state === 'inactive' ? 'inactive' : 'active',
+          traits: identity.traits,
+          metadata_public: identity.metadata_public,
+          metadata_admin: identity.metadata_admin,
+          external_id: identity.external_id,
+          credentials: {
+            password: {
+              config: { password: randomBytes(32).toString('base64url') },
+            },
+          },
+        },
+      },
+      { timeout: opts?.timeoutMs }
+    );
+
+    const after = await this.readIdentityWithPassword(identityId, opts);
+    return { lastChangedAt: after?.credentials?.password?.updated_at };
+  }
+
+  private async readIdentityWithPassword(
+    identityId: string,
+    opts?: { timeoutMs?: number }
+  ): Promise<Identity | null> {
+    try {
+      const { data } = await this.kratosIdentityClient.getIdentity(
+        { id: identityId, includeCredential: ['password'] },
+        { timeout: opts?.timeoutMs }
+      );
+      return data;
+    } catch (error) {
+      if (
+        (error as { response?: { status?: number } })?.response?.status === 404
+      ) {
+        return null;
       }
       throw error;
     }
