@@ -49,7 +49,6 @@ describe('OrganizationService', () => {
     countActorsWithRole: Mock;
   };
   let organizationVerificationService: { delete: Mock };
-  let organizationSettingsService: { updateSettings: Mock };
   let actorService: { deleteActorById: Mock };
 
   beforeEach(async () => {
@@ -76,9 +75,6 @@ describe('OrganizationService', () => {
     roleSetService = module.get(RoleSetService) as any;
     organizationVerificationService = module.get(
       OrganizationVerificationService
-    ) as any;
-    organizationSettingsService = module.get(
-      OrganizationSettingsService
     ) as any;
     actorService = module.get(ActorService) as any;
   });
