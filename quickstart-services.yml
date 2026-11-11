@@ -310,14 +310,28 @@ services:
       - 8080
     restart: unless-stopped
 
-  mailslurper:
+  # Mail sink for Kratos's courier and notifications (Swarmail, which replaced
+  # MailSlurper). Traefik keeps MailSlurper's host ports:
+  #   4436 -> Swarmail's UI and REST API (container port 8025)
+  #   4437 -> the MailSlurper-compatible API (GET/DELETE /mail, /mailcount),
+  #           which .scripts/register-user.sh and the test suites read
+  #   1025 -> SMTP, plain (no TLS)
+  # Mail is kept in memory, as before: recreating the container empties it.
+  swarmail:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    container_name: alkemio_dev_kratos_mailslurper
-    image: oryd/mailslurper:latest-smtps
+    container_name: alkemio_dev_swarmail
+    image: ghcr.io/feedback-loop-ai/swarmail:0.4.0
     restart: always
+    # Swarmail drains for up to 10s on SIGTERM; give it room.
+    stop_grace_period: 30s
+    environment:
+      # Off unless set: MailSlurper's service API, a view over every inbox.
+      - SWARMAIL_MAILSLURPER_LISTEN=0.0.0.0:4437
+      # Oldest mail is evicted past this many per inbox (default 100000).
+      - SWARMAIL_MAX_PER_INBOX=2000
     ports:
-      - 4436
+      - 8025
       - 4437
       - 1025
     networks:

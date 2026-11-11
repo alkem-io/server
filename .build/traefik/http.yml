@@ -5,15 +5,16 @@ http:
         servers:
           - url: 'http://rabbitmq:15672'
 
-    mailslurper-client:
+    swarmail-http:
       loadBalancer:
         servers:
-          - url: 'http://mailslurper:4436'
+          - url: 'http://swarmail:8025'
 
+    # Swarmail's MailSlurper-compatible API (SWARMAIL_MAILSLURPER_LISTEN).
     mailslurper-api:
       loadBalancer:
         servers:
-          - url: 'http://mailslurper:4437'
+          - url: 'http://swarmail:4437'
 
     alkemio-server:
       loadBalancer:
@@ -564,11 +565,11 @@ http:
       entryPoints:
         - 'mailslurper-api'
 
-    mailslurper-client:
+    swarmail-http:
       rule: 'PathPrefix(`/`)'
-      service: 'mailslurper-client'
+      service: 'swarmail-http'
       entryPoints:
-        - 'mailslurper-client'
+        - 'swarmail-http'
 
     authorization-evaluation:
       rule: 'PathPrefix(`/`)'
@@ -648,10 +649,10 @@ tcp:
         servers:
           - address: 'rabbitmq:5672'
 
-    mailslurper-smtp:
+    swarmail-smtp:
       loadBalancer:
         servers:
-          - address: 'mailslurper:1025'
+          - address: 'swarmail:1025'
 
     redis:
       loadBalancer:
@@ -676,11 +677,11 @@ tcp:
       entryPoints:
         - 'rabbitmq-amqp'
 
-    mailslurper-smtp:
+    swarmail-smtp:
       rule: 'HostSNI(`*`)'
-      service: 'mailslurper-smtp'
+      service: 'swarmail-smtp'
       entryPoints:
-        - 'mailslurper-smtp'
+        - 'swarmail-smtp'
 
     redis:
       rule: 'HostSNI(`*`)'

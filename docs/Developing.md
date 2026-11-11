@@ -9,7 +9,7 @@ In this setup you are then using the docker composed stack for:
   - ory/kratos
   - ory/hydra
   - ory/oathkeeper
-  - ory/mailslurper (not used on production)
+- Swarmail, the mail sink for Kratos and notifications (not used on production)
 - Matrix Synapse homeserver (for real-time collaboration features)
 
 Note that the CT Server from the docker composed stack is listening on port 4001 instead of port 4000, so it will not collide with running a second server locally - but do keep in mind those two server instances are sharing the same data / authentication provider.
@@ -48,7 +48,11 @@ Configuration for the Ory services can be found in `./build/ory`. The Synapse ho
 
 The verification and recovery flows templates can be edited in `./build/ory/kratos/courier-templates`. More information how to customize them [here](https://www.ory.sh/kratos/docs/concepts/email-sms/#sender-address-and-template-customization). They are using [golang templates](https://golang.org/pkg/text/template/) format.
 
-The registration and the recovery flows include sending emails to the registered users. For development purposes the fake smtp server `Mailslurper` is used. It can be accessed on http://localhost:4436/ (if the docker compose method has been used to setup the development environment).
+The registration and the recovery flows include sending emails to the registered users. For development purposes the mail sink [Swarmail](https://github.com/feedback-loop-ai/swarmail) catches them; it replaced MailSlurper and keeps its ports (if the docker compose method has been used to setup the development environment):
+
+- http://localhost:4436/ is the Swarmail UI. Every local mail is in the `default` inbox. Its REST API is on the same port, e.g. `curl 'http://localhost:4436/api/v1/inboxes/default/await?count=1&timeout_ms=10000'` answers as soon as the inbox holds at least one mail.
+- http://localhost:4437/mail is the MailSlurper-compatible API (`GET /mail`, `GET /mail/{id}`, `GET /mailcount`, `DELETE /mail` with `{"pruneCode":"all"}`), which `.scripts/register-user.sh` and the test suites' `MAIL_SLURPER_ENDPOINT=http://localhost:4437/mail` read.
+- SMTP is plain (no TLS) on `localhost:1025`, `swarmail:1025` inside the compose network.
 
 ## Schema baseline workflow troubleshooting
 

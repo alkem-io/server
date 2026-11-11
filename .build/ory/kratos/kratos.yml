@@ -242,7 +242,11 @@ identity:
 
 courier:
   smtp:
-    connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true&legacy_ssl=true
+    # Swarmail (the local mail sink), plain SMTP: Kratos enforces STARTTLS on
+    # smtp:// unless disabled, and Swarmail runs without a certificate. No
+    # userinfo: Kratos will not AUTH over an unencrypted link, so the mail
+    # lands in Swarmail's `default` inbox.
+    connection_uri: smtp://swarmail:1025/?disable_starttls=true
     from_name: Team Alkemio
     from_address: info@alkem.io
   template_override_path: /etc/config/kratos/courier-templates
