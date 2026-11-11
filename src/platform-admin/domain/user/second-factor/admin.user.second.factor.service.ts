@@ -31,6 +31,7 @@ const KRATOS_TIMEOUT_MS = 5000;
 export type SecondFactorResetResult = {
   removedCredentialTypes: string[];
   sessionsRevoked: number;
+  passwordInvalidated: boolean;
 };
 
 /** A step of the reset that failed, with the closed-set reason for its row. */
@@ -46,8 +47,9 @@ class ResetStepFailure extends Error {
 
 /**
  * Support reset of a member's second factor: removes every second factor,
- * ends every session at Kratos and in the application, and records one
- * logical reset as an intent row and an outcome row.
+ * optionally replaces the password with an unusable secret (recovery by email
+ * still works), ends every session at Kratos and in the application, and
+ * records one logical reset as an intent row and an outcome row.
  *
  * The application revocation runs LAST: it writes the subject marker that
  * rejects every sign-in that began before it, so a sign-in racing the Kratos
@@ -67,7 +69,8 @@ export class AdminUserSecondFactorService {
 
   async resetSecondFactor(
     actor: ActorContext,
-    userID: string
+    userID: string,
+    invalidatePassword: boolean
   ): Promise<SecondFactorResetResult> {
     if (userID === actor.actorID) {
       throw new ForbiddenException(
@@ -90,13 +93,18 @@ export class AdminUserSecondFactorService {
     const ids = { kratosIdentityId, correlationId };
     await this.auditService.recordResetStarted(actor, target, {
       ...ids,
-      invalidatePassword: false,
+      invalidatePassword,
     });
 
     let removed: Set<string>;
     let sessionsRevoked: number;
     let tokenRevocationFailedCount: number;
+    let passwordInvalidated = false;
+    let passwordLastChangedAt: string | undefined;
     try {
+      if (invalidatePassword) {
+        passwordInvalidated = !!(await this.replacePassword(kratosIdentityId));
+      }
       removed = await this.removeSecondFactors(kratosIdentityId);
       await this.step('kratos_sessions', () =>
         this.kratosService.invalidateAllIdentitySessions(kratosIdentityId, {
@@ -104,9 +112,16 @@ export class AdminUserSecondFactorService {
         })
       );
       // A session still open while the steps above ran may have enrolled a
-      // new factor: the second pass removes it with the rest.
+      // new factor or set a new password: the second pass removes them too.
       for (const type of await this.removeSecondFactors(kratosIdentityId)) {
         removed.add(type);
+      }
+      if (invalidatePassword) {
+        const replaced = await this.replacePassword(kratosIdentityId);
+        if (replaced) {
+          passwordInvalidated = true;
+          passwordLastChangedAt = replaced.lastChangedAt;
+        }
       }
       const report = await this.step('application_sessions', () =>
         this.sessionRevocationService.revokeAllForSub(
@@ -165,7 +180,8 @@ export class AdminUserSecondFactorService {
       removedCredentialTypes,
       sessionsRevoked,
       tokenRevocationFailedCount,
-      passwordInvalidated: false,
+      passwordInvalidated,
+      ...(passwordLastChangedAt !== undefined && { passwordLastChangedAt }),
     });
 
     try {
@@ -186,7 +202,15 @@ export class AdminUserSecondFactorService {
       );
     }
 
-    return { removedCredentialTypes, sessionsRevoked };
+    return { removedCredentialTypes, sessionsRevoked, passwordInvalidated };
+  }
+
+  private replacePassword(identityId: string) {
+    return this.step('kratos_password', () =>
+      this.kratosService.replacePasswordWithUnusableSecret(identityId, {
+        timeoutMs: KRATOS_TIMEOUT_MS,
+      })
+    );
   }
 
   /** One pass over the three second-factor types; resolves what it removed. */
