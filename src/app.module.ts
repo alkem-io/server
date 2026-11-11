@@ -25,7 +25,7 @@ import {
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { HealthModule } from '@core/health/health.module';
-import { AuthInterceptor } from '@core/interceptors';
+import { AuthInterceptor, passportAuthenticate } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { ActorModule } from '@domain/actor/actor.module';
@@ -88,6 +88,7 @@ import { WinstonConfigService } from '@src/config/winston.config';
 // session. Idle TTL is now driven by express-session rolling cookie.
 
 import { buildGraphqlWsRequest } from '@core/auth/oidc/graphql-ws-auth';
+import { graphqlWsOnNext } from '@core/auth/oidc/graphql-ws-on-next';
 import {
   getCookieMiddleware,
   getSessionMiddleware,
@@ -109,7 +110,6 @@ import {
   WebsocketContext,
 } from '@src/types';
 import { print } from 'graphql/language/printer';
-import { CloseCode } from 'graphql-ws';
 import { WinstonModule } from 'nest-winston';
 import { ApmApolloPlugin } from './apm/plugins';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
@@ -242,25 +242,19 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
             },
             'graphql-ws': {
               // Sockets are authenticated once at connection time, so a
-              // long-lived subscription would outlive its session. ActorContext
-              // .absoluteExpiry is stamped by CookieSessionStrategy from the
-              // BFF alkemio_session's ABSOLUTE ceiling (absolute_expires_at).
-              // Deliberately NOT enforced here: `.expiry` (access-token, ~10min,
-              // self-renews) and the sliding idle window (renews on activity).
-              onNext: (ctx, _message, args, result) => {
-                const context = args.contextValue as IGraphQLContext;
-                const absoluteExpiry = context.req?.user?.absoluteExpiry;
-                // if the session has passed its absolute ceiling, close the socket
-                if (absoluteExpiry && absoluteExpiry < Date.now()) {
-                  (ctx as WebsocketContext).extra.socket.close(
-                    CloseCode.Unauthorized,
-                    'Session expired'
-                  );
-                  return;
-                }
-
-                return result;
-              },
+              // long-lived subscription would outlive its session: a cookie
+              // socket is re-validated before every event it would deliver.
+              onNext: (ctx, _message, args, result) =>
+                graphqlWsOnNext({
+                  context: args.contextValue as IGraphQLContext,
+                  socket: (ctx as WebsocketContext).extra.socket,
+                  result,
+                  authenticate: passportAuthenticate,
+                  cookieName: configService.get(
+                    'identity.authentication.providers.oidc.cookie.name',
+                    { infer: true }
+                  ),
+                }),
             },
           },
         };

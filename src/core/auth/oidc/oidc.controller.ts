@@ -1033,7 +1033,13 @@ export class OidcController {
       return;
     }
     res.setHeader('Cache-Control', 'no-store');
-    res.status(200).json({ id_token: idToken });
+    // The token stays even when refused: the client's logout leg sends it.
+    res.status(200).json({
+      id_token: idToken,
+      second_factor_required:
+        (req as Request & { secondFactorRefused?: boolean })
+          .secondFactorRefused === true,
+    });
   }
 
   @Get('logout')

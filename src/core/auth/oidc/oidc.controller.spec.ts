@@ -1476,3 +1476,29 @@ describe('OidcController — sign-in assurance and the sign-in start on the sess
     expect(session.created_at).toBe(1_800_000_000);
   });
 });
+
+describe('OidcController — id-token-hint says whether the sign-in is refused', () => {
+  const sessionWithToken = () =>
+    makeSession({
+      id_token: 'idt',
+      absolute_expires_at: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+  it.each([
+    ['refused', true, true],
+    ['not refused', undefined, false],
+  ])('returns the token and second_factor_required when %s', async (_label, flag, expected) => {
+    const { controller } = await buildController();
+    const req = makeReq({ session: sessionWithToken() });
+    if (flag) req.secondFactorRefused = flag;
+    const res = makeRes();
+
+    await controller.idTokenHint(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.jsonBody).toEqual({
+      id_token: 'idt',
+      second_factor_required: expected,
+    });
+  });
+});

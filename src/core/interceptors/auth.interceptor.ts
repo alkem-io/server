@@ -382,8 +382,9 @@ const getRequest = (context: ExecutionContext) => {
   return req;
 };
 
-// Promisified passport.authenticate
-const passportAuthenticate = async (req: IncomingMessage) => {
+// Promisified passport.authenticate. Also re-run by the graphql-ws hook
+// before each event on a cookie socket.
+export const passportAuthenticate = async (req: IncomingMessage) => {
   return new Promise<ActorContext | undefined>((resolve, reject) => {
     // T042b — cookie-session OR non-interactive-login OR hydra-bearer.
     // Browser sessions take the cookie path; clients bearing an HS256 token
