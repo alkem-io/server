@@ -522,6 +522,21 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
+    it('PLATFORM_SECOND_FACTOR_RESET: EXACTLY {platform-support, platform-users-admin}, non-cascading', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy();
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_SECOND_FACTOR_RESET
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.PLATFORM_USERS_ADMIN,
+      ]);
+      expect(rules[0].cascade).toBe(false);
+    });
+
     // R-F.3 (2026-09-18, licensing-section-design.md): the License Manager's
     // console list read (Slice B: A12's legacy pair is gone). Settings Admin DEFINES
     // plans (A13) and must not get the usage lists for free; Support and

@@ -856,9 +856,11 @@ describe('KratosService — second-factor admin calls', () => {
         .spyOn(service.kratosIdentityClient, 'deleteIdentityCredentials')
         .mockResolvedValue({} as any);
 
-      await service.deleteIdentityCredential('identity-1', 'lookup_secret', {
-        timeoutMs: 5000,
-      });
+      await expect(
+        service.deleteIdentityCredential('identity-1', 'lookup_secret', {
+          timeoutMs: 5000,
+        })
+      ).resolves.toBe(true);
 
       expect(spy).toHaveBeenCalledWith(
         { id: 'identity-1', type: 'lookup_secret' },
@@ -874,7 +876,7 @@ describe('KratosService — second-factor admin calls', () => {
 
       await expect(
         service.deleteIdentityCredential('identity-1', 'totp')
-      ).resolves.toBeUndefined();
+      ).resolves.toBe(false);
     });
 
     it.each([

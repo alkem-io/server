@@ -238,6 +238,7 @@ export const A_ROW_GATE_COVERAGE: Record<ARowId, ARowGateCoverageEntry> = {
       'src/platform-admin/core/identity/admin.identity.resolver.mutations.spec.ts',
       'test/integration/platform-admin/admin-user-account-delete.spec.ts',
       'src/platform-admin/domain/mcp-api-key/admin.mcp.api.key.resolver.fields.spec.ts',
+      'src/platform-admin/domain/user/second-factor/admin.user.second.factor.resolver.mutations.spec.ts',
     ],
   },
   A6: {
@@ -482,6 +483,10 @@ export const PRIVILEGE_COVERAGE: Record<
   },
   // R-F.3 (2026-09-18) — the License Manager's console list read, platform-anchored.
   [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
+    ruleSpec: PLATFORM_POLICY_SPEC,
+    grantSetSpec: PLATFORM_POLICY_SPEC,
+  },
+  [AuthorizationPrivilege.PLATFORM_SECOND_FACTOR_RESET]: {
     ruleSpec: PLATFORM_POLICY_SPEC,
     grantSetSpec: PLATFORM_POLICY_SPEC,
   },

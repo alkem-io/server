@@ -404,23 +404,25 @@ export class KratosService {
 
   /**
    * Removes one credential type (a second factor) from an identity through
-   * the admin API. A 404 means it is already absent: resolves.
+   * the admin API. Resolves `true` when it removed one, `false` when it was
+   * already absent (404).
    */
   public async deleteIdentityCredential(
     identityId: string,
     type: SecondFactorCredentialType,
     opts?: { timeoutMs?: number }
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       await this.kratosIdentityClient.deleteIdentityCredentials(
         { id: identityId, type },
         { timeout: opts?.timeoutMs }
       );
+      return true;
     } catch (error) {
       if (
         (error as { response?: { status?: number } })?.response?.status === 404
       ) {
-        return;
+        return false;
       }
       throw error;
     }
