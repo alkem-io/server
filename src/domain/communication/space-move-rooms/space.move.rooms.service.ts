@@ -219,7 +219,7 @@ export class SpaceMoveRoomsService {
 
   /**
    * Recreates the community updates room for each Communication in the subtree.
-   * Old room is deleted (DB + Matrix), new empty room is created and linked.
+   * A new empty room is created and linked, then the old room is deleted (DB + Matrix).
    * Each iteration is independent — failure in one space does not prevent others.
    */
   async recreateUpdatesRooms(
@@ -227,28 +227,30 @@ export class SpaceMoveRoomsService {
   ): Promise<void> {
     for (const comm of communications) {
       try {
-        // 1. Delete old updates room (removes DB entity + Matrix room)
-        await this.roomService.deleteRoom({ roomID: comm.updatesRoomId });
-
-        // 2. Create new empty updates room
+        // 1. Create the new empty updates room first: createRoom throws when
+        //    the Matrix room cannot be created, and the space must then keep
+        //    its old room rather than end up with none.
         const newRoom = await this.roomService.createRoom({
           displayName: `updates-${comm.displayName}`,
           type: RoomType.UPDATES,
         });
 
-        // 3. Update Communication entity to point to the new room
+        // 2. Update Communication entity to point to the new room
         const communication =
           await this.communicationService.getCommunicationOrFail(
             comm.communicationId
           );
         communication.updates = newRoom;
         await this.communicationService.save(communication);
+
+        // 3. Delete the old updates room (removes DB entity + Matrix room)
+        await this.roomService.deleteRoom({ roomID: comm.updatesRoomId });
       } catch (error: unknown) {
         const err = error as Error;
         this.logger.error?.(
           {
             message:
-              'Failed to recreate updates room — space may be left without an updates room',
+              'Failed to recreate updates room — space may still have its pre-move updates room',
             details: {
               communicationId: comm.communicationId,
               spaceId: comm.spaceId,

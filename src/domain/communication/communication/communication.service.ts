@@ -11,9 +11,10 @@ import {
   Communication,
   ICommunication,
 } from '@domain/communication/communication';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IRoom } from '../room/room.interface';
 import { RoomService } from '../room/room.service';
@@ -25,7 +26,8 @@ export class CommunicationService {
     private readonly roomService: RoomService,
     private readonly communicationAdapter: CommunicationAdapter,
     @InjectRepository(Communication)
-    private readonly communicationRepository: Repository<Communication>
+    private readonly communicationRepository: Repository<Communication>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   async createCommunication(
@@ -41,12 +43,43 @@ export class CommunicationService {
     // save to get the id assigned
     await this.save(communication);
 
-    communication.updates = await this.roomService.createRoom({
-      displayName: `${displayName}-Updates`,
-      type: RoomType.UPDATES,
-    });
+    try {
+      communication.updates = await this.roomService.createRoom({
+        displayName: `${displayName}-Updates`,
+        type: RoomType.UPDATES,
+      });
+    } catch (error: unknown) {
+      // createRoom fails when the Matrix room cannot be created; don't leave
+      // the Communication saved above behind without its updates room.
+      await this.removeCommunicationWithoutUpdatesRoom(communication);
+      throw error;
+    }
 
     return communication;
+  }
+
+  private async removeCommunicationWithoutUpdatesRoom(
+    communication: ICommunication
+  ): Promise<void> {
+    const communicationId = communication.id;
+    try {
+      if (communication.authorization) {
+        await this.authorizationPolicyService.delete(
+          communication.authorization
+        );
+      }
+      await this.communicationRepository.remove(communication as Communication);
+    } catch (cleanupError: unknown) {
+      this.logger.error(
+        {
+          message:
+            'Unable to remove Communication after its updates room creation failed',
+          details: { communicationId },
+        },
+        (cleanupError as Error)?.stack,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   async save(communication: ICommunication): Promise<ICommunication> {

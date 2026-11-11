@@ -4,6 +4,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { ConversationModule } from '@domain/communication/conversation/conversation.module';
 import { Room } from '@domain/communication/room/room.entity';
+import { RoomModule } from '@domain/communication/room/room.module';
 import { CommunityModule } from '@domain/community/community/community.module';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -31,6 +32,7 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
     CommunicationModule,
     CommunicationAdapterModule,
     ConversationModule,
+    RoomModule,
     TaskModule,
     TypeOrmModule.forFeature([Space, Forum, Room, User, VirtualContributor]),
   ],

@@ -17,6 +17,11 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
 import { AdminCommunicationReconcileForumHierarchyInput } from './dto/admin.communication.dto.reconcile.forum.hierarchy';
+import { CommunicationAdminRegenerateMissingRoomsInput } from './dto/admin.communication.dto.regenerate.missing.rooms.input';
+import {
+  CommunicationAdminRegenerateMissingRoomsResult,
+  CommunicationAdminRoomRegenerationOutcome,
+} from './dto/admin.communication.dto.regenerate.missing.rooms.result';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
 import { CommunicationAdminUpdateRoomStateInput } from './dto/admin.communication.dto.update.room.state';
 
@@ -133,6 +138,59 @@ export class AdminCommunicationResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminCommunicationRemoveOrphanedRoom',
         target: { roomID: orphanedRoomData.roomID },
+        outcome: 'failure',
+        error,
+      });
+      throw error;
+    }
+  }
+
+  @Mutation(() => CommunicationAdminRegenerateMissingRoomsResult, {
+    description:
+      'Re-create the rooms on the messaging platform for Rooms that are missing theirs, each with the type, visibility and members of its owner. Idempotent: Rooms that already have a room are left untouched. Reports the outcome per Room.',
+  })
+  @Profiling.api
+  async adminCommunicationRegenerateMissingRooms(
+    @Args('regenerateData')
+    regenerateData: CommunicationAdminRegenerateMissingRoomsInput,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<CommunicationAdminRegenerateMissingRoomsResult> {
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+      `communications admin regenerate missing rooms`
+    );
+    try {
+      const result =
+        await this.adminCommunicationService.regenerateMissingRooms(
+          regenerateData
+        );
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminCommunicationRegenerateMissingRooms',
+        target: {
+          requestedRoomIDs: regenerateData.roomIDs,
+          regeneratedRoomIDs: result.rooms
+            .filter(
+              room =>
+                room.outcome ===
+                CommunicationAdminRoomRegenerationOutcome.REGENERATED
+            )
+            .map(room => room.roomID),
+          alreadyExisted: result.alreadyExisted,
+          failed: result.failed,
+          aborted: result.aborted,
+        },
+        // An aborted pass left Rooms unchecked: not a completed operation.
+        outcome: result.aborted ? 'failure' : 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminCommunicationRegenerateMissingRooms',
+        target: { requestedRoomIDs: regenerateData.roomIDs },
         outcome: 'failure',
         error,
       });

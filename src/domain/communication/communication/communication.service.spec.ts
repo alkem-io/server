@@ -73,6 +73,24 @@ describe('CommunicationService', () => {
         type: RoomType.UPDATES,
       });
     });
+
+    it('should remove the saved communication and rethrow when the updates room cannot be created', async () => {
+      const failure = new Error('matrix down');
+      communicationRepo.save.mockImplementation(async (entity: any) => {
+        entity.id = 'comm-1';
+        return entity;
+      });
+      roomService.createRoom.mockRejectedValue(failure);
+
+      await expect(
+        service.createCommunication('TestSpace', 'space-1')
+      ).rejects.toBe(failure);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalled();
+      expect(communicationRepo.remove).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'comm-1' })
+      );
+    });
   });
 
   describe('save', () => {

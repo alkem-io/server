@@ -378,6 +378,13 @@ enum CollaboraDocumentType {
   WORDPROCESSING
 }
 
+"""What happened to a Room during a regenerate-missing-rooms pass."""
+enum CommunicationAdminRoomRegenerationOutcome {
+  ALREADY_EXISTED
+  FAILED
+  REGENERATED
+}
+
 enum CommunityMembershipPolicy {
   APPLICATIONS
   INVITATIONS
@@ -2690,6 +2697,25 @@ type CommunicationAdminOrphanedUsageResult {
   rooms: [CommunicationAdminRoomResult!]!
 }
 
+type CommunicationAdminRegenerateMissingRoomsResult {
+  """
+  True when the pass stopped early because the messaging platform could not be reached; the remaining Rooms were not checked.
+  """
+  aborted: Boolean!
+  """Number of Rooms that already had a room on the messaging platform."""
+  alreadyExisted: Int!
+  """Number of Rooms that could not be regenerated."""
+  failed: Int!
+  """
+  Number of Rooms whose room on the messaging platform was missing and has been created.
+  """
+  regenerated: Int!
+  """
+  Per-Room outcome for every Room examined individually: all requested Rooms when roomIDs is given, otherwise the Rooms the messaging platform did not list. When aborted is true, Rooms not reached before the pass stopped have no entry.
+  """
+  rooms: [CommunicationAdminRoomRegenerationResult!]!
+}
+
 type CommunicationAdminRoomMembershipResult {
   """Display name of the entity"""
   displayName: String!
@@ -2705,6 +2731,17 @@ type CommunicationAdminRoomMembershipResult {
   missingMembers: [String!]!
   """The matrix room ID"""
   roomID: String!
+}
+
+type CommunicationAdminRoomRegenerationResult {
+  """Why the Room could not be regenerated, when it failed."""
+  error: String
+  """The outcome for this Room."""
+  outcome: CommunicationAdminRoomRegenerationOutcome!
+  """The ID of the Room."""
+  roomID: UUID!
+  """The type of the Room; null when the Room was not found."""
+  type: RoomType
 }
 
 type CommunicationAdminRoomResult {
@@ -4872,6 +4909,10 @@ type Mutation {
   Reconcile the Matrix space hierarchy that mirrors the forum against the current forum/discussion state — report-first (dryRun defaults true), scoped to categories + the forum space, never a delete. Returns a task id; the pass runs asynchronously and the task completes with the summary.
   """
   adminCommunicationReconcileForumHierarchy(reconcileData: AdminCommunicationReconcileForumHierarchyInput!): String!
+  """
+  Re-create the rooms on the messaging platform for Rooms that are missing theirs, each with the type, visibility and members of its owner. Idempotent: Rooms that already have a room are left untouched. Reports the outcome per Room.
+  """
+  adminCommunicationRegenerateMissingRooms(regenerateData: CommunicationAdminRegenerateMissingRoomsInput!): CommunicationAdminRegenerateMissingRoomsResult!
   """Remove an orphaned room from messaging platform."""
   adminCommunicationRemoveOrphanedRoom(orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput!): Boolean!
   """
@@ -8762,6 +8803,13 @@ input CommunicationAdminEnsureAccessInput {
 
 input CommunicationAdminMembershipInput {
   communityID: UUID!
+}
+
+input CommunicationAdminRegenerateMissingRoomsInput {
+  """
+  Limit the pass to these Rooms; an empty list checks nothing. When omitted, every Room is checked against the rooms known to the messaging platform.
+  """
+  roomIDs: [UUID!]
 }
 
 input CommunicationAdminRemoveOrphanedRoomInput {

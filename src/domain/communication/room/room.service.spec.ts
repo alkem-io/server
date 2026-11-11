@@ -1,13 +1,17 @@
+import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LoggerService } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { type Mocked } from 'vitest';
 import { IMessage } from '../message/message.interface';
@@ -23,6 +27,7 @@ describe('RoomService', () => {
   let roomLookupService: Mocked<RoomLookupService>;
   let _actorLookupService: Mocked<ActorLookupService>;
   let roomRepo: Mocked<Repository<Room>>;
+  let logger: LoggerService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -43,6 +48,7 @@ describe('RoomService', () => {
     roomLookupService = module.get(RoomLookupService);
     _actorLookupService = module.get(ActorLookupService);
     roomRepo = module.get(getRepositoryToken(Room));
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
   });
 
   describe('createRoom', () => {
@@ -167,23 +173,183 @@ describe('RoomService', () => {
       ).rejects.toThrow(Error);
     });
 
-    it('should log error but not throw when external room creation fails', async () => {
-      roomRepo.save.mockResolvedValue({
-        id: 'room-1',
-        displayName: 'Test Room',
-        type: RoomType.CALLOUT,
-      } as any);
-      communicationAdapter.createRoom.mockRejectedValue(
-        new Error('Matrix error')
-      );
+    describe('when the Matrix room cannot be created', () => {
+      const savedRoom = () =>
+        ({
+          id: 'room-1',
+          displayName: 'Test Room',
+          type: RoomType.CALLOUT,
+          authorization: { id: 'auth-1' },
+        }) as any;
 
-      const result = await service.createRoom({
-        displayName: 'Test Room',
-        type: RoomType.CALLOUT,
+      it('removes the room row and its authorization, then rethrows', async () => {
+        const room = savedRoom();
+        roomRepo.save.mockResolvedValue(room);
+        const failure = CommunicationAdapterException.fromTransportError(
+          'createRoom',
+          new Error('RPC timeout')
+        );
+        communicationAdapter.createRoom.mockRejectedValue(failure);
+
+        await expect(
+          service.createRoom({
+            displayName: 'Test Room',
+            type: RoomType.CALLOUT,
+          })
+        ).rejects.toBe(failure);
+
+        expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+          room.authorization
+        );
+        expect(roomRepo.remove).toHaveBeenCalledWith(room);
       });
 
-      // Should still return the saved room despite Matrix failure
-      expect(result.id).toBe('room-1');
+      it('asks the adapter to drop the room after a transport failure, which may still complete late', async () => {
+        roomRepo.save.mockResolvedValue(savedRoom());
+        communicationAdapter.createRoom.mockRejectedValue(
+          CommunicationAdapterException.fromTransportError(
+            'createRoom',
+            new Error('RPC timeout')
+          )
+        );
+
+        await expect(
+          service.createRoom({
+            displayName: 'Test Room',
+            type: RoomType.CALLOUT,
+          })
+        ).rejects.toThrow();
+
+        expect(communicationAdapter.deleteRoom).toHaveBeenCalledWith('room-1');
+      });
+
+      it('logs a late delete the adapter reports as failed, which it does by returning false', async () => {
+        roomRepo.save.mockResolvedValue(savedRoom());
+        communicationAdapter.createRoom.mockRejectedValue(
+          CommunicationAdapterException.fromTransportError(
+            'createRoom',
+            new Error('RPC timeout')
+          )
+        );
+        communicationAdapter.deleteRoom.mockResolvedValue(false);
+        const warn = vi.spyOn(logger, 'warn');
+
+        await expect(
+          service.createRoom({
+            displayName: 'Test Room',
+            type: RoomType.CALLOUT,
+          })
+        ).rejects.toThrow();
+        await vi.waitFor(() =>
+          expect(warn).toHaveBeenCalledWith(
+            expect.objectContaining({ details: { roomId: 'room-1' } }),
+            LogContext.COMMUNICATION
+          )
+        );
+      });
+
+      it('does not send a delete when the adapter itself reported the failure', async () => {
+        roomRepo.save.mockResolvedValue(savedRoom());
+        communicationAdapter.createRoom.mockRejectedValue(
+          CommunicationAdapterException.fromAdapterError('createRoom', {
+            code: 'MATRIX_ERROR',
+            message: 'synapse said no',
+          })
+        );
+
+        await expect(
+          service.createRoom({
+            displayName: 'Test Room',
+            type: RoomType.CALLOUT,
+          })
+        ).rejects.toThrow();
+
+        expect(communicationAdapter.deleteRoom).not.toHaveBeenCalled();
+      });
+
+      it('still rethrows the creation error when the row cleanup fails', async () => {
+        roomRepo.save.mockResolvedValue(savedRoom());
+        const failure = new Error('Matrix error');
+        communicationAdapter.createRoom.mockRejectedValue(failure);
+        roomRepo.remove.mockRejectedValue(new Error('db down'));
+
+        await expect(
+          service.createRoom({
+            displayName: 'Test Room',
+            type: RoomType.CALLOUT,
+          })
+        ).rejects.toBe(failure);
+      });
+    });
+  });
+
+  describe('ensureExternalRoom', () => {
+    const room = {
+      id: 'room-1',
+      displayName: 'callout-comments-foo',
+      type: RoomType.CALLOUT,
+      avatarUrl: undefined,
+    } as unknown as IRoom;
+
+    const roomNotFound = () =>
+      CommunicationAdapterException.fromAdapterError('getRoomMembers', {
+        code: 'ROOM_NOT_FOUND',
+        message: 'room not found',
+      });
+
+    it('does not send a create when the Matrix room already exists', async () => {
+      communicationAdapter.getRoomMembers.mockResolvedValue([]);
+
+      const context = vi.fn();
+
+      const created = await service.ensureExternalRoom(room, context);
+
+      expect(created).toBe(false);
+      expect(communicationAdapter.createRoom).not.toHaveBeenCalled();
+      // the owner context is only worked out for a room that is missing
+      expect(context).not.toHaveBeenCalled();
+    });
+
+    it('re-creates a missing Matrix room from the row and the owner context', async () => {
+      communicationAdapter.getRoomMembers.mockRejectedValue(roomNotFound());
+      communicationAdapter.createRoom.mockResolvedValue(true);
+
+      const created = await service.ensureExternalRoom(room, async () => ({
+        parentContextId: 'space-1',
+      }));
+
+      expect(created).toBe(true);
+      expect(communicationAdapter.createRoom).toHaveBeenCalledWith(
+        'room-1',
+        RoomType.CALLOUT,
+        'callout-comments-foo',
+        undefined,
+        'space-1',
+        undefined,
+        undefined,
+        undefined,
+        { 'io.alkemio.visibility': { visible: false } }
+      );
+    });
+
+    it('does not create on a transport error: that is not evidence the room is missing', async () => {
+      const transport = CommunicationAdapterException.fromTransportError(
+        'getRoomMembers',
+        new Error('RPC timeout')
+      );
+      communicationAdapter.getRoomMembers.mockRejectedValue(transport);
+
+      await expect(service.ensureExternalRoom(room)).rejects.toBe(transport);
+      expect(communicationAdapter.createRoom).not.toHaveBeenCalled();
+    });
+
+    it('propagates a failed create and leaves the row in place', async () => {
+      communicationAdapter.getRoomMembers.mockRejectedValue(roomNotFound());
+      const failure = new Error('still down');
+      communicationAdapter.createRoom.mockRejectedValue(failure);
+
+      await expect(service.ensureExternalRoom(room)).rejects.toBe(failure);
+      expect(roomRepo.remove).not.toHaveBeenCalled();
     });
   });
 

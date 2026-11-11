@@ -42,6 +42,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { isRoomNotFoundError } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { cloneDeep, keyBy } from 'lodash';
@@ -827,11 +828,36 @@ export class CalloutService {
       const parentSpaceId = callout.calloutsSet
         ? await this.getParentSpaceId(callout.calloutsSet.id)
         : undefined;
-      callout.comments = await this.roomService.createRoom({
-        displayName: `callout-comments-${callout.nameID}`,
-        type: RoomType.CALLOUT,
-        parentContextId: parentSpaceId,
-      });
+      try {
+        callout.comments = await this.roomService.createRoom({
+          displayName: `callout-comments-${callout.nameID}`,
+          type: RoomType.CALLOUT,
+          parentContextId: parentSpaceId,
+        });
+      } catch (error) {
+        // createRoom fails when the Matrix room cannot be created; drop the
+        // whiteboard default documents materialized above before propagating.
+        // A failed cleanup must not replace the creation error.
+        try {
+          await this.contributionDefaultsService.deleteMaterializedWhiteboardDocuments(
+            materializedWhiteboardDocumentIDs
+          );
+        } catch (cleanupError: unknown) {
+          this.logger.error(
+            {
+              message:
+                'Unable to delete the whiteboard default documents after the comments room creation failed',
+              details: {
+                calloutId: callout.id,
+                documentIds: materializedWhiteboardDocumentIDs,
+              },
+            },
+            (cleanupError as Error)?.stack,
+            LogContext.COLLABORATION
+          );
+        }
+        throw error;
+      }
     }
 
     if (calloutUpdateData.sortOrder)
@@ -1009,8 +1035,7 @@ export class CalloutService {
         commentCallouts.map(async callout => {
           // comments is an eager relation, so it's already loaded on the callout
           if (!callout.comments) return 0;
-          const messages = await this.roomService.getMessages(callout.comments);
-          return messages.length;
+          return this.countComments(callout.id, callout.comments);
         })
       );
       for (let i = 0; i < commentCallouts.length; i++) {
@@ -1074,8 +1099,37 @@ export class CalloutService {
   private async getCommentsCount(calloutID: string): Promise<number> {
     const comments = await this.getComments(calloutID);
     if (!comments) return 0;
-    const messages = await this.roomService.getMessages(comments);
-    return messages.length;
+    return this.countComments(calloutID, comments);
+  }
+
+  /**
+   * Number of messages in a callout's comments room. A room row whose Matrix
+   * room is missing (ROOM_NOT_FOUND) counts as 0 and is logged, instead of
+   * failing the whole callout / callouts-set query on a derived counter.
+   * Any other failure still propagates.
+   */
+  private async countComments(
+    calloutID: string,
+    comments: IRoom
+  ): Promise<number> {
+    try {
+      const messages = await this.roomService.getMessages(comments);
+      return messages.length;
+    } catch (error: unknown) {
+      if (!isRoomNotFoundError(error)) {
+        throw error;
+      }
+      this.logger.error(
+        {
+          message:
+            'Callout comments room has no Matrix room; reporting 0 comments. Regenerate with adminCommunicationRegenerateMissingRooms',
+          details: { calloutId: calloutID, roomId: comments.id },
+        },
+        (error as Error)?.stack,
+        LogContext.COLLABORATION
+      );
+      return 0;
+    }
   }
 
   private async setNameIdOnWhiteboardData(

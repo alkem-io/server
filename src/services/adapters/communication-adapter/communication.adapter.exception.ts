@@ -1,4 +1,4 @@
-import { ErrorCode } from '@alkemio/matrix-adapter-lib';
+import { ErrCodeRoomNotFound, ErrorCode } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { BaseException } from '@common/exceptions/base.exception';
@@ -68,6 +68,24 @@ export class CommunicationAdapterException extends BaseException {
     );
   }
 }
+
+/**
+ * True only when the adapter itself answered that the Matrix room does not
+ * exist. Transport failures (timeouts, broker down) carry no adapter error
+ * code and are deliberately NOT matched: they share the same
+ * MATRIX_ENTITY_NOT_FOUND_ERROR status but say nothing about the room.
+ */
+export const isRoomNotFoundError = (error: unknown): boolean =>
+  error instanceof CommunicationAdapterException &&
+  error.adapterError?.code === ErrCodeRoomNotFound;
+
+/**
+ * True when the adapter never answered (timeout, broker down): the outcome of
+ * the operation is unknown, as opposed to an error the adapter reported.
+ */
+export const isTransportError = (error: unknown): boolean =>
+  error instanceof CommunicationAdapterException &&
+  error.adapterError === undefined;
 
 /**
  * Map adapter error codes to Alkemio error status codes.

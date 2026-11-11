@@ -18,6 +18,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
+import { CommunicationAdapterException } from '@services/adapters/communication-adapter/communication.adapter.exception';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { actorContextData } from '@test/data/actorContext.mock';
@@ -1762,6 +1763,27 @@ describe('CalloutService', () => {
 
       expect(result).toBe(3);
     });
+
+    it('should return 0 when the comments room has no Matrix room', async () => {
+      const callout = {
+        id: 'callout-1',
+        settings: {
+          contribution: { allowedTypes: [] },
+        },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue({
+        ...callout,
+        comments: { id: 'room-1' },
+      });
+      vi.mocked(roomService.getMessages).mockRejectedValue(
+        CommunicationAdapterException.fromAdapterError('getRoom', {
+          code: 'ROOM_NOT_FOUND',
+          message: 'room not found',
+        })
+      );
+
+      await expect(service.getActivityCount(callout)).resolves.toBe(0);
+    });
   });
 
   describe('getActivityCountBatch', () => {
@@ -1924,6 +1946,39 @@ describe('CalloutService', () => {
       await service.getActivityCountBatch([callout]);
 
       expect(callout.activity).toBe(7);
+    });
+
+    it('should report 0 for a comments room with no Matrix room and still resolve the others', async () => {
+      const broken = makeCommentCallout('c-broken');
+      const healthy = makeCommentCallout('c-healthy');
+
+      (roomService.getMessages as Mock).mockImplementation(async room => {
+        if (room === broken.comments) {
+          throw CommunicationAdapterException.fromAdapterError('getRoom', {
+            code: 'ROOM_NOT_FOUND',
+            message: 'room not found',
+          });
+        }
+        return [{ id: 'm1' }, { id: 'm2' }];
+      });
+
+      await service.getActivityCountBatch([broken, healthy]);
+
+      expect(broken.activity).toBe(0);
+      expect(healthy.activity).toBe(2);
+    });
+
+    it('should still fail on adapter errors other than ROOM_NOT_FOUND', async () => {
+      const callout = makeCommentCallout('c-1');
+      const transport = CommunicationAdapterException.fromTransportError(
+        'getRoom',
+        new Error('RPC timeout')
+      );
+      (roomService.getMessages as Mock).mockRejectedValue(transport);
+
+      await expect(service.getActivityCountBatch([callout])).rejects.toBe(
+        transport
+      );
     });
 
     it('should parallelize comment RPC calls', async () => {
