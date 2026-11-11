@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import {
   AuthenticationException,
+  SecondFactorRequiredException,
   SessionStoreUnavailableException,
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -9,6 +10,7 @@ import { clearSessionCookie } from '@core/auth/oidc/session-cookie';
 import {
   BearerValidationError,
   CookieSessionInvalidError,
+  SecondFactorRequiredError,
 } from '@core/auth/oidc/strategies/auth.errors';
 import { SessionStoreUnavailableError } from '@core/auth/oidc/strategies/cookie-session.errors';
 import {
@@ -21,6 +23,7 @@ import {
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
 } from '@core/auth/oidc/strategies/strategy.names';
+import { SecondFactorRequiredHttpException } from '@core/auth/second-factor/second-factor-required.http.exception';
 import { decodeGuestNameHeader } from '@core/authentication/guest-name.resolver';
 import {
   CallHandler,
@@ -36,6 +39,7 @@ import { ConfigService } from '@nestjs/config';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { AlkemioConfig } from '@src/types';
 import type { Response } from 'express';
+import { type GraphQLResolveInfo, Kind } from 'graphql';
 import { IncomingMessage } from 'http';
 import passport from 'passport';
 import { Observable } from 'rxjs';
@@ -99,11 +103,38 @@ const AUTH_ENTRY_POINT_PATHS = new Set([
   '/api/auth/oidc/app-handoff',
 ]);
 
-function isAuthEntryPoint(req: IncomingMessage | undefined): boolean {
+function requestPath(req: IncomingMessage | undefined): string | null {
   const url = req?.url;
-  if (typeof url !== 'string') return false;
-  const path = url.split('?')[0].replace(/\/+$/, '') || '/';
-  return AUTH_ENTRY_POINT_PATHS.has(path);
+  if (typeof url !== 'string') return null;
+  return url.split('?')[0].replace(/\/+$/, '') || '/';
+}
+
+function isAuthEntryPoint(req: IncomingMessage | undefined): boolean {
+  const path = requestPath(req);
+  return path !== null && AUTH_ENTRY_POINT_PATHS.has(path);
+}
+
+/** A refused sign-in still reaches the session routes: sign-in, sign-out, id-token-hint. */
+function isOidcRoute(req: IncomingMessage | undefined): boolean {
+  return requestPath(req)?.startsWith('/api/auth/oidc/') ?? false;
+}
+
+/**
+ * Whether every root selection of the operation is the field `platform` (the
+ * public boot configuration). Aliases are allowed; a fragment at the root is
+ * not, since it can name any field.
+ */
+function isPlatformRootedOperation(context: ExecutionContext): boolean {
+  const info =
+    GqlExecutionContext.create(context).getInfo<GraphQLResolveInfo>();
+  const selections = info?.operation?.selectionSet.selections ?? [];
+  return (
+    selections.length > 0 &&
+    selections.every(
+      selection =>
+        selection.kind === Kind.FIELD && selection.name.value === 'platform'
+    )
+  );
 }
 
 @Injectable()
@@ -163,6 +194,23 @@ export class AuthInterceptor implements NestInterceptor {
     try {
       resolved = await passportAuthenticate(req);
     } catch (err) {
+      // A valid but under-assured sign-in: the cookie is never cleared for it,
+      // the second-factor page and id-token-hint need the session.
+      if (err instanceof SecondFactorRequiredError) {
+        if (context.getType<ContextType | 'graphql'>() === 'graphql') {
+          if (!isPlatformRootedOperation(context)) {
+            throw new SecondFactorRequiredException();
+          }
+        } else if (isOidcRoute(req)) {
+          (
+            req as IncomingMessage & { secondFactorRefused?: boolean }
+          ).secondFactorRefused = true;
+        } else {
+          throw new SecondFactorRequiredHttpException();
+        }
+        req.user = this.actorContextService.createAnonymous();
+        return next.handle();
+      }
       if (
         err instanceof BearerValidationError ||
         err instanceof CookieSessionInvalidError
@@ -388,7 +436,8 @@ const passportAuthenticate = async (req: IncomingMessage) => {
           if (
             err instanceof BearerValidationError ||
             err instanceof CookieSessionInvalidError ||
-            err instanceof SessionStoreUnavailableError
+            err instanceof SessionStoreUnavailableError ||
+            err instanceof SecondFactorRequiredError
           ) {
             reject(err);
             return;

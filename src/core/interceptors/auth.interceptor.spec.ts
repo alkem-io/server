@@ -1,11 +1,18 @@
+import {
+  AuthenticationException,
+  SecondFactorRequiredException,
+} from '@common/exceptions';
 import type { ActorContextService } from '@core/actor-context/actor.context.service';
 import {
   BearerValidationError,
   CookieSessionInvalidError,
+  SecondFactorRequiredError,
 } from '@core/auth/oidc/strategies/auth.errors';
 import { SessionStoreUnavailableError } from '@core/auth/oidc/strategies/cookie-session.errors';
+import { SecondFactorRequiredHttpException } from '@core/auth/second-factor/second-factor-required.http.exception';
 import { type CallHandler, type ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
+import { Kind, parse } from 'graphql';
 // We need to mock passport at module level since it's imported statically.
 // However, since vi.mock is not allowed, we'll use vi.spyOn on the imported passport module.
 import passport from 'passport';
@@ -800,5 +807,192 @@ describe('server#6332 — store-unreachable is 503, never 401 (D3)', () => {
     expect(res.setHeader).toHaveBeenCalledWith('Retry-After', '5');
     // Emphatically NOT let through to the resolver as an anonymous actor.
     expect(mockNext.handle).not.toHaveBeenCalled();
+  });
+});
+
+describe('AuthInterceptor — a sign-in refused for its second factor', () => {
+  const COOKIE = {
+    name: 'alkemio_session_sandbox',
+    secure: true,
+    domain: 'alkem.io',
+  };
+  let actorContextService: ActorContextService;
+  let interceptor: AuthInterceptor;
+  let next: CallHandler;
+
+  beforeEach(() => {
+    actorContextService = {
+      createAnonymous: vi
+        .fn()
+        .mockReturnValue({ isAnonymous: true, credentials: [] }),
+      createGuest: vi.fn(),
+    } as unknown as ActorContextService;
+    interceptor = new AuthInterceptor(actorContextService, {
+      get: vi.fn().mockReturnValue(COOKIE),
+    } as any);
+    next = { handle: vi.fn().mockReturnValue(of('response')) };
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  function rejectWith(err: unknown) {
+    vi.spyOn(passport, 'authenticate').mockImplementation(
+      (_s: any, _o: any, callback: any) => (_req: any) => callback(err)
+    );
+  }
+
+  function gqlCtx(document: string) {
+    const res = { cookie: vi.fn(), headersSent: false };
+    const req: any = {
+      headers: { cookie: 'alkemio_session_sandbox=s%3Aabc' },
+      res,
+    };
+    const operation = parse(document).definitions.find(
+      d => d.kind === Kind.OPERATION_DEFINITION
+    );
+    vi.spyOn(GqlExecutionContext, 'create').mockReturnValue({
+      getContext: vi.fn().mockReturnValue({ req }),
+      getInfo: vi.fn().mockReturnValue({ operation }),
+    } as any);
+    const ctx = {
+      getType: vi.fn().mockReturnValue('graphql'),
+    } as unknown as ExecutionContext;
+    return { ctx, req, res };
+  }
+
+  function httpCtx(url: string, headers: Record<string, string> = {}) {
+    const res = { cookie: vi.fn(), headersSent: false };
+    const req: any = {
+      method: 'GET',
+      url,
+      headers: { cookie: 'alkemio_session_sandbox=s%3Aabc', ...headers },
+      res,
+    };
+    const ctx = {
+      getType: vi.fn().mockReturnValue('http'),
+      switchToHttp: vi.fn().mockReturnValue({
+        getRequest: vi.fn().mockReturnValue(req),
+        getResponse: vi.fn().mockReturnValue(res),
+      }),
+    } as unknown as ExecutionContext;
+    return { ctx, req, res };
+  }
+
+  describe('GraphQL', () => {
+    it.each([
+      [
+        'the boot configuration query',
+        '{ platform { configuration { locations { domain } } } }',
+      ],
+      [
+        'an aliased platform root',
+        'query { p: platform { id } q: platform { id } }',
+      ],
+    ])('serves %s as the anonymous actor', async (_label, document) => {
+      rejectWith(new SecondFactorRequiredError());
+      const { ctx, req, res } = gqlCtx(document);
+
+      await interceptor.intercept(ctx, next);
+
+      expect(next.handle).toHaveBeenCalled();
+      expect(req.user).toEqual({ isAnonymous: true, credentials: [] });
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a me query', '{ me { id } }'],
+      [
+        'a mutation',
+        'mutation { updatePlatformSettings(settingsData: {}) { integration { iframeAllowedUrls } } }',
+      ],
+      ['a mixed platform and me document', '{ platform { id } me { id } }'],
+      [
+        'a fragment at the root',
+        'query { ...Root } fragment Root on Query { platform { id } }',
+      ],
+    ])('refuses %s with SECOND_FACTOR_REQUIRED and no http status', async (_label, document) => {
+      rejectWith(new SecondFactorRequiredError());
+      const { ctx, res } = gqlCtx(document);
+
+      const error = await interceptor.intercept(ctx, next).catch(e => e);
+
+      expect(error).toBeInstanceOf(SecondFactorRequiredException);
+      expect(error.extensions.code).toBe('SECOND_FACTOR_REQUIRED');
+      expect(error.extensions.http).toBeUndefined();
+      expect(error.extensions.details).toBeUndefined();
+      expect(next.handle).not.toHaveBeenCalled();
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it('fails closed on a strategy error of no known class (a rule read failed)', async () => {
+      rejectWith(new Error('connection terminated'));
+      const { ctx } = gqlCtx('{ me { id } }');
+
+      await expect(interceptor.intercept(ctx, next)).rejects.toBeInstanceOf(
+        AuthenticationException
+      );
+      expect(next.handle).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('REST', () => {
+    it.each([
+      '/api/auth/oidc/id-token-hint',
+      '/api/auth/oidc/logout',
+      '/api/auth/oidc/refresh?x=1',
+    ])('lets %s through as anonymous, flagged as refused', async url => {
+      rejectWith(new SecondFactorRequiredError());
+      const { ctx, req, res } = httpCtx(url);
+
+      await interceptor.intercept(ctx, next);
+
+      expect(next.handle).toHaveBeenCalled();
+      expect(req.user).toEqual({ isAnonymous: true, credentials: [] });
+      expect(req.secondFactorRefused).toBe(true);
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a REST route', '/rest/memo/abc/pdf', {}],
+      ['the forwardAuth route', '/rest/internal/forward-auth', {}],
+      [
+        'the assistant forwardAuth route',
+        '/rest/internal/assistant-forward-auth',
+        {},
+      ],
+      ['MCP after its guard ended anonymous', '/rest/mcp', {}],
+      [
+        'a bearer on a REST route',
+        '/rest/memo/abc/pdf',
+        { authorization: 'Bearer x' },
+      ],
+    ])('answers 403 second_factor_required on %s, never clearing the cookie', async (_label, url, headers) => {
+      rejectWith(new SecondFactorRequiredError());
+      const { ctx, req, res } = httpCtx(url, headers);
+      if (url === '/rest/mcp') {
+        req.user = { isAnonymous: true, actorID: '' };
+      }
+
+      const error = await interceptor.intercept(ctx, next).catch(e => e);
+
+      expect(error).toBeInstanceOf(SecondFactorRequiredHttpException);
+      expect(error.getStatus()).toBe(403);
+      expect(error.getResponse()).toEqual({
+        statusCode: 403,
+        error_code: 'second_factor_required',
+      });
+      expect(next.handle).not.toHaveBeenCalled();
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it('fails closed on a strategy error of no known class (a rule read failed)', async () => {
+      rejectWith(new Error('connection terminated'));
+      const { ctx } = httpCtx('/rest/memo/abc/pdf');
+
+      await expect(interceptor.intercept(ctx, next)).rejects.toBeInstanceOf(
+        AuthenticationException
+      );
+      expect(next.handle).not.toHaveBeenCalled();
+    });
   });
 });
