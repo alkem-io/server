@@ -3,6 +3,7 @@ import { DevicePushTokenService } from '@domain/device-push-token/device.push.to
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { MESSAGING_REDIS_CLIENT } from '@services/infrastructure/redis-client/messaging-redis.provider';
 import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
 import { getMetadataArgsStorage, In } from 'typeorm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -15,6 +16,8 @@ const mockConfigService = {
     return config[key];
   }),
 };
+
+const redis = { eval: vi.fn(), del: vi.fn() };
 
 describe('DevicePushTokenService', () => {
   let service: DevicePushTokenService;
@@ -34,6 +37,7 @@ describe('DevicePushTokenService', () => {
           provide: ConfigService,
           useValue: mockConfigService,
         },
+        { provide: MESSAGING_REDIS_CLIENT, useValue: redis },
       ],
     }).compile();
 
@@ -41,6 +45,27 @@ describe('DevicePushTokenService', () => {
     // The cap read runs on every register; a user at or under the cap evicts
     // nothing.
     repository.find!.mockResolvedValue([]);
+  });
+
+  it('incrementBadgeCount runs INCR and EXPIRE in one eval with a 30-day TTL', async () => {
+    redis.eval.mockResolvedValue(4);
+
+    await expect(service.incrementBadgeCount('user-1')).resolves.toBe(4);
+
+    expect(redis.eval).toHaveBeenCalledTimes(1);
+    expect(redis.eval).toHaveBeenCalledWith(
+      expect.any(String),
+      1,
+      'push:badge:user-1',
+      '2592000'
+    );
+  });
+
+  it('resetBadgeCount deletes the key of that user', async () => {
+    await service.resetBadgeCount('user-1');
+
+    expect(redis.del).toHaveBeenCalledTimes(1);
+    expect(redis.del).toHaveBeenCalledWith('push:badge:user-1');
   });
 
   describe('register (SC-001)', () => {

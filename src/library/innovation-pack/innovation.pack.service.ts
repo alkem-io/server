@@ -120,6 +120,14 @@ export class InnovationPackService {
     return await this.innovationPackRepository.save(innovationPack);
   }
 
+  /** Writes only the promote column, so a concurrent change to any other column is never overwritten. */
+  async setPromote(innovationPackID: string, promote: boolean): Promise<void> {
+    await this.innovationPackRepository.update(
+      { id: innovationPackID },
+      { promote }
+    );
+  }
+
   async update(
     innovationPackData: UpdateInnovationPackInput
   ): Promise<IInnovationPack> {

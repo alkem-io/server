@@ -21,7 +21,7 @@ Alkemio Server is a NestJS GraphQL server for the Alkemio collaboration platform
 | Package Manager | pnpm 10.17.1 via Corepack              |
 | Framework       | NestJS 10, TypeORM 0.3*, Apollo Server 4 |
 | Language        | TypeScript 5.3                          |
-| Database        | PostgreSQL 17.5                         |
+| Database        | PostgreSQL 18.6                         |
 | Messaging       | RabbitMQ queues                         |
 | Auth            | Ory Kratos/Oathkeeper                   |
 | Monitoring      | Elastic APM                             |
@@ -106,7 +106,7 @@ SDD is **mandatory** for feature work. Read `.specify/memory/constitution.md` fi
 
 ### Local Development Flow
 
-1. Start dependencies: `pnpm run start:services` (PostgreSQL 17.5, RabbitMQ, Redis, Ory Kratos/Oathkeeper)
+1. Start dependencies: `pnpm run start:services` (PostgreSQL 18.6, RabbitMQ, Redis, Ory Kratos/Oathkeeper)
 2. Run migrations: `pnpm run migration:run`
 3. Start server: `pnpm start:dev`
 4. Dev accounts seed themselves: the one-shot `dev-seed-roles` compose service waits (up to `DEV_SEED_WAIT_SECONDS`, default 3600) for the server, then registers them. Re-run by hand with `pnpm run dev:seed-roles` (idempotent)

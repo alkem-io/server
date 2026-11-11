@@ -154,6 +154,8 @@ export const CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ =
   'credentialRuleTypes-platformSupportListsRead';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_LICENSING_LISTS_READ =
   'credentialRuleTypes-platformLicensingListsRead';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_PROMOTE_MANAGE =
+  'credentialRuleTypes-platformPromoteManage';
 // QA server-C1-1 (ruling (b′) "mover-only reads"): platform-resource-admin's
 // own NON-cascading READ rules — A9 target resolution only, one identifier
 // per tree so a stored policy row names which mover read it carries.
