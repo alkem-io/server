@@ -1,4 +1,5 @@
 import { ActorContext } from '@core/actor-context/actor.context';
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
 import {
   CORRELATION_ID_REQUEST_KEY,
   getCorrelationId,
@@ -8,6 +9,8 @@ import { PassportStrategy } from '@nestjs/passport';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
 import { Strategy } from 'passport-custom';
+import { emitAudit } from '../audit';
+import { SecondFactorRequiredError } from './auth.errors';
 import {
   HydraBearerContext,
   HydraBearerValidator,
@@ -34,7 +37,10 @@ export class HydraBearerStrategy extends PassportStrategy(
   Strategy,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER
 ) {
-  constructor(private readonly validator: HydraBearerValidator) {
+  constructor(
+    private readonly validator: HydraBearerValidator,
+    private readonly secondFactorPolicy: SecondFactorPolicyService
+  ) {
     super();
   }
 
@@ -62,6 +68,27 @@ export class HydraBearerStrategy extends PassportStrategy(
         correlationId;
     }
 
-    return result.actorContext;
+    // A request-scoped copy: the validator's actor is the shared cached one.
+    // The token's `acr` alone decides, never its type or audience.
+    const actor = Object.assign(new ActorContext(), result.actorContext, {
+      secondFactor: { satisfied: result.ctx.acr === 'aal2' },
+    });
+    try {
+      await this.secondFactorPolicy.assertNotRefused(actor, new Date());
+    } catch (error) {
+      if (error instanceof SecondFactorRequiredError) {
+        emitAudit({
+          event_type: 'auth.second_factor.refused',
+          outcome: 'failure',
+          sub: result.ctx.sub || null,
+          client_id: result.ctx.client_id || null,
+          correlation_id: correlationId,
+          request_id: correlationId,
+          error_code: 'second_factor_required',
+        });
+      }
+      throw error;
+    }
+    return actor;
   }
 }

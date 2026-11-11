@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { Request } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SecondFactorPolicyService } from '../../second-factor/second-factor.policy.service';
 import { OidcService } from '../oidc.service';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
 import { addSessionToSubIndex } from '../session-index.redis';
@@ -216,6 +217,10 @@ async function buildStack(sids: string[]) {
     providers: [
       OidcSessionRevocationService,
       CookieSessionStrategy,
+      {
+        provide: SecondFactorPolicyService,
+        useValue: { assertNotRefused: vi.fn().mockResolvedValue(undefined) },
+      },
       { provide: OIDC_REDIS_CLIENT, useValue: shared.client },
       { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
       {

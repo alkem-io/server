@@ -15,6 +15,7 @@ import { SESSION_STORE_HANDLE } from '@core/auth/oidc/strategies/cookie-session.
 import { cookieSessionStoreUnavailableMiddleware } from '@core/auth/oidc/strategies/cookie-session.exception-filter';
 import { CookieSessionStrategy } from '@core/auth/oidc/strategies/cookie-session.strategy';
 import { AUTH_STRATEGY_OIDC_COOKIE_SESSION } from '@core/auth/oidc/strategies/strategy.names';
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -350,6 +351,10 @@ export async function createOidcHarness(
         },
       },
       CookieSessionStrategy,
+      {
+        provide: SecondFactorPolicyService,
+        useValue: { assertNotRefused: () => Promise.resolve() },
+      },
       ...(opts.appMode
         ? [{ provide: OIDC_REDIS_CLIENT, useValue: redis }]
         : []),

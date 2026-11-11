@@ -1,5 +1,6 @@
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { getCorrelationId } from '@core/middleware/correlation-id.middleware';
 import { Inject, Injectable, LoggerService, Optional } from '@nestjs/common';
@@ -25,7 +26,10 @@ import type {
   AlkemioSessionPayload,
   SessionStoreHandle,
 } from '../session-store.redis';
-import { CookieSessionInvalidError } from './auth.errors';
+import {
+  CookieSessionInvalidError,
+  SecondFactorRequiredError,
+} from './auth.errors';
 import {
   CookieSessionContext,
   SESSION_STORE_HANDLE,
@@ -58,6 +62,7 @@ export class CookieSessionStrategy extends PassportStrategy(
     private readonly sessionStore: SessionStoreHandle,
     private readonly authService: AuthenticationService,
     private readonly actorContextService: ActorContextService,
+    private readonly secondFactorPolicy: SecondFactorPolicyService,
     configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -238,11 +243,30 @@ export class CookieSessionStrategy extends PassportStrategy(
     // expiry = access-token expiry (self-renews — informational);
     // absoluteExpiry = the 30d ceiling that never extends (enforcement);
     // the sliding idle window renews on activity and cannot be stamped.
-    return Object.assign(new ActorContext(), actorContext, {
+    // `issuedAt` is the sign-in's start, which the privileged-session gates read.
+    const actor = Object.assign(new ActorContext(), actorContext, {
       expiry: payload.expires_at * 1000,
       absoluteExpiry: payload.absolute_expires_at * 1000,
       issuedAt: payload.created_at * 1000,
+      secondFactor: { satisfied: payload.acr === 'aal2' },
     });
+    try {
+      await this.secondFactorPolicy.assertNotRefused(actor, new Date());
+    } catch (error) {
+      if (error instanceof SecondFactorRequiredError) {
+        emitAudit({
+          event_type: 'auth.second_factor.refused',
+          outcome: 'failure',
+          sub: payload.sub || null,
+          client_id: payload.client_id || null,
+          correlation_id: correlationId,
+          request_id: requestId,
+          error_code: 'second_factor_required',
+        });
+      }
+      throw error;
+    }
+    return actor;
   }
 
   /**
