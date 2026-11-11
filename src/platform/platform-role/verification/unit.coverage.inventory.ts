@@ -178,6 +178,16 @@ export const AUDIT_WRITER_COVERAGE: Record<
     writeFailsSpec:
       'src/domain/communication/matrix-session/matrix.session.service.spec.ts',
   },
+  [PlatformAuditCategory.AUTHENTICATION]: {
+    // Second factor: fail-closed — a reset whose intent cannot be recorded
+    // does not run, and a rule switch whose transition cannot be recorded
+    // rolls back.
+    failMode: 'fail-closed',
+    writeSucceedsSpec:
+      'src/core/auth/second-factor/second-factor.audit.service.spec.ts',
+    writeFailsSpec:
+      'src/core/auth/second-factor/second-factor.audit.service.spec.ts',
+  },
 };
 
 // ---------------------------------------------------------------------------

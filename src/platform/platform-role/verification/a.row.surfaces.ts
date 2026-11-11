@@ -1085,6 +1085,16 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       gate: { requires: AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
     },
+    // `PlatformSettings.security` — the second-factor rule, read back only
+    // by the role that switches it; null to every other reader.
+    {
+      file: 'src/platform/platform-settings/platform.settings.resolver.fields.ts',
+      member: 'security',
+      kind: 'graphql-field',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+    },
   ],
 
   // ===== A11 — operational machinery (032, pre-existing) =====
