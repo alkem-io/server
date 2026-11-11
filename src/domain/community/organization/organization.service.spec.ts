@@ -5,6 +5,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { SecondFactorAuditService } from '@core/auth/second-factor/second-factor.audit.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -474,20 +475,6 @@ describe('OrganizationService', () => {
     });
   });
 
-  describe('updateOrganizationSettings', () => {
-    it('should delegate to settings service and save', async () => {
-      const org = { id: 'org-1', settings: {} } as unknown as IOrganization;
-      organizationSettingsService.updateSettings.mockReturnValue({
-        membership: {},
-      });
-      repository.save.mockImplementation((e: any) => Promise.resolve(e));
-
-      await service.updateOrganizationSettings(org, {} as any);
-      expect(organizationSettingsService.updateSettings).toHaveBeenCalled();
-      expect(repository.save).toHaveBeenCalled();
-    });
-  });
-
   describe('getMetrics', () => {
     it('should return metrics with associates count', async () => {
       const roleSet = { id: 'rs-1' };
@@ -639,5 +626,174 @@ describe('OrganizationService', () => {
       } as any);
       expect(profileService.updateProfile).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('OrganizationService.updateOrganizationSettings — the second-factor rule', () => {
+  const organizationId = 'org-1';
+
+  function makeTx() {
+    const saved: any[] = [];
+    return {
+      saved,
+      create: vi.fn((_entity: unknown, row: any) => ({ ...row })),
+      save: vi.fn(async (entityOrRow: any, maybeRow?: any) => {
+        const row = maybeRow ?? entityOrRow;
+        saved.push(row);
+        return row;
+      }),
+    };
+  }
+
+  async function build(opts: { auditFails?: boolean } = {}) {
+    const tx = makeTx();
+    const log: string[] = [];
+    const repository = {
+      save: vi.fn(),
+      manager: {
+        transaction: vi.fn(async (work: (m: unknown) => Promise<unknown>) => {
+          log.push('begin');
+          try {
+            const result = await work(tx);
+            log.push('commit');
+            return result;
+          } catch (error) {
+            log.push('rollback');
+            throw error;
+          }
+        }),
+      },
+    };
+    if (opts.auditFails) {
+      tx.save.mockImplementation(async (entityOrRow: any, maybeRow?: any) => {
+        if (!maybeRow && entityOrRow.category) throw new Error('db down');
+        return maybeRow ?? entityOrRow;
+      });
+    }
+    const module = await Test.createTestingModule({
+      providers: [
+        OrganizationService,
+        MockCacheManager,
+        MockWinstonProvider,
+        { provide: getRepositoryToken(Organization), useValue: repository },
+        // The real writer, so the row's attribution is the one shipped.
+        {
+          provide: SecondFactorAuditService,
+          useValue: new SecondFactorAuditService({} as never),
+        },
+        OrganizationSettingsService,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    return { service: module.get(OrganizationService), tx, log, repository };
+  }
+
+  const organization = (on: boolean) =>
+    ({
+      id: organizationId,
+      settings: {
+        privacy: { contributionRolesPubliclyVisible: false },
+        membership: {
+          allowUsersMatchingDomainToJoin: false,
+          allowSpaceInvitations: true,
+          allowApplications: true,
+        },
+        security: {
+          secondFactorRequired: on,
+          secondFactorRequiredSince: on ? '2026-10-01T08:00:00Z' : null,
+        },
+      },
+    }) as unknown as IOrganization;
+
+  const actorWith = (type: string, resourceID = '') =>
+    ({ actorID: 'actor-1', credentials: [{ type, resourceID }] }) as any;
+
+  const auditRows = (tx: ReturnType<typeof makeTx>) =>
+    tx.saved.filter(row => row.category === 'authentication');
+
+  it.each([
+    [
+      "the organisation's own admin, attributed self",
+      actorWith('organization-admin', organizationId),
+      'self',
+    ],
+    [
+      'a Platform Content Full Access holder, attributed that role',
+      actorWith('platform-content-full-access'),
+      'platform_content_full_access',
+    ],
+  ])('records an off→on by %s in the save transaction', async (_label, actor, role) => {
+    const { service, tx, log } = await build();
+
+    await service.updateOrganizationSettings(
+      organization(false),
+      { security: { secondFactorRequired: true } },
+      actor
+    );
+
+    expect(log).toEqual(['begin', 'commit']);
+    const rows = auditRows(tx);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      outcome: 'configuration_changed',
+      initiatorUserId: 'actor-1',
+      initiatorRole: role,
+      subjectOrganizationId: organizationId,
+      details: {
+        scope: 'organization',
+        organizationId,
+        from: false,
+        to: true,
+      },
+    });
+    expect(tx.saved[0].id).toBe(organizationId);
+  });
+
+  it('records an on→off', async () => {
+    const { service, tx } = await build();
+
+    await service.updateOrganizationSettings(
+      organization(true),
+      { security: { secondFactorRequired: false } },
+      actorWith('organization-owner', organizationId)
+    );
+
+    expect(auditRows(tx)[0].details).toMatchObject({
+      from: true,
+      to: false,
+      since: '2026-10-01T08:00:00Z',
+    });
+  });
+
+  it.each([
+    [
+      'a privacy-only save',
+      { privacy: { contributionRolesPubliclyVisible: true } },
+    ],
+    ['an on→on save', { security: { secondFactorRequired: true } }],
+  ])('writes no row for %s', async (_label, update) => {
+    const { service, tx } = await build();
+
+    await service.updateOrganizationSettings(
+      organization(true),
+      update,
+      actorWith('organization-admin', organizationId)
+    );
+
+    expect(auditRows(tx)).toEqual([]);
+  });
+
+  it('rolls the save back and throws when the row cannot be written', async () => {
+    const { service, log } = await build({ auditFails: true });
+
+    await expect(
+      service.updateOrganizationSettings(
+        organization(false),
+        { security: { secondFactorRequired: true } },
+        actorWith('organization-admin', organizationId)
+      )
+    ).rejects.toThrow('db down');
+    expect(log).toEqual(['begin', 'rollback']);
   });
 });

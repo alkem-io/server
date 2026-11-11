@@ -1,3 +1,4 @@
+import { SecondFactorModule } from '@core/auth/second-factor/second-factor.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
@@ -45,6 +46,7 @@ import { OrganizationLicenseService } from './organization.service.license';
     ProfileModule,
     AvatarCreatorModule,
     StorageAggregatorModule,
+    SecondFactorModule,
     TypeOrmModule.forFeature([Organization]),
   ],
   providers: [
