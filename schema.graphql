@@ -1806,6 +1806,8 @@ type ActorRoles {
 }
 
 type AdminResetUserSecondFactorResult {
+  """False when it was not asked, or the identity holds no password."""
+  passwordInvalidated: Boolean!
   """
   The second-factor credential types that were removed (totp, webauthn, lookup_secret).
   """
@@ -8663,6 +8665,10 @@ input AdminCommunicationReconcileForumHierarchyInput {
 }
 
 input AdminResetUserSecondFactorInput {
+  """
+  True whenever anyone else may hold the member's password: the password is then replaced with a secret nobody holds, and the account is regained only through the emailed recovery link. No default.
+  """
+  invalidatePassword: Boolean!
   """The user whose second factor is reset."""
   userID: UUID!
 }

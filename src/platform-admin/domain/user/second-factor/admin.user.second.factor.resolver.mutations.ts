@@ -36,7 +36,8 @@ export class AdminUserSecondFactorResolverMutations {
     );
     return this.adminUserSecondFactorService.resetSecondFactor(
       actorContext,
-      resetData.userID
+      resetData.userID,
+      resetData.invalidatePassword
     );
   }
 }

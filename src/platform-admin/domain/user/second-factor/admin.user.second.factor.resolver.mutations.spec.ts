@@ -8,9 +8,12 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { Test } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminUserSecondFactorResolverMutations } from './admin.user.second.factor.resolver.mutations';
 import { AdminUserSecondFactorService } from './admin.user.second.factor.service';
+import { AdminResetUserSecondFactorInput } from './dto/admin.user.second.factor.dto';
 
 // The platform policy as `platform.service.authorization.ts` builds it for
 // this privilege.
@@ -35,6 +38,7 @@ async function build() {
     resetSecondFactor: vi.fn().mockResolvedValue({
       removedCredentialTypes: ['totp'],
       sessionsRevoked: 1,
+      passwordInvalidated: true,
     }),
   };
   const module = await Test.createTestingModule({
@@ -75,16 +79,29 @@ describe('AdminUserSecondFactorResolverMutations.adminResetUserSecondFactor', ()
 
     const result = await resolver.adminResetUserSecondFactor(actor, {
       userID: 'user-2',
+      invalidatePassword: true,
     });
 
     expect(resetService.resetSecondFactor).toHaveBeenCalledWith(
       actor,
-      'user-2'
+      'user-2',
+      true
     );
     expect(result).toEqual({
       removedCredentialTypes: ['totp'],
       sessionsRevoked: 1,
+      passwordInvalidated: true,
     });
+  });
+
+  it('refuses an input that omits invalidatePassword', async () => {
+    const input = plainToInstance(AdminResetUserSecondFactorInput, {
+      userID: '8a2c3d4e-5f60-4a1b-9c2d-3e4f5a6b7c8d',
+    });
+
+    const errors = await validate(input);
+
+    expect(errors.map(e => e.property)).toEqual(['invalidatePassword']);
   });
 
   it('refuses a Platform Settings Admin with FORBIDDEN_POLICY', async () => {
@@ -93,7 +110,7 @@ describe('AdminUserSecondFactorResolverMutations.adminResetUserSecondFactor', ()
     const error = await resolver
       .adminResetUserSecondFactor(
         actorWith(AuthorizationCredential.PLATFORM_SETTINGS_ADMIN),
-        { userID: 'user-2' }
+        { userID: 'user-2', invalidatePassword: false }
       )
       .catch(e => e);
 
