@@ -45,6 +45,21 @@ export type SecondFactorRuleTransition = {
   since: string | null;
 };
 
+/**
+ * The transition a requested rule value makes, or `undefined` when the request
+ * leaves the rule as it is (omitted, null, or equal to the stored value). Only
+ * an off→on moves the switch-on time; an on→off keeps the stored one.
+ */
+export function secondFactorRuleTransition(
+  from: boolean,
+  requested: boolean | null | undefined,
+  storedSince: string | null | undefined
+): SecondFactorRuleTransition | undefined {
+  if (requested == null || requested === from) return undefined;
+  const since = requested ? new Date().toISOString() : (storedSince ?? null);
+  return { from, to: requested, since };
+}
+
 type ResetIds = { kratosIdentityId: string; correlationId: string };
 
 const RESET_OWNERS = [

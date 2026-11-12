@@ -1,6 +1,9 @@
 import { LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
-import type { SecondFactorRuleTransition } from '@core/auth/second-factor/second-factor.audit.service';
+import {
+  type SecondFactorRuleTransition,
+  secondFactorRuleTransition,
+} from '@core/auth/second-factor/second-factor.audit.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdatePlatformSettingsInput } from './dto/platform.settings.dto.update';
@@ -40,25 +43,19 @@ export class PlatformSettingsService {
       }
     }
 
-    const requested = updateData.security?.secondFactorRequiredForPlatformRoles;
-    const from =
-      platformSecuritySettings(settings).secondFactorRequiredForPlatformRoles;
-    if (typeof requested !== 'boolean' || requested === from) {
+    const transition = secondFactorRuleTransition(
+      platformSecuritySettings(settings).secondFactorRequiredForPlatformRoles,
+      updateData.security?.secondFactorRequiredForPlatformRoles,
+      settings.security?.secondFactorRequiredForPlatformRolesSince
+    );
+    if (!transition) {
       return { settings: updatedSettings };
     }
-    // Only an off→on moves the switch-on time; any other save keeps the
-    // stored value exactly as it is.
-    const since = requested
-      ? new Date().toISOString()
-      : (settings.security?.secondFactorRequiredForPlatformRolesSince ?? null);
     updatedSettings.security = {
-      secondFactorRequiredForPlatformRoles: requested,
-      secondFactorRequiredForPlatformRolesSince: since,
+      secondFactorRequiredForPlatformRoles: transition.to,
+      secondFactorRequiredForPlatformRolesSince: transition.since,
     };
-    return {
-      settings: updatedSettings,
-      transition: { from, to: requested, since },
-    };
+    return { settings: updatedSettings, transition };
   }
 
   public addIframeAllowedURLOrFail(

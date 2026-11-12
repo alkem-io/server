@@ -1,4 +1,7 @@
-import type { SecondFactorRuleTransition } from '@core/auth/second-factor/second-factor.audit.service';
+import {
+  type SecondFactorRuleTransition,
+  secondFactorRuleTransition,
+} from '@core/auth/second-factor/second-factor.audit.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateOrganizationSettingsEntityInput } from './dto/organization.settings.dto.update';
@@ -45,20 +48,18 @@ export class OrganizationSettingsService {
       }
     }
 
-    const requested = updateData.security?.secondFactorRequired;
-    const from = settings.security?.secondFactorRequired === true;
-    if (requested == null || requested === from) {
+    const transition = secondFactorRuleTransition(
+      settings.security?.secondFactorRequired === true,
+      updateData.security?.secondFactorRequired,
+      settings.security?.secondFactorRequiredSince
+    );
+    if (!transition) {
       return { settings };
     }
-    // Only an off→on moves the switch-on time; any other save keeps the
-    // stored value exactly as it is.
-    const since = requested
-      ? new Date().toISOString()
-      : (settings.security?.secondFactorRequiredSince ?? null);
     settings.security = {
-      secondFactorRequired: requested,
-      secondFactorRequiredSince: since,
+      secondFactorRequired: transition.to,
+      secondFactorRequiredSince: transition.since,
     };
-    return { settings, transition: { from, to: requested, since } };
+    return { settings, transition };
   }
 }
