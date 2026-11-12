@@ -324,6 +324,14 @@ export class AuthInterceptor implements NestInterceptor {
         throw new SessionStoreUnavailableException(LogContext.AUTH);
       }
 
+      // A strategy error of no known class (a second-factor rule read that
+      // failed) refuses every route that reads the actor. The entry points
+      // read none, so sign-out keeps working while the database is down.
+      if (err instanceof AuthenticationException && isAuthEntryPoint(req)) {
+        req.user = this.resolveUnauthenticated(req);
+        return next.handle();
+      }
+
       // Other errors (e.g. SessionStoreUnavailableError on a REST route →
       // handled by its own exception filter, which is reachable there now that
       // the allow-list preserves the type; AuthenticationException — rethrow to

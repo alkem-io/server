@@ -994,5 +994,31 @@ describe('AuthInterceptor — a sign-in refused for its second factor', () => {
       );
       expect(next.handle).not.toHaveBeenCalled();
     });
+
+    it.each([
+      '/api/auth/oidc/login?returnUrl=/',
+      '/api/auth/oidc/callback',
+      '/api/auth/oidc/logout',
+      '/api/auth/oidc/app-handoff',
+    ])('lets %s through as anonymous when a rule read fails, since it reads no actor', async url => {
+      rejectWith(new Error('connection terminated'));
+      const { ctx, req, res } = httpCtx(url);
+
+      await interceptor.intercept(ctx, next);
+
+      expect(next.handle).toHaveBeenCalled();
+      expect(req.user).toEqual({ isAnonymous: true, credentials: [] });
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it('still fails closed on id-token-hint, which reads the session', async () => {
+      rejectWith(new Error('connection terminated'));
+      const { ctx } = httpCtx('/api/auth/oidc/id-token-hint');
+
+      await expect(interceptor.intercept(ctx, next)).rejects.toBeInstanceOf(
+        AuthenticationException
+      );
+      expect(next.handle).not.toHaveBeenCalled();
+    });
   });
 });
