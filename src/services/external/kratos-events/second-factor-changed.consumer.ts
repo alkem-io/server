@@ -89,7 +89,7 @@ export class SecondFactorChangedConsumer {
         observedAt: data.observedAt,
         sourceFlowId: data.sourceFlowId,
         requestContext:
-          typeof userAgent === 'string'
+          typeof userAgent === 'string' && userAgent
             ? { userAgent: userAgent.slice(0, USER_AGENT_MAX_LENGTH) }
             : undefined,
       });

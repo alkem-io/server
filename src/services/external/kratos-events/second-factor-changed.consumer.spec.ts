@@ -104,12 +104,15 @@ describe('SecondFactorChangedConsumer', () => {
     expect(JSON.stringify(arg)).not.toContain('203.0.113.7');
   });
 
-  it('passes no requestContext when the event carries no user agent', async () => {
+  it.each([
+    ['no user agent', { clientIp: '203.0.113.7' }],
+    ['an empty user agent', { clientIp: '203.0.113.7', userAgent: '' }],
+  ])('passes no requestContext when the event carries %s', async (_label, request) => {
     const { consumer, observer } = buildConsumer();
     const { context } = buildContext();
 
     await consumer.handleSecondFactorChanged(
-      { ...validData, request: { clientIp: '203.0.113.7' } },
+      { ...validData, request },
       context
     );
 
