@@ -139,13 +139,6 @@ export class AdminUserSecondFactorService {
       tokenRevocationFailedCount = report.tokenRevocationFailedCount;
     } catch (error) {
       if (!(error instanceof ResetStepFailure)) throw error;
-      await this.auditService.recordResetFailed(actor, target, {
-        ...ids,
-        failedStep: error.failedStep,
-        failureReason: error.failureReason,
-        removedCredentialTypes: removedInOrder(removed),
-        passwordInvalidated,
-      });
       this.logger.error(
         {
           message: 'Second-factor reset did not complete',
@@ -157,6 +150,13 @@ export class AdminUserSecondFactorService {
         undefined,
         LogContext.AUTH
       );
+      await this.auditService.recordResetFailed(actor, target, {
+        ...ids,
+        failedStep: error.failedStep,
+        failureReason: error.failureReason,
+        removedCredentialTypes: removedInOrder(removed),
+        passwordInvalidated,
+      });
       throw new BaseException(
         'Second-factor reset did not complete',
         LogContext.AUTH,

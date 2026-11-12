@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { EMPTY, of, throwError } from 'rxjs';
+import { EMPTY, NEVER, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { NotificationExternalAdapter } from './notification.external.adapter';
 
@@ -77,6 +77,20 @@ describe('NotificationExternalAdapter', () => {
       await expect(
         adapter.publishSecondFactorChangeSecuritySignal({})
       ).rejects.toThrow('broker down');
+    });
+
+    it('rejects when the broker never confirms, so a stalled publish reaches the caller', async () => {
+      vi.useFakeTimers();
+      try {
+        notificationsClient.emit.mockReturnValue(NEVER);
+
+        const published = adapter.publishSecondFactorChangeSecuritySignal({});
+        const outcome = expect(published).rejects.toThrow();
+        await vi.advanceTimersByTimeAsync(5000);
+        await outcome;
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

@@ -48,6 +48,7 @@ function build(
     invalidateSessions?: () => Promise<void>;
     revoke?: () => Promise<unknown>;
     recordStarted?: () => Promise<void>;
+    recordFailed?: () => Promise<void>;
     notify?: () => Promise<void>;
     replacePassword?: (
       call: number
@@ -75,6 +76,7 @@ function build(
     }),
     recordResetFailed: vi.fn(async () => {
       calls.push('failed');
+      return opts.recordFailed?.();
     }),
   };
   const kratos = {
@@ -460,6 +462,22 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
     const failedRow = JSON.stringify(audit.recordResetFailed.mock.calls[0]);
     expect(failedRow).not.toContain(failure.message);
     expect(JSON.stringify(logger.error.mock.calls)).toContain(failure.message);
+  });
+
+  it('logs the failed step and its cause even when the failure row cannot be written', async () => {
+    const { service, logger } = build({
+      invalidateSessions: () => Promise.reject(httpError(503)),
+      recordFailed: () => Promise.reject(new Error('audit store down')),
+    });
+
+    await expect(
+      service.resetSecondFactor(admin, TARGET.id, false)
+    ).rejects.toThrow('audit store down');
+
+    const logged = JSON.stringify(logger.error.mock.calls);
+    expect(logged).toContain('kratos_sessions');
+    expect(logged).toContain('http_503');
+    expect(logged).toContain('Request failed with status code 503');
   });
 
   it('records kratos_sessions when the session invalidation fails, with what was already removed, and revokes nothing', async () => {
