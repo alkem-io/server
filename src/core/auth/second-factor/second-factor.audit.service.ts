@@ -173,6 +173,8 @@ export class SecondFactorAuditService {
     input: ResetIds & {
       failedStep: SecondFactorResetFailedStep;
       failureReason: SecondFactorResetFailureReason;
+      removedCredentialTypes: string[];
+      passwordInvalidated: boolean;
     }
   ): Promise<void> {
     await this.writeReset(
@@ -183,6 +185,9 @@ export class SecondFactorAuditService {
       {
         kratosIdentityId: input.kratosIdentityId,
         failedStep: input.failedStep,
+        // What took effect before the failure, so the row is not silent on it.
+        removedCredentialTypes: [...input.removedCredentialTypes],
+        passwordInvalidated: input.passwordInvalidated,
       },
       input.failureReason
     );

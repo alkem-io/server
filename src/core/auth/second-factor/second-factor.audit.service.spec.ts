@@ -196,11 +196,13 @@ describe('SecondFactorAuditService', () => {
       }
     });
 
-    it('writes a failed row with its closed-set reason', async () => {
+    it('writes a failed row with its closed-set reason and what took effect', async () => {
       await service.recordResetFailed(support, target, {
         ...ids,
-        failedStep: 'kratos_credentials',
+        failedStep: 'kratos_sessions',
         failureReason: 'http_500',
+        removedCredentialTypes: ['totp'],
+        passwordInvalidated: true,
       });
 
       expect(defaultManager.saved[0]).toMatchObject({
@@ -208,9 +210,16 @@ describe('SecondFactorAuditService', () => {
         failureReason: 'http_500',
         details: {
           kratosIdentityId: 'kratos-2',
-          failedStep: 'kratos_credentials',
+          failedStep: 'kratos_sessions',
+          removedCredentialTypes: ['totp'],
+          passwordInvalidated: true,
         },
       });
+      expect(
+        Object.keys(defaultManager.saved[0].details).every(k =>
+          RESET_DETAIL_KEYS.includes(k)
+        )
+      ).toBe(true);
     });
 
     it('rejects a reason outside the closed set at compile time', () => {
@@ -220,6 +229,8 @@ describe('SecondFactorAuditService', () => {
           failedStep: 'kratos_sessions',
           // @ts-expect-error raw error text is not a failure reason
           failureReason: 'connect ECONNREFUSED 10.0.0.1:4434',
+          removedCredentialTypes: [],
+          passwordInvalidated: false,
         });
       expect(write).toBeDefined();
     });

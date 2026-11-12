@@ -14,7 +14,7 @@ export class AdminResetUserSecondFactorInput {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      "True whenever anyone else may hold the member's password: the password is then replaced with a secret nobody holds, and the account is regained only through the emailed recovery link. No default.",
+      "True whenever anyone else may hold the member's password: the password is then replaced with a secret nobody holds. Other first factors (a passkey, a linked social sign-in) and the identity's addresses are not touched and must be checked separately. No default.",
   })
   @IsBoolean()
   invalidatePassword!: boolean;

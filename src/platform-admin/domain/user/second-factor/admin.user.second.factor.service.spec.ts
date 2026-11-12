@@ -462,9 +462,35 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
     expect(JSON.stringify(logger.error.mock.calls)).toContain(failure.message);
   });
 
-  it('records kratos_sessions when the session invalidation fails, and revokes nothing', async () => {
+  it('records kratos_sessions when the session invalidation fails, with what was already removed, and revokes nothing', async () => {
     const { service, audit, revocation } = build({
+      deleteCredential: async (_id, type) => type !== 'webauthn',
       invalidateSessions: () => Promise.reject(httpError(503)),
+    });
+
+    await expect(
+      service.resetSecondFactor(admin, TARGET.id, true)
+    ).rejects.toThrow();
+
+    expect(audit.recordResetFailed).toHaveBeenCalledWith(
+      admin,
+      expect.anything(),
+      expect.objectContaining({
+        failedStep: 'kratos_sessions',
+        failureReason: 'http_503',
+        removedCredentialTypes: ['totp', 'lookup_secret'],
+        passwordInvalidated: true,
+      })
+    );
+    expect(revocation.revokeAllForSub).not.toHaveBeenCalled();
+  });
+
+  it('records the removals of a pass that failed part-way', async () => {
+    const { service, audit } = build({
+      deleteCredential: async (_id, type) => {
+        if (type === 'webauthn') throw timeoutError();
+        return true;
+      },
     });
 
     await expect(
@@ -475,11 +501,11 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
       admin,
       expect.anything(),
       expect.objectContaining({
-        failedStep: 'kratos_sessions',
-        failureReason: 'http_503',
+        failedStep: 'kratos_credentials',
+        removedCredentialTypes: ['totp'],
+        passwordInvalidated: false,
       })
     );
-    expect(revocation.revokeAllForSub).not.toHaveBeenCalled();
   });
 
   it('records kratos_credentials when the second removal pass fails, and revokes nothing', async () => {

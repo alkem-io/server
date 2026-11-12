@@ -89,7 +89,7 @@ export class AdminUserSecondFactorService {
       invalidatePassword,
     });
 
-    let removed: Set<string>;
+    const removed = new Set<string>();
     let sessionsRevoked: number;
     let tokenRevocationFailedCount: number;
     let passwordInvalidated = false;
@@ -98,7 +98,7 @@ export class AdminUserSecondFactorService {
       if (invalidatePassword) {
         passwordInvalidated = !!(await this.replacePassword(kratosIdentityId));
       }
-      removed = await this.removeSecondFactors(kratosIdentityId);
+      await this.removeSecondFactors(kratosIdentityId, removed);
       await this.step('kratos_sessions', () =>
         this.kratosService.invalidateAllIdentitySessions(kratosIdentityId, {
           timeoutMs: KRATOS_TIMEOUT_MS,
@@ -106,9 +106,7 @@ export class AdminUserSecondFactorService {
       );
       // A session still open while the steps above ran may have enrolled a
       // new factor or set a new password: the second pass removes them too.
-      for (const type of await this.removeSecondFactors(kratosIdentityId)) {
-        removed.add(type);
-      }
+      await this.removeSecondFactors(kratosIdentityId, removed);
       if (invalidatePassword) {
         const replaced = await this.replacePassword(kratosIdentityId);
         if (replaced) {
@@ -145,6 +143,8 @@ export class AdminUserSecondFactorService {
         ...ids,
         failedStep: error.failedStep,
         failureReason: error.failureReason,
+        removedCredentialTypes: removedInOrder(removed),
+        passwordInvalidated,
       });
       this.logger.error(
         {
@@ -165,9 +165,7 @@ export class AdminUserSecondFactorService {
       );
     }
 
-    const removedCredentialTypes = SECOND_FACTOR_METHODS.filter(type =>
-      removed.has(type)
-    );
+    const removedCredentialTypes = removedInOrder(removed);
     await this.auditService.recordResetCompleted(actor, target, {
       ...ids,
       removedCredentialTypes,
@@ -206,9 +204,11 @@ export class AdminUserSecondFactorService {
     );
   }
 
-  /** One pass over the three second-factor types; resolves what it removed. */
-  private async removeSecondFactors(identityId: string): Promise<Set<string>> {
-    const removed = new Set<string>();
+  /** One pass over the three second-factor types, adding what it removed. */
+  private async removeSecondFactors(
+    identityId: string,
+    removed: Set<string>
+  ): Promise<void> {
     for (const type of SECOND_FACTOR_METHODS) {
       const wasPresent = await this.step('kratos_credentials', () =>
         this.kratosService.deleteIdentityCredential(identityId, type, {
@@ -217,7 +217,6 @@ export class AdminUserSecondFactorService {
       );
       if (wasPresent) removed.add(type);
     }
-    return removed;
   }
 
   private async step<T>(
@@ -230,6 +229,10 @@ export class AdminUserSecondFactorService {
       throw new ResetStepFailure(failedStep, failureReasonOf(error), error);
     }
   }
+}
+
+function removedInOrder(removed: Set<string>): string[] {
+  return SECOND_FACTOR_METHODS.filter(type => removed.has(type));
 }
 
 function failureReasonOf(error: unknown): SecondFactorResetFailureReason {
