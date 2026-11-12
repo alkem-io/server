@@ -249,6 +249,19 @@ export class DocumentService {
     return `${documentsBaseUrlPath}/${document.id}`;
   }
 
+  /** The text form of a uuid column value: what getPubliclyAccessibleURL appends to the base. */
+  private static readonly DOCUMENT_ID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+  /** True only for the address getPubliclyAccessibleURL produces: base, one '/', one document id. */
+  public isPubliclyAccessibleURL(url: string): boolean {
+    const base = `${this.getDocumentsBaseUrlPath()}/`;
+    return (
+      url.startsWith(base) &&
+      DocumentService.DOCUMENT_ID_PATTERN.test(url.slice(base.length))
+    );
+  }
+
   public async getDocumentFromURL(
     url: string,
     options?: FindOneOptions<Document>
