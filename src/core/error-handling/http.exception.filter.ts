@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { BaseHttpException } from '@common/exceptions/http';
+import { SecondFactorRequiredHttpException } from '@core/auth/second-factor/second-factor-required.http.exception';
 import {
   ArgumentsHost,
   Catch,
@@ -33,7 +34,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     const httpArguments = host.switchToHttp();
-    const response = httpArguments.getResponse<Response<RestErrorResponse>>();
+    const response = httpArguments.getResponse<Response>();
     const req = httpArguments.getRequest<HttpContext['req']>();
     const status = exception.getStatus();
     let userID = 'unknown';
@@ -51,6 +52,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
     this.logger.error(loggableException);
 
+    // Clients branch on `error_code`, which the generic shape below drops.
+    if (exception instanceof SecondFactorRequiredHttpException) {
+      response.status(status).json(exception.getResponse());
+      return exception;
+    }
+
     response.status(status).json({
       statusCode: status,
       code: exception.code,
@@ -65,7 +72,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         process.env.NODE_ENV !== 'production' ? exception.details : undefined,
       stack:
         process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
-    });
+    } satisfies RestErrorResponse);
     // something needs to be returned so the default ExceptionsHandler is not triggered
     return exception;
   }
