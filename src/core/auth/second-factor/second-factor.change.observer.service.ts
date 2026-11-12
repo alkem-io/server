@@ -6,6 +6,7 @@ import { extractNonLeakyReason } from '@domain/community/user-password-change/us
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { TimeoutError } from 'rxjs';
 import {
   SecondFactorAuditService,
   SecondFactorMethod,
@@ -75,7 +76,11 @@ export class SecondFactorChangeObserverService {
     await this.notify(user, observedAt, correlationId);
   }
 
-  /** Publishes the notice; on failure records it under `correlationId`. */
+  /**
+   * Publishes the notice; on failure records it under `correlationId`. A
+   * timed-out publish is not retried: the broker client buffers it and may
+   * still deliver it, so a retry would send the member the notice again.
+   */
   async notify(
     user: { id: string; email: string },
     observedAt: string,
@@ -86,10 +91,12 @@ export class SecondFactorChangeObserverService {
       observedAtISO8601: observedAt,
     };
     try {
-      await retryWithBackoff(() =>
-        this.notificationAdapter.publishSecondFactorChangeSecuritySignal(
-          payload
-        )
+      await retryWithBackoff(
+        () =>
+          this.notificationAdapter.publishSecondFactorChangeSecuritySignal(
+            payload
+          ),
+        { shouldRetry: error => !(error instanceof TimeoutError) }
       );
     } catch (error) {
       await this.auditService.recordSignalFailed(

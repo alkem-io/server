@@ -41,10 +41,11 @@ export class SecondFactorPolicyService {
   async coverage(
     credentials: ICredentialDefinition[]
   ): Promise<SecondFactorCoverage> {
-    const switchedOnAt = [
-      ...(await this.platformRuleSince(credentials)),
-      ...(await this.organizationRulesSince(credentials)),
-    ];
+    const [platform, organizations] = await Promise.all([
+      this.platformRuleSince(credentials),
+      this.organizationRulesSince(credentials),
+    ]);
+    const switchedOnAt = [...platform, ...organizations];
     if (switchedOnAt.length === 0) {
       return { covered: false, deadline: null };
     }

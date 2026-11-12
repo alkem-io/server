@@ -1,3 +1,4 @@
+import { TimeoutError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SecondFactorChangeObserverService } from './second-factor.change.observer.service';
 
@@ -173,6 +174,24 @@ describe('SecondFactorChangeObserverService', () => {
         observedAtISO8601: '2026-11-11T11:00:00.000Z',
       });
       expect(audit.recordFactorChange).not.toHaveBeenCalled();
+    });
+
+    it('publishes a timed-out notice once and records it as a timeout', async () => {
+      const { service, audit, notifications } = build({
+        publish: () => Promise.reject(new TimeoutError()),
+      });
+
+      await withRetryClock(() =>
+        service.notify(member, '2026-11-11T11:00:00.000Z', 'corr-reset')
+      );
+
+      expect(
+        notifications.publishSecondFactorChangeSecuritySignal
+      ).toHaveBeenCalledTimes(1);
+      expect(audit.recordSignalFailed).toHaveBeenCalledWith(
+        { id: 'user-2' },
+        { failureReason: 'timeout', correlationId: 'corr-reset' }
+      );
     });
 
     it('records the failed notice under the given correlation id, without an email', async () => {
