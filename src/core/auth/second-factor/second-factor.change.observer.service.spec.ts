@@ -40,6 +40,18 @@ function build(opts: {
   return { service, audit, userLookup, notifications, logger };
 }
 
+/** Runs `run` with the retry backoff driven by a fake clock, not real sleeps. */
+async function withRetryClock<T>(run: () => Promise<T>): Promise<T> {
+  vi.useFakeTimers();
+  try {
+    const result = run();
+    await vi.runAllTimersAsync();
+    return await result;
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 describe('SecondFactorChangeObserverService', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -123,19 +135,27 @@ describe('SecondFactorChangeObserverService', () => {
     });
 
     it('records a failed notice once and resolves when every publish fails', async () => {
-      const { service, audit, logger } = build({
+      const { service, audit, logger, notifications } = build({
         publish: () => Promise.reject(new Error('timeout reaching broker')),
       });
 
       await expect(
-        service.handleObservedChange({ identityId: 'kratos-1', method: 'totp' })
+        withRetryClock(() =>
+          service.handleObservedChange({
+            identityId: 'kratos-1',
+            method: 'totp',
+          })
+        )
       ).resolves.toBeUndefined();
 
+      expect(
+        notifications.publishSecondFactorChangeSecuritySignal
+      ).toHaveBeenCalledTimes(3);
       expect(audit.recordSignalFailed).toHaveBeenCalledTimes(1);
       const [, failure] = audit.recordSignalFailed.mock.calls[0] as any[];
       expect(SIGNAL_FAILURE_REASONS).toContain(failure.failureReason);
       expect(logger.error).toHaveBeenCalled();
-    }, 15_000);
+    });
   });
 
   describe('notify', () => {
@@ -160,7 +180,9 @@ describe('SecondFactorChangeObserverService', () => {
         publish: () => Promise.reject(new Error('ECONNREFUSED')),
       });
 
-      await service.notify(member, '2026-11-11T11:00:00.000Z', 'corr-reset');
+      await withRetryClock(() =>
+        service.notify(member, '2026-11-11T11:00:00.000Z', 'corr-reset')
+      );
 
       expect(audit.recordSignalFailed).toHaveBeenCalledWith(
         { id: 'user-2' },
@@ -169,6 +191,6 @@ describe('SecondFactorChangeObserverService', () => {
       expect(JSON.stringify(audit.recordSignalFailed.mock.calls)).not.toContain(
         'reset@example.com'
       );
-    }, 15_000);
+    });
   });
 });

@@ -59,12 +59,24 @@ describe('NotificationExternalAdapter', () => {
         observedAtISO8601: '2026-11-11T10:00:00.000Z',
       };
 
+      notificationsClient.emit.mockReturnValue(of(1));
+
       await adapter.publishSecondFactorChangeSecuritySignal(payload);
 
       expect(notificationsClient.emit).toHaveBeenCalledWith(
         NotificationEvent.USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL,
         payload
       );
+    });
+
+    it('rejects when the broker publish fails, so the caller can retry and record it', async () => {
+      notificationsClient.emit.mockReturnValue(
+        throwError(() => new Error('broker down'))
+      );
+
+      await expect(
+        adapter.publishSecondFactorChangeSecuritySignal({})
+      ).rejects.toThrow('broker down');
     });
   });
 

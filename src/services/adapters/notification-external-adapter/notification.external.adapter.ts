@@ -197,12 +197,13 @@ export class NotificationExternalAdapter {
 
   /**
    * Sent to the user's current email address whenever their second factor is
-   * changed, by themselves or by a support reset.
+   * changed, by themselves or by a support reset. Awaited, so a broker failure
+   * reaches the caller's retry and failure record.
    */
   public async publishSecondFactorChangeSecuritySignal(
     payload: unknown
   ): Promise<void> {
-    await this.sendExternalNotifications(
+    await this.sendExternalNotificationsAwaited(
       NotificationEvent.USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL,
       payload
     );
