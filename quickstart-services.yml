@@ -861,7 +861,10 @@ services:
       - MAINTENANCE_MODE=false
       - CORRELATION_ID_HEADER=X-Request-ID
       - LOGIN_BACKOFF_MAX_IDENTIFIER_ATTEMPTS=10
-      - LOGIN_BACKOFF_MAX_IP_ATTEMPTS=20
+      # Non-production (workspace#103 OG-4): a successful sign-in no longer clears
+      # the per-address counter (D34), and the test harness signs in every persona
+      # from one address. Acceptance and production keep the default of 20.
+      - LOGIN_BACKOFF_MAX_IP_ATTEMPTS=300
       - LOGIN_BACKOFF_IDENTIFIER_LOCKOUT_SECONDS=120
       - LOGIN_BACKOFF_IP_LOCKOUT_SECONDS=120
       - KRATOS_INTERNAL_URL=http://kratos:4433
