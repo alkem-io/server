@@ -22,7 +22,7 @@ export class AdminUserSecondFactorResolverMutations {
 
   @Mutation(() => AdminResetUserSecondFactorResult, {
     description:
-      "Platform Support or Platform Users Admin: remove a user's second factor (authenticator app, security keys, recovery codes) and end all their sessions. Audited fail-closed. Refuses self-targeting.",
+      "Platform Support or Platform Users Admin: remove a user's second factor (authenticator app, security keys, recovery codes) and end their identity-provider sessions and their platform sign-in sessions. A bearer token issued to an application outside the platform's own sign-in is not ended and stays valid until it expires. Audited fail-closed. Refuses self-targeting.",
   })
   async adminResetUserSecondFactor(
     @CurrentActor() actorContext: ActorContext,
