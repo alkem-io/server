@@ -40,4 +40,6 @@ export interface NativePushNotificationMessage {
   platform: string;
   token: string;
   payload: PushNotificationMessage['payload'];
+  /** The iOS app icon count. Absent when the counter could not be read. */
+  badge?: number;
 }
