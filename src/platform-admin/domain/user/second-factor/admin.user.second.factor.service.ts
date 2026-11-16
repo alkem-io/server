@@ -166,14 +166,21 @@ export class AdminUserSecondFactorService {
     }
 
     const removedCredentialTypes = removedInOrder(removed);
-    await this.auditService.recordResetCompleted(actor, target, {
-      ...ids,
-      removedCredentialTypes,
-      sessionsRevoked,
-      tokenRevocationFailedCount,
-      passwordInvalidated,
-      ...(passwordLastChangedAt !== undefined && { passwordLastChangedAt }),
-    });
+    // The reset has taken effect: a failed completion row must not also cost
+    // the member the notice, so the notice is attempted and the failure rethrown.
+    let auditFailure: { error: unknown } | undefined;
+    try {
+      await this.auditService.recordResetCompleted(actor, target, {
+        ...ids,
+        removedCredentialTypes,
+        sessionsRevoked,
+        tokenRevocationFailedCount,
+        passwordInvalidated,
+        ...(passwordLastChangedAt !== undefined && { passwordLastChangedAt }),
+      });
+    } catch (error) {
+      auditFailure = { error };
+    }
 
     try {
       await this.changeObserver.notify(
@@ -193,6 +200,7 @@ export class AdminUserSecondFactorService {
       );
     }
 
+    if (auditFailure) throw auditFailure.error;
     return { removedCredentialTypes, sessionsRevoked, passwordInvalidated };
   }
 

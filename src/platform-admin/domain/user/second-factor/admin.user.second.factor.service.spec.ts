@@ -49,6 +49,7 @@ function build(
     revoke?: () => Promise<unknown>;
     recordStarted?: () => Promise<void>;
     recordFailed?: () => Promise<void>;
+    recordCompleted?: () => Promise<void>;
     notify?: () => Promise<void>;
     replacePassword?: (
       call: number
@@ -73,6 +74,7 @@ function build(
     }),
     recordResetCompleted: vi.fn(async () => {
       calls.push('completed');
+      return opts.recordCompleted?.();
     }),
     recordResetFailed: vi.fn(async () => {
       calls.push('failed');
@@ -594,6 +596,17 @@ describe('AdminUserSecondFactorService.resetSecondFactor', () => {
       (audit.recordResetCompleted.mock.calls[0] as any[])[2]
         .tokenRevocationFailedCount
     ).toBe(2);
+  });
+
+  it('still sends the notice when the completion row fails, then fails', async () => {
+    const { service, observer } = build({
+      recordCompleted: () => Promise.reject(new Error('audit write failed')),
+    });
+
+    await expect(
+      service.resetSecondFactor(admin, TARGET.id, false)
+    ).rejects.toThrow('audit write failed');
+    expect(observer.notify).toHaveBeenCalledTimes(1);
   });
 
   it('does not fail a completed reset when the notice fails', async () => {

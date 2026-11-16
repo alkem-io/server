@@ -93,6 +93,8 @@ import {
   getCookieMiddleware,
   getSessionMiddleware,
 } from '@core/auth/oidc/session-middleware.holder';
+import { SecondFactorModule } from '@core/auth/second-factor/second-factor.module';
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
@@ -157,9 +159,12 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     }),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+      imports: [ConfigModule, SecondFactorModule],
+      inject: [ConfigService, SecondFactorPolicyService],
+      useFactory: async (
+        configService: ConfigService<AlkemioConfig, true>,
+        secondFactorPolicy: SecondFactorPolicyService
+      ) => {
         const endpointCluster = configService.get('hosting.endpoint_cluster', {
           infer: true,
         });
@@ -243,13 +248,16 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
             'graphql-ws': {
               // Sockets are authenticated once at connection time, so a
               // long-lived subscription would outlive its session: a cookie
-              // socket is re-validated before every event it would deliver.
+              // socket is re-validated before every event it would deliver,
+              // and a bearer socket's actor is held to the second-factor rule.
               onNext: (ctx, _message, args, result) =>
                 graphqlWsOnNext({
                   context: args.contextValue as IGraphQLContext,
                   socket: (ctx as WebsocketContext).extra.socket,
                   result,
                   authenticate: passportAuthenticate,
+                  assertNotRefused: actor =>
+                    secondFactorPolicy.assertNotRefused(actor, new Date()),
                   cookieName: configService.get(
                     'identity.authentication.providers.oidc.cookie.name',
                     { infer: true }

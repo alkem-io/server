@@ -25,6 +25,8 @@ export type GraphqlWsOnNextInput<T> = {
   result: T;
   /** Re-runs the sign-in strategies against the socket's upgrade request. */
   authenticate: (req: IncomingMessage) => Promise<ActorContext | undefined>;
+  /** The second-factor rule for an actor, read now: throws when it is refused. */
+  assertNotRefused: (actor: ActorContext) => Promise<void>;
   cookieName: string;
 };
 
@@ -40,6 +42,7 @@ export async function graphqlWsOnNext<T>({
   socket,
   result,
   authenticate,
+  assertNotRefused,
   cookieName,
 }: GraphqlWsOnNextInput<T>): Promise<T | undefined> {
   const req = context.req;
@@ -50,8 +53,22 @@ export async function graphqlWsOnNext<T>({
     socket.close(CloseCode.Unauthorized, 'Session expired');
     return undefined;
   }
-  // A bearer-authenticated socket is not re-validated.
+  // A bearer-authenticated socket is not re-validated, but the actor it opened
+  // as is still held to the second-factor rule before every event (FR-012): a
+  // socket opened in grace must not outlive the deadline.
   if (!req || resolveCookieSessionId(req, cookieName) === null) {
+    if (openedAs && !openedAs.isAnonymous) {
+      try {
+        await assertNotRefused(openedAs);
+      } catch (error) {
+        if (error instanceof SecondFactorRequiredError) {
+          socket.close(CloseCode.Forbidden, 'Second factor required');
+        } else {
+          socket.close(GRAPHQL_WS_TRY_AGAIN_LATER, 'Try again later');
+        }
+        return undefined;
+      }
+    }
     return result;
   }
 
