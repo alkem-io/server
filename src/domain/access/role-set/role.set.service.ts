@@ -30,6 +30,7 @@ import {
   IApplication,
 } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { ApplicationLifecycleState } from '@domain/access/application/application.service.lifecycle';
 import { CreateInvitationInput, IInvitation } from '@domain/access/invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
@@ -128,6 +129,7 @@ export class RoleSetService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationService: ApplicationService,
+    private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationService: InvitationService,
     private platformInvitationService: PlatformInvitationService,
     private formService: FormService,
@@ -1772,6 +1774,13 @@ export class RoleSetService {
     const application =
       await this.applicationService.createApplication(applicationData);
     application.roleSet = roleSet;
+
+    // The policy is applied before the one and only save, so the application
+    // is never stored with a policy that has no credential rules (#6763).
+    await this.applicationAuthorizationService.applyAuthorizationPolicy(
+      application,
+      roleSet.authorization
+    );
 
     const savedApplication = await this.applicationService.save(application);
 

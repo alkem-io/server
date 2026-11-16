@@ -371,15 +371,14 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
-    let application = await this.roleSetService.createApplication({
+    // Stored once, with its authorization policy already applied. A new
+    // application changes no other policy on the role set, so the
+    // role-set-wide policy pass is not run here.
+    const application = await this.roleSetService.createApplication({
       roleSetID: roleSet.id,
       questions: applicationData.questions,
       userID: actorContext.actorID,
     });
-
-    application = await this.applicationService.save(application);
-
-    await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
     if (roleSet.type === RoleSetType.SPACE) {
       const community =
