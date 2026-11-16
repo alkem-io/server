@@ -172,6 +172,7 @@ export const NON_ADMIN_SURFACES: Readonly<
   replaceCollaboraDocument: NON_ADMIN,
   replaceWhiteboardContentFromSource: NON_ADMIN,
   resetConversationVc: NON_ADMIN,
+  resetPushBadgeCount: NON_ADMIN,
   revokeMcpApiKey: NON_ADMIN,
   sendDirectMessageToUsers: NON_ADMIN,
   sendMessageReplyToRoom: NON_ADMIN,

@@ -147,6 +147,34 @@ export class NotificationPushAdapter {
       });
     }
 
+    // One count per user per dispatch, however many iOS devices they hold, so
+    // every device shows the same number. A store failure costs the badge,
+    // never the push.
+    const iosUserIds = new Set(
+      tokens.filter(t => t.platform === 'ios').map(t => t.userId)
+    );
+    const badges = new Map<string, number>();
+    await Promise.all(
+      [...iosUserIds].map(async userId => {
+        try {
+          badges.set(
+            userId,
+            await this.devicePushTokenService.incrementBadgeCount(userId)
+          );
+        } catch (error: any) {
+          this.logger.error?.(
+            {
+              message: 'Push badge store error - sending without a badge',
+              userId,
+              error: error?.message,
+            },
+            error?.stack,
+            LogContext.PUSH_NOTIFICATION
+          );
+        }
+      })
+    );
+
     // ...and one message per device token, to the SAME queue. No event filter:
     // the transport is per-recipient and event-agnostic by ruling.
     for (const deviceToken of tokens) {
@@ -155,6 +183,7 @@ export class NotificationPushAdapter {
         platform: deviceToken.platform,
         token: deviceToken.token,
         payload: payloadEnvelope,
+        badge: badges.get(deviceToken.userId),
       };
 
       await this.publishToQueue(message, {
