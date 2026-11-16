@@ -91,14 +91,21 @@ class Store {
   afterRoleSetApplicationsLoaded: () => void = () => {};
   private sequence = 0;
 
-  private toEntity(row: StoredApplication) {
+  /**
+   * `user` and `roleSet` are not eager on Application: like the database,
+   * only hand them out when the read asked for them.
+   */
+  private toEntity(
+    row: StoredApplication,
+    relations: { user?: boolean; roleSet?: boolean } = {}
+  ) {
     const stored = clone(row);
     return {
       id: stored.id,
       lifecycle: stored.lifecycle,
       authorization: { ...stored.policy, privilegeRules: [] },
-      user: { id: stored.userID },
-      roleSet: { id: stored.roleSetID },
+      ...(relations.user ? { user: { id: stored.userID } } : {}),
+      ...(relations.roleSet ? { roleSet: { id: stored.roleSetID } } : {}),
     };
   }
 
@@ -123,7 +130,7 @@ class Store {
     },
     findOne: async (options: any) => {
       const row = this.applications.get(options.where.id);
-      return row ? this.toEntity(row) : null;
+      return row ? this.toEntity(row, options.relations) : null;
     },
     find: async (options: any) =>
       [...this.applications.values()]
@@ -132,7 +139,7 @@ class Store {
             row.userID === options.where.user.id &&
             row.roleSetID === options.where.roleSet.id
         )
-        .map(row => this.toEntity(row)),
+        .map(row => this.toEntity(row, options.relations)),
   };
 
   policyRepository = {
