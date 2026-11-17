@@ -62,7 +62,14 @@ export class PlatformService {
     return platform;
   }
 
-  async savePlatform(platform: IPlatform): Promise<IPlatform> {
+  /** Pass `manager` to save inside the caller's transaction. */
+  async savePlatform(
+    platform: IPlatform,
+    manager?: EntityManager
+  ): Promise<IPlatform> {
+    if (manager) {
+      return await manager.save(Platform, platform);
+    }
     return await this.platformRepository.save(platform);
   }
 

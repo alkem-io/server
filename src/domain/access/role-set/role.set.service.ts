@@ -30,12 +30,15 @@ import {
   IApplication,
 } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { ApplicationLifecycleState } from '@domain/access/application/application.service.lifecycle';
 import { CreateInvitationInput, IInvitation } from '@domain/access/invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { CreatePlatformInvitationInput } from '@domain/access/invitation.platform/dto/platform.invitation.dto.create';
 import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
+import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
 import { resolveRoleCredential } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
@@ -128,8 +131,11 @@ export class RoleSetService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationService: ApplicationService,
+    private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationService: InvitationService,
+    private invitationAuthorizationService: InvitationAuthorizationService,
     private platformInvitationService: PlatformInvitationService,
+    private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private formService: FormService,
     private roleService: RoleService,
     private actorService: ActorService,
@@ -1773,6 +1779,13 @@ export class RoleSetService {
       await this.applicationService.createApplication(applicationData);
     application.roleSet = roleSet;
 
+    // The policy is applied before the one and only save, so the application
+    // is never stored with a policy that has no credential rules (#6763).
+    await this.applicationAuthorizationService.applyAuthorizationPolicy(
+      application,
+      roleSet.authorization
+    );
+
     const savedApplication = await this.applicationService.save(application);
 
     await this.roleSetCacheService.deleteMembershipStatusCache(
@@ -1797,6 +1810,13 @@ export class RoleSetService {
     const invitation =
       await this.invitationService.createInvitation(invitationData);
     invitation.roleSet = roleSet;
+
+    // The policy is applied before the one and only save, so the invitation
+    // is never stored with a policy that has no credential rules (#6763).
+    await this.invitationAuthorizationService.applyAuthorizationPolicy(
+      invitation,
+      roleSet.authorization
+    );
 
     const result = await this.invitationService.save(invitation);
     // Ensure that the contributor has a credential for the invitation
@@ -1836,6 +1856,14 @@ export class RoleSetService {
         externalInvitationInput
       );
     externalInvitation.roleSet = roleSet;
+
+    // As for invitations: policy first, then the one and only save (#6763).
+    externalInvitation.authorization =
+      await this.platformInvitationAuthorizationService.applyAuthorizationPolicy(
+        externalInvitation,
+        roleSet.authorization
+      );
+
     return await this.platformInvitationService.save(externalInvitation);
   }
 

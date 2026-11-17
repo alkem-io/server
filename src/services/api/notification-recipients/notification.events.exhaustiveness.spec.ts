@@ -335,6 +335,8 @@ describe('organization-invitation notification events — exhaustiveness (D14)',
       USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION:
         'email-only (notification.space.adapter)',
       USER_PASSWORD_CHANGE_SECURITY_SIGNAL: 'email-only (external adapter)',
+      USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL:
+        'email-only (external adapter)',
       // Organization email invitation: the recipient has no account, so the
       // event is email-only and listed in NOT_SUPPORTED_IN_APP_EVENTS.
       ORGANIZATION_ASSOCIATE_INVITATION_USER_PLATFORM:

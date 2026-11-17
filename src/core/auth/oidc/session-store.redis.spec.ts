@@ -200,4 +200,36 @@ describe('buildSessionStore.markTerminated — express-session compatibility', (
       Date.now()
     );
   });
+
+  it('nulls the sign-in assurance of the session it ends', async () => {
+    const store: Record<string, string> = {
+      [SESSION_KEY_PREFIX + 'sid-3']: JSON.stringify({
+        sub: 'kratos-id',
+        client_id: 'alkemio-web',
+        created_at: 1700000000,
+        acr: 'aal2',
+      }),
+    };
+
+    await buildSessionStore(makeRedis(store)).markTerminated(
+      'sid-3',
+      'second_factor_reset'
+    );
+
+    expect(readTombstone(store, 'sid-3').acr).toBeNull();
+  });
+
+  it('reads a payload written without acr as acr null', async () => {
+    const store: Record<string, string> = {
+      [SESSION_KEY_PREFIX + 'sid-4']: JSON.stringify({
+        sub: 'kratos-id',
+        client_id: 'alkemio-web',
+        created_at: 1700000000,
+      }),
+    };
+
+    const payload = await buildSessionStore(makeRedis(store)).get('sid-4');
+
+    expect(payload?.acr).toBeNull();
+  });
 });

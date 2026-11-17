@@ -209,6 +209,10 @@ export const organizationData: { organization: IOrganization } = {
         allowSpaceInvitations: true,
         allowApplications: true,
       },
+      security: {
+        secondFactorRequired: false,
+        secondFactorRequiredSince: null,
+      },
     },
   },
 };

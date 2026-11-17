@@ -112,7 +112,7 @@ describe('ApplicationService', () => {
   });
 
   describe('createApplication', () => {
-    it('should create application with user, authorization policy, and lifecycle', async () => {
+    it('should build an application with user, authorization policy, and lifecycle without persisting it', async () => {
       const mockUser = { id: 'user-1' } as any;
       const mockLifecycle = { id: 'lifecycle-1' } as any;
       const applicationData = {
@@ -135,7 +135,8 @@ describe('ApplicationService', () => {
       expect(result.user).toBe(mockUser);
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
-      expect(applicationRepository.save).toHaveBeenCalledTimes(2);
+      // Persisted by the caller, once its policy has been applied (#6763)
+      expect(applicationRepository.save).not.toHaveBeenCalled();
     });
   });
 

@@ -187,6 +187,23 @@ describe('AuditLogAnalyzeTool', () => {
       expect(content.window.days).toBe(7);
     });
 
+    it('flags a failed second-factor reset as an anomaly', async () => {
+      auditRepository.createQueryBuilder.mockReturnValue(
+        makeQueryBuilder([
+          createEntry({
+            outcome: PlatformAuditOutcome.SECOND_FACTOR_RESET_FAILED,
+          }),
+        ])
+      );
+
+      const result = await tool.execute(
+        { action: 'summary' },
+        createActorContext()
+      );
+
+      expect(parse(result).totals.anomalies).toBe(1);
+    });
+
     it('clamps the window to a maximum of 365 days', async () => {
       const result = await tool.execute(
         { action: 'summary', windowDays: 100000 },

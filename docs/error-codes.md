@@ -85,6 +85,7 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 | 11116 | LOGIN_FLOW_INIT                     | Login flow initialization failed.       | Try again or clear browser cache                  |
 | 11117 | SESSION_REFRESH_REQUIRED            | Please sign in again to continue.       | Re-authenticate, then retry the action            |
 | 11118 | PLATFORM_SUPPORT_SELF_TARGET        | You can't do this to your own account.  | Ask another Platform Support user or an org admin |
+| 11119 | SECOND_FACTOR_REQUIRED              | Please complete two-step verification.  | Raised by `AuthInterceptor`: the sign-in must complete a second factor; the client routes to `/second-factor` |
 
 ### 12xxx - Validation Errors
 

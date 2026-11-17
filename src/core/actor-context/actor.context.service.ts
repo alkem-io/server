@@ -235,6 +235,11 @@ export function isFeatureCredentialType(type: string): boolean {
   return type.startsWith('feature-');
 }
 
+/** A `platform-*` role credential: what the platform second-factor rule covers. */
+export function isPlatformCredentialType(type: string): boolean {
+  return type.startsWith('platform-');
+}
+
 const normalizeGuestName = (guestName?: string): string => {
   const trimmed = guestName?.trim();
   return trimmed && trimmed.length > 0

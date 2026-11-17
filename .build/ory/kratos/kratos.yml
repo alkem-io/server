@@ -62,6 +62,27 @@ selfservice:
           origins:
             - http://localhost:3000
             - http://localhost:3001
+    totp:
+      enabled: true
+      config:
+        issuer: Alkemio Local
+    lookup_secret:
+      enabled: true
+    webauthn:
+      enabled: true
+      config:
+        # Second factor only; passkeys stay the passwordless method.
+        passwordless: false
+        rp:
+          id: localhost
+          display_name: Alkemio
+          origins:
+            - http://localhost:3000
+            - http://localhost:3001
+    # The settings flow takes no change to the email or the name: an email is
+    # changed through the server, which keeps the recovery address safe.
+    profile:
+      enabled: false
 
   flows:
     error:
@@ -70,6 +91,7 @@ selfservice:
     settings:
       ui_url: http://localhost:3000/settings
       privileged_session_max_age: 15m
+      required_aal: highest_available
       after:
         default_browser_return_url: http://localhost:3000
         password:
@@ -82,6 +104,38 @@ selfservice:
             - hook: web_hook
               config:
                 url: http://kratos-hooks:8080/api/v1/webhooks/kratos/password-changed
+                method: POST
+                body: file:///etc/config/kratos/password-changed.jsonnet
+                response:
+                  ignore: true
+                  parse: false
+        # Report a member's own enrolment or removal of a second factor,
+        # fail-open like the password hook above.
+        totp:
+          hooks:
+            - hook: web_hook
+              config:
+                url: http://kratos-hooks:8080/api/v1/webhooks/kratos/second-factor-changed?method=totp
+                method: POST
+                body: file:///etc/config/kratos/password-changed.jsonnet
+                response:
+                  ignore: true
+                  parse: false
+        webauthn:
+          hooks:
+            - hook: web_hook
+              config:
+                url: http://kratos-hooks:8080/api/v1/webhooks/kratos/second-factor-changed?method=webauthn
+                method: POST
+                body: file:///etc/config/kratos/password-changed.jsonnet
+                response:
+                  ignore: true
+                  parse: false
+        lookup_secret:
+          hooks:
+            - hook: web_hook
+              config:
+                url: http://kratos-hooks:8080/api/v1/webhooks/kratos/second-factor-changed?method=lookup_secret
                 method: POST
                 body: file:///etc/config/kratos/password-changed.jsonnet
                 response:
@@ -166,6 +220,39 @@ selfservice:
                 response:
                   ignore: false
                   parse: true
+        totp:
+          hooks:
+            - hook: require_verified_address
+            - hook: web_hook
+              config:
+                url: http://oidc-service:8080/webhooks/kratos/post-login
+                method: POST
+                body: file:///etc/config/kratos/alkemio-claims.jsonnet
+                response:
+                  ignore: false
+                  parse: true
+        lookup_secret:
+          hooks:
+            - hook: require_verified_address
+            - hook: web_hook
+              config:
+                url: http://oidc-service:8080/webhooks/kratos/post-login
+                method: POST
+                body: file:///etc/config/kratos/alkemio-claims.jsonnet
+                response:
+                  ignore: false
+                  parse: true
+        webauthn:
+          hooks:
+            - hook: require_verified_address
+            - hook: web_hook
+              config:
+                url: http://oidc-service:8080/webhooks/kratos/post-login
+                method: POST
+                body: file:///etc/config/kratos/alkemio-claims.jsonnet
+                response:
+                  ignore: false
+                  parse: true
         oidc:
           hooks:
             - hook: web_hook
@@ -214,6 +301,8 @@ session:
   # Mirrors the prod/infra base values (720h / 360h).
   lifespan: 720h
   earliest_possible_extend: 360h
+  whoami:
+    required_aal: highest_available
 
 log:
   level: debug

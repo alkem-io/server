@@ -1,8 +1,10 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { SecondFactorAuditService } from '@core/auth/second-factor/second-factor.audit.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
 import { PlatformConfigurationAuditService } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.service';
@@ -96,9 +98,9 @@ describe('PlatformResolverMutations', () => {
         undefined
       );
       const updatedSettings = { integration: { someKey: 'value' } };
-      (platformSettingsService.updateSettings as Mock).mockResolvedValue(
-        updatedSettings
-      );
+      (platformSettingsService.updateSettings as Mock).mockReturnValue({
+        settings: updatedSettings,
+      });
       (platformService.savePlatform as Mock).mockResolvedValue(mockPlatform);
 
       const settingsData = { integration: { someKey: 'value' } } as any;
@@ -235,9 +237,9 @@ describe('PlatformResolverMutations', () => {
       (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
         undefined
       );
-      (platformSettingsService.updateSettings as Mock).mockResolvedValue(
-        mockPlatform.settings
-      );
+      (platformSettingsService.updateSettings as Mock).mockReturnValue({
+        settings: mockPlatform.settings,
+      });
       (platformService.savePlatform as Mock).mockResolvedValue(mockPlatform);
       const configurationAudit = module.get(
         PlatformConfigurationAuditService
@@ -375,5 +377,128 @@ describe('PlatformResolverMutations', () => {
         })
       );
     });
+  });
+});
+
+describe('PlatformResolverMutations.updatePlatformSettings — the second-factor rule', () => {
+  const actor = { actorID: 'actor-1' } as ActorContext;
+  const platform = {
+    id: 'p1',
+    authorization: { id: 'auth-1' },
+    settings: {
+      integration: { iframeAllowedUrls: [], notificationEmailBlacklist: [] },
+    },
+  };
+
+  async function build(opts: {
+    transition?: { from: boolean; to: boolean; since: string | null };
+    recordRuleTransition?: () => Promise<void>;
+  }) {
+    const module = await Test.createTestingModule({
+      providers: [PlatformResolverMutations, MockWinstonProvider],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    const resolver = module.get(PlatformResolverMutations);
+    const platformService = module.get(PlatformService) as any;
+    const settingsService = module.get(PlatformSettingsService) as any;
+    const secondFactorAudit = module.get(SecondFactorAuditService) as any;
+    const configurationAudit = module.get(
+      PlatformConfigurationAuditService
+    ) as any;
+    const entityManager = module.get(getEntityManagerToken()) as any;
+
+    const log: string[] = [];
+    const tx = { id: 'tx' };
+    entityManager.transaction.mockImplementation(
+      async (work: (m: unknown) => Promise<void>) => {
+        log.push('begin');
+        try {
+          await work(tx);
+          log.push('commit');
+        } catch (error) {
+          log.push('rollback');
+          throw error;
+        }
+      }
+    );
+    platformService.getPlatformOrFail.mockResolvedValue({ ...platform });
+    platformService.savePlatform.mockImplementation(async () => {
+      log.push('save');
+    });
+    settingsService.updateSettings.mockReturnValue({
+      settings: { ...platform.settings },
+      transition: opts.transition,
+    });
+    secondFactorAudit.recordRuleTransition.mockImplementation(async () => {
+      log.push('transition');
+      return opts.recordRuleTransition?.();
+    });
+    configurationAudit.recordChangeForActor.mockResolvedValue(undefined);
+    return {
+      resolver,
+      platformService,
+      secondFactorAudit,
+      configurationAudit,
+      log,
+      tx,
+    };
+  }
+
+  it.each([
+    ['off→on', { from: false, to: true, since: '2026-11-11T10:00:00.000Z' }],
+    ['on→off', { from: true, to: false, since: '2026-11-01T10:00:00.000Z' }],
+  ])('records %s in the transaction that saves the settings', async (_label, transition) => {
+    const { resolver, platformService, secondFactorAudit, log, tx } =
+      await build({ transition });
+
+    await resolver.updatePlatformSettings(actor, {
+      security: { secondFactorRequiredForPlatformRoles: transition.to },
+    } as any);
+
+    expect(log).toEqual(['begin', 'save', 'transition', 'commit']);
+    expect(platformService.savePlatform).toHaveBeenCalledWith(
+      expect.anything(),
+      tx
+    );
+    expect(secondFactorAudit.recordRuleTransition).toHaveBeenCalledWith(
+      tx,
+      actor,
+      { scope: 'platform', ...transition }
+    );
+  });
+
+  it('rolls the save back and throws when the transition row cannot be written', async () => {
+    const { resolver, log, configurationAudit } = await build({
+      transition: { from: false, to: true, since: '2026-11-11T10:00:00.000Z' },
+      recordRuleTransition: () => Promise.reject(new Error('db down')),
+    });
+
+    await expect(
+      resolver.updatePlatformSettings(actor, {
+        security: { secondFactorRequiredForPlatformRoles: true },
+      } as any)
+    ).rejects.toThrow('db down');
+    expect(log).toEqual(['begin', 'save', 'transition', 'rollback']);
+    expect(configurationAudit.recordChangeForActor).not.toHaveBeenCalled();
+  });
+
+  it('writes no transition row for a save without a transition, and records the whole input', async () => {
+    const { resolver, secondFactorAudit, configurationAudit } = await build({});
+    const settingsData = {
+      integration: { iframeAllowedUrls: ['https://x.example'] },
+    } as any;
+
+    await resolver.updatePlatformSettings(actor, settingsData);
+
+    expect(secondFactorAudit.recordRuleTransition).not.toHaveBeenCalled();
+    expect(configurationAudit.recordChangeForActor).toHaveBeenCalledWith(
+      actor,
+      expect.any(Array),
+      expect.objectContaining({
+        setting: 'platformSettings',
+        newValue: settingsData,
+      })
+    );
   });
 });

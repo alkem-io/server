@@ -316,6 +316,38 @@ describe('NativePushSenderService', () => {
     });
   });
 
+  describe('the app icon badge', () => {
+    it('sets aps.badge from the message', async () => {
+      const { request } = stubApnsSession(200);
+
+      await createService().send(createMessage({ badge: 7 }));
+
+      expect(JSON.parse(request.end.mock.calls[0][0]).aps.badge).toBe(7);
+    });
+
+    it('omits aps.badge when the message has none', async () => {
+      const { request } = stubApnsSession(200);
+
+      await createService().send(createMessage());
+
+      const { aps } = JSON.parse(request.end.mock.calls[0][0]);
+      expect(Object.keys(aps)).toEqual(['alert']);
+    });
+
+    it('leaves the FCM body unchanged when the message has a badge', async () => {
+      stubFcmResponses({ ok: true, status: 200 });
+      await createService().send(createMessage({ platform: 'android' }));
+      stubFcmResponses({ ok: true, status: 200 });
+      await createService().send(
+        createMessage({ platform: 'android', badge: 5 })
+      );
+
+      const withoutBadge = JSON.parse(mockFetch.mock.calls[1][1].body);
+      const withBadge = JSON.parse(mockFetch.mock.calls[3][1].body);
+      expect(withBadge).toEqual(withoutBadge);
+    });
+  });
+
   describe('the error taxonomy (FR-008)', () => {
     // Exactly two permanent codes, both APNs.
     it('deletes the row on APNs 410', async () => {
