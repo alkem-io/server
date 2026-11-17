@@ -119,16 +119,18 @@ services:
   # 4436 is Swarmail's UI and REST API (its port 8025), 4437 the
   # MailSlurper-compatible API, 1025 plain SMTP. Mail is kept in memory.
   swarmail:
-    image: ghcr.io/feedback-loop-ai/swarmail:0.4.0
+    image: ghcr.io/feedback-loop-ai/swarmail:0.5.0
     restart: unless-stopped
     stop_grace_period: 30s
     environment:
       - SWARMAIL_MAILSLURPER_LISTEN=0.0.0.0:4437
       - SWARMAIL_MAX_PER_INBOX=2000
+    # Loopback only: the API is unauthenticated (it reads and deletes mail,
+    # injects SMTP failures and sets webhooks).
     ports:
-      - "4436:8025"
-      - "4437:4437"
-      - "1025:1025"
+      - "127.0.0.1:4436:8025"
+      - "127.0.0.1:4437:4437"
+      - "127.0.0.1:1025:1025"
 
   kratos-migrate:
     image: oryd/kratos:v26.2.0

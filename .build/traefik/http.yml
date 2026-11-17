@@ -559,14 +559,20 @@ http:
       entryPoints:
         - 'synapse-admin'
 
+    # Loopback hostnames only: Swarmail binds 0.0.0.0 in its container, where
+    # its own Host check (its DNS-rebinding defence) is off, so Traefik refuses
+    # a rebound hostname before the unauthenticated mail API sees it.
     mailslurper-api:
-      rule: 'PathPrefix(`/`)'
+      rule: 'Host(`localhost`) || Host(`127.0.0.1`)'
       service: 'mailslurper-api'
       entryPoints:
         - 'mailslurper-api'
 
+    # Loopback hostnames only: Swarmail binds 0.0.0.0 in its container, where
+    # its own Host check (its DNS-rebinding defence) is off, so Traefik refuses
+    # a rebound hostname before the unauthenticated mail API sees it.
     swarmail-http:
-      rule: 'PathPrefix(`/`)'
+      rule: 'Host(`localhost`) || Host(`127.0.0.1`)'
       service: 'swarmail-http'
       entryPoints:
         - 'swarmail-http'

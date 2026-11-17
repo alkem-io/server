@@ -28,9 +28,12 @@ services:
       - 3000:80
       - 5432:5432
       - 8008:8008
-      - 4436:4436
-      - 4437:4437
-      - 1025:1025
+      # Swarmail (mail sink): loopback only. Its API is unauthenticated and can
+      # read or delete mail, inject SMTP failures and set webhooks, so it is not
+      # published to other machines on the network.
+      - 127.0.0.1:4436:4436
+      - 127.0.0.1:4437:4437
+      - 127.0.0.1:1025:1025
       - 5672:5672
       - 15672:15672
       - 6379:6379
@@ -321,7 +324,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_swarmail
-    image: ghcr.io/feedback-loop-ai/swarmail:0.4.0
+    image: ghcr.io/feedback-loop-ai/swarmail:0.5.0
     restart: always
     # Swarmail drains for up to 10s on SIGTERM; give it room.
     stop_grace_period: 30s
@@ -330,10 +333,8 @@ services:
       - SWARMAIL_MAILSLURPER_LISTEN=0.0.0.0:4437
       # Oldest mail is evicted past this many per inbox (default 100000).
       - SWARMAIL_MAX_PER_INBOX=2000
-    ports:
-      - 8025
-      - 4437
-      - 1025
+    # No ports of its own: Traefik reaches it on alkemio_dev_net and publishes
+    # 4436/4437/1025 on loopback only.
     networks:
       - alkemio_dev_net
 
