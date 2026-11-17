@@ -115,13 +115,19 @@ services:
       timeout: 10s
       retries: 5
 
-  mailslurper:
-    image: oryd/mailslurper:latest-smtps
+  # Mail sink (Swarmail, which replaced MailSlurper), on MailSlurper's ports:
+  # 4436 is Swarmail's UI and REST API (its port 8025), 4437 the
+  # MailSlurper-compatible API, 1025 plain SMTP. Mail is kept in memory.
+  swarmail:
+    image: ghcr.io/feedback-loop-ai/swarmail:0.5.0
     restart: unless-stopped
-    ports:
-      - "4436:4436"
-      - "4437:4437"
-      - "1025:1025"
+    stop_grace_period: 30s
+    environment:
+      - SWARMAIL_MAILSLURPER_LISTEN=0.0.0.0:4437
+      - SWARMAIL_MAX_PER_INBOX=2000
+    # No ports of its own: Traefik publishes 4436/4437/1025 on loopback and
+    # applies .build/traefik/http.yml's loopback Host rules (the API is
+    # unauthenticated; Swarmail's own Host check is off on 0.0.0.0).
 
   kratos-migrate:
     image: oryd/kratos:v26.2.0
@@ -324,10 +330,11 @@ services:
       - RABBITMQ_PASSWORD=alkemio!
       - LOGGING_CONSOLE_ENABLED=true
       - LOGGING_LEVEL_CONSOLE=verbose
-      - EMAIL_SMTP_HOST=mailslurper
+      - EMAIL_SMTP_HOST=swarmail
       - EMAIL_MULTI_PROVIDER_STRATEGY=fallback
       - EMAIL_SMTP_SECURE=false
       - EMAIL_SMTP_PORT=1025
+      - EMAIL_SMTP_USER=default
       - ENVIRONMENT=dev
       - ALKEMIO_SERVER_ENDPOINT=http://app:4000/graphql
       - ALKEMIO_WEBCLIENT_ENDPOINT=http://localhost:3000
@@ -345,15 +352,24 @@ services:
       - oathkeeper
       - kratos
       - hydra
+      - swarmail
     ports:
       - "3000:3000"
       - "8080:8080"
+      # Swarmail (mail sink), loopback only, through http.yml's routers: their
+      # Host(localhost) || Host(127.0.0.1) rules are the DNS-rebinding defence.
+      - "127.0.0.1:4436:4436"
+      - "127.0.0.1:4437:4437"
+      - "127.0.0.1:1025:1025"
     command:
       - "--api.insecure=true"
       - "--api.dashboard=true"
       - "--providers.file.filename=/etc/traefik/http.yml"
       - "--providers.file.watch=true"
       - "--entrypoints.web.address=:3000"
+      - "--entrypoints.swarmail-http.address=:4436"
+      - "--entrypoints.mailslurper-api.address=:4437"
+      - "--entrypoints.swarmail-smtp.address=:1025"
       - "--accesslog=true"
       - "--log.level=DEBUG"
     volumes:
