@@ -153,7 +153,7 @@ class Store {
           },
         });
         this.rows.set(row.id, row);
-        this.writes.push(row);
+        this.writes.push(clone(row));
         return entity;
       },
       findOne: async (options: any) => {

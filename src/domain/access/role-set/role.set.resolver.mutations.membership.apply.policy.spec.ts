@@ -125,7 +125,7 @@ class Store {
         },
       });
       this.applications.set(row.id, row);
-      this.applicationWrites.push(row);
+      this.applicationWrites.push(clone(row));
       return application;
     },
     findOne: async (options: any) => {
