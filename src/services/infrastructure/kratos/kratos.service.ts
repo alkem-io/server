@@ -1,4 +1,4 @@
-import { X509Certificate } from 'node:crypto';
+import { randomBytes, X509Certificate } from 'node:crypto';
 import { LogContext } from '@common/enums';
 import { AuthenticationType } from '@common/enums/authentication.type';
 import {
@@ -11,6 +11,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   Configuration,
+  DeleteIdentityCredentialsTypeEnum,
   FrontendApi,
   type GetIdentityIncludeCredentialEnum,
   Identity,
@@ -24,6 +25,12 @@ import { OryDefaultIdentitySchema } from './types/ory.default.identity.schema';
 
 export const CLEVERBASE_SIGNING_CERTIFICATE_CLAIM =
   'com.cleverbase.signing_certificate';
+
+/** The three second-factor credential types a support reset removes. */
+type SecondFactorCredentialType =
+  | typeof DeleteIdentityCredentialsTypeEnum.Totp
+  | typeof DeleteIdentityCredentialsTypeEnum.Webauthn
+  | typeof DeleteIdentityCredentialsTypeEnum.LookupSecret;
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system:
@@ -153,7 +160,7 @@ export class KratosService {
    *   - `cleverbase` -> `AuthenticationType.CLEVERBASE`
    *   - `apple`     -> `AuthenticationType.APPLE`
    * - If the identity has password credentials, it adds `AuthenticationType.EMAIL`.
-   * - If the identity has passkey (or legacy webauthn) credentials, it adds
+   * - If the identity has passkey credentials, it adds
    *   `AuthenticationType.PASSKEY`.
    * - If none of the above conditions are met, it adds `AuthenticationType.UNKNOWN`.
    */
@@ -187,10 +194,11 @@ export class KratosService {
       authTypes.add(AuthenticationType.EMAIL);
     }
 
-    // Passkeys are a separate Kratos credential type (`passkey`, with `webauthn`
-    // as the legacy key) — not OIDC and not password — so they must be detected
-    // explicitly or they never surface as an authentication method.
-    if (identity.credentials.passkey || identity.credentials.webauthn) {
+    // Passkeys are a separate Kratos credential type — not OIDC and not
+    // password — so they must be detected explicitly or they never surface as
+    // an authentication method. A `webauthn` credential is a security key used
+    // as a second factor, not a sign-in method.
+    if (identity.credentials.passkey) {
       authTypes.add(AuthenticationType.PASSKEY);
     }
 
@@ -366,15 +374,17 @@ export class KratosService {
    * `UserEmailChangeService.applyAdminEmailChange`.
    */
   public async invalidateAllIdentitySessions(
-    identityId: string
+    identityId: string,
+    opts?: { timeoutMs?: number }
   ): Promise<void> {
     // The @ory/kratos-client v26 admin API exposes session invalidation via
     // `deleteIdentitySessions` (revokes ALL active sessions for the identity in
     // a single call). Earlier client versions called this `disableIdentitySessions`.
     try {
-      await this.kratosIdentityClient.deleteIdentitySessions({
-        id: identityId,
-      });
+      await this.kratosIdentityClient.deleteIdentitySessions(
+        { id: identityId },
+        { timeout: opts?.timeoutMs }
+      );
     } catch (error) {
       // Kratos returns 404 when the identity has no active sessions to revoke.
       // The post-condition "no active sessions exist" is already satisfied, so
@@ -388,6 +398,86 @@ export class KratosService {
         );
         return;
       }
+      throw error;
+    }
+  }
+
+  /**
+   * Removes one credential type (a second factor) from an identity through
+   * the admin API. Resolves `true` when it removed one, `false` when it was
+   * already absent (404).
+   */
+  public async deleteIdentityCredential(
+    identityId: string,
+    type: SecondFactorCredentialType,
+    opts?: { timeoutMs?: number }
+  ): Promise<boolean> {
+    try {
+      await this.kratosIdentityClient.deleteIdentityCredentials(
+        { id: identityId, type },
+        { timeout: opts?.timeoutMs }
+      );
+      return true;
+    } catch (error) {
+      if (isNotFound(error)) return false;
+      throw error;
+    }
+  }
+
+  /**
+   * Replaces an identity's password with a random secret that is kept
+   * nowhere, so the old password stops signing in while recovery still works.
+   * Resolves `null` when the identity is gone or has no password; otherwise
+   * the password's last-change time as an admin read straight after the write
+   * returns it (the update's own answer carries a zero time, not the write's).
+   *
+   * Errors are rethrown as they are and may carry the request body: whoever
+   * catches one logs its `message` only.
+   */
+  public async replacePasswordWithUnusableSecret(
+    identityId: string,
+    opts?: { timeoutMs?: number }
+  ): Promise<{ lastChangedAt?: string } | null> {
+    const identity = await this.readIdentityWithPassword(identityId, opts);
+    if (!identity?.credentials?.password) return null;
+
+    // A PUT replaces every field but the credentials, so everything is carried as read.
+    await this.kratosIdentityClient.updateIdentity(
+      {
+        id: identityId,
+        updateIdentityBody: {
+          schema_id: identity.schema_id,
+          state: identity.state === 'inactive' ? 'inactive' : 'active',
+          traits: identity.traits,
+          metadata_public: identity.metadata_public,
+          metadata_admin: identity.metadata_admin,
+          external_id: identity.external_id,
+          credentials: {
+            password: {
+              config: { password: randomBytes(32).toString('base64url') },
+            },
+          },
+        },
+      },
+      { timeout: opts?.timeoutMs }
+    );
+
+    const after = await this.readIdentityWithPassword(identityId, opts);
+    return { lastChangedAt: after?.credentials?.password?.updated_at };
+  }
+
+  private async readIdentityWithPassword(
+    identityId: string,
+    opts?: { timeoutMs?: number }
+  ): Promise<Identity | null> {
+    try {
+      const { data } = await this.kratosIdentityClient.getIdentity(
+        { id: identityId, includeCredential: ['password'] },
+        { timeout: opts?.timeoutMs }
+      );
+      return data;
+    } catch (error) {
+      if (isNotFound(error)) return null;
       throw error;
     }
   }
@@ -709,4 +799,10 @@ export class KratosService {
 
     return this.mapAuthenticationType(identity);
   }
+}
+
+function isNotFound(error: unknown): boolean {
+  return (
+    (error as { response?: { status?: number } })?.response?.status === 404
+  );
 }

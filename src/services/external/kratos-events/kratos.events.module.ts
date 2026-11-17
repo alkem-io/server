@@ -1,7 +1,9 @@
+import { SecondFactorModule } from '@core/auth/second-factor/second-factor.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { UserPasswordChangeModule } from '@domain/community/user-password-change/user.password.change.module';
 import { Module } from '@nestjs/common';
 import { PasswordChangedConsumer } from './password-changed.consumer';
+import { SecondFactorChangedConsumer } from './second-factor-changed.consumer';
 
 /**
  * Broker consumer module for Kratos-driven events (spec 005). Currently hosts
@@ -16,7 +18,7 @@ import { PasswordChangedConsumer } from './password-changed.consumer';
  * resolution the dedupe key needs.
  */
 @Module({
-  imports: [UserPasswordChangeModule, UserLookupModule],
-  controllers: [PasswordChangedConsumer],
+  imports: [UserPasswordChangeModule, UserLookupModule, SecondFactorModule],
+  controllers: [PasswordChangedConsumer, SecondFactorChangedConsumer],
 })
 export class KratosEventsModule {}

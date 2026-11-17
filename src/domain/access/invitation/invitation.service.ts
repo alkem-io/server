@@ -50,6 +50,11 @@ export class InvitationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Builds a new Invitation without persisting it. The caller attaches the
+   * role set, applies the authorization policy and saves once, so an
+   * invitation is never stored with a policy that has no credential rules.
+   */
   async createInvitation(
     invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
@@ -63,7 +68,7 @@ export class InvitationService {
     // be visible without one, as state reads dereference it unconditionally
     invitation.lifecycle = await this.lifecycleService.createLifecycle();
 
-    return await this.invitationRepository.save(invitation);
+    return invitation;
   }
 
   async deleteInvitation(

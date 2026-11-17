@@ -20,11 +20,13 @@ entryPoints:
     address: ':8280'
   kratos-admin-ui:
     address: ':8188'
-  mailslurper-client:
+  # Swarmail (the mail sink): its UI and REST API, the MailSlurper-compatible
+  # API, and SMTP, on MailSlurper's former host ports.
+  swarmail-http:
     address: ':4436'
   mailslurper-api:
     address: ':4437'
-  mailslurper-smtp:
+  swarmail-smtp:
     address: ':1025'
   rabbitmq-amqp:
     address: ':5672'

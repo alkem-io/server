@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { Request } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SecondFactorPolicyService } from '../../second-factor/second-factor.policy.service';
 import { OidcService } from '../oidc.service';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
 import { addSessionToSubIndex } from '../session-index.redis';
@@ -174,6 +175,7 @@ function seedPayload(sid: string): AlkemioSessionPayload {
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: nowS,
+    acr: null,
     client_id: 'alkemio-web',
     // Reserved and never populated in production (see the field's declaration
     // in `session-store.redis.ts`). Seeded here only so the tombstone's
@@ -215,6 +217,10 @@ async function buildStack(sids: string[]) {
     providers: [
       OidcSessionRevocationService,
       CookieSessionStrategy,
+      {
+        provide: SecondFactorPolicyService,
+        useValue: { assertNotRefused: vi.fn().mockResolvedValue(undefined) },
+      },
       { provide: OIDC_REDIS_CLIENT, useValue: shared.client },
       { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
       {

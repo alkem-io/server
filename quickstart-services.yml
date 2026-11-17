@@ -28,9 +28,12 @@ services:
       - 3000:80
       - 5432:5432
       - 8008:8008
-      - 4436:4436
-      - 4437:4437
-      - 1025:1025
+      # Swarmail (mail sink): loopback only. Its API is unauthenticated and can
+      # read or delete mail, inject SMTP failures and set webhooks, so it is not
+      # published to other machines on the network.
+      - 127.0.0.1:4436:4436
+      - 127.0.0.1:4437:4437
+      - 127.0.0.1:1025:1025
       - 5672:5672
       - 15672:15672
       - 6379:6379
@@ -163,7 +166,7 @@ services:
       - URLS_SELF_ADMIN=http://hydra:4445/
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_ADMIN_CORS_ENABLED=true
-      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name,alkemio_actor_id
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name,alkemio_actor_id,acr
       - STRATEGIES_ACCESS_TOKEN=jwt
       # FR-006/006a — Hydra calls oidc-service on every token issuance
       # (auth-code + refresh) to (re)inject `alkemio_actor_id` into the id_token.
@@ -285,7 +288,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: alkemio/oidc-service:v0.8.0
+    image: ${OIDC_SERVICE_IMAGE:-alkemio/oidc-service:v0.8.0}
     depends_on:
       - hydra
       - kratos
@@ -310,16 +313,28 @@ services:
       - 8080
     restart: unless-stopped
 
-  mailslurper:
+  # Mail sink for Kratos's courier and notifications (Swarmail, which replaced
+  # MailSlurper). Traefik keeps MailSlurper's host ports:
+  #   4436 -> Swarmail's UI and REST API (container port 8025)
+  #   4437 -> the MailSlurper-compatible API (GET/DELETE /mail, /mailcount),
+  #           which .scripts/register-user.sh and the test suites read
+  #   1025 -> SMTP, plain (no TLS)
+  # Mail is kept in memory, as before: recreating the container empties it.
+  swarmail:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    container_name: alkemio_dev_kratos_mailslurper
-    image: oryd/mailslurper:latest-smtps
+    container_name: alkemio_dev_swarmail
+    image: ghcr.io/feedback-loop-ai/swarmail:0.5.0
     restart: always
-    ports:
-      - 4436
-      - 4437
-      - 1025
+    # Swarmail drains for up to 10s on SIGTERM; give it room.
+    stop_grace_period: 30s
+    environment:
+      # Off unless set: MailSlurper's service API, a view over every inbox.
+      - SWARMAIL_MAILSLURPER_LISTEN=0.0.0.0:4437
+      # Oldest mail is evicted past this many per inbox (default 100000).
+      - SWARMAIL_MAX_PER_INBOX=2000
+    # No ports of its own: Traefik reaches it on alkemio_dev_net and publishes
+    # 4436/4437/1025 on loopback only.
     networks:
       - alkemio_dev_net
 
@@ -845,7 +860,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_kratos_hooks
     hostname: kratos-hooks
-    image: alkemio/kratos-webhooks:v0.2.3
+    image: ${KRATOS_WEBHOOKS_IMAGE:-alkemio/kratos-webhooks:v0.2.3}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -861,7 +876,10 @@ services:
       - MAINTENANCE_MODE=false
       - CORRELATION_ID_HEADER=X-Request-ID
       - LOGIN_BACKOFF_MAX_IDENTIFIER_ATTEMPTS=10
-      - LOGIN_BACKOFF_MAX_IP_ATTEMPTS=20
+      # Non-production only: a successful sign-in no longer clears the per-address
+      # counter, and the test harness signs in every persona from one address.
+      # Acceptance and production keep the default of 20.
+      - LOGIN_BACKOFF_MAX_IP_ATTEMPTS=300
       - LOGIN_BACKOFF_IDENTIFIER_LOCKOUT_SECONDS=120
       - LOGIN_BACKOFF_IP_LOCKOUT_SECONDS=120
       - KRATOS_INTERNAL_URL=http://kratos:4433

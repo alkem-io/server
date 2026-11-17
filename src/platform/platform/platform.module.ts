@@ -1,3 +1,4 @@
+import { SecondFactorModule } from '@core/auth/second-factor/second-factor.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
@@ -33,6 +34,7 @@ import { PlatformLicenseService } from './platform.service.license';
     AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,
     PlatformSettingsModule,
+    SecondFactorModule,
     LibraryModule,
     ForumModule,
     MessagingModule,
