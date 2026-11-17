@@ -43,7 +43,6 @@ import {
   SUPPORT_APPLICATION_EVENT_AUDIT_ACTIONS,
 } from './role.set.resolver.mutations.membership';
 import { RoleSetService } from './role.set.service';
-import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { RoleSetCacheService } from './role.set.service.cache';
 
 /**
@@ -149,9 +148,6 @@ describe('RoleSetResolverMutationsMembership — organization Community tab', ()
     (
       module.get(PlatformInvitationResendThrottleService) as any
     ).claim.mockResolvedValue(true);
-    (
-      module.get(RoleSetAuthorizationService) as any
-    ).applyAuthorizationPolicyOnInvitationsApplications.mockResolvedValue([]);
     (
       module.get(OrganizationLookupService) as any
     ).getOrganizationForRoleSetOrFail.mockResolvedValue({ id: 'org-1' });
