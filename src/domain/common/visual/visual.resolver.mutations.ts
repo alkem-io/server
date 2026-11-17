@@ -1,6 +1,8 @@
 import { CurrentActor } from '@common/decorators';
+import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
+import { BaseException } from '@common/exceptions/base.exception';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -44,6 +46,17 @@ export class VisualResolverMutations {
       AuthorizationPrivilege.UPDATE,
       `visual image update: ${visual.id}`
     );
+    if (
+      updateData.uri !== '' &&
+      !this.documentService.isPubliclyAccessibleURL(updateData.uri)
+    ) {
+      throw new BaseException(
+        'Visual address must be a platform storage document address or empty',
+        LogContext.PROFILE,
+        AlkemioErrorStatus.VISUAL_URI_NOT_ALLOWED,
+        { visualID: visual.id }
+      );
+    }
     return await this.visualService.updateVisual(updateData);
   }
 
