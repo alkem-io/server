@@ -99,4 +99,18 @@ export class Organization extends Actor implements IOrganization, IGroupable {
     this.settings.membership.allowSpaceInvitations ??= true;
     this.settings.membership.allowApplications ??= true;
   }
+
+  /** Rows written before the second-factor rule hold no `security` block. */
+  @AfterLoad()
+  applySecuritySettingsDefaults() {
+    if (!this.settings) {
+      return;
+    }
+    this.settings.security ??= {
+      secondFactorRequired: false,
+      secondFactorRequiredSince: null,
+    };
+    this.settings.security.secondFactorRequired ??= false;
+    this.settings.security.secondFactorRequiredSince ??= null;
+  }
 }

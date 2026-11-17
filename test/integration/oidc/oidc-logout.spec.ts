@@ -26,7 +26,10 @@ describe('GET /api/auth/oidc/logout + /api/auth/oidc/id-token-hint (FR-017c + FR
       .get('/api/auth/oidc/id-token-hint')
       .set('Cookie', sessionCookie!)
       .expect(200);
-    expect(res.body).toEqual({ id_token: 'id-token-jwt' });
+    expect(res.body).toEqual({
+      id_token: 'id-token-jwt',
+      second_factor_required: false,
+    });
   });
 
   it('id-token-hint returns 401 when no session cookie is present', async () => {

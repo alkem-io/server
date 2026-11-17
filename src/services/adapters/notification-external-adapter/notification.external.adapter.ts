@@ -72,7 +72,7 @@ import { ClientProxy } from '@nestjs/microservices';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
-import { defaultIfEmpty, lastValueFrom } from 'rxjs';
+import { defaultIfEmpty, lastValueFrom, timeout } from 'rxjs';
 import { NotificationInputUserEmailChangeGlobalAdmin } from '../notification-adapter/dto/platform/notification.dto.input.platform.user.email.change';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
@@ -85,6 +85,8 @@ import {
   NotificationEventPayloadOrganizationAssociateInvitation,
   NotificationEventPayloadOrganizationAssociateInvitationPlatform,
 } from './notification.event.payload.organization.associate.bridge';
+
+const SECOND_FACTOR_SIGNAL_PUBLISH_TIMEOUT_MS = 5000;
 
 interface CalloutContributionPayload {
   id: string;
@@ -192,6 +194,29 @@ export class NotificationExternalAdapter {
     await this.sendExternalNotifications(
       NotificationEvent.USER_PASSWORD_CHANGE_SECURITY_SIGNAL,
       payload
+    );
+  }
+
+  /**
+   * Sent to the user's current email address whenever their second factor is
+   * changed, by themselves or by a support reset. Awaited, so a broker failure
+   * reaches the caller's retry and failure record. Bounded, because the client
+   * sets no publish timeout: during a broker outage the confirm never arrives,
+   * and the support reset that awaits this would hang after it took effect.
+   */
+  public async publishSecondFactorChangeSecuritySignal(
+    payload: unknown
+  ): Promise<void> {
+    await lastValueFrom(
+      this.notificationsClient
+        .emit<number>(
+          NotificationEvent.USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL,
+          payload
+        )
+        .pipe(
+          timeout(SECOND_FACTOR_SIGNAL_PUBLISH_TIMEOUT_MS),
+          defaultIfEmpty(undefined as unknown as number)
+        )
     );
   }
 

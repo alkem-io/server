@@ -180,6 +180,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 118,
     userMessage: 'userMessages.authorization.platformSupportSelfTarget',
   },
+  [AlkemioErrorStatus.SECOND_FACTOR_REQUIRED]: {
+    category: ErrorCategory.AUTHORIZATION,
+    specificCode: 119,
+    userMessage: 'userMessages.authorization.secondFactorRequired',
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 12xxx - VALIDATION: Input/state validation errors

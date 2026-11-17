@@ -7,6 +7,7 @@ import {
   HydraBearerValidator,
 } from '@core/auth/oidc/strategies/hydra-bearer.validator';
 import { AUTH_STRATEGY_OIDC_HYDRA_BEARER } from '@core/auth/oidc/strategies/strategy.names';
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -97,6 +98,10 @@ export async function createBearerHarness(
       },
       HydraBearerValidator,
       HydraBearerStrategy,
+      {
+        provide: SecondFactorPolicyService,
+        useValue: { assertNotRefused: () => Promise.resolve() },
+      },
     ],
   }).compile();
 

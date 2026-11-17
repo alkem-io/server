@@ -15,6 +15,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLE_HOLDERS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_ROLES_ASSIGN,
+  CREDENTIAL_RULE_TYPES_PLATFORM_SECOND_FACTOR_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_SUPPORT_LISTS_READ,
   CREDENTIAL_RULE_TYPES_PLATFORM_USERS_ADMIN,
   CREDENTIAL_RULE_TYPES_SET_SERVICE_PROFILE,
@@ -385,6 +386,20 @@ export class PlatformAuthorizationService {
       );
     platformSupportListsRead.cascade = false;
     credentialRules.push(platformSupportListsRead);
+
+    // The support reset of a member's second factor. Non-cascading: the
+    // reset is gated on this policy alone.
+    const platformSecondFactorReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_SECOND_FACTOR_RESET],
+        [
+          AuthorizationCredential.PLATFORM_SUPPORT,
+          AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_SECOND_FACTOR_RESET
+      );
+    platformSecondFactorReset.cascade = false;
+    credentialRules.push(platformSecondFactorReset);
 
     // 027-platform-role-redesign, R-F.3 (2026-09-18, licensing-section-design.md)
     // — the License Manager's console LIST READ, Support's twin. Its owning

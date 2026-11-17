@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { EMPTY, of, throwError } from 'rxjs';
+import { EMPTY, NEVER, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { NotificationExternalAdapter } from './notification.external.adapter';
 
@@ -50,6 +50,48 @@ describe('NotificationExternalAdapter', () => {
 
   it('should be defined', () => {
     expect(adapter).toBeDefined();
+  });
+
+  describe('publishSecondFactorChangeSecuritySignal', () => {
+    it('publishes the second-factor signal with the payload unchanged', async () => {
+      const payload = {
+        recipientEmail: 'member@example.com',
+        observedAtISO8601: '2026-11-11T10:00:00.000Z',
+      };
+
+      notificationsClient.emit.mockReturnValue(of(1));
+
+      await adapter.publishSecondFactorChangeSecuritySignal(payload);
+
+      expect(notificationsClient.emit).toHaveBeenCalledWith(
+        NotificationEvent.USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL,
+        payload
+      );
+    });
+
+    it('rejects when the broker publish fails, so the caller can retry and record it', async () => {
+      notificationsClient.emit.mockReturnValue(
+        throwError(() => new Error('broker down'))
+      );
+
+      await expect(
+        adapter.publishSecondFactorChangeSecuritySignal({})
+      ).rejects.toThrow('broker down');
+    });
+
+    it('rejects when the broker never confirms, so a stalled publish reaches the caller', async () => {
+      vi.useFakeTimers();
+      try {
+        notificationsClient.emit.mockReturnValue(NEVER);
+
+        const published = adapter.publishSecondFactorChangeSecuritySignal({});
+        const outcome = expect(published).rejects.toThrow();
+        await vi.advanceTimersByTimeAsync(5000);
+        await outcome;
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('sendExternalNotifications', () => {

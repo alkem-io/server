@@ -89,3 +89,60 @@ describe('Organization entity — applyMembershipSettingsDefaults (@AfterLoad)',
     expect(organization.settings.membership.allowApplications).toBe(false);
   });
 });
+
+describe('Organization entity — applySecuritySettingsDefaults (@AfterLoad)', () => {
+  it('creates the default block on a row written before the rule existed', () => {
+    const organization = new Organization();
+    organization.settings = {
+      membership: { allowUsersMatchingDomainToJoin: false },
+      privacy: { contributionRolesPubliclyVisible: true },
+    } as any;
+
+    organization.applySecuritySettingsDefaults();
+
+    expect(organization.settings.security).toEqual({
+      secondFactorRequired: false,
+      secondFactorRequiredSince: null,
+    });
+  });
+
+  it('defaults a key missing inside an existing block', () => {
+    const organization = new Organization();
+    organization.settings = {
+      membership: { allowUsersMatchingDomainToJoin: false },
+      privacy: { contributionRolesPubliclyVisible: true },
+      security: { secondFactorRequired: true },
+    } as any;
+
+    organization.applySecuritySettingsDefaults();
+
+    expect(organization.settings.security).toEqual({
+      secondFactorRequired: true,
+      secondFactorRequiredSince: null,
+    });
+  });
+
+  it('leaves a stored block as it is', () => {
+    const security = {
+      secondFactorRequired: true,
+      secondFactorRequiredSince: '2026-11-01T10:00:00.000Z',
+    };
+    const organization = new Organization();
+    organization.settings = {
+      membership: { allowUsersMatchingDomainToJoin: false },
+      privacy: { contributionRolesPubliclyVisible: true },
+      security: { ...security },
+    } as any;
+
+    organization.applySecuritySettingsDefaults();
+
+    expect(organization.settings.security).toEqual(security);
+  });
+
+  it('leaves an entity loaded without settings alone', () => {
+    const organization = new Organization();
+
+    expect(() => organization.applySecuritySettingsDefaults()).not.toThrow();
+    expect(organization.settings).toBeUndefined();
+  });
+});

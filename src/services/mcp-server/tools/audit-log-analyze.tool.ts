@@ -36,6 +36,7 @@ const ANOMALY_OUTCOMES = new Set<PlatformAuditOutcome>([
   PlatformAuditOutcome.GLOBAL_ADMIN_NOTIFICATION_FAILED,
   PlatformAuditOutcome.SPACE_ADMIN_NOTIFICATION_FAILED,
   PlatformAuditOutcome.SESSION_INVALIDATION_FAILED,
+  PlatformAuditOutcome.SECOND_FACTOR_RESET_FAILED,
   PlatformAuditOutcome.REJECTED_VALIDATION,
   PlatformAuditOutcome.REJECTED_CONFLICT,
 ]);

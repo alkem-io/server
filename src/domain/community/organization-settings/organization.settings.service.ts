@@ -1,3 +1,7 @@
+import {
+  type SecondFactorRuleTransition,
+  secondFactorRuleTransition,
+} from '@core/auth/second-factor/second-factor.audit.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateOrganizationSettingsEntityInput } from './dto/organization.settings.dto.update';
@@ -12,7 +16,10 @@ export class OrganizationSettingsService {
   public updateSettings(
     settings: IOrganizationSettings,
     updateData: UpdateOrganizationSettingsEntityInput
-  ): IOrganizationSettings {
+  ): {
+    settings: IOrganizationSettings;
+    transition?: SecondFactorRuleTransition;
+  } {
     // Every field below is `Boolean` (nullable) on the input type and carries
     // `@IsOptional()`, which skips validation for null as well as undefined.
     // An explicit `null` therefore reaches this method unvalidated, and a bare
@@ -40,6 +47,19 @@ export class OrganizationSettingsService {
           updateData.membership.allowApplications;
       }
     }
-    return settings;
+
+    const transition = secondFactorRuleTransition(
+      settings.security?.secondFactorRequired === true,
+      updateData.security?.secondFactorRequired,
+      settings.security?.secondFactorRequiredSince
+    );
+    if (!transition) {
+      return { settings };
+    }
+    settings.security = {
+      secondFactorRequired: transition.to,
+      secondFactorRequiredSince: transition.since,
+    };
+    return { settings, transition };
   }
 }

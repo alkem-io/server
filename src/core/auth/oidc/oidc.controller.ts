@@ -543,6 +543,7 @@ export class OidcController {
       sub,
       alkemio_actor_id: alkemioActorId,
       client_id: clientId,
+      acr: toAssuranceLevel(claims.acr),
     };
 
     if (appMode) {
@@ -554,7 +555,7 @@ export class OidcController {
           bundle,
           returnTo: targetReturnTo,
           app_challenge: appMode.challenge,
-          issued_at: now,
+          issued_at: preAuth.issued_at,
           correlation_id: correlationId,
         });
       } catch {
@@ -587,7 +588,7 @@ export class OidcController {
     }
 
     await this.establishSession(req, res, bundle, {
-      createdAt: now,
+      createdAt: preAuth.issued_at,
       correlationId,
       rpId,
     });
@@ -735,6 +736,7 @@ export class OidcController {
         s.refresh_failure_streak_started_at = null;
         s.created_at = ctx.createdAt;
         s.client_id = bundle.client_id;
+        s.acr = bundle.acr;
         s.request_context_cache = null;
         req.session.save(saveErr => (saveErr ? reject(saveErr) : resolve()));
       });
@@ -777,6 +779,7 @@ export class OidcController {
       request_id: ctx.correlationId,
       granted_scope: bundle.scope,
       rp_id: ctx.rpId,
+      acr: bundle.acr,
     });
   }
 
@@ -1030,7 +1033,13 @@ export class OidcController {
       return;
     }
     res.setHeader('Cache-Control', 'no-store');
-    res.status(200).json({ id_token: idToken });
+    // The token stays even when refused: the client's logout leg sends it.
+    res.status(200).json({
+      id_token: idToken,
+      second_factor_required:
+        (req as Request & { secondFactorRefused?: boolean })
+          .secondFactorRefused === true,
+    });
   }
 
   @Get('logout')
@@ -1172,6 +1181,11 @@ export class OidcController {
     url.searchParams.set('post_logout_redirect_uri', effectivePostLogout);
     res.redirect(302, url.toString());
   }
+}
+
+/** Only the two levels the broker issues count; anything else is `null`, never `'aal2'`. */
+function toAssuranceLevel(acr: unknown): 'aal1' | 'aal2' | null {
+  return acr === 'aal1' || acr === 'aal2' ? acr : null;
 }
 
 function constantTimeStringEqual(a: string, b: string): boolean {

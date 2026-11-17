@@ -19,6 +19,12 @@
               },
               "passkey": {
                 "display_name": true
+              },
+              "totp": {
+                "account_name": true
+              },
+              "webauthn": {
+                "identifier": true
               }
             },
             "verification": {

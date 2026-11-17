@@ -50,4 +50,9 @@ export enum PlatformAuditCategory {
   // **actor** id and may have no `user` row — accepted, workspace#091
   // FR-009/D10. Reuses the `key_minted` outcome (D6).
   MATRIX_SESSION = 'matrix_session',
+  // Second factor: a support reset (intent row, then an outcome row), an
+  // off→on or on→off of a second-factor rule, and a member's own change
+  // reported by the identity provider. Written FAIL-CLOSED by
+  // `SecondFactorAuditService`.
+  AUTHENTICATION = 'authentication',
 }

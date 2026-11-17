@@ -23,13 +23,16 @@
  * - `email_changed`    → the admin email-change flow, which today revokes only
  *                        the Kratos session and leaves BFF/API access alive
  * - `admin_revoked` / `user_revoked` → server#6073's session-management UI
+ * - `second_factor_reset` → the support reset of a member's second factor
+ *                        (`admin.user.second.factor.service.ts`)
  */
 export type SessionRevocationReason =
   | 'account_deleted'
   | 'password_changed'
   | 'email_changed'
   | 'admin_revoked'
-  | 'user_revoked';
+  | 'user_revoked'
+  | 'second_factor_reset';
 
 /**
  * Per-session result of the LOCAL teardown.

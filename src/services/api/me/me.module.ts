@@ -1,3 +1,4 @@
+import { SecondFactorModule } from '@core/auth/second-factor/second-factor.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
@@ -38,6 +39,7 @@ import { MeService } from './me.service';
     AccountDeletionModule,
     AccountLookupModule,
     OrganizationLookupModule,
+    SecondFactorModule,
   ],
   providers: [
     MeService,
