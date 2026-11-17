@@ -141,7 +141,17 @@ export class UserPasswordChangeObserverService {
   }
 }
 
-function extractNonLeakyReason(err: unknown): string {
+/** The closed set a failed security-signal row may carry. */
+export type SecuritySignalFailureReason =
+  | 'timeout'
+  | 'broker_unreachable'
+  | 'network_error'
+  | 'operation_failed'
+  | 'unknown_error';
+
+export function extractNonLeakyReason(
+  err: unknown
+): SecuritySignalFailureReason {
   const message = String((err as Error)?.message ?? err ?? '');
   if (!message) return 'unknown_error';
   if (/timeout|timed\s*out/i.test(message)) return 'timeout';

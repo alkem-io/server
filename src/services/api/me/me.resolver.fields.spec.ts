@@ -1,3 +1,4 @@
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
 import { AccountDeletionBlockerService } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
@@ -30,8 +31,13 @@ describe('MeResolverFields', () => {
   // spec file sharing the worker.
   let logger: { verbose: ReturnType<typeof vi.fn> };
 
+  let secondFactorPolicyServiceMock: ReturnType<
+    typeof createMock<SecondFactorPolicyService>
+  >;
+
   beforeEach(() => {
     logger = { verbose: vi.fn() };
+    secondFactorPolicyServiceMock = createMock<SecondFactorPolicyService>();
     meService = createMock<MeService>();
     meService.getCommunityInvitationsCountForUser.mockResolvedValue(3);
     meService.getCommunityInvitationsForUser.mockResolvedValue([]);
@@ -80,6 +86,7 @@ describe('MeResolverFields', () => {
       mcpApiKeyServiceMock,
       accountDeletionBlockerServiceMock,
       accountLookupServiceMock,
+      secondFactorPolicyServiceMock,
       logger as any
     );
   });
@@ -457,6 +464,7 @@ describe('MeResolverFields', () => {
         mcpApiKeyServiceMock,
         accountDeletionBlockerServiceMock,
         accountLookupServiceMock,
+        secondFactorPolicyServiceMock,
         logger as any
       );
 
@@ -526,5 +534,70 @@ describe('MeResolverFields', () => {
       expect(result.blockers[0].displayName).toBe('My Space');
       expect(result.totals).toEqual([{ kind: 'ACCOUNT_SPACE', total: 1 }]);
     });
+  });
+});
+
+describe('MeResolverFields.secondFactorRequirement', () => {
+  const deadline = new Date('2026-11-15T10:00:00.000Z');
+  const platformRole = [{ type: 'platform-support', resourceID: '' }];
+
+  function build() {
+    const secondFactorPolicyService = createMock<SecondFactorPolicyService>();
+    secondFactorPolicyService.coverage.mockResolvedValue({
+      covered: true,
+      deadline,
+    });
+    const resolver = new MeResolverFields(
+      createMock<MeService>(),
+      createMock<UserLookupService>(),
+      createMock<InAppNotificationService>(),
+      createMock<McpApiKeyService>(),
+      createMock<AccountDeletionBlockerService>(),
+      createMock<AccountLookupService>(),
+      secondFactorPolicyService,
+      { verbose: vi.fn() } as any
+    );
+    return { resolver, secondFactorPolicyService };
+  }
+
+  it.each([
+    ['satisfied', true],
+    ['not satisfied', false],
+  ])('reads coverage for a stamped sign-in (%s)', async (_label, satisfied) => {
+    const { resolver, secondFactorPolicyService } = build();
+    const actor = {
+      actorID: 'user-123',
+      credentials: platformRole,
+      secondFactor: { satisfied },
+    } as any;
+
+    const result = await resolver.secondFactorRequirement(actor);
+
+    expect(result).toEqual({ covered: true, deadline, satisfied });
+    expect(secondFactorPolicyService.coverage).toHaveBeenCalledWith(
+      platformRole
+    );
+  });
+
+  it.each([
+    [
+      'a non-interactive caller holding a platform role',
+      { actorID: 'user-123', credentials: platformRole },
+    ],
+    [
+      'an actor without a resolved id',
+      { actorID: '', credentials: [], secondFactor: { satisfied: true } },
+    ],
+  ])('answers the empty value for %s without evaluating', async (_label, actor) => {
+    const { resolver, secondFactorPolicyService } = build();
+
+    const result = await resolver.secondFactorRequirement(actor as any);
+
+    expect(result).toEqual({
+      covered: false,
+      deadline: null,
+      satisfied: false,
+    });
+    expect(secondFactorPolicyService.coverage).not.toHaveBeenCalled();
   });
 });

@@ -17,6 +17,7 @@ const RECORD: AppHandoffRecord = {
     sub: 'sub-1',
     alkemio_actor_id: 'actor-1',
     client_id: 'alkemio-web',
+    acr: null,
   },
   returnTo: '/spaces/alkemio',
   app_challenge: 'challenge-0123456789abcdefghijklmnopqrstuvwx',
@@ -115,5 +116,20 @@ describe('redeemAppHandoff (FR-009)', () => {
     expect(redis.getdel).toHaveBeenCalledOnce();
     expect(redis.getdel).toHaveBeenCalledWith(APP_HANDOFF_KEY_PREFIX + code);
     expect(redis.set).not.toHaveBeenCalled();
+  });
+});
+
+describe('the handoff bundle carries the sign-in assurance', () => {
+  it('round-trips acr', async () => {
+    const { redis } = makeFakeRedis();
+    const record: AppHandoffRecord = {
+      ...RECORD,
+      bundle: { ...RECORD.bundle, acr: 'aal2' },
+    };
+    const code = await storeAppHandoff(redis, record);
+
+    const redeemed = await redeemAppHandoff(redis, code);
+
+    expect(redeemed?.bundle.acr).toBe('aal2');
   });
 });

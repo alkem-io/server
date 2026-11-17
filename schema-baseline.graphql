@@ -759,6 +759,26 @@ input AdminCommunicationReconcileForumHierarchyInput {
   repairRoomParentPointers: Boolean! = false
 }
 
+input AdminResetUserSecondFactorInput {
+  """
+  True whenever anyone else may hold the member's password: the password is then replaced with a secret nobody holds. Other first factors (a passkey, a linked social sign-in) and the identity's addresses are not touched and must be checked separately. No default.
+  """
+  invalidatePassword: Boolean!
+  """The user whose second factor is reset."""
+  userID: UUID!
+}
+
+type AdminResetUserSecondFactorResult {
+  """False when it was not asked, or the identity holds no password."""
+  passwordInvalidated: Boolean!
+  """
+  The second-factor credential types that were removed (totp, webauthn, lookup_secret).
+  """
+  removedCredentialTypes: [String!]!
+  """How many application sessions of the user were ended."""
+  sessionsRevoked: Int!
+}
+
 input AdminRevokeMcpApiKeyInput {
   keyID: UUID!
   """
@@ -1249,6 +1269,7 @@ enum AuthorizationPrivilege {
   PLATFORM_PROMOTE_MANAGE
   PLATFORM_ROLES_ASSIGN
   PLATFORM_ROLE_HOLDERS_READ
+  PLATFORM_SECOND_FACTOR_RESET
   PLATFORM_SETTINGS_ADMIN
   PLATFORM_SUPPORT_LISTS_READ
   PLATFORM_SUPPORT_ORG_MEMBERSHIP
@@ -5474,6 +5495,10 @@ type MeQueryResults {
     """The state names you want to filter on"""
     states: [String!]
   ): Float!
+  """
+  Whether a second-factor rule covers the current user, its deadline, and whether this session satisfies it.
+  """
+  secondFactorRequirement: MeSecondFactorRequirement!
   """The Spaces the current user is a member of as a flat list."""
   spaceMembershipsFlat: [CommunityMembershipResult!]!
   """The hierarchy of the Spaces the current user is a member."""
@@ -5485,6 +5510,19 @@ type MeQueryResults {
   The current authenticated User;  null if not yet registered on the platform
   """
   user: User
+}
+
+type MeSecondFactorRequirement {
+  """
+  False for any caller whose credential is not a person's sign-in (API key, delegation token, non-interactive token, service account), whatever its roles. A cookie session and a Hydra bearer read their real coverage.
+  """
+  covered: Boolean!
+  """
+  When a covering rule starts refusing a sign-in without a second factor; the earliest of the rules that cover the user.
+  """
+  deadline: DateTime
+  """Whether this session's sign-in completed a second factor."""
+  satisfied: Boolean!
 }
 
 type MediaGallery {
@@ -5856,6 +5894,10 @@ type Mutation {
   Lists, and on request copies, the files templates reference but do not store. A file is copied only when the template's owner can read it. A dry run by default.
   """
   adminRepairTemplateFiles(repairData: AdminTemplateFileRepairInput!): AdminTemplateFileRepairResult!
+  """
+  Platform Support or Platform Users Admin: remove a user's second factor (authenticator app, security keys, recovery codes) and end their identity-provider sessions and their platform sign-in sessions. A bearer token issued to an application outside the platform's own sign-in is not ended and stays valid until it expires. Audited fail-closed. Refuses self-targeting.
+  """
+  adminResetUserSecondFactor(resetData: AdminResetUserSecondFactorInput!): AdminResetUserSecondFactorResult!
   """Platform Users Admin: revoke a named user's MCP API key. Idempotent."""
   adminRevokeMcpApiKey(revokeData: AdminRevokeMcpApiKeyInput!): McpApiKey!
   """
@@ -6560,6 +6602,7 @@ enum NotificationEvent {
   USER_ORGANIZATION_ASSOCIATE_APPLICATION_DECLINED
   USER_ORGANIZATION_ASSOCIATE_INVITATION
   USER_PASSWORD_CHANGE_SECURITY_SIGNAL
+  USER_SECOND_FACTOR_CHANGE_SECURITY_SIGNAL
   USER_SIGN_UP_WELCOME
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
   USER_SPACE_COMMUNITY_INVITATION
@@ -6795,6 +6838,8 @@ type OrganizationSettings {
   membership: OrganizationSettingsMembership!
   """The privacy settings for this Organization"""
   privacy: OrganizationSettingsPrivacy!
+  """The security settings for this Organization."""
+  security: OrganizationSettingsSecurity!
 }
 
 type OrganizationSettingsMembership {
@@ -6813,6 +6858,13 @@ type OrganizationSettingsPrivacy {
   Allow contribution roles (membership, lead etc) in Spaces to be visible.
   """
   contributionRolesPubliclyVisible: Boolean!
+}
+
+type OrganizationSettingsSecurity {
+  """
+  Holders of an organization role (owner, admin, associate) must use a second factor.
+  """
+  secondFactorRequired: Boolean!
 }
 
 type OrganizationVerification {
@@ -7200,6 +7252,17 @@ type PlatformRolesAccess {
 type PlatformSettings {
   """The integration settings for this Platform"""
   integration: PlatformIntegrationSettings!
+  """
+  The second-factor rule for platform roles. Null unless the reader holds the platform-settings privilege.
+  """
+  security: PlatformSettingsSecurity
+}
+
+type PlatformSettingsSecurity {
+  """Holders of a Platform … role must use a second factor."""
+  secondFactorRequiredForPlatformRoles: Boolean!
+  """When the rule was last switched on; null while it has never been on."""
+  secondFactorRequiredForPlatformRolesSince: DateTime
 }
 
 type PlatformWellKnownVirtualContributorMapping {
@@ -10177,6 +10240,8 @@ input UpdateOrganizationSettingsEntityInput {
   membership: UpdateOrganizationSettingsMembershipInput
   """"""
   privacy: UpdateOrganizationSettingsPrivacyInput
+  """The second-factor rule for the members of this Organization."""
+  security: UpdateOrganizationSettingsSecurityInput
 }
 
 input UpdateOrganizationSettingsInput {
@@ -10204,9 +10269,18 @@ input UpdateOrganizationSettingsPrivacyInput {
   contributionRolesPubliclyVisible: Boolean!
 }
 
+input UpdateOrganizationSettingsSecurityInput {
+  """
+  Require holders of an organization role (owner, admin, associate) to use a second factor. Switching it on starts a fourteen-day grace.
+  """
+  secondFactorRequired: Boolean
+}
+
 input UpdatePlatformSettingsInput {
   """"""
   integration: UpdatePlatformSettingsIntegrationInput
+  """The second-factor rule for platform roles."""
+  security: UpdatePlatformSettingsSecurityInput
 }
 
 input UpdatePlatformSettingsIntegrationInput {
@@ -10216,6 +10290,13 @@ input UpdatePlatformSettingsIntegrationInput {
   Update the list of email addresses blocked from receiving notifications.
   """
   notificationEmailBlacklist: [String!]
+}
+
+input UpdatePlatformSettingsSecurityInput {
+  """
+  Require holders of a Platform … role to use a second factor. Switching it on starts a fourteen-day grace.
+  """
+  secondFactorRequiredForPlatformRoles: Boolean
 }
 
 input UpdatePollInput {

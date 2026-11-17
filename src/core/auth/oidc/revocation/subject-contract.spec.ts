@@ -50,6 +50,7 @@ function sessionPayloadFromCallback(sub: string): AlkemioSessionPayload {
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: nowS,
+    acr: null,
     client_id: 'alkemio-web',
     request_context_cache: null,
     terminated_at: null,

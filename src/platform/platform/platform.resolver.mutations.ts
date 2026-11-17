@@ -1,9 +1,11 @@
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { SecondFactorAuditService } from '@core/auth/second-factor/second-factor.audit.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import {
   NotificationEmailAddressInput,
@@ -15,6 +17,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
 import { PlatformConfigurationAuditService } from '@src/platform-admin/platform-configuration-audit/platform.configuration.audit.service';
 import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
+import { EntityManager } from 'typeorm';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
@@ -35,7 +38,9 @@ export class PlatformResolverMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private platformSettingsService: PlatformSettingsService,
     private platformOperationsAuditService: PlatformOperationsAuditService,
-    private readonly platformConfigurationAuditService: PlatformConfigurationAuditService
+    private readonly platformConfigurationAuditService: PlatformConfigurationAuditService,
+    private readonly secondFactorAuditService: SecondFactorAuditService,
+    @InjectEntityManager() private readonly entityManager: EntityManager
   ) {}
 
   @Mutation(() => IPlatform, {
@@ -91,11 +96,24 @@ export class PlatformResolverMutations {
       `platform settings update: ${JSON.stringify(settingsData.integration)}`
     );
 
-    platform.settings = await this.platformSettingsService.updateSettings(
-      platform.settings,
-      settingsData
-    );
-    await this.platformService.savePlatform(platform);
+    const { settings, transition } =
+      this.platformSettingsService.updateSettings(
+        platform.settings,
+        settingsData
+      );
+    platform.settings = settings;
+    // A second-factor rule switch and its audit row commit together, or not
+    // at all.
+    await this.entityManager.transaction(async manager => {
+      await this.platformService.savePlatform(platform, manager);
+      if (transition) {
+        await this.secondFactorAuditService.recordRuleTransition(
+          manager,
+          actorContext,
+          { scope: 'platform', ...transition }
+        );
+      }
+    });
 
     // T058 — A10, single-path surface: every successful call is, by
     // construction, authorized by PLATFORM_SETTINGS_ADMIN.
@@ -104,7 +122,7 @@ export class PlatformResolverMutations {
       A10_INTENDED_OWNERS,
       {
         setting: 'platformSettings',
-        newValue: settingsData.integration,
+        newValue: settingsData,
         outcome: 'success',
       }
     );

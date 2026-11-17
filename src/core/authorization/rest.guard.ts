@@ -7,12 +7,14 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import {
   BearerValidationError,
   CookieSessionInvalidError,
+  SecondFactorRequiredError,
 } from '@core/auth/oidc/strategies/auth.errors';
 import {
   AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
 } from '@core/auth/oidc/strategies/strategy.names';
+import { SecondFactorRequiredHttpException } from '@core/auth/second-factor/second-factor-required.http.exception';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -56,6 +58,11 @@ export class RestGuard extends AuthGuard([
           err?.message ?? String(err),
           LogContext.AUTH
         );
+      }
+      // Its own class, so the calendar ICS redirect filter (which catches
+      // ForbiddenHttpException) answers it as a 403, not a sign-in redirect.
+      if (err instanceof SecondFactorRequiredError) {
+        throw new SecondFactorRequiredHttpException();
       }
       throw new ForbiddenHttpException(
         err?.message ?? String(err),

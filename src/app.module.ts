@@ -25,7 +25,7 @@ import {
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { HealthModule } from '@core/health/health.module';
-import { AuthInterceptor } from '@core/interceptors';
+import { AuthInterceptor, passportAuthenticate } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { ActivityFeedModule } from '@domain/activity-feed';
 import { ActorModule } from '@domain/actor/actor.module';
@@ -88,10 +88,13 @@ import { WinstonConfigService } from '@src/config/winston.config';
 // session. Idle TTL is now driven by express-session rolling cookie.
 
 import { buildGraphqlWsRequest } from '@core/auth/oidc/graphql-ws-auth';
+import { graphqlWsOnNext } from '@core/auth/oidc/graphql-ws-on-next';
 import {
   getCookieMiddleware,
   getSessionMiddleware,
 } from '@core/auth/oidc/session-middleware.holder';
+import { SecondFactorModule } from '@core/auth/second-factor/second-factor.module';
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
@@ -102,14 +105,8 @@ import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/emai
 import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
 import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
-import {
-  AlkemioConfig,
-  ConnectionContext,
-  SubscriptionsTransportWsWebsocket,
-  WebsocketContext,
-} from '@src/types';
+import { AlkemioConfig, ConnectionContext, WebsocketContext } from '@src/types';
 import { print } from 'graphql/language/printer';
-import { CloseCode } from 'graphql-ws';
 import { WinstonModule } from 'nest-winston';
 import { ApmApolloPlugin } from './apm/plugins';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
@@ -157,9 +154,12 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     }),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService<AlkemioConfig, true>) => {
+      imports: [ConfigModule, SecondFactorModule],
+      inject: [ConfigService, SecondFactorPolicyService],
+      useFactory: async (
+        configService: ConfigService<AlkemioConfig, true>,
+        secondFactorPolicy: SecondFactorPolicyService
+      ) => {
         const endpointCluster = configService.get('hosting.endpoint_cluster', {
           infer: true,
         });
@@ -225,42 +225,24 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
             return { req: ctx.req };
           },
           subscriptions: {
-            'subscriptions-transport-ws': {
-              /***
-               * subscriptions-transport-ws required passing the request object
-               * through the onConnect method
-               * required for passport.js to execute the strategy against the incoming headers
-               */
-              onConnect: (
-                connectionParams: Record<string, any>,
-                websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
-              ) => {
-                return {
-                  req: { headers: websocket?.upgradeReq?.headers },
-                };
-              },
-            },
             'graphql-ws': {
               // Sockets are authenticated once at connection time, so a
-              // long-lived subscription would outlive its session. ActorContext
-              // .absoluteExpiry is stamped by CookieSessionStrategy from the
-              // BFF alkemio_session's ABSOLUTE ceiling (absolute_expires_at).
-              // Deliberately NOT enforced here: `.expiry` (access-token, ~10min,
-              // self-renews) and the sliding idle window (renews on activity).
-              onNext: (ctx, _message, args, result) => {
-                const context = args.contextValue as IGraphQLContext;
-                const absoluteExpiry = context.req?.user?.absoluteExpiry;
-                // if the session has passed its absolute ceiling, close the socket
-                if (absoluteExpiry && absoluteExpiry < Date.now()) {
-                  (ctx as WebsocketContext).extra.socket.close(
-                    CloseCode.Unauthorized,
-                    'Session expired'
-                  );
-                  return;
-                }
-
-                return result;
-              },
+              // long-lived subscription would outlive its session: a cookie
+              // socket is re-validated before every event it would deliver,
+              // and a bearer socket's actor is held to the second-factor rule.
+              onNext: (ctx, _message, args, result) =>
+                graphqlWsOnNext({
+                  context: args.contextValue as IGraphQLContext,
+                  socket: (ctx as WebsocketContext).extra.socket,
+                  result,
+                  authenticate: passportAuthenticate,
+                  assertNotRefused: actor =>
+                    secondFactorPolicy.assertNotRefused(actor, new Date()),
+                  cookieName: configService.get(
+                    'identity.authentication.providers.oidc.cookie.name',
+                    { infer: true }
+                  ),
+                }),
             },
           },
         };
