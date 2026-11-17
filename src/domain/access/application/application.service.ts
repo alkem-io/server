@@ -47,6 +47,11 @@ export class ApplicationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Builds a new Application without persisting it. The caller attaches the
+   * role set, applies the authorization policy and saves once, so an
+   * application is never stored with a policy that has no credential rules.
+   */
   async createApplication(
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
@@ -58,12 +63,10 @@ export class ApplicationService {
     application.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.APPLICATION
     );
-    // save the user to get the id assigned
-    await this.applicationRepository.save(application);
 
     application.lifecycle = await this.lifecycleService.createLifecycle();
 
-    return await this.applicationRepository.save(application);
+    return application;
   }
 
   async deleteApplication(
