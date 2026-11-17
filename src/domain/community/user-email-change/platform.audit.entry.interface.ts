@@ -162,6 +162,9 @@ export interface PlatformResourceAuditDetails {
   formId?: string;
   /** The user who submitted the deleted response, when still known. */
   respondentUserId?: string;
+  /** Platform-promote flag changes only: the value stored. `resourceKind` is
+   * then one of `space`, `innovation_pack` or `virtual_contributor`. */
+  promote?: boolean;
 }
 
 /**

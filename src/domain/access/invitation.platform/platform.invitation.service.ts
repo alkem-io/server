@@ -45,6 +45,12 @@ export class PlatformInvitationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Builds a new PlatformInvitation without persisting it. The caller attaches
+   * the role set, applies the authorization policy and saves once, so a
+   * platform invitation is never stored with a policy that has no credential
+   * rules.
+   */
   async createPlatformInvitation(
     roleSet: IRoleSet,
     platformInvitationData: CreatePlatformInvitationInput
@@ -72,7 +78,7 @@ export class PlatformInvitationService {
       AuthorizationPolicyType.INVITATION
     );
 
-    return await this.platformInvitationRepository.save(platformInvitation);
+    return platformInvitation;
   }
 
   async deletePlatformInvitation(

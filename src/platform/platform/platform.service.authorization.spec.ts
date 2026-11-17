@@ -550,6 +550,31 @@ describe('PlatformAuthorizationService', () => {
       expect(rules[0].cascade).toBe(false);
     });
 
+    it('PLATFORM_PROMOTE_MANAGE: EXACTLY {platform-content-full-access, platform-license-manager}, non-cascading — support, users-admin, settings-admin, resource-admin, operations-admin and roles-admin are NOT among the reachers', async () => {
+      arrange();
+      await service.applyAuthorizationPolicy();
+
+      const rules = rulesGranting(
+        AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE
+      );
+      expect(rules).toHaveLength(1);
+      expect(rules[0].criterias).toEqual([
+        AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS,
+        AuthorizationCredential.PLATFORM_LICENSE_MANAGER,
+      ]);
+      for (const outsider of [
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.PLATFORM_USERS_ADMIN,
+        AuthorizationCredential.PLATFORM_SETTINGS_ADMIN,
+        AuthorizationCredential.PLATFORM_RESOURCE_ADMIN,
+        AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+        AuthorizationCredential.PLATFORM_ROLES_ADMIN,
+      ]) {
+        expect(rules[0].criterias).not.toContain(outsider);
+      }
+      expect(rules[0].cascade).toBe(false);
+    });
+
     it('PLATFORM_SETTINGS_ADMIN (T035, A10): EXACTLY the union of both surfaces it re-anchors — including platform-settings-admin itself', async () => {
       arrange();
       await service.applyAuthorizationPolicy();

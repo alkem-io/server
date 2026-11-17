@@ -143,6 +143,99 @@ describe('LibraryService', () => {
     });
   });
 
+  describe('getListedVirtualContributors (promoted first)', () => {
+    it('orders promoted VCs first, then by rowId (creation order), keeping the store/visibility filter', async () => {
+      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      await service.getListedVirtualContributors();
+
+      expect(entityManager.find).toHaveBeenCalledWith(expect.anything(), {
+        where: { listedInStore: true, searchVisibility: 'public' },
+        order: { promote: 'DESC', rowId: 'ASC' },
+      });
+    });
+  });
+
+  describe('getListedInnovationPacks (promoted first)', () => {
+    const pack = (id: string, promote: boolean) =>
+      ({ id, promote, listedInStore: true, searchVisibility: 'public' }) as any;
+    const counts: Record<string, number> = { p1: 3, p2: 5, p3: 1, p4: 4 };
+
+    beforeEach(() => {
+      vi.mocked(innovationPackService.getTemplatesCount).mockImplementation(
+        async (id: string) => counts[id]
+      );
+    });
+
+    it.each([
+      [
+        InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC,
+        ['p2', 'p4', 'p1', 'p3'],
+      ],
+      [
+        InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_ASC,
+        ['p4', 'p2', 'p3', 'p1'],
+      ],
+    ])('%s: promoted packs first, the requested order within each group', async (orderBy, expected) => {
+      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([
+        pack('p1', false),
+        pack('p2', true),
+        pack('p3', false),
+        pack('p4', true),
+      ]);
+
+      const result = await service.getListedInnovationPacks(undefined, orderBy);
+
+      expect(result.map(p => p.id)).toEqual(expected);
+    });
+
+    it('RANDOM: promoted packs always come first, the shuffle stays within each group', async () => {
+      for (let run = 0; run < 20; run++) {
+        (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([
+          pack('p1', false),
+          pack('p2', true),
+          pack('p3', false),
+          pack('p4', true),
+        ]);
+
+        const result = await service.getListedInnovationPacks(
+          undefined,
+          InnovationPacksOrderBy.RANDOM
+        );
+
+        expect(new Set(result.slice(0, 2).map(p => p.id))).toEqual(
+          new Set(['p2', 'p4'])
+        );
+        expect(result).toHaveLength(4);
+      }
+    });
+
+    it('the limit applies after the partition, so a limited listing keeps promoted packs', async () => {
+      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([
+        pack('p1', false),
+        pack('p2', false),
+        pack('p3', true),
+      ]);
+
+      const result = await service.getListedInnovationPacks(
+        1,
+        InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_DESC
+      );
+
+      expect(result.map(p => p.id)).toEqual(['p3']);
+    });
+
+    it('the shared sort used by the admin list is NOT partitioned', async () => {
+      const result = await service.sortAndFilterInnovationPacks(
+        [pack('p1', false), pack('p2', true), pack('p3', false)],
+        undefined,
+        InnovationPacksOrderBy.NUMBER_OF_TEMPLATES_ASC
+      );
+
+      expect(result.map(p => p.id)).toEqual(['p3', 'p1', 'p2']);
+    });
+  });
+
   // ── getListedInnovationHubs ───────────────────────────────────────
 
   describe('getListedInnovationHubs', () => {
@@ -471,7 +564,7 @@ describe('LibraryService', () => {
 
   // ── getPaginatedListedInnovationPacks ─────────────────────────────
   describe('getPaginatedListedInnovationPacks', () => {
-    it('should page newest-first (rowId DESC) and return the helper result', async () => {
+    it('should page promoted packs first, then newest-first (promote DESC, rowId DESC), and return the helper result', async () => {
       const items = [
         { id: 'pack-a', rowId: 2 },
         { id: 'pack-b', rowId: 1 },
@@ -485,10 +578,12 @@ describe('LibraryService', () => {
 
       expect(result.total).toBe(2);
       expect(result.items).toEqual(items);
-      // newest-first: rowId DESC on the query alias
-      expect(qb.orderBy).toHaveBeenCalledWith({
-        'innovationPack.rowId': 'DESC',
-      });
+      // promoted first, then newest-first: promote DESC, rowId DESC
+      expect(qb.orderBy).toHaveBeenCalledWith('innovationPack.promote', 'DESC');
+      expect(qb.addOrderBy).toHaveBeenCalledWith(
+        'innovationPack.rowId',
+        'DESC'
+      );
       expect(qb.take).toHaveBeenCalledWith(10);
     });
 
@@ -542,6 +637,22 @@ describe('LibraryService', () => {
       expect(wqb?.orWhere).toHaveBeenCalledWith(
         expect.stringContaining('EXISTS (SELECT 1 FROM tagset'),
         { searchTerm: '%inno%' }
+      );
+    });
+
+    it('keeps promoted-first ordering when a search term narrows the list', async () => {
+      const qb = makeQb('innovationPack');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedListedInnovationPacks(
+        { first: 25 },
+        { searchTerm: 'inno' }
+      );
+
+      expect(qb.orderBy).toHaveBeenCalledWith('innovationPack.promote', 'DESC');
+      expect(qb.where).toHaveBeenCalledWith(
+        'innovationPack.listedInStore = :listed',
+        { listed: true }
       );
     });
 

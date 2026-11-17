@@ -44,6 +44,11 @@ export class InnovationPack extends NameableEntity implements IInnovationPack {
   @Column()
   listedInStore!: boolean;
 
+  // Platform-promote: listed first in the Innovation Library. Read and
+  // written only through PLATFORM_PROMOTE_MANAGE.
+  @Column('boolean', { nullable: false, default: false })
+  promote!: boolean;
+
   @Column('varchar', {
     length: 36,
     nullable: false,

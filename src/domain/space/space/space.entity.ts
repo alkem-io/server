@@ -119,6 +119,11 @@ export class Space extends Actor implements ISpace {
   @Column('boolean', { nullable: false, default: false })
   pinned!: boolean;
 
+  // Platform-promote: listed first on Explore Spaces. Read and written only
+  // through PLATFORM_PROMOTE_MANAGE (see SpaceResolverFields.promote).
+  @Column('boolean', { nullable: false, default: false })
+  promote!: boolean;
+
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,

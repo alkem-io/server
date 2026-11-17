@@ -3,6 +3,7 @@ import { LogContext } from '@src/common/enums';
 import { EntityNotFoundException } from '@src/common/exceptions';
 import { IBaseAlkemio } from '@src/domain/common/entity/base-entity';
 import {
+  Brackets,
   Equal,
   LessThan,
   LessThanOrEqual,
@@ -20,6 +21,17 @@ import {
 import { tryValidateArgs } from './validate.pagination.args';
 
 export type Paginationable = { rowId: number };
+
+export interface PaginationOptions {
+  /**
+   * Name of a boolean column that partitions the result: rows where it is
+   * true come first, then the rest, each group in the requested `rowId`
+   * order. Cursors become composite `(flag, rowId)` keysets, so walking the
+   * pages in either direction returns every row exactly once. When set, this
+   * option owns the ORDER BY of the query (any existing order is replaced).
+   */
+  leadingBooleanDesc?: string;
+}
 
 const DEFAULT_PAGE_ITEMS = 25;
 const DEFAULT_CURSOR_COLUMN: keyof IBaseAlkemio = 'id';
@@ -61,6 +73,7 @@ const SORTING_COLUMN: keyof Paginationable = 'rowId';
  * @param paginationArgs
  * @param sort
  * @param cursorColumn
+ * @param options see {@link PaginationOptions}
  */
 export const getRelayStylePaginationResults = async <
   T extends IBaseAlkemio & Paginationable,
@@ -68,7 +81,8 @@ export const getRelayStylePaginationResults = async <
   query: SelectQueryBuilder<T>,
   paginationArgs: PaginationArgs,
   sort: 'ASC' | 'DESC' = 'ASC',
-  cursorColumn = DEFAULT_CURSOR_COLUMN
+  cursorColumn = DEFAULT_CURSOR_COLUMN,
+  options?: PaginationOptions
 ): Promise<IRelayStylePaginatedType<T>> => {
   const logger = new Logger(LogContext.PAGINATION);
 
@@ -80,6 +94,16 @@ export const getRelayStylePaginationResults = async <
     logger.error(error.name, error.message);
 
     throw e;
+  }
+
+  if (options?.leadingBooleanDesc) {
+    return getLeadingBooleanPaginationResults(
+      query,
+      paginationArgs,
+      sort,
+      cursorColumn,
+      options.leadingBooleanDesc
+    );
   }
 
   const { first, after, last, before } = paginationArgs;
@@ -231,4 +255,179 @@ const getPageInfo = async <T extends IBaseAlkemio & Paginationable>(
     hasNextPage,
     hasPreviousPage,
   };
+};
+
+/**
+ * Keyset pagination over the order `flag DESC, rowId <sort>`.
+ *
+ * A single-key `rowId` cursor cannot page such an order: after a promoted row
+ * the next page must continue with the remaining promoted rows and then the
+ * non-promoted ones from the start of the `rowId` range, which `rowId > x`
+ * cannot express (it skips or repeats rows). The cursor is therefore the
+ * pair `(flag, rowId)` of the cursor row, and "after" means: a lower flag
+ * (false sorts before true in Postgres, so lower = later here), or the same
+ * flag and a later `rowId`.
+ *
+ * Backward pages (`last`/`before`) are read in the reverse order and flipped
+ * in memory, so `last: n` returns exactly the n rows preceding the cursor.
+ * `hasPreviousPage`/`hasNextPage` are computed against the un-cursored query
+ * with the same keyset predicates, so both are exact in both directions.
+ */
+const getLeadingBooleanPaginationResults = async <
+  T extends IBaseAlkemio & Paginationable,
+>(
+  query: SelectQueryBuilder<T>,
+  paginationArgs: PaginationArgs,
+  sort: 'ASC' | 'DESC',
+  cursorColumn: typeof DEFAULT_CURSOR_COLUMN,
+  flagColumn: string
+): Promise<IRelayStylePaginatedType<T>> => {
+  const { first, after, last, before } = paginationArgs;
+  const backward = first === undefined && last !== undefined;
+  const flag = `${query.alias}.${flagColumn}`;
+  const rowId = `${query.alias}.${SORTING_COLUMN}`;
+  const reverseSort = sort === 'ASC' ? 'DESC' : 'ASC';
+
+  // The un-cursored query: page-info counts run against it.
+  const base = query.clone();
+
+  query
+    .orderBy(flag, backward ? 'ASC' : 'DESC')
+    .addOrderBy(rowId, backward ? reverseSort : sort);
+
+  const cursor = before ?? after;
+  if (cursor) {
+    const cursorEntity = await findCursorEntity(query, cursorColumn, cursor);
+    const key = toKeyset(cursorEntity, flagColumn);
+    query = andWhereKeyset(
+      query,
+      backward
+        ? precedesKeyset(flag, rowId, sort, key, 'cursor')
+        : followsKeyset(flag, rowId, sort, key, 'cursor')
+    );
+  }
+
+  query.take(first ?? last ?? DEFAULT_PAGE_ITEMS);
+
+  const result = await query.getMany();
+  if (backward) {
+    result.reverse();
+  }
+
+  const startItem = result[0];
+  const endItem = result[result.length - 1];
+
+  let hasPreviousPage = false;
+  let hasNextPage = false;
+  if (startItem && endItem) {
+    const [countBefore, countAfter] = await Promise.all([
+      andWhereKeyset(
+        base.clone(),
+        precedesKeyset(
+          flag,
+          rowId,
+          sort,
+          toKeyset(startItem, flagColumn),
+          'start'
+        )
+      ).getCount(),
+      andWhereKeyset(
+        base.clone(),
+        followsKeyset(flag, rowId, sort, toKeyset(endItem, flagColumn), 'end')
+      ).getCount(),
+    ]);
+    hasPreviousPage = countBefore > 0;
+    hasNextPage = countAfter > 0;
+  }
+
+  return {
+    edges: result.map<IRelayStyleEdge<T>>(x => ({ node: x })),
+    pageInfo: {
+      startCursor: startItem?.[cursorColumn],
+      endCursor: endItem?.[cursorColumn],
+      hasNextPage,
+      hasPreviousPage,
+    },
+  };
+};
+
+type Keyset = { flag: boolean; rowId: number };
+
+type KeysetPredicate = {
+  sql: string;
+  parameters: Record<string, unknown>;
+};
+
+const toKeyset = (entity: Paginationable, flagColumn: string): Keyset => ({
+  flag:
+    (entity as Paginationable & Record<string, unknown>)[flagColumn] === true,
+  rowId: entity.rowId,
+});
+
+/** Rows strictly after `key` in the order `flag DESC, rowId <sort>`. */
+const followsKeyset = (
+  flag: string,
+  rowId: string,
+  sort: 'ASC' | 'DESC',
+  key: Keyset,
+  name: string
+): KeysetPredicate => {
+  const flagParam = `keysetFlag_${name}`;
+  const rowIdParam = `keysetRowId_${name}`;
+  return {
+    sql: `(${flag} < :${flagParam} OR (${flag} = :${flagParam} AND ${rowId} ${sort === 'ASC' ? '>' : '<'} :${rowIdParam}))`,
+    parameters: { [flagParam]: key.flag, [rowIdParam]: key.rowId },
+  };
+};
+
+/** Rows strictly before `key` in the order `flag DESC, rowId <sort>`. */
+const precedesKeyset = (
+  flag: string,
+  rowId: string,
+  sort: 'ASC' | 'DESC',
+  key: Keyset,
+  name: string
+): KeysetPredicate => {
+  const flagParam = `keysetFlag_${name}`;
+  const rowIdParam = `keysetRowId_${name}`;
+  return {
+    sql: `(${flag} > :${flagParam} OR (${flag} = :${flagParam} AND ${rowId} ${sort === 'ASC' ? '<' : '>'} :${rowIdParam}))`,
+    parameters: { [flagParam]: key.flag, [rowIdParam]: key.rowId },
+  };
+};
+
+const andWhereKeyset = <T extends ObjectLiteral>(
+  query: SelectQueryBuilder<T>,
+  predicate: KeysetPredicate
+): SelectQueryBuilder<T> => {
+  const hasWhere =
+    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
+  return query[hasWhere ? 'andWhere' : 'where'](
+    new Brackets(qb => qb.where(predicate.sql, predicate.parameters))
+  );
+};
+
+const findCursorEntity = async <T extends IBaseAlkemio & Paginationable>(
+  query: SelectQueryBuilder<T>,
+  cursorColumn: string,
+  cursor: string
+): Promise<T> => {
+  const hasWhere =
+    query.expressionMap.wheres && query.expressionMap.wheres.length > 0;
+
+  const cursorEntity = await query
+    .clone()
+    [hasWhere ? 'andWhere' : 'where']({
+      [cursorColumn]: Equal(cursor),
+    })
+    .getOne();
+
+  if (!cursorEntity) {
+    throw new EntityNotFoundException(
+      `Unable to find entity with ID: ${cursor}`,
+      LogContext.PAGINATION
+    );
+  }
+
+  return cursorEntity;
 };

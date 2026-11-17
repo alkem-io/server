@@ -72,7 +72,7 @@ export class TemplateContentSpaceService {
         { allowFormFraming: true }
       );
 
-    for (const subspace of templateContentSpaceData.subspaces) {
+    for (const subspace of templateContentSpaceData.subspaces ?? []) {
       const subspaceContent = await this.createTemplateContentSpace(
         subspace,
         storageAggregator,

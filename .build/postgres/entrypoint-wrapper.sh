@@ -15,6 +15,20 @@ if [ -f "$pgdata/.pg-volume-copy-incomplete" ]; then
   echo "[ensure] $pgdata holds an interrupted copy. Run .scripts/migrate-postgres-volume.sh to redo it." >&2
   exit 1
 fi
+# Major version guard: a cluster only starts on its own major (postgres would refuse with a cryptic
+# "database files are incompatible with server"); the migration script converts it.
+if [ -f "$pgdata/PG_VERSION" ]; then
+  data_major="$(cat "$pgdata/PG_VERSION")"
+  server_major="$(postgres -V | sed -E 's/[^0-9]*([0-9]+).*/\1/')"
+  if [ "$data_major" != "$server_major" ]; then
+    echo "[ensure] $pgdata holds Postgres $data_major data but this is Postgres $server_major." >&2
+    echo "[ensure] quickstart: run .scripts/migrate-postgres-volume.sh (or 'pnpm run start:services', which runs it);" >&2
+    echo "[ensure] it converts the data and keeps a copy of the old cluster." >&2
+    echo "[ensure] devcontainer: the script does not cover its 'postgres-data' volume; remove that volume to" >&2
+    echo "[ensure] start on a fresh cluster (dump anything you need first with the old postgres image)." >&2
+    exit 1
+  fi
+fi
 
 # Preserve original command (defaults to "postgres")
 args=("$@")

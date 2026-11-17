@@ -1,6 +1,9 @@
+import { AuthorizationPrivilege } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { PlatformAuthorizationPolicyLoaderCreator } from '@core/dataloader/creators';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -14,6 +17,7 @@ describe('SpaceResolverFields', () => {
   let spaceService: SpaceService;
   let spaceLookupService: SpaceLookupService;
   let actorLookupService: ActorLookupService;
+  let authorizationService: AuthorizationService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -28,6 +32,7 @@ describe('SpaceResolverFields', () => {
     spaceService = module.get(SpaceService);
     spaceLookupService = module.get(SpaceLookupService);
     actorLookupService = module.get(ActorLookupService);
+    authorizationService = module.get(AuthorizationService);
   });
 
   it('should be defined', () => {
@@ -51,6 +56,69 @@ describe('SpaceResolverFields', () => {
       const loader = { load: vi.fn().mockRejectedValue(denied) } as any;
 
       await expect(resolver.activityScore(space, loader)).rejects.toBe(denied);
+    });
+  });
+
+  describe('promote', () => {
+    const platformPolicy = { id: 'platform-auth' } as any;
+    const actorContext = { actorID: 'actor-1' } as any;
+    const policyLoader = () =>
+      ({ load: vi.fn().mockResolvedValue(platformPolicy) }) as any;
+
+    it('a PLATFORM_PROMOTE_MANAGE holder reads the stored value (true and false alike), checked against the PLATFORM policy', async () => {
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      const loader = policyLoader();
+
+      expect(
+        await resolver.promote({ promote: true } as any, actorContext, loader)
+      ).toBe(true);
+      expect(
+        await resolver.promote({ promote: false } as any, actorContext, loader)
+      ).toBe(false);
+      expect(loader.load).toHaveBeenCalledWith(
+        PlatformAuthorizationPolicyLoaderCreator.KEY
+      );
+      expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+        actorContext,
+        platformPolicy,
+        AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE
+      );
+    });
+
+    it('a holder gets the stored value when the parent Space was selected without promote', async () => {
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue({
+        id: 'space-1',
+        promote: true,
+      } as any);
+
+      await expect(
+        resolver.promote({ id: 'space-1' } as any, actorContext, policyLoader())
+      ).resolves.toBe(true);
+      expect(spaceLookupService.getSpaceOrFail).toHaveBeenCalledWith(
+        'space-1',
+        { select: { id: true, promote: true } }
+      );
+    });
+
+    it('a loaded parent is not re-read', async () => {
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      await resolver.promote(
+        { id: 'space-1', promote: false } as any,
+        actorContext,
+        policyLoader()
+      );
+
+      expect(spaceLookupService.getSpaceOrFail).not.toHaveBeenCalled();
+    });
+
+    it('anyone else gets null (absent, not false) and no error', async () => {
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
+
+      await expect(
+        resolver.promote({ promote: true } as any, actorContext, policyLoader())
+      ).resolves.toBeNull();
     });
   });
 

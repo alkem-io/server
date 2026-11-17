@@ -12,6 +12,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import {
   AccountLoaderCreator,
   ActorLoaderCreator,
+  PlatformAuthorizationPolicyLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
@@ -39,6 +40,38 @@ export class VirtualContributorResolverFields {
     private aiServerAdapter: AiServerAdapter,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
   ) {}
+
+  /**
+   * The platform-promote flag, visible only to PLATFORM_PROMOTE_MANAGE
+   * holders (Content Full Access, License Manager); null for everyone else,
+   * never an error. The platform policy comes from a per-request loader, so a
+   * list of N rows costs one lookup.
+   */
+  @ResolveField('promote', () => Boolean, {
+    nullable: true,
+    description:
+      'Whether this VirtualContributor is platform-promoted (listed first). Null unless the caller may manage promotion (Platform Content Full Access or Platform License Manager).',
+  })
+  async promote(
+    @Parent() virtualContributor: IVirtualContributor,
+    @CurrentActor() actorContext: ActorContext,
+    @Loader(PlatformAuthorizationPolicyLoaderCreator)
+    loader: ILoader<IAuthorizationPolicy>
+  ): Promise<boolean | null> {
+    const platformPolicy = await loader.load(
+      PlatformAuthorizationPolicyLoaderCreator.KEY
+    );
+    if (
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        platformPolicy,
+        AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE
+      )
+    ) {
+      return null;
+    }
+    return virtualContributor.promote ?? null;
+  }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)

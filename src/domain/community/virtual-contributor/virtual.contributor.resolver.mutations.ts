@@ -1,3 +1,4 @@
+import { A22_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -5,8 +6,10 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   DeleteVirtualContributorInput,
@@ -14,6 +17,7 @@ import {
   UpdateVirtualContributorPlatformSettingsInput,
   UpdateVirtualContributorSettingsInput,
 } from './dto';
+import { AdminUpdateVirtualContributorPromoteInput } from './dto/virtual.contributor.dto.admin.update.promote';
 import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
 import { IVirtualContributor } from './virtual.contributor.interface';
 import { VirtualContributorService } from './virtual.contributor.service';
@@ -29,7 +33,9 @@ export class VirtualContributorResolverMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private readonly platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => IVirtualContributor, {
@@ -157,6 +163,57 @@ export class VirtualContributorResolverMutations {
     return this.virtualContributorService.getVirtualContributorByIdOrFail(
       virtualContributor.id
     );
+  }
+
+  /**
+   * The platform-promote flag: promoted VCs are listed first on the
+   * platform-wide VC listings (library, available-for-role-set picker).
+   * Gated on the PLATFORM policy, not the VC's own, so the owning account
+   * cannot promote its own VC. The flag is not part of any authorization
+   * policy, so nothing is re-applied.
+   */
+  @Mutation(() => IVirtualContributor, {
+    description:
+      'Sets the platform-promote flag of a VirtualContributor. Platform Content Full Access or Platform License Manager only.',
+  })
+  async adminUpdateVirtualContributorPromote(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('promoteData') promoteData: AdminUpdateVirtualContributorPromoteInput
+  ): Promise<IVirtualContributor> {
+    const virtualContributor =
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
+        promoteData.virtualContributorID
+      );
+    const platformPolicy =
+      await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      platformPolicy,
+      AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE,
+      `adminUpdateVirtualContributorPromote: ${virtualContributor.id}`
+    );
+
+    await this.virtualContributorService.setPromote(
+      virtualContributor.id,
+      promoteData.promote
+    );
+    virtualContributor.promote = promoteData.promote;
+
+    // Single-path surface: every call reaching here was authorized by
+    // PLATFORM_PROMOTE_MANAGE. Every successful call is audited, including
+    // re-applying the current value, so the trail records each admin action.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      A22_INTENDED_OWNERS,
+      {
+        resourceKind: 'virtual_contributor',
+        resourceId: virtualContributor.id,
+        promote: virtualContributor.promote,
+        outcome: 'promote_changed',
+      }
+    );
+
+    return virtualContributor;
   }
 
   @Mutation(() => IVirtualContributor, {

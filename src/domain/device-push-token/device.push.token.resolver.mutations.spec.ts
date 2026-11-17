@@ -15,6 +15,7 @@ describe('DevicePushTokenResolverMutations', () => {
   let service: {
     register: ReturnType<typeof vi.fn>;
     unregister: ReturnType<typeof vi.fn>;
+    resetBadgeCount: ReturnType<typeof vi.fn>;
   };
 
   const actor = (actorID: string) => {
@@ -25,7 +26,11 @@ describe('DevicePushTokenResolverMutations', () => {
   };
 
   beforeEach(() => {
-    service = { register: vi.fn(), unregister: vi.fn() };
+    service = {
+      register: vi.fn(),
+      unregister: vi.fn(),
+      resetBadgeCount: vi.fn(),
+    };
     resolver = new DevicePushTokenResolverMutations(service as any);
   });
 
@@ -56,5 +61,19 @@ describe('DevicePushTokenResolverMutations', () => {
       resolver.unregisterDevicePushToken(actor('user-1'), { token: 'tok-1' })
     ).resolves.toBe(true);
     expect(service.unregister).toHaveBeenCalledWith('user-1', 'tok-1');
+  });
+
+  it('refuses an unauthenticated actor on resetPushBadgeCount', async () => {
+    await expect(resolver.resetPushBadgeCount(actor(''))).rejects.toThrow(
+      ForbiddenException
+    );
+    expect(service.resetBadgeCount).not.toHaveBeenCalled();
+  });
+
+  it('resets the counter of the caller', async () => {
+    await expect(resolver.resetPushBadgeCount(actor('user-1'))).resolves.toBe(
+      true
+    );
+    expect(service.resetBadgeCount).toHaveBeenCalledWith('user-1');
   });
 });

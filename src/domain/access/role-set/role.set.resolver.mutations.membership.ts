@@ -37,7 +37,6 @@ import { IPlatformInvitation } from '@domain/access/invitation.platform/platform
 import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { IOrganization } from '@domain/community/organization';
@@ -93,7 +92,6 @@ import {
 import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
-import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { RoleSetServiceLifecycleApplication } from './role.set.service.lifecycle.application';
 import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.invitation';
@@ -127,8 +125,6 @@ export class RoleSetResolverMutationsMembership {
   constructor(
     private authorizationService: AuthorizationService,
     private roleSetService: RoleSetService,
-    private roleSetAuthorizationService: RoleSetAuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private notificationUserAdapter: NotificationUserAdapter,
     private notificationAdapterSpace: NotificationSpaceAdapter,
     private notificationVirtualContributorAdapter: NotificationVirtualContributorAdapter,
@@ -371,15 +367,14 @@ export class RoleSetResolverMutationsMembership {
       }
     }
 
-    let application = await this.roleSetService.createApplication({
+    // Stored once, with its authorization policy already applied. A new
+    // application changes no other policy on the role set, so the
+    // role-set-wide policy pass is not run here.
+    const application = await this.roleSetService.createApplication({
       roleSetID: roleSet.id,
       questions: applicationData.questions,
       userID: actorContext.actorID,
     });
-
-    application = await this.applicationService.save(application);
-
-    await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
 
     if (roleSet.type === RoleSetType.SPACE) {
       const community =
@@ -613,8 +608,9 @@ export class RoleSetResolverMutationsMembership {
       );
     }
 
-    // Reset all authorizations on the invitations and applications because it's easier
-    await this.resetAuthorizationsOnRoleSetApplicationsInvitations(roleSet.id);
+    // Each invitation was stored with its authorization policy already
+    // applied, and a new invitation changes no other policy on the role set,
+    // so no role-set-wide policy pass is run here.
 
     // Before the notifications go out, so the admins they reach can already
     // see the Space.
@@ -2314,29 +2310,6 @@ export class RoleSetResolverMutationsMembership {
         }
       }
     }
-  }
-
-  private async resetAuthorizationsOnRoleSetApplicationsInvitations(
-    roleSetID: string
-  ) {
-    // Logic is that the ability to invite to a subspace requires the ability to invite to the
-    // parent community if the user is not a member there
-    const roleSet = await this.roleSetService.getRoleSetOrFail(
-      roleSetID,
-
-      {
-        relations: {
-          invitations: true,
-          platformInvitations: true,
-          applications: true,
-        },
-      }
-    );
-    const authorizations =
-      await this.roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications(
-        roleSet
-      );
-    await this.authorizationPolicyService.saveAll(authorizations);
   }
 
   private validateRoleSetTypeOrFail(

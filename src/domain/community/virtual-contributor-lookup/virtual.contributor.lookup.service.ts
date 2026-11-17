@@ -202,7 +202,11 @@ export class VirtualContributorLookupService {
       });
     }
 
-    return getPaginationResults(qb, paginationArgs);
+    // Promoted VCs first, then creation order. Ordering only: the filters
+    // above decide membership.
+    return getPaginationResults(qb, paginationArgs, 'ASC', {
+      leadingBooleanDesc: 'promote',
+    });
   }
 
   /**

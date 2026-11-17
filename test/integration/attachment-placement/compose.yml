@@ -1,9 +1,11 @@
 services:
   postgres:
-    image: postgres:17.5
+    image: postgres:18.6-trixie@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
     environment:
       POSTGRES_DB: attachment_placement
       POSTGRES_USER: attachment_placement
+      # 18 defaults PGDATA to /var/lib/postgresql/18/docker and refuses a .../data mount without this
+      PGDATA: /var/lib/postgresql/data
       POSTGRES_PASSWORD: attachment_placement
     ports:
       - "127.0.0.1:${ATTACHMENT_PLACEMENT_DB_PORT:-0}:5432"

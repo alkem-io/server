@@ -12,6 +12,7 @@ import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.s
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona/ai.persona.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { VirtualContributorDefaultsModule } from '../virtual-contributor-defaults/virtual.contributor.defaults.module';
 import { VirtualActorLookupModule } from '../virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { VirtualContributorModelCardModule } from '../virtual-contributor-model-card/virtual.contributor.model.card.module';
@@ -42,6 +43,7 @@ import { VirtualContributorAuthorizationService } from './virtual.contributor.se
     PlatformWellKnownVirtualContributorsModule,
     TypeOrmModule.forFeature([VirtualContributor]),
     PlatformAuthorizationPolicyModule,
+    PlatformResourceAuditModule,
     SubscriptionServiceModule,
     VirtualContributorModelCardModule,
   ],

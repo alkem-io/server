@@ -30,7 +30,7 @@ export class CreateTemplateContentSpaceInput {
   @IsOptional()
   @ValidateNested()
   @Type(() => CreateTemplateContentSpaceInput)
-  subspaces!: CreateTemplateContentSpaceInput[];
+  subspaces?: CreateTemplateContentSpaceInput[];
 
   @Field(() => SpaceLevel, { nullable: false })
   level!: SpaceLevel;

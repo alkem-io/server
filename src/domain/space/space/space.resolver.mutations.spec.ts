@@ -1,3 +1,4 @@
+import { A22_INTENDED_OWNERS } from '@common/constants/authorization/audit.intended.owners';
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -9,6 +10,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { LicenseService } from '@domain/common/license/license.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
@@ -223,6 +225,164 @@ describe('SpaceResolverMutations', () => {
         expect.any(String)
       );
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('adminUpdateSpacePromote', () => {
+    const actorContext = { actorID: 'content-1' } as any;
+    const platformPolicy = { id: 'platform-auth' } as any;
+    let platformAuthorizationPolicyService: PlatformAuthorizationPolicyService;
+    let platformResourceAuditService: PlatformResourceAuditService;
+
+    const loadedSpace = (promote: boolean) =>
+      ({
+        id: 'space-1',
+        promote,
+        visibility: 'active',
+        authorization: { id: 'space-auth' },
+      }) as any;
+
+    beforeEach(() => {
+      platformAuthorizationPolicyService = module.get(
+        PlatformAuthorizationPolicyService
+      );
+      platformResourceAuditService = module.get(PlatformResourceAuditService);
+      vi.mocked(
+        platformAuthorizationPolicyService.getPlatformAuthorizationPolicy
+      ).mockResolvedValue(platformPolicy);
+    });
+
+    it('a PLATFORM_PROMOTE_MANAGE holder sets the flag, gated on the PLATFORM policy (not the space policy), and it is audited', async () => {
+      const space = loadedSpace(false);
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+      const result = await resolver.adminUpdateSpacePromote(actorContext, {
+        spaceID: 'space-1',
+        promote: true,
+      });
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        platformPolicy,
+        AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE,
+        expect.any(String)
+      );
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(1);
+      expect(spaceService.setPromote).toHaveBeenCalledWith('space-1', true);
+      expect(spaceService.save).not.toHaveBeenCalled();
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+        resourceKind: 'space',
+        resourceId: 'space-1',
+        promote: true,
+        outcome: 'promote_changed',
+      });
+      expect(result.promote).toBe(true);
+    });
+
+    it('a refused caller changes nothing and is not audited', async () => {
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(
+        loadedSpace(false)
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockImplementation(
+        () => {
+          throw new Error('forbidden');
+        }
+      );
+
+      await expect(
+        resolver.adminUpdateSpacePromote(actorContext, {
+          spaceID: 'space-1',
+          promote: true,
+        })
+      ).rejects.toThrow('forbidden');
+      expect(spaceService.setPromote).not.toHaveBeenCalled();
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).not.toHaveBeenCalled();
+    });
+
+    it('re-applying the current value succeeds (idempotent) and is still audited', async () => {
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(
+        loadedSpace(true)
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+      const result = await resolver.adminUpdateSpacePromote(actorContext, {
+        spaceID: 'space-1',
+        promote: true,
+      });
+
+      expect(result.promote).toBe(true);
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(actorContext, A22_INTENDED_OWNERS, {
+        resourceKind: 'space',
+        resourceId: 'space-1',
+        promote: true,
+        outcome: 'promote_changed',
+      });
+    });
+
+    it('un-promoting is a change and is audited with promote: false', async () => {
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(
+        loadedSpace(true)
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+      await resolver.adminUpdateSpacePromote(actorContext, {
+        spaceID: 'space-1',
+        promote: false,
+      });
+
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).toHaveBeenCalledWith(
+        actorContext,
+        A22_INTENDED_OWNERS,
+        expect.objectContaining({ promote: false })
+      );
+    });
+
+    it('changes nothing else: visibility untouched and no authorization re-apply', async () => {
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(
+        loadedSpace(false)
+      );
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(true);
+
+      const result = await resolver.adminUpdateSpacePromote(actorContext, {
+        spaceID: 'space-1',
+        promote: true,
+      });
+
+      expect(result.visibility).toBe('active');
+      expect(
+        spaceAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.saveAll).not.toHaveBeenCalled();
+      expect(spaceService.adminUpdateSpaceVisibility).not.toHaveBeenCalled();
+    });
+
+    it('an unknown space id fails with the lookup error before any gate, save or audit', async () => {
+      vi.mocked(spaceService.getSpaceOrFail).mockRejectedValue(
+        new Error('not found')
+      );
+
+      await expect(
+        resolver.adminUpdateSpacePromote(actorContext, {
+          spaceID: 'missing',
+          promote: true,
+        })
+      ).rejects.toThrow('not found');
+      expect(spaceService.setPromote).not.toHaveBeenCalled();
+      expect(
+        platformResourceAuditService.recordEventForActor
+      ).not.toHaveBeenCalled();
     });
   });
 
