@@ -105,12 +105,7 @@ import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/emai
 import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
 import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
-import {
-  AlkemioConfig,
-  ConnectionContext,
-  SubscriptionsTransportWsWebsocket,
-  WebsocketContext,
-} from '@src/types';
+import { AlkemioConfig, ConnectionContext, WebsocketContext } from '@src/types';
 import { print } from 'graphql/language/printer';
 import { WinstonModule } from 'nest-winston';
 import { ApmApolloPlugin } from './apm/plugins';
@@ -230,21 +225,6 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
             return { req: ctx.req };
           },
           subscriptions: {
-            'subscriptions-transport-ws': {
-              /***
-               * subscriptions-transport-ws required passing the request object
-               * through the onConnect method
-               * required for passport.js to execute the strategy against the incoming headers
-               */
-              onConnect: (
-                connectionParams: Record<string, any>,
-                websocket: SubscriptionsTransportWsWebsocket // couldn't find a better type
-              ) => {
-                return {
-                  req: { headers: websocket?.upgradeReq?.headers },
-                };
-              },
-            },
             'graphql-ws': {
               // Sockets are authenticated once at connection time, so a
               // long-lived subscription would outlive its session: a cookie
