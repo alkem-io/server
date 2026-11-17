@@ -288,7 +288,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: ${OIDC_SERVICE_IMAGE:-alkemio/oidc-service:v0.8.0}
+    image: ${OIDC_SERVICE_IMAGE:-alkemio/oidc-service:v0.9.0}
     depends_on:
       - hydra
       - kratos
@@ -566,7 +566,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.42.1
+    image: alkemio/notifications:v0.45.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -860,7 +860,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_kratos_hooks
     hostname: kratos-hooks
-    image: ${KRATOS_WEBHOOKS_IMAGE:-alkemio/kratos-webhooks:v0.2.3}
+    image: ${KRATOS_WEBHOOKS_IMAGE:-alkemio/kratos-webhooks:v0.3.0}
     depends_on:
       rabbitmq:
         condition: service_healthy
