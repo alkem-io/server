@@ -1309,6 +1309,45 @@ describe('ProfileService', () => {
       expect(syncActor).toHaveBeenCalledWith('actor-1', 'Polina Boneva');
     });
 
+    it('starts the sync only after the profile save resolves', async () => {
+      const { syncActor } = setup(actorProfile(ProfileType.USER, 'Old Name'));
+      let resolveSave!: () => void;
+      profileRepository.save!.mockImplementation(
+        (p: any) =>
+          new Promise<Profile>(resolve => {
+            resolveSave = () => resolve(p);
+          })
+      );
+
+      const pending = service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'New Name',
+      });
+      await vi.waitFor(() => expect(profileRepository.save).toHaveBeenCalled());
+      expect(syncActor).not.toHaveBeenCalled();
+
+      resolveSave();
+      await pending;
+
+      expect(syncActor).toHaveBeenCalledTimes(1);
+      expect(syncActor).toHaveBeenCalledWith('actor-1', 'New Name');
+    });
+
+    it('does not sync when the profile save fails', async () => {
+      const { actorFindOne, syncActor } = setup(
+        actorProfile(ProfileType.USER, 'Old Name')
+      );
+      profileRepository.save!.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.updateProfile({ id: 'p-actor' } as any, {
+          displayName: 'New Name',
+        })
+      ).rejects.toThrow('db down');
+
+      expect(actorFindOne).not.toHaveBeenCalled();
+      expect(syncActor).not.toHaveBeenCalled();
+    });
+
     it('syncs a renamed virtual contributor', async () => {
       const { syncActor } = setup(
         actorProfile(ProfileType.VIRTUAL_CONTRIBUTOR, 'Old VC')
