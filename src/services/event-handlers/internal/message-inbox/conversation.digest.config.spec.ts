@@ -35,9 +35,10 @@ describe('buildDigestConfig (data-model §6)', () => {
     });
   });
 
-  // The cap anchor is cleared on every flush, so the worst case is set by the
-  // quiet period, not the max delay (SC-010).
-  it('the defaults bound the worst case to 720/720/12/3 dispatches per recipient per hour (SC-010)', () => {
+  // The cap anchor is cleared on every flush, so the nominal rate is set by the
+  // quiet period, not the max delay (SC-010). Arithmetic on the configured
+  // windows only; it does not exercise the scheduler.
+  it('the default quiet periods imply nominal rates of 720/720/12/3 dispatches per recipient per hour (SC-010)', () => {
     const config = buildDigestConfig(validRaw());
     const perHour = (quietPeriodSeconds: number) => 3600 / quietPeriodSeconds;
 
