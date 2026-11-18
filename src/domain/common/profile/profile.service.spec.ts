@@ -7,6 +7,7 @@ import {
   NotSupportedException,
   ValidationException,
 } from '@common/exceptions';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LocationService } from '@domain/common/location/location.service';
 import { ReferenceService } from '@domain/common/reference/reference.service';
@@ -18,6 +19,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -38,6 +40,7 @@ describe('ProfileService', () => {
   let storageBucketService: StorageBucketService;
   let profileDocumentsService: ProfileDocumentsService;
   let authorizationPolicyService: AuthorizationPolicyService;
+  let communicationAdapter: CommunicationAdapter;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -72,6 +75,7 @@ describe('ProfileService', () => {
     storageBucketService = module.get(StorageBucketService);
     profileDocumentsService = module.get(ProfileDocumentsService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    communicationAdapter = module.get(CommunicationAdapter);
   });
 
   afterEach(() => {
@@ -1263,6 +1267,143 @@ describe('ProfileService', () => {
         tagsetService.convertTagsetTemplatesToCreateTagsetInput
       ).toHaveBeenCalledWith(templates);
       expect(result).toBe(converted);
+    });
+  });
+  describe('updateProfile - Matrix display name sync', () => {
+    const actorProfile = (type: ProfileType, displayName: string) =>
+      ({
+        id: 'p-actor',
+        type,
+        displayName,
+        references: [],
+        tagsets: [],
+        visuals: [],
+        authorization: { id: 'auth-1' },
+      }) as unknown as Profile;
+
+    const setup = (profile: Profile) => {
+      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      profileRepository.save!.mockImplementation(async (p: any) => p);
+      const actorFindOne = vi
+        .spyOn(Actor, 'findOne')
+        .mockResolvedValue({ id: 'actor-1', nameID: 'actor-name' } as Actor);
+      const syncActor = vi.mocked(communicationAdapter.syncActor);
+      syncActor.mockReset();
+      syncActor.mockResolvedValue(true);
+      return { actorFindOne, syncActor };
+    };
+
+    it('syncs a renamed user once, with the new name', async () => {
+      const { actorFindOne, syncActor } = setup(
+        actorProfile(ProfileType.USER, 'Polina Boneva ☀️')
+      );
+
+      await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'Polina Boneva',
+      });
+
+      expect(actorFindOne).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { profile: { id: 'p-actor' } } })
+      );
+      expect(syncActor).toHaveBeenCalledTimes(1);
+      expect(syncActor).toHaveBeenCalledWith('actor-1', 'Polina Boneva');
+    });
+
+    it('syncs a renamed virtual contributor', async () => {
+      const { syncActor } = setup(
+        actorProfile(ProfileType.VIRTUAL_CONTRIBUTOR, 'Old VC')
+      );
+
+      await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'New VC',
+      });
+
+      expect(syncActor).toHaveBeenCalledTimes(1);
+      expect(syncActor).toHaveBeenCalledWith('actor-1', 'New VC');
+    });
+
+    it('does not sync when the display name is unchanged', async () => {
+      const { actorFindOne, syncActor } = setup(
+        actorProfile(ProfileType.USER, 'Same Name')
+      );
+
+      await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'Same Name',
+        tagline: 'new tagline',
+      });
+
+      expect(actorFindOne).not.toHaveBeenCalled();
+      expect(syncActor).not.toHaveBeenCalled();
+    });
+
+    it('does not sync when no display name is provided', async () => {
+      const { syncActor } = setup(actorProfile(ProfileType.USER, 'Name'));
+
+      await service.updateProfile({ id: 'p-actor' } as any, {
+        description: 'new description',
+      });
+
+      expect(syncActor).not.toHaveBeenCalled();
+    });
+
+    it('does not sync a renamed organization, which is not a Matrix user', async () => {
+      const { actorFindOne, syncActor } = setup(
+        actorProfile(ProfileType.ORGANIZATION, 'Old Org')
+      );
+
+      await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'New Org',
+      });
+
+      expect(actorFindOne).not.toHaveBeenCalled();
+      expect(syncActor).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the nameID when the new display name is blank', async () => {
+      const { syncActor } = setup(actorProfile(ProfileType.USER, 'Old Name'));
+
+      await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: '   ',
+      });
+
+      expect(syncActor).toHaveBeenCalledWith('actor-1', 'actor-name');
+    });
+
+    it('still returns the updated profile when the sync throws', async () => {
+      const { syncActor } = setup(actorProfile(ProfileType.USER, 'Old Name'));
+      syncActor.mockRejectedValue(new Error('matrix down'));
+
+      const result = await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'New Name',
+      });
+
+      expect(result.displayName).toBe('New Name');
+      expect(syncActor).toHaveBeenCalledTimes(1);
+    });
+
+    it('still returns the updated profile when the adapter reports failure', async () => {
+      const { syncActor } = setup(actorProfile(ProfileType.USER, 'Old Name'));
+      syncActor.mockResolvedValue(false);
+
+      const result = await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'New Name',
+      });
+
+      expect(result.displayName).toBe('New Name');
+    });
+
+    it('does not sync when no actor owns the profile', async () => {
+      const { actorFindOne, syncActor } = setup(
+        actorProfile(ProfileType.USER, 'Old Name')
+      );
+      actorFindOne.mockResolvedValue(null);
+
+      const result = await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'New Name',
+      });
+
+      expect(result.displayName).toBe('New Name');
+      expect(syncActor).not.toHaveBeenCalled();
     });
   });
 });

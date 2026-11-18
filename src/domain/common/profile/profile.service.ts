@@ -8,6 +8,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILocation, LocationService } from '@domain/common/location';
@@ -25,6 +27,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
@@ -44,6 +47,7 @@ export class ProfileService {
     private visualService: VisualService,
     private locationService: LocationService,
     private profileDocumentsService: ProfileDocumentsService,
+    private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -300,6 +304,7 @@ export class ProfileService {
       profile.description = profileData.description;
     }
 
+    const previousDisplayName = profile.displayName;
     if (profileData.displayName !== undefined) {
       profile.displayName = profileData.displayName;
     }
@@ -329,7 +334,64 @@ export class ProfileService {
       );
     }
 
-    return await this.profileRepository.save(profile);
+    const savedProfile = await this.profileRepository.save(profile);
+
+    if (savedProfile.displayName !== previousDisplayName) {
+      await this.syncActorDisplayNameToMatrix(savedProfile);
+    }
+
+    return savedProfile;
+  }
+
+  /**
+   * Matrix keeps its own copy of a user's or virtual contributor's display
+   * name, set when the actor is created. Every rename reaches this method,
+   * whichever mutation made it, so this is where Matrix is told about it;
+   * otherwise calls and room membership keep showing the old name.
+   * Organizations are not Matrix users, so only these two profile types
+   * are synced.
+   *
+   * Best-effort: the rename is already saved, so a Matrix failure is logged
+   * and never fails the update.
+   */
+  private async syncActorDisplayNameToMatrix(profile: IProfile): Promise<void> {
+    if (
+      profile.type !== ProfileType.USER &&
+      profile.type !== ProfileType.VIRTUAL_CONTRIBUTOR
+    ) {
+      return;
+    }
+
+    try {
+      const actor = await Actor.findOne({
+        where: { profile: { id: profile.id } },
+        select: { id: true, nameID: true },
+      });
+      if (!actor) {
+        this.logger.warn?.(
+          `No actor owns profile ${profile.id}; display name not synced to communication adapter`,
+          LogContext.PROFILE
+        );
+        return;
+      }
+      actor.profile = profile as Profile;
+      const synced = await this.communicationAdapter.syncActor(
+        actor.id,
+        getActorDisplayName(actor)
+      );
+      if (!synced) {
+        this.logger.warn?.(
+          `Communication adapter did not confirm display name sync for actor: ${actor.id}`,
+          LogContext.COMMUNICATION
+        );
+      }
+    } catch (e: any) {
+      this.logger.error(
+        `Failed to sync display name to communication adapter for profile: ${profile.id}`,
+        e?.stack,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   /**

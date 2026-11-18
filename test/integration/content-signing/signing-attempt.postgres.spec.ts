@@ -1561,6 +1561,7 @@ describeRealServices('SigningAttempt — PostgreSQL and file-service', () => {
       unused,
       unused,
       unused,
+      unused,
       source.getRepository(ProfileFixture) as any,
       logger
     );

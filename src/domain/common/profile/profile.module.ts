@@ -9,6 +9,7 @@ import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
@@ -34,6 +35,7 @@ import { ProfileAuthorizationService } from './profile.service.authorization';
     DocumentModule,
     UrlGeneratorModule,
     AvatarCreatorModule,
+    CommunicationAdapterModule,
   ],
   providers: [
     ProfileResolverMutations,
