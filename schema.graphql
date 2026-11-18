@@ -4760,11 +4760,11 @@ type MeSecondFactorRequirement {
   """
   deadline: DateTime
   """
-  Whether this session's sign-in meets a second-factor rule: it completed a second factor, and the account held at least two ways to pass the second step when they were counted at sign-in.
+  Whether this session's sign-in meets a second-factor rule: it completed a second factor, and the account held at least two ways to pass the second step when they were counted at sign-in. A sign-in whose ways were not counted (a bearer token, or a session from before they were recorded) needs only the second factor.
   """
   satisfied: Boolean!
   """
-  True when a covering rule applies and this session signed in with a second factor, but the account held fewer than two ways to pass the second step at sign-in. An authenticator app, each security key and recovery codes count one each; a passkey does not count. Signing in again after adding a way updates it.
+  True when a covering rule applies and this session signed in with a second factor, but the count of ways to pass the second step recorded at sign-in is below two. An authenticator app, each security key and recovery codes count one each; a passkey does not count. A sign-in whose ways were not counted (a bearer token, or a session from before they were recorded) returns false. Signing in again after adding a way updates it.
   """
   secondWayNeeded: Boolean!
 }

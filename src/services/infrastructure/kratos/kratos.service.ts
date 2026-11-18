@@ -484,13 +484,14 @@ export class KratosService {
 
   public async getIdentityById(
     identityId: string,
-    includeCredential?: GetIdentityIncludeCredentialEnum[]
+    includeCredential?: GetIdentityIncludeCredentialEnum[],
+    opts?: { timeoutMs?: number }
   ): Promise<Identity | undefined> {
     try {
-      const { data: identity } = await this.kratosIdentityClient.getIdentity({
-        id: identityId,
-        includeCredential,
-      });
+      const { data: identity } = await this.kratosIdentityClient.getIdentity(
+        { id: identityId, includeCredential },
+        { timeout: opts?.timeoutMs }
+      );
       return identity;
     } catch (error) {
       const status = (error as any)?.response?.status;

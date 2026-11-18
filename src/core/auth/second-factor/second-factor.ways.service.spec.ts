@@ -101,7 +101,9 @@ describe('SecondFactorWaysService.count', () => {
     await service.count('id-1');
 
     expect(getIdentityById).toHaveBeenCalledTimes(1);
-    expect(getIdentityById).toHaveBeenCalledWith('id-1', ['webauthn']);
+    expect(getIdentityById).toHaveBeenCalledWith('id-1', ['webauthn'], {
+      timeoutMs: 5000,
+    });
   });
 
   it('throws when the identity is not found', async () => {
