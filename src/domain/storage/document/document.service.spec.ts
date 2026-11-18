@@ -370,6 +370,44 @@ describe('DocumentService', () => {
     });
   });
 
+  describe('isPubliclyAccessibleURL', () => {
+    const DOCUMENT_ID = '3f2b8c1e-9a4d-4e7b-8c2f-5d6a7b8c9d0e';
+    const DOCUMENT_URL = `${BASE_DOCUMENT_URL}/${DOCUMENT_ID}`;
+
+    test.each([
+      ['a document address', DOCUMENT_URL],
+      [
+        'a document address with an unusual variant digit',
+        `${BASE_DOCUMENT_URL}/11111111-1111-4111-1111-111111111111`,
+      ],
+    ])('accepts %s', (_label, url) => {
+      expect(service.isPubliclyAccessibleURL(url)).toBe(true);
+    });
+
+    test.each([
+      ['a query string appended', `${DOCUMENT_URL}?x=1`],
+      ['a trailing slash', `${DOCUMENT_URL}/`],
+      [
+        'an upper-case identifier',
+        `${BASE_DOCUMENT_URL}/${DOCUMENT_ID.toUpperCase()}`,
+      ],
+      [
+        'dot segments to a same-origin redirect',
+        `${BASE_DOCUMENT_URL}/../../../../auth/oidc/logout?post_logout_redirect_uri=https://attacker.example/x.png`,
+      ],
+      ['a non-uuid identifier', `${BASE_DOCUMENT_URL}/not-a-uuid`],
+      [
+        'the same path on another host',
+        `https://other.example${HOSTING_CONFIG.path_api_private_rest}/storage/document/${DOCUMENT_ID}`,
+      ],
+      ['a non-web scheme', 'ftp://host-you-control.example/a.png'],
+      ['text that is not an address', 'not a url'],
+      ['the empty string', ''],
+    ])('refuses %s', (_label, url) => {
+      expect(service.isPubliclyAccessibleURL(url)).toBe(false);
+    });
+  });
+
   // ── getDocumentFromURL ──────────────────────────────────────────
 
   describe('getDocumentFromURL', () => {
