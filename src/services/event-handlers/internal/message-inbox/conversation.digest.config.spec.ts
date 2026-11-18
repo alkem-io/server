@@ -35,14 +35,16 @@ describe('buildDigestConfig (data-model §6)', () => {
     });
   });
 
-  it('the defaults bound the worst case to 60/30/2/1 dispatches per recipient per hour (SC-010)', () => {
+  // The cap anchor is cleared on every flush, so the worst case is set by the
+  // quiet period, not the max delay (SC-010).
+  it('the defaults bound the worst case to 720/720/12/3 dispatches per recipient per hour (SC-010)', () => {
     const config = buildDigestConfig(validRaw());
-    const perHour = (maxDelaySeconds: number) => 3600 / maxDelaySeconds;
+    const perHour = (quietPeriodSeconds: number) => 3600 / quietPeriodSeconds;
 
-    expect(perHour(config.windows.push.direct.maxDelaySeconds)).toBe(60);
-    expect(perHour(config.windows.push.group.maxDelaySeconds)).toBe(30);
-    expect(perHour(config.windows.email.direct.maxDelaySeconds)).toBe(2);
-    expect(perHour(config.windows.email.group.maxDelaySeconds)).toBe(1);
+    expect(perHour(config.windows.push.direct.quietPeriodSeconds)).toBe(720);
+    expect(perHour(config.windows.push.group.quietPeriodSeconds)).toBe(720);
+    expect(perHour(config.windows.email.direct.quietPeriodSeconds)).toBe(12);
+    expect(perHour(config.windows.email.group.quietPeriodSeconds)).toBe(3);
   });
 
   it('accepts seconds-scale windows so the live test stacks can run (Ruling 3b)', () => {

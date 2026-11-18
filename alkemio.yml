@@ -588,11 +588,16 @@ notifications:
     # debounce never fires in an active conversation, which would make the
     # busiest conversations the quietest notifiers.
     #
-    # Worst case dispatches per recipient per hour = 3600 / max_delay_seconds,
-    # INDEPENDENT of message volume. That bound is why the pre-R4 suppression
-    # window and both volume budgets were deleted (D-21). With the defaults
-    # below that is 60 direct / 30 group pushes and 2 direct / 1 group emails
-    # per recipient per hour (server#6757 raised push from 12 / 4).
+    # The cap only bounds how long a continuous burst can delay a dispatch; it
+    # does NOT bound how often dispatches go out. The cap anchor is cleared on
+    # every flush, so a sender pacing messages just past the quiet period gets
+    # one dispatch per message: worst case per recipient per hour per track =
+    # 3600 / quiet_period_seconds. With the defaults below that is 720 direct /
+    # 720 group pushes and 12 direct / 3 group emails per recipient per hour
+    # (server#6757 cut the push quiet period to 5s). D-21 deleted the pre-R4
+    # suppression window and both volume budgets on the belief that the bound
+    # was 3600 / max_delay_seconds; a minimum gap between flushes, if wanted,
+    # belongs in the 034 D-21 amendment.
     #
     # Every window is env-overridable because the live test stacks must run
     # seconds-scale windows; the committed defaults are the production values.
