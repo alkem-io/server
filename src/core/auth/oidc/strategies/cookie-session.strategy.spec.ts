@@ -386,6 +386,25 @@ describe('CookieSessionStrategy — the second factor of the sign-in', () => {
     expect(result?.secondFactor).toEqual({ satisfied: false });
   });
 
+  it.each([0, 1, 2])('stamps the %i ways the session holds', async ways => {
+    const { strategy, cachedContext } = await build(
+      buildPayload({ acr: 'aal2', second_factor_ways: ways })
+    );
+
+    const result = await strategy.validate(request());
+
+    expect(result?.secondFactor).toEqual({ satisfied: true, ways });
+    expect(cachedContext.secondFactor).toBeUndefined();
+  });
+
+  it('stamps no ways for a session written before they were recorded', async () => {
+    const { strategy } = await build(buildPayload({ acr: 'aal2' }));
+
+    const result = await strategy.validate(request());
+
+    expect(result?.secondFactor).not.toHaveProperty('ways');
+  });
+
   it('keeps issuedAt at the sign-in start, created_at in milliseconds', async () => {
     const payload = buildPayload();
     const { strategy } = await build(payload);

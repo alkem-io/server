@@ -38,6 +38,10 @@ export type AlkemioSessionPayload = {
   // refresh. `'aal2'` means a second factor was completed at this sign-in.
   // A payload written before this field existed reads as `null`.
   acr: 'aal1' | 'aal2' | null;
+  // How many ways to pass the second step the identity held at sign-in, read
+  // from Kratos once and never by a refresh. A payload written before this
+  // field existed has none.
+  second_factor_ways?: number;
   // RESERVED — declared with the original OIDC session layer as a slot for
   // per-request display name / email, and never populated by anything since.
   // It is set to `null` at login and read only defensively (revocation scrubs
