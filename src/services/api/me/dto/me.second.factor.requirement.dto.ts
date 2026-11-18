@@ -26,7 +26,7 @@ export class MeSecondFactorRequirement {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'True when a covering rule applies and this session signed in with a second factor, but the count of ways to pass the second step recorded at sign-in is below two. An authenticator app, each security key and recovery codes count one each; a passkey does not count. A sign-in whose ways were not counted (a bearer token, or a session from before they were recorded) returns false. Signing in again after adding a way updates it.',
+      'True when a covering rule applies and this session signed in with a second factor, but the count of ways to pass the second step recorded at sign-in is below two. An authenticator app, each security key used as a second step, and recovery codes count one each; a passkey, including a security key registered for passwordless sign-in, does not count. A sign-in whose ways were not counted (a bearer token, or a session from before they were recorded) returns false. Signing in again after adding a way updates it.',
   })
   secondWayNeeded!: boolean;
 }
