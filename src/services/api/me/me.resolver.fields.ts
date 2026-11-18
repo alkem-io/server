@@ -1,6 +1,10 @@
 import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
 import { ActorContext } from '@core/actor-context/actor.context';
-import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
+import {
+  meetsSecondFactorRule,
+  SecondFactorPolicyService,
+  secondWayNeeded,
+} from '@core/auth/second-factor/second-factor.policy.service';
 import { PaginationArgs } from '@core/pagination';
 import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
 import { AccountDeletionBlockerService } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
@@ -44,6 +48,7 @@ const EMPTY_SECOND_FACTOR_REQUIREMENT: MeSecondFactorRequirement = {
   covered: false,
   deadline: null,
   satisfied: false,
+  secondWayNeeded: false,
 };
 
 @Resolver(() => MeQueryResults)
@@ -373,7 +378,7 @@ export class MeResolverFields {
   @ResolveField('secondFactorRequirement', () => MeSecondFactorRequirement, {
     nullable: false,
     description:
-      'Whether a second-factor rule covers the current user, its deadline, and whether this session satisfies it.',
+      'Whether a second-factor rule covers the current user, its deadline, whether this session meets it, and whether the account needs a second way to pass the second step.',
   })
   public async secondFactorRequirement(
     @CurrentActor() actorContext: ActorContext
@@ -388,7 +393,8 @@ export class MeResolverFields {
     return {
       covered,
       deadline,
-      satisfied: actorContext.secondFactor.satisfied,
+      satisfied: meetsSecondFactorRule(actorContext.secondFactor),
+      secondWayNeeded: covered && secondWayNeeded(actorContext.secondFactor),
     };
   }
 

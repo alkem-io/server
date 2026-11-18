@@ -104,6 +104,14 @@ describe('HydraBearerStrategy — the second factor of the sign-in', () => {
     expect(result?.secondFactor).toEqual({ satisfied: false });
   });
 
+  it('stamps no ways: a bearer token carries no session to hold them', async () => {
+    const { strategy } = await build({ acr: 'aal2' });
+
+    const result = await strategy.validate(request());
+
+    expect(result?.secondFactor).not.toHaveProperty('ways');
+  });
+
   it('asks the policy about the stamped copy', async () => {
     const { strategy, secondFactorPolicy } = await build({ acr: 'aal1' });
 

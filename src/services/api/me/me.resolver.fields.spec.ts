@@ -541,11 +541,11 @@ describe('MeResolverFields.secondFactorRequirement', () => {
   const deadline = new Date('2026-11-15T10:00:00.000Z');
   const platformRole = [{ type: 'platform-support', resourceID: '' }];
 
-  function build() {
+  function build(covered = true) {
     const secondFactorPolicyService = createMock<SecondFactorPolicyService>();
     secondFactorPolicyService.coverage.mockResolvedValue({
-      covered: true,
-      deadline,
+      covered,
+      deadline: covered ? deadline : null,
     });
     const resolver = new MeResolverFields(
       createMock<MeService>(),
@@ -573,10 +573,70 @@ describe('MeResolverFields.secondFactorRequirement', () => {
 
     const result = await resolver.secondFactorRequirement(actor);
 
-    expect(result).toEqual({ covered: true, deadline, satisfied });
+    expect(result).toEqual({
+      covered: true,
+      deadline,
+      satisfied,
+      secondWayNeeded: false,
+    });
     expect(secondFactorPolicyService.coverage).toHaveBeenCalledWith(
       platformRole
     );
+  });
+
+  const stampedActor = (secondFactor: { satisfied: boolean; ways?: number }) =>
+    ({ actorID: 'user-123', credentials: platformRole, secondFactor }) as any;
+
+  it.each([
+    0, 1,
+  ])('needs a second way after a second-factor sign-in on an account with %i way(s)', async ways => {
+    const { resolver } = build();
+
+    const result = await resolver.secondFactorRequirement(
+      stampedActor({ satisfied: true, ways })
+    );
+
+    expect(result).toEqual({
+      covered: true,
+      deadline,
+      satisfied: false,
+      secondWayNeeded: true,
+    });
+  });
+
+  it('is satisfied and needs nothing with two ways', async () => {
+    const { resolver } = build();
+
+    const result = await resolver.secondFactorRequirement(
+      stampedActor({ satisfied: true, ways: 2 })
+    );
+
+    expect(result).toMatchObject({ satisfied: true, secondWayNeeded: false });
+  });
+
+  it('does not ask for a second way when the sign-in used no second factor', async () => {
+    const { resolver } = build();
+
+    const result = await resolver.secondFactorRequirement(
+      stampedActor({ satisfied: false, ways: 1 })
+    );
+
+    expect(result).toMatchObject({ satisfied: false, secondWayNeeded: false });
+  });
+
+  it('does not ask for a second way when no rule covers the user', async () => {
+    const { resolver } = build(false);
+
+    const result = await resolver.secondFactorRequirement(
+      stampedActor({ satisfied: true, ways: 1 })
+    );
+
+    expect(result).toEqual({
+      covered: false,
+      deadline: null,
+      satisfied: false,
+      secondWayNeeded: false,
+    });
   });
 
   it.each([
@@ -597,6 +657,7 @@ describe('MeResolverFields.secondFactorRequirement', () => {
       covered: false,
       deadline: null,
       satisfied: false,
+      secondWayNeeded: false,
     });
     expect(secondFactorPolicyService.coverage).not.toHaveBeenCalled();
   });

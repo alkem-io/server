@@ -248,7 +248,12 @@ export class CookieSessionStrategy extends PassportStrategy(
       expiry: payload.expires_at * 1000,
       absoluteExpiry: payload.absolute_expires_at * 1000,
       issuedAt: payload.created_at * 1000,
-      secondFactor: { satisfied: payload.acr === 'aal2' },
+      secondFactor: {
+        satisfied: payload.acr === 'aal2',
+        ...(typeof payload.second_factor_ways === 'number'
+          ? { ways: payload.second_factor_ways }
+          : {}),
+      },
     });
     await assertSignInNotRefused(this.secondFactorPolicy, actor, {
       sub: payload.sub || null,

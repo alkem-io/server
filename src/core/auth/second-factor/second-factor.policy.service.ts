@@ -13,6 +13,34 @@ import { In, Repository } from 'typeorm';
 
 export const SECOND_FACTOR_GRACE_MS = 14 * 24 * 3600 * 1000;
 
+/** How many ways to pass the second step a covered member must hold. */
+export const SECOND_FACTOR_WAYS_REQUIRED = 2;
+
+type StampedSecondFactor = NonNullable<ActorContext['secondFactor']>;
+
+/**
+ * A second-factor sign-in on an account counted with fewer ways than
+ * required. A sign-in whose ways were not counted (a bearer token, or a
+ * session from before they were recorded) never needs one.
+ */
+export function secondWayNeeded(secondFactor: StampedSecondFactor): boolean {
+  return (
+    secondFactor.satisfied &&
+    typeof secondFactor.ways === 'number' &&
+    secondFactor.ways < SECOND_FACTOR_WAYS_REQUIRED
+  );
+}
+
+/**
+ * Whether a sign-in meets a covering rule: it used a second factor, and the
+ * account held enough ways to pass the second step when they were counted.
+ */
+export function meetsSecondFactorRule(
+  secondFactor: StampedSecondFactor
+): boolean {
+  return secondFactor.satisfied && !secondWayNeeded(secondFactor);
+}
+
 const ORGANIZATION_ROLE_CREDENTIALS: ReadonlySet<string> = new Set([
   AuthorizationCredential.ORGANIZATION_OWNER,
   AuthorizationCredential.ORGANIZATION_ADMIN,
@@ -56,15 +84,17 @@ export class SecondFactorPolicyService {
   }
 
   /**
-   * Throws `SecondFactorRequiredError` when the actor's sign-in is refused.
-   * Only an actor stamped by a sign-in strategy is evaluated.
+   * Throws `SecondFactorRequiredError` when the actor's sign-in is refused:
+   * covered, past the deadline, and not meeting the rule (no second factor,
+   * or too few ways to pass it). Only an actor stamped by a sign-in strategy
+   * is evaluated.
    */
   async assertNotRefused(actor: ActorContext, now: Date): Promise<void> {
     if (!actor.secondFactor) return;
     const { covered, deadline } = await this.coverage(actor.credentials);
     if (
       covered &&
-      !actor.secondFactor.satisfied &&
+      !meetsSecondFactorRule(actor.secondFactor) &&
       deadline !== null &&
       now.getTime() >= deadline.getTime()
     ) {

@@ -1,3 +1,4 @@
+import { SecondFactorWaysService } from '@core/auth/second-factor/second-factor.ways.service';
 import {
   Controller,
   Get,
@@ -158,6 +159,7 @@ export class OidcController {
     // transports or APM.
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private readonly secondFactorWays: SecondFactorWaysService,
     // FR-022c — sessionStore optional because some test harnesses replace
     // OidcController via custom providers and don't wire SESSION_STORE_HANDLE.
     // When absent, tearDownSession falls back to legacy destroy-only behaviour
@@ -587,10 +589,25 @@ export class OidcController {
       return;
     }
 
+    // Read before anything is established, so a failed read leaves the
+    // browser's current session as it was and fails this sign-in.
+    let secondFactorWays: number;
+    try {
+      secondFactorWays = await this.secondFactorWays.count(bundle.sub);
+    } catch {
+      return rejectCallback(
+        res,
+        correlationId,
+        rpId,
+        'second_factor_ways_read_failed'
+      );
+    }
+
     await this.establishSession(req, res, bundle, {
       createdAt: preAuth.issued_at,
       correlationId,
       rpId,
+      secondFactorWays,
     });
 
     res.redirect(302, targetReturnTo);
@@ -680,10 +697,16 @@ export class OidcController {
       // FR-011 — the SAME path a web login takes, with `created_at` pinned to
       // the handoff's issue time so subject-scoped revocation windows bind to
       // when the user actually authenticated.
+      // The ways are read at redemption, when the session is created; a
+      // failed read fails the sign-in like any other failure here.
+      const secondFactorWays = await this.secondFactorWays.count(
+        record.bundle.sub
+      );
       await this.establishSession(req, res, record.bundle, {
         createdAt: record.issued_at,
         correlationId,
         rpId,
+        secondFactorWays,
       });
     } catch {
       // The code was burned in step 1, so the user's retry has to come from a
@@ -698,12 +721,21 @@ export class OidcController {
    * Regenerate, populate, persist, re-index and announce a session — the whole
    * "the user is now signed in" step, shared verbatim by the web `/callback`
    * and the app `/app-handoff` (FR-011). The caller owns the redirect.
+   *
+   * `secondFactorWays` is read by the caller from the identity provider, each
+   * inside its own handler's failure path, and is kept on the session for the
+   * second-factor rule.
    */
   private async establishSession(
     req: Request,
     res: Response,
     bundle: MintedSessionBundle,
-    ctx: { createdAt: number; correlationId: string; rpId: string | null }
+    ctx: {
+      createdAt: number;
+      correlationId: string;
+      rpId: string | null;
+      secondFactorWays: number;
+    }
   ): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
 
@@ -737,6 +769,7 @@ export class OidcController {
         s.created_at = ctx.createdAt;
         s.client_id = bundle.client_id;
         s.acr = bundle.acr;
+        s.second_factor_ways = ctx.secondFactorWays;
         s.request_context_cache = null;
         req.session.save(saveErr => (saveErr ? reject(saveErr) : resolve()));
       });
