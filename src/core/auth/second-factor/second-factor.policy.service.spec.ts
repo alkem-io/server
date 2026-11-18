@@ -58,12 +58,13 @@ describe('SecondFactorPolicyService', () => {
 
   const stamped = (
     credentials: { type: string; resourceID: string }[],
-    satisfied: boolean
+    satisfied: boolean,
+    ways?: number
   ) =>
     Object.assign(new ActorContext(), {
       actorID: 'actor-1',
       credentials,
-      secondFactor: { satisfied },
+      secondFactor: ways === undefined ? { satisfied } : { satisfied, ways },
     });
 
   describe('coverage', () => {
@@ -289,6 +290,77 @@ describe('SecondFactorPolicyService', () => {
         service.assertNotRefused(unstamped, afterDeadline)
       ).resolves.toBeUndefined();
       expect(platformRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      0, 1,
+    ])('refuses a second-factor sign-in on an account with %i way(s) once the deadline is reached', async ways => {
+      ruleOnSince(S);
+
+      await expect(
+        service.assertNotRefused(
+          stamped(platformRole, true, ways),
+          afterDeadline
+        )
+      ).rejects.toBeInstanceOf(SecondFactorRequiredError);
+    });
+
+    it('does not refuse one way before the deadline', async () => {
+      ruleOnSince(S);
+
+      await expect(
+        service.assertNotRefused(
+          stamped(platformRole, true, 1),
+          new Date(afterDeadline.getTime() - 1)
+        )
+      ).resolves.toBeUndefined();
+    });
+
+    it.each([
+      2, 3,
+    ])('passes a second-factor sign-in on an account with %i ways', async ways => {
+      ruleOnSince(S);
+
+      await expect(
+        service.assertNotRefused(
+          stamped(platformRole, true, ways),
+          afterDeadline
+        )
+      ).resolves.toBeUndefined();
+    });
+
+    it('still refuses a sign-in without a second factor however many ways the account holds', async () => {
+      ruleOnSince(S);
+
+      await expect(
+        service.assertNotRefused(stamped(platformRole, false, 3), afterDeadline)
+      ).rejects.toBeInstanceOf(SecondFactorRequiredError);
+    });
+
+    it('checks a sign-in whose ways were not counted (bearer, older session) on the second factor alone', async () => {
+      ruleOnSince(S);
+
+      await expect(
+        service.assertNotRefused(stamped(platformRole, true), afterDeadline)
+      ).resolves.toBeUndefined();
+      await expect(
+        service.assertNotRefused(stamped(platformRole, false), afterDeadline)
+      ).rejects.toBeInstanceOf(SecondFactorRequiredError);
+    });
+
+    it('does not refuse an uncovered actor with one way', async () => {
+      ruleOnSince(S);
+
+      await expect(
+        service.assertNotRefused(
+          stamped(
+            [credential(AuthorizationCredential.GLOBAL_REGISTERED)],
+            true,
+            1
+          ),
+          afterDeadline
+        )
+      ).resolves.toBeUndefined();
     });
 
     it('rejects with the read error when a rule read fails (nothing is served)', async () => {

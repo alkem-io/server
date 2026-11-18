@@ -12,13 +12,21 @@ export class MeSecondFactorRequirement {
   @Field(() => Date, {
     nullable: true,
     description:
-      'When a covering rule starts refusing a sign-in without a second factor; the earliest of the rules that cover the user.',
+      'When a covering rule starts refusing a sign-in that does not meet it; the earliest of the rules that cover the user.',
   })
   deadline!: Date | null;
 
   @Field(() => Boolean, {
     nullable: false,
-    description: "Whether this session's sign-in completed a second factor.",
+    description:
+      "Whether this session's sign-in meets a second-factor rule: it completed a second factor, and the account held at least two ways to pass the second step when they were counted at sign-in.",
   })
   satisfied!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'True when a covering rule applies and this session signed in with a second factor, but the account held fewer than two ways to pass the second step at sign-in. An authenticator app, each security key and recovery codes count one each; a passkey does not count. Signing in again after adding a way updates it.',
+  })
+  secondWayNeeded!: boolean;
 }

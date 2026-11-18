@@ -3,9 +3,6 @@ import { UserIdentityNotFoundException } from '@common/exceptions/user/user.iden
 import { Injectable } from '@nestjs/common';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 
-/** The number of ways a covered member must hold to meet a second-factor rule. */
-export const SECOND_FACTOR_WAYS_REQUIRED = 2;
-
 /**
  * Counts the ways an identity holds to pass the second step of a sign-in:
  * an authenticator app counts once, each security key once, recovery codes

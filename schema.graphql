@@ -4734,7 +4734,7 @@ type MeQueryResults {
     states: [String!]
   ): Float!
   """
-  Whether a second-factor rule covers the current user, its deadline, and whether this session satisfies it.
+  Whether a second-factor rule covers the current user, its deadline, whether this session meets it, and whether the account needs a second way to pass the second step.
   """
   secondFactorRequirement: MeSecondFactorRequirement!
   """The Spaces the current user is a member of as a flat list."""
@@ -4756,11 +4756,17 @@ type MeSecondFactorRequirement {
   """
   covered: Boolean!
   """
-  When a covering rule starts refusing a sign-in without a second factor; the earliest of the rules that cover the user.
+  When a covering rule starts refusing a sign-in that does not meet it; the earliest of the rules that cover the user.
   """
   deadline: DateTime
-  """Whether this session's sign-in completed a second factor."""
+  """
+  Whether this session's sign-in meets a second-factor rule: it completed a second factor, and the account held at least two ways to pass the second step when they were counted at sign-in.
+  """
   satisfied: Boolean!
+  """
+  True when a covering rule applies and this session signed in with a second factor, but the account held fewer than two ways to pass the second step at sign-in. An authenticator app, each security key and recovery codes count one each; a passkey does not count. Signing in again after adding a way updates it.
+  """
+  secondWayNeeded: Boolean!
 }
 
 """A message that was sent in a chat room"""
