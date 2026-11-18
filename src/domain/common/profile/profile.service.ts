@@ -337,7 +337,9 @@ export class ProfileService {
     const savedProfile = await this.profileRepository.save(profile);
 
     if (savedProfile.displayName !== previousDisplayName) {
-      await this.syncActorDisplayNameToMatrix(savedProfile);
+      // Not awaited: the rename is already saved, and a slow or unreachable
+      // adapter would otherwise hold the response until the RPC timeout.
+      void this.syncActorDisplayNameToMatrix(savedProfile);
     }
 
     return savedProfile;
@@ -351,8 +353,8 @@ export class ProfileService {
    * Organizations are not Matrix users, so only these two profile types
    * are synced.
    *
-   * Best-effort: the rename is already saved, so a Matrix failure is logged
-   * and never fails the update.
+   * Best-effort and never rejects: the rename is already saved, so a Matrix
+   * failure is logged and never fails the update.
    */
   private async syncActorDisplayNameToMatrix(profile: IProfile): Promise<void> {
     if (

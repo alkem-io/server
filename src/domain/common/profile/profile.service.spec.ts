@@ -1293,6 +1293,9 @@ describe('ProfileService', () => {
       return { actorFindOne, syncActor };
     };
 
+    // The sync runs after updateProfile returns; let it settle before asserting.
+    const settle = () => new Promise(resolve => setImmediate(resolve));
+
     it('syncs a renamed user once, with the new name', async () => {
       const { actorFindOne, syncActor } = setup(
         actorProfile(ProfileType.USER, 'Polina Boneva ☀️')
@@ -1301,6 +1304,8 @@ describe('ProfileService', () => {
       await service.updateProfile({ id: 'p-actor' } as any, {
         displayName: 'Polina Boneva',
       });
+
+      await settle();
 
       expect(actorFindOne).toHaveBeenCalledWith(
         expect.objectContaining({ where: { profile: { id: 'p-actor' } } })
@@ -1330,6 +1335,7 @@ describe('ProfileService', () => {
 
       resolveSave();
       await pending;
+      await settle();
 
       expect(syncActor).toHaveBeenCalledTimes(1);
       expect(syncActor).toHaveBeenCalledWith('actor-1', 'New Name');
@@ -1359,6 +1365,7 @@ describe('ProfileService', () => {
       await service.updateProfile({ id: 'p-actor' } as any, {
         displayName: 'New VC',
       });
+      await settle();
 
       expect(syncActor).toHaveBeenCalledTimes(1);
       expect(syncActor).toHaveBeenCalledWith('actor-1', 'New VC');
@@ -1373,6 +1380,7 @@ describe('ProfileService', () => {
         displayName: 'Same Name',
         tagline: 'new tagline',
       });
+      await settle();
 
       expect(actorFindOne).not.toHaveBeenCalled();
       expect(syncActor).not.toHaveBeenCalled();
@@ -1384,6 +1392,7 @@ describe('ProfileService', () => {
       await service.updateProfile({ id: 'p-actor' } as any, {
         description: 'new description',
       });
+      await settle();
 
       expect(syncActor).not.toHaveBeenCalled();
     });
@@ -1396,6 +1405,7 @@ describe('ProfileService', () => {
       await service.updateProfile({ id: 'p-actor' } as any, {
         displayName: 'New Org',
       });
+      await settle();
 
       expect(actorFindOne).not.toHaveBeenCalled();
       expect(syncActor).not.toHaveBeenCalled();
@@ -1407,6 +1417,7 @@ describe('ProfileService', () => {
       await service.updateProfile({ id: 'p-actor' } as any, {
         displayName: '   ',
       });
+      await settle();
 
       expect(syncActor).toHaveBeenCalledWith('actor-1', 'actor-name');
     });
@@ -1418,6 +1429,22 @@ describe('ProfileService', () => {
       const result = await service.updateProfile({ id: 'p-actor' } as any, {
         displayName: 'New Name',
       });
+
+      await settle();
+
+      expect(result.displayName).toBe('New Name');
+      expect(syncActor).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns the saved profile without waiting for the Matrix sync', async () => {
+      const { syncActor } = setup(actorProfile(ProfileType.USER, 'Old Name'));
+      // An adapter that never answers, as when matrix-adapter is unreachable.
+      syncActor.mockReturnValue(new Promise<boolean>(() => {}));
+
+      const result = await service.updateProfile({ id: 'p-actor' } as any, {
+        displayName: 'New Name',
+      });
+      await settle();
 
       expect(result.displayName).toBe('New Name');
       expect(syncActor).toHaveBeenCalledTimes(1);
@@ -1443,7 +1470,9 @@ describe('ProfileService', () => {
       const result = await service.updateProfile({ id: 'p-actor' } as any, {
         displayName: 'New Name',
       });
+      await settle();
 
+      expect(actorFindOne).toHaveBeenCalled();
       expect(result.displayName).toBe('New Name');
       expect(syncActor).not.toHaveBeenCalled();
     });
