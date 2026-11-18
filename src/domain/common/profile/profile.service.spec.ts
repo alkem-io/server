@@ -1310,7 +1310,9 @@ describe('ProfileService', () => {
     });
 
     it('starts the sync only after the profile save resolves', async () => {
-      const { syncActor } = setup(actorProfile(ProfileType.USER, 'Old Name'));
+      const { actorFindOne, syncActor } = setup(
+        actorProfile(ProfileType.USER, 'Old Name')
+      );
       let resolveSave!: () => void;
       profileRepository.save!.mockImplementation(
         (p: any) =>
@@ -1323,6 +1325,7 @@ describe('ProfileService', () => {
         displayName: 'New Name',
       });
       await vi.waitFor(() => expect(profileRepository.save).toHaveBeenCalled());
+      expect(actorFindOne).not.toHaveBeenCalled();
       expect(syncActor).not.toHaveBeenCalled();
 
       resolveSave();
