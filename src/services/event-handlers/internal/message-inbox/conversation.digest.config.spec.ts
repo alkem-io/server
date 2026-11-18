@@ -5,12 +5,12 @@ import {
 } from './conversation.digest.config';
 
 const validRaw = () => ({
-  sweep_interval_seconds: 10,
+  sweep_interval_seconds: 1,
   max_dispatch_attempts: 3,
   retry_backoff_seconds: 60,
   push: {
-    direct: { quiet_period_seconds: 60, max_delay_seconds: 300 },
-    group: { quiet_period_seconds: 300, max_delay_seconds: 900 },
+    direct: { quiet_period_seconds: 5, max_delay_seconds: 60 },
+    group: { quiet_period_seconds: 5, max_delay_seconds: 120 },
   },
   email: {
     direct: { quiet_period_seconds: 300, max_delay_seconds: 1800 },
@@ -19,15 +19,15 @@ const validRaw = () => ({
 });
 
 describe('buildDigestConfig (data-model §6)', () => {
-  it('parses the shipped production defaults (D-20)', () => {
+  it('parses the shipped production defaults (D-20, server#6757)', () => {
     const config = buildDigestConfig(validRaw());
 
-    expect(config.sweepIntervalSeconds).toBe(10);
+    expect(config.sweepIntervalSeconds).toBe(1);
     expect(config.maxDispatchAttempts).toBe(3);
     expect(config.retryBackoffSeconds).toBe(60);
     expect(config.windows.push.direct).toEqual({
-      quietPeriodSeconds: 60,
-      maxDelaySeconds: 300,
+      quietPeriodSeconds: 5,
+      maxDelaySeconds: 60,
     });
     expect(config.windows.email.group).toEqual({
       quietPeriodSeconds: 1200,
@@ -35,14 +35,17 @@ describe('buildDigestConfig (data-model §6)', () => {
     });
   });
 
-  it('the defaults bound the worst case to 12/4/2/1 dispatches per recipient per hour (SC-010)', () => {
+  // The cap anchor is cleared on every flush, so the nominal rate is set by the
+  // quiet period, not the max delay (SC-010). Arithmetic on the configured
+  // windows only; it does not exercise the scheduler.
+  it('the default quiet periods imply nominal rates of 720/720/12/3 dispatches per recipient per hour (SC-010)', () => {
     const config = buildDigestConfig(validRaw());
-    const perHour = (maxDelaySeconds: number) => 3600 / maxDelaySeconds;
+    const perHour = (quietPeriodSeconds: number) => 3600 / quietPeriodSeconds;
 
-    expect(perHour(config.windows.push.direct.maxDelaySeconds)).toBe(12);
-    expect(perHour(config.windows.push.group.maxDelaySeconds)).toBe(4);
-    expect(perHour(config.windows.email.direct.maxDelaySeconds)).toBe(2);
-    expect(perHour(config.windows.email.group.maxDelaySeconds)).toBe(1);
+    expect(perHour(config.windows.push.direct.quietPeriodSeconds)).toBe(720);
+    expect(perHour(config.windows.push.group.quietPeriodSeconds)).toBe(720);
+    expect(perHour(config.windows.email.direct.quietPeriodSeconds)).toBe(12);
+    expect(perHour(config.windows.email.group.quietPeriodSeconds)).toBe(3);
   });
 
   it('accepts seconds-scale windows so the live test stacks can run (Ruling 3b)', () => {
@@ -77,10 +80,10 @@ describe('buildDigestConfig (data-model §6)', () => {
 
     it('rejects a sweep coarser than the tightest quiet period (it would systematically overshoot)', () => {
       const raw = validRaw();
-      raw.sweep_interval_seconds = 120;
+      raw.sweep_interval_seconds = 10;
 
       expect(() => buildDigestConfig(raw)).toThrow(
-        /sweep_interval_seconds \(120\) must be <= the smallest configured quiet period \(60\)/
+        /sweep_interval_seconds \(10\) must be <= the smallest configured quiet period \(5\)/
       );
     });
 
