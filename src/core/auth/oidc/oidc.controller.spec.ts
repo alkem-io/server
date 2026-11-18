@@ -118,7 +118,17 @@ function makeSession(
 ) {
   const session: any = { ...initial };
   session.regenerate = vi.fn((cb: (err?: unknown) => void) => cb());
-  session.save = vi.fn((cb: (err?: unknown) => void) => cb());
+  // What the session held each time it was saved: a value set after save()
+  // never reaches the store.
+  const saved: Record<string, unknown>[] = [];
+  Object.defineProperty(session, 'saved', { value: saved });
+  session.save = vi.fn((cb: (err?: unknown) => void) => {
+    saved.push({
+      sub: session.sub,
+      second_factor_ways: session.second_factor_ways,
+    });
+    cb();
+  });
   session.destroy = vi.fn((cb: () => void) => {
     if (opts?.destroyClearsSub !== false) {
       delete session.sub;
@@ -1601,7 +1611,10 @@ describe('OidcController — the ways to pass the second step on the session', (
     );
 
     expect(secondFactorWays.count).toHaveBeenCalledExactlyOnceWith('sub-ways');
-    expect(req.session.second_factor_ways).toBe(1);
+    expect(req.session.saved.at(-1)).toEqual({
+      sub: 'sub-ways',
+      second_factor_ways: 1,
+    });
     expect(res.redirectedTo).toBe('/dashboard');
   });
 
@@ -1634,7 +1647,10 @@ describe('OidcController — the ways to pass the second step on the session', (
     expect(secondFactorWays.count).toHaveBeenCalledExactlyOnceWith(
       'sub-ways-app'
     );
-    expect(req.session.second_factor_ways).toBe(2);
+    expect(req.session.saved.at(-1)).toEqual({
+      sub: 'sub-ways-app',
+      second_factor_ways: 2,
+    });
     expect(res.redirectedTo).toBe('/dashboard');
   });
 
