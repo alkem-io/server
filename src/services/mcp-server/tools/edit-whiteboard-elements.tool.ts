@@ -118,12 +118,7 @@ export class EditWhiteboardElementsTool implements McpTool {
 
   private failure(outcome: string, errorId?: string): McpToolResult {
     return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({ outcome, ...(errorId ? { errorId } : {}) }),
-        },
-      ],
+      content: [{ type: 'text', text: JSON.stringify({ outcome, errorId }) }],
       isError: true,
     };
   }

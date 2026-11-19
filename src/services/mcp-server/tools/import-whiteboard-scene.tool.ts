@@ -165,9 +165,7 @@ export class ImportWhiteboardSceneTool implements McpTool {
       outcome.outcome,
       outcome.outcome === 'durable-success'
         ? { whiteboardId: input.whiteboardId, ...outcome.result }
-        : outcome.errorId
-          ? { errorId: outcome.errorId }
-          : {}
+        : { errorId: outcome.errorId }
     );
   }
 }

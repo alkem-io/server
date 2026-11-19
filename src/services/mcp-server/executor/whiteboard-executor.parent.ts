@@ -203,7 +203,7 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
         }
       }
       if (Date.now() >= deadline) stop('timeout-before-go');
-      if (stopped) return { outcome: stopped, ...(errorId ? { errorId } : {}) };
+      if (stopped) return { outcome: stopped, errorId };
       let child: ChildProcess;
       phase = 'joining';
       try {
