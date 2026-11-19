@@ -366,31 +366,138 @@ describe('McpServerService.handleRequest — session revalidation (workspace#038
     expect(transport.close).toHaveBeenCalledTimes(1);
     expect(res.statusCode).toBe(401);
   });
+});
 
-  it('leaves an anonymous session alone — no revalidation, no 401 (CodeRabbit, PR #6358)', async () => {
-    const { service, transport, res, mcpApiKeyService } = setup();
-    // A session that never authenticated: anonymous actorContext, no apiKeyId.
-    // It holds no authority to revoke, so the revalidation branch must not
-    // fire — and it must not be mistaken for a revoked-credential session and
-    // torn down. Anonymous MCP access is a legitimate state (the strategy
-    // returns an anonymous ActorContext rather than a 401 for an absent key);
-    // per-operation scope enforcement is what constrains it, not this branch.
-    const session = (service as any).sessions.get(SESSION_ID);
-    session.actorContext = { actorID: '', isAnonymous: true };
-    session.apiKeyId = undefined;
+describe('McpServerService.handleRequest — session admission', () => {
+  const REFUSAL = {
+    jsonrpc: '2.0',
+    error: { code: -32001, message: 'Authentication required.' },
+    id: null,
+  };
 
+  const setup = (opts: { enabled?: boolean } = {}) => {
+    const configService = {
+      get: vi.fn().mockReturnValue(opts.enabled ?? true),
+    };
+    const logger = { warn: vi.fn(), verbose: vi.fn(), error: vi.fn() };
+    const service = new McpServerService(
+      configService as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { checkToolAllowed: vi.fn() } as any,
+      logger as any,
+      { isKeyUsable: vi.fn() } as any
+    );
+    const res: any = Object.assign(new EventEmitter(), {
+      statusCode: 200,
+      headers: {} as Record<string, string>,
+      setHeader: vi.fn((k: string, v: string) => {
+        res.headers[k] = v;
+      }),
+      end: vi.fn(),
+    });
+    return { service, res };
+  };
+
+  const request = (body: unknown) =>
+    Object.assign(new EventEmitter(), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      body,
+    }) as any;
+
+  const initialize = {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2025-03-26',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1.0.0' },
+    },
+  };
+
+  const expectRefused = (service: McpServerService, res: any) => {
+    expect(res.statusCode).toBe(401);
+    expect(res.setHeader).toHaveBeenCalledWith('WWW-Authenticate', 'Bearer');
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Type',
+      'application/json'
+    );
+    expect(res.end).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(res.end.mock.calls[0][0])).toEqual(REFUSAL);
+    expect(res.headers['mcp-session-id']).toBeUndefined();
+    expect((service as any).sessions.size).toBe(0);
+  };
+
+  it('refuses a request without a session and without an actor', async () => {
+    const { service, res } = setup();
+    await service.handleRequest(request(initialize), res, undefined, undefined);
+    expectRefused(service, res);
+  });
+
+  it('refuses a request without a session whose actor is anonymous', async () => {
+    const { service, res } = setup();
+    const actor = new ActorContext();
+    actor.isAnonymous = true;
+    await service.handleRequest(request(initialize), res, undefined, actor);
+    expectRefused(service, res);
+  });
+
+  it('refuses a request without a session whose actor has no actor id', async () => {
+    const { service, res } = setup();
+    const actor = new ActorContext();
+    actor.actorID = '';
+    actor.isAnonymous = false;
+    await service.handleRequest(request(initialize), res, undefined, actor);
+    expectRefused(service, res);
+  });
+
+  it('refuses a tool call without a session the same way as a handshake', async () => {
+    const { service, res } = setup();
     await service.handleRequest(
-      new EventEmitter() as any,
+      request({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'list_whiteboards', arguments: {} },
+      }),
       res,
-      SESSION_ID,
-      undefined,
       undefined,
       undefined
     );
+    expectRefused(service, res);
+  });
 
-    expect(mcpApiKeyService.isKeyUsable).not.toHaveBeenCalled();
-    expect(transport.close).not.toHaveBeenCalled();
-    expect(transport.handleRequest).toHaveBeenCalledTimes(1);
-    expect(res.statusCode).not.toBe(401);
+  it('answers 503 when the endpoint is switched off', async () => {
+    const { service, res } = setup({ enabled: false });
+    await service.handleRequest(request(initialize), res, undefined, undefined);
+    expect(res.statusCode).toBe(503);
+    expect(res.setHeader).not.toHaveBeenCalledWith(
+      'WWW-Authenticate',
+      expect.anything()
+    );
+  });
+
+  it('answers 404 for a session it does not hold', async () => {
+    const { service, res } = setup();
+    await service.handleRequest(
+      request(initialize),
+      res,
+      'unknown-session',
+      undefined
+    );
+    expect(res.statusCode).toBe(404);
+    expect(JSON.parse(res.end.mock.calls[0][0]).error.message).toBe(
+      'Session not found. Please reinitialize.'
+    );
+    expect(res.setHeader).not.toHaveBeenCalledWith(
+      'WWW-Authenticate',
+      expect.anything()
+    );
   });
 });
