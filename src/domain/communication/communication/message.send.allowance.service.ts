@@ -5,7 +5,7 @@ import { EntityManager } from 'typeorm';
 const MESSAGE_SEND_LIMIT = 20;
 const MESSAGE_SEND_WINDOW_MINUTES = 60;
 
-export type MessageSendAction =
+type MessageSendAction =
   | 'sendMessageToUsers'
   | 'sendDirectMessageToUsers'
   | 'sendMessageToOrganization'
