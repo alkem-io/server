@@ -109,158 +109,137 @@ export class WhiteboardListTool implements McpTool {
       LogContext.MCP_SERVER
     );
 
-    try {
-      // Build query with necessary relations
-      const queryBuilder = this.whiteboardRepository
-        .createQueryBuilder('whiteboard')
-        .leftJoinAndSelect('whiteboard.authorization', 'authorization')
-        .leftJoinAndSelect('whiteboard.profile', 'profile')
-        .leftJoin('whiteboard.contribution', 'contribution')
-        .leftJoin('contribution.callout', 'callout')
-        .leftJoin('whiteboard.framing', 'framing')
-        .leftJoin('framing.callout', 'framingCallout')
-        .addSelect([
-          'contribution.id',
-          'callout.id',
-          'framing.id',
-          'framingCallout.id',
-        ]);
+    // Build query with necessary relations
+    const queryBuilder = this.whiteboardRepository
+      .createQueryBuilder('whiteboard')
+      .leftJoinAndSelect('whiteboard.authorization', 'authorization')
+      .leftJoinAndSelect('whiteboard.profile', 'profile')
+      .leftJoin('whiteboard.contribution', 'contribution')
+      .leftJoin('contribution.callout', 'callout')
+      .leftJoin('whiteboard.framing', 'framing')
+      .leftJoin('framing.callout', 'framingCallout')
+      .addSelect([
+        'contribution.id',
+        'callout.id',
+        'framing.id',
+        'framingCallout.id',
+      ]);
 
-      // Apply filter for user's contributions
-      if (filter === 'my_contributions' && agentInfo.actorID) {
-        queryBuilder.where('whiteboard.createdBy = :userId', {
-          userId: agentInfo.actorID,
-        });
-      }
-
-      // Apply sorting
-      switch (sortBy) {
-        case 'oldest':
-          queryBuilder.orderBy('whiteboard.updatedDate', 'ASC');
-          break;
-        case 'name':
-          queryBuilder.orderBy('profile.displayName', 'ASC');
-          break;
-        case 'recent':
-        default:
-          queryBuilder.orderBy('whiteboard.updatedDate', 'DESC');
-          break;
-      }
-
-      // Fetch more than limit to account for authorization filtering
-      const fetchLimit = effectiveLimit * 3;
-      queryBuilder.take(fetchLimit);
-
-      const whiteboards = await queryBuilder.getMany();
-
-      // Filter by authorization and build results
-      const results: WhiteboardListItem[] = [];
-
-      for (const whiteboard of whiteboards) {
-        if (results.length >= effectiveLimit) {
-          break;
-        }
-
-        // Check read authorization
-        if (!whiteboard.authorization) {
-          continue;
-        }
-
-        try {
-          const hasAccess = this.authorizationService.isAccessGranted(
-            agentInfo,
-            whiteboard.authorization,
-            AuthorizationPrivilege.READ
-          );
-
-          if (!hasAccess) {
-            continue;
-          }
-        } catch {
-          // No access
-          continue;
-        }
-
-        // Build context info
-        const context: WhiteboardListItem['context'] = {};
-        if (whiteboard.contribution?.callout) {
-          context.calloutId = whiteboard.contribution.callout.id;
-        } else if (whiteboard.framing?.callout) {
-          context.calloutId = whiteboard.framing.callout.id;
-        }
-
-        // Real, browser-openable web URL built by the platform's own
-        // UrlGeneratorService (the canonical link the rest of Alkemio uses).
-        // Best-effort: an unresolvable board degrades to no link rather than
-        // failing the whole listing.
-        let url: string | undefined;
-        try {
-          url = await this.urlGeneratorService.getWhiteboardUrlPath(
-            whiteboard.id,
-            whiteboard.nameID
-          );
-        } catch (urlError) {
-          this.logger.verbose?.(
-            `list_whiteboards: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
-            LogContext.MCP_SERVER
-          );
-        }
-
-        results.push({
-          id: whiteboard.id,
-          name: whiteboard.profile?.displayName || 'Untitled Whiteboard',
-          // Truncated: full profile descriptions (often long markdown) made a
-          // 20-board listing cost ~14k model tokens; a listing needs a teaser,
-          // not the document (analyze_whiteboard serves the deep dive).
-          description: truncate(whiteboard.profile?.description),
-          createdBy: whiteboard.createdBy,
-          isMyContribution: whiteboard.createdBy === agentInfo.actorID,
-          updatedDate: whiteboard.updatedDate,
-          createdDate: whiteboard.createdDate,
-          url,
-          context: Object.keys(context).length > 0 ? context : undefined,
-        });
-      }
-
-      // Summary info
-      const summary = {
-        totalFound: results.length,
-        filter,
-        sortBy,
-        userId: agentInfo.actorID || 'anonymous',
-        hasMore: whiteboards.length >= fetchLimit,
-      };
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              summary,
-              whiteboards: results,
-            }),
-          },
-        ],
-      };
-    } catch (error) {
-      this.logger.error?.(
-        `Failed to list whiteboards: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : undefined,
-        LogContext.MCP_SERVER
-      );
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify({
-              error: 'Failed to list whiteboards',
-              message: error instanceof Error ? error.message : 'Unknown error',
-            }),
-          },
-        ],
-        isError: true,
-      };
+    // Apply filter for user's contributions
+    if (filter === 'my_contributions' && agentInfo.actorID) {
+      queryBuilder.where('whiteboard.createdBy = :userId', {
+        userId: agentInfo.actorID,
+      });
     }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'oldest':
+        queryBuilder.orderBy('whiteboard.updatedDate', 'ASC');
+        break;
+      case 'name':
+        queryBuilder.orderBy('profile.displayName', 'ASC');
+        break;
+      case 'recent':
+      default:
+        queryBuilder.orderBy('whiteboard.updatedDate', 'DESC');
+        break;
+    }
+
+    // Fetch more than limit to account for authorization filtering
+    const fetchLimit = effectiveLimit * 3;
+    queryBuilder.take(fetchLimit);
+
+    const whiteboards = await queryBuilder.getMany();
+
+    // Filter by authorization and build results
+    const results: WhiteboardListItem[] = [];
+
+    for (const whiteboard of whiteboards) {
+      if (results.length >= effectiveLimit) {
+        break;
+      }
+
+      // Check read authorization
+      if (!whiteboard.authorization) {
+        continue;
+      }
+
+      try {
+        const hasAccess = this.authorizationService.isAccessGranted(
+          agentInfo,
+          whiteboard.authorization,
+          AuthorizationPrivilege.READ
+        );
+
+        if (!hasAccess) {
+          continue;
+        }
+      } catch {
+        // No access
+        continue;
+      }
+
+      // Build context info
+      const context: WhiteboardListItem['context'] = {};
+      if (whiteboard.contribution?.callout) {
+        context.calloutId = whiteboard.contribution.callout.id;
+      } else if (whiteboard.framing?.callout) {
+        context.calloutId = whiteboard.framing.callout.id;
+      }
+
+      // Real, browser-openable web URL built by the platform's own
+      // UrlGeneratorService (the canonical link the rest of Alkemio uses).
+      // Best-effort: an unresolvable board degrades to no link rather than
+      // failing the whole listing.
+      let url: string | undefined;
+      try {
+        url = await this.urlGeneratorService.getWhiteboardUrlPath(
+          whiteboard.id,
+          whiteboard.nameID
+        );
+      } catch (urlError) {
+        this.logger.verbose?.(
+          `list_whiteboards: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
+          LogContext.MCP_SERVER
+        );
+      }
+
+      results.push({
+        id: whiteboard.id,
+        name: whiteboard.profile?.displayName || 'Untitled Whiteboard',
+        // Truncated: full profile descriptions (often long markdown) made a
+        // 20-board listing cost ~14k model tokens; a listing needs a teaser,
+        // not the document (analyze_whiteboard serves the deep dive).
+        description: truncate(whiteboard.profile?.description),
+        createdBy: whiteboard.createdBy,
+        isMyContribution: whiteboard.createdBy === agentInfo.actorID,
+        updatedDate: whiteboard.updatedDate,
+        createdDate: whiteboard.createdDate,
+        url,
+        context: Object.keys(context).length > 0 ? context : undefined,
+      });
+    }
+
+    // Summary info
+    const summary = {
+      totalFound: results.length,
+      filter,
+      sortBy,
+      userId: agentInfo.actorID || 'anonymous',
+      hasMore: whiteboards.length >= fetchLimit,
+    };
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({
+            summary,
+            whiteboards: results,
+          }),
+        },
+      ],
+    };
   }
 }

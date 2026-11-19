@@ -145,16 +145,17 @@ export class ContributionsAnalyzeTool implements McpTool {
     // owns the policy) — a slug matched raw against space.id would silently
     // return an empty set instead of an error.
     if (scope.type === 'space') {
-      try {
-        const space = await this.spaceLookupService.getSpaceByIdOrNameIdOrFail(
-          scope.spaceId
-        );
-        scope.spaceId = space.id;
-      } catch {
-        return this.errorResult(
-          `Space not found: ${scope.spaceId}. Pass a space/subspace UUID, or a top-level space nameID (URL slug); subspaces require the UUID.`
-        );
-      }
+      const space = await this.spaceLookupService.getSpaceByIdOrNameIdOrFail(
+        scope.spaceId
+      );
+      // The check the GraphQL lookup of a Space makes.
+      this.authorizationService.grantAccessOrFail(
+        agentInfo,
+        space.authorization,
+        AuthorizationPrivilege.READ_ABOUT,
+        'analyze contributions of space'
+      );
+      scope.spaceId = space.id;
     }
 
     this.logger.verbose?.(
@@ -162,52 +163,38 @@ export class ContributionsAnalyzeTool implements McpTool {
       LogContext.MCP_SERVER
     );
 
-    try {
-      // Fetch contributions based on scope
-      const contributions = await this.fetchContributions(
-        scope,
-        agentInfo,
-        effectiveLimit,
-        contributionTypes
-      );
+    // Fetch contributions based on scope
+    const contributions = await this.fetchContributions(
+      scope,
+      agentInfo,
+      effectiveLimit,
+      contributionTypes
+    );
 
-      // Generate analysis based on type
-      let result: Record<string, unknown>;
+    // Generate analysis based on type
+    let result: Record<string, unknown>;
 
-      switch (analysisType) {
-        case 'content':
-          result = await this.analyzeContent(contributions, agentInfo);
-          break;
-        case 'semantic':
-          result = await this.analyzeSemanticContent(contributions, agentInfo);
-          break;
-        case 'summary':
-        default:
-          result = this.generateSummary(contributions, scope, agentInfo);
-          break;
-      }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(result),
-          },
-        ],
-      };
-    } catch (error) {
-      this.logger.error?.(
-        `Failed to analyze contributions: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : undefined,
-        LogContext.MCP_SERVER
-      );
-
-      return this.errorResult(
-        error instanceof Error
-          ? error.message
-          : 'Failed to analyze contributions'
-      );
+    switch (analysisType) {
+      case 'content':
+        result = await this.analyzeContent(contributions, agentInfo);
+        break;
+      case 'semantic':
+        result = await this.analyzeSemanticContent(contributions, agentInfo);
+        break;
+      case 'summary':
+      default:
+        result = this.generateSummary(contributions, scope, agentInfo);
+        break;
     }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result),
+        },
+      ],
+    };
   }
 
   /**

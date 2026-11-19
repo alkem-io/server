@@ -3,6 +3,11 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  toErrorLogEntry,
+  toMcpErrorText,
+  toPublicErrorResult,
+} from '@core/error-handling/public.error.result';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
@@ -204,33 +209,44 @@ export class McpServerService implements OnModuleInit {
           };
         }
 
-        // Per-tool capability gate: for a DELEGATED call, the tool must
-        // be enabled in the on-behalf-of user's assistant grant. This is layered
-        // ON TOP of the per-entity AuthorizationService check inside the tool —
-        // effective authority = user privileges ∩ enabled capabilities. Refusal
-        // maps to `capability_disabled` so assistant-service can explain it.
-        const gateRefusal = await this.capabilityGateService.checkToolAllowed(
-          name,
-          actorContext
-        );
-        if (gateRefusal) {
+        try {
+          // Per-tool capability gate: for a DELEGATED call, the tool must
+          // be enabled in the on-behalf-of user's assistant grant. This is layered
+          // ON TOP of the per-entity AuthorizationService check inside the tool —
+          // effective authority = user privileges ∩ enabled capabilities. Refusal
+          // maps to `capability_disabled` so assistant-service can explain it.
+          const gateRefusal = await this.capabilityGateService.checkToolAllowed(
+            name,
+            actorContext
+          );
+          if (gateRefusal) {
+            return {
+              content: [{ type: 'text', text: gateRefusal }],
+              isError: true,
+            };
+          }
+
+          const caller = this.callerSignal.getStore();
+          const signal = caller
+            ? AbortSignal.any([caller, extra.signal])
+            : extra.signal;
+          const result = await tool.execute(args || {}, actorContext, signal);
+
+          // Return in MCP SDK expected format
           return {
-            content: [{ type: 'text', text: gateRefusal }],
+            content: result.content,
+            isError: result.isError,
+          };
+        } catch (error) {
+          const result = toPublicErrorResult(error);
+          this.logFailure(error, result.errorId, actorContext, {
+            operation: tool.getDefinition().name,
+          });
+          return {
+            content: [{ type: 'text', text: toMcpErrorText(result, error) }],
             isError: true,
           };
         }
-
-        const caller = this.callerSignal.getStore();
-        const signal = caller
-          ? AbortSignal.any([caller, extra.signal])
-          : extra.signal;
-        const result = await tool.execute(args || {}, actorContext, signal);
-
-        // Return in MCP SDK expected format
-        return {
-          content: result.content,
-          isError: result.isError,
-        };
       }
     );
 
@@ -251,6 +267,34 @@ export class McpServerService implements OnModuleInit {
       return '';
     }
     return `, assistantActorId: ${delegation.assistantActorId}, onBehalfOfUserId: ${delegation.onBehalfOfUserId}`;
+  }
+
+  /**
+   * One log entry per failed call, from named fields only: never the error
+   * itself, its message, or anything the caller sent.
+   */
+  private logFailure(
+    error: unknown,
+    errorId: string,
+    actorContext: ActorContext,
+    asked: { operation: string; resource?: string }
+  ): void {
+    const delegation = actorContext.delegationContext;
+    this.logger.error?.(
+      {
+        ...toErrorLogEntry(error, errorId),
+        ...asked,
+        actorID: actorContext.actorID || 'anonymous',
+        ...(delegation
+          ? {
+              assistantActorId: delegation.assistantActorId,
+              onBehalfOfUserId: delegation.onBehalfOfUserId,
+            }
+          : {}),
+      },
+      undefined,
+      LogContext.MCP_SERVER
+    );
   }
 
   /**
@@ -450,25 +494,23 @@ export class McpServerService implements OnModuleInit {
       throw new Error('Resource not found');
     }
 
-    const authorizationPolicy = await provider.getAuthorizationPolicy(uri);
-    const accessGranted = this.authorizationService.isAccessGranted(
-      actorContext,
-      authorizationPolicy,
-      AuthorizationPrivilege.READ
-    );
-    if (!accessGranted) {
-      this.logger.warn?.(
-        {
-          message: 'MCP resource read denied',
-          uri,
-          actorID: actorContext.actorID || 'anonymous',
-        },
-        LogContext.MCP_SERVER
+    try {
+      const authorizationPolicy = await provider.getAuthorizationPolicy(uri);
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        authorizationPolicy,
+        AuthorizationPrivilege.READ,
+        'read MCP resource'
       );
-      throw new Error('Access denied');
+      return await provider.read(uri, actorContext);
+    } catch (error) {
+      const result = toPublicErrorResult(error);
+      this.logFailure(error, result.errorId, actorContext, {
+        operation: 'resources/read',
+        resource: provider.constructor.name,
+      });
+      throw new Error(toMcpErrorText(result, error));
     }
-
-    return provider.read(uri, actorContext);
   }
 
   /**

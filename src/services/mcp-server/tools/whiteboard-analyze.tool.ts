@@ -144,10 +144,8 @@ export class WhiteboardAnalyzeTool implements McpTool {
         doc => readWhiteboardScene(doc, fork)
       ));
     } catch (error) {
-      const message =
-        error instanceof DocumentPurgingError
-          ? `Whiteboard ${whiteboardId} has been deleted.`
-          : `Could not read whiteboard ${whiteboardId}: ${error instanceof Error ? error.message : 'unknown error'}`;
+      if (!(error instanceof DocumentPurgingError)) throw error;
+      const message = `Whiteboard ${whiteboardId} has been deleted.`;
       this.logger.warn?.(
         `analyze_whiteboard: ${message}`,
         LogContext.MCP_SERVER

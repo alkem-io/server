@@ -385,6 +385,15 @@ describe('CommunityActivitySummaryTool', () => {
     });
 
     describe('error handling', () => {
+      it('lets an unexpected failure propagate instead of turning it into text', async () => {
+        const failure = new Error('unexpected');
+        vi.spyOn(tool as any, 'getAuthorizedSpaces').mockRejectedValue(failure);
+
+        await expect(tool.execute({}, createMockActorContext())).rejects.toBe(
+          failure
+        );
+      });
+
       it('should handle space lookup errors gracefully', async () => {
         vi.mocked(spaceLookupService.getCollaborationOrFail).mockRejectedValue(
           new Error('Space not found')
