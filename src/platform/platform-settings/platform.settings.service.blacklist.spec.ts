@@ -140,7 +140,7 @@ describe('PlatformSettingsService - notification email blacklist', () => {
       expect(result).toEqual(['other@example.com']);
     });
 
-    it('removes an entry stored before format validation applied', () => {
+    it('removes an existing entry by exact match', () => {
       const settings = createSettings({
         notificationEmailBlacklist: [
           'user@example.com\r\n',

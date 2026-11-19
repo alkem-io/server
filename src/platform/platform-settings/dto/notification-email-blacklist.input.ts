@@ -4,8 +4,7 @@ import { Transform } from 'class-transformer';
 /**
  * The one format rule for a notification blacklist entry, shared by the add
  * mutation (checked in PlatformSettingsService) and the bulk settings update
- * (checked by its DTO). Line breaks are refused even inside a quoted local
- * part, which plain IsEmail would otherwise accept.
+ * (checked by its DTO).
  */
 export const NOTIFICATION_EMAIL_FORMAT = {
   blacklisted_chars: '\r\n',
