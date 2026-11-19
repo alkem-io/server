@@ -116,4 +116,7 @@ export enum AlkemioErrorStatus {
   // Organization user-associates: the direct join door (domain match) is not
   // open for this viewer on this organization at this moment.
   ROLE_SET_JOIN_NOT_ELIGIBLE = 'ROLESET_JOIN_NOT_ELIGIBLE',
+  // A member has used their hourly allowance for sending messages to people.
+  // Distinct so the client can show its own message.
+  MESSAGE_SEND_LIMIT_REACHED = 'MESSAGE_SEND_LIMIT_REACHED',
 }
