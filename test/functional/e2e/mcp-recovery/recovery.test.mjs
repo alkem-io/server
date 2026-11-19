@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { McpError } from '@modelcontextprotocol/sdk/types.js';
 import {
   artifact,
   board,
@@ -242,16 +241,12 @@ test('US1-AS4/US4-AS1: real denied actor and canary reject arbitrary URL media',
     ).data.outcome,
     'forbidden'
   );
-  await assert.rejects(
-    denied.callTool({
-      name: 'analyze_whiteboard',
-      arguments: { whiteboardId: id, analysisType: 'elements' },
-    }),
-    error =>
-      error instanceof McpError &&
-      error.code === -32603 &&
-      error.message.includes("Authorization: unable to grant 'read' privilege")
-  );
+  const refused = await denied.callTool({
+    name: 'analyze_whiteboard',
+    arguments: { whiteboardId: id, analysisType: 'elements' },
+  });
+  assert.equal(refused.isError, true);
+  assert.match(refused.content[0].text, /^\[FORBIDDEN_POLICY\] /);
   const viewer = await room(manifest, id, 'reader');
   try {
     assert.equal(viewer.isReadOnly(), true);

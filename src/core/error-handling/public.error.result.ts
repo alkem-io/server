@@ -66,18 +66,21 @@ const resultFor = (
  * a caller projects once and uses that result for both the log and the answer.
  */
 export const toPublicErrorResult = (error: unknown): PublicErrorResult => {
-  if (!(error instanceof BaseException)) {
+  const isAlkemio = error instanceof BaseException;
+  const code = (error as { code?: AlkemioErrorStatus } | null | undefined)
+    ?.code;
+  if (code !== undefined && NEUTRAL_STATUSES.has(code)) {
+    return resultFor(
+      AlkemioErrorStatus.FORBIDDEN_POLICY,
+      NEUTRAL_ERROR_MESSAGE,
+      isAlkemio ? error.errorId : randomUUID()
+    );
+  }
+  if (!isAlkemio) {
     return resultFor(
       AlkemioErrorStatus.UNSPECIFIED,
       INTERNAL_SERVER_ERROR_MESSAGE,
       randomUUID()
-    );
-  }
-  if (NEUTRAL_STATUSES.has(error.code)) {
-    return resultFor(
-      AlkemioErrorStatus.FORBIDDEN_POLICY,
-      NEUTRAL_ERROR_MESSAGE,
-      error.errorId
     );
   }
   return resultFor(error.code, withoutUuids(error.message), error.errorId);

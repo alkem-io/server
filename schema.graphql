@@ -6391,7 +6391,9 @@ type Query {
   activityFeedGrouped(args: ActivityFeedGroupedQueryArgs): [ActivityLogEntry!]!
   """Retrieve the ActivityLog for the specified Collaboration"""
   activityLogOnCollaboration(queryData: ActivityLogInput!): [ActivityLogEntry!]!
-  """Get an Actor by ID. Returns null if not found."""
+  """
+  Get an Actor by ID. Null, with an error, when the Actor is not available to the caller.
+  """
   actor(id: UUID!): ActorFull
   """All Actors that hold credentials matching the supplied criteria."""
   actorsWithCredential(credentialType: CredentialType!, resourceID: UUID): [ActorFull!]!

@@ -23,6 +23,7 @@ import {
   HttpExceptionFilter,
   isErrorResponseDebugEnabled,
   sanitizeGraphQLFormattedError,
+  toPublicSubscriptionResult,
   UnhandledExceptionFilter,
 } from '@core/error-handling';
 import { HealthModule } from '@core/health/health.module';
@@ -47,7 +48,7 @@ import { TemplateApplierModule } from '@domain/template/template-applier/templat
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { LibraryModule } from '@library/library/library.module';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { LoggerService, MiddlewareConsumer, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -108,7 +109,7 @@ import { AdminContributorsModule } from '@src/platform-admin/services/avatars/ad
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
 import { AlkemioConfig, ConnectionContext, WebsocketContext } from '@src/types';
 import { print } from 'graphql/language/printer';
-import { WinstonModule } from 'nest-winston';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonModule } from 'nest-winston';
 import { ApmApolloPlugin } from './apm/plugins';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
@@ -156,10 +157,15 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
       imports: [ConfigModule, SecondFactorModule],
-      inject: [ConfigService, SecondFactorPolicyService],
+      inject: [
+        ConfigService,
+        SecondFactorPolicyService,
+        WINSTON_MODULE_NEST_PROVIDER,
+      ],
       useFactory: async (
         configService: ConfigService<AlkemioConfig, true>,
-        secondFactorPolicy: SecondFactorPolicyService
+        secondFactorPolicy: SecondFactorPolicyService,
+        logger: LoggerService
       ) => {
         const endpointCluster = configService.get('hosting.endpoint_cluster', {
           infer: true,
@@ -232,9 +238,10 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
               // long-lived subscription would outlive its session: a cookie
               // socket is re-validated before every event it would deliver,
               // and a bearer socket's actor is held to the second-factor rule.
-              onNext: (ctx, _message, args, result) =>
-                graphqlWsOnNext({
-                  context: args.contextValue as IGraphQLContext,
+              onNext: async (ctx, _message, args, result) => {
+                const context = args.contextValue as IGraphQLContext;
+                const delivered = await graphqlWsOnNext({
+                  context,
                   socket: (ctx as WebsocketContext).extra.socket,
                   result,
                   authenticate: passportAuthenticate,
@@ -244,7 +251,16 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
                     'identity.authentication.providers.oidc.cookie.name',
                     { infer: true }
                   ),
-                }),
+                });
+                return (
+                  delivered &&
+                  toPublicSubscriptionResult(
+                    delivered,
+                    logger,
+                    context?.req?.user?.actorID
+                  )
+                );
+              },
             },
           },
         };

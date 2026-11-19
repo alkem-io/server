@@ -106,6 +106,21 @@ describe('toPublicErrorResult', () => {
         'This is not available. It may not exist, or you may not have access to it.'
       );
     });
+
+    it('decides on the code, so a coded refusal of another class folds too', () => {
+      const result = toPublicErrorResult({
+        code: AlkemioErrorStatus.FORBIDDEN_POLICY,
+        message: `refused ${actorId}`,
+      });
+
+      expect(result).toEqual({
+        code: AlkemioErrorStatus.FORBIDDEN_POLICY,
+        numericCode: computeNumericCode(neutralMetadata),
+        userMessage: neutralMetadata.userMessage,
+        message: NEUTRAL_ERROR_MESSAGE,
+        errorId: expect.stringMatching(UUID_V4),
+      });
+    });
   });
 
   const folded = new Set<string>([
