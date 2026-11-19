@@ -1,5 +1,10 @@
 import { PRIVILEGED_SESSION_WINDOW_MS } from '@common/constants';
 import { ActorContext } from '@core/actor-context/actor.context';
+import {
+  meetsSecondFactorRule,
+  SecondFactorPolicyService,
+  secondWayNeeded,
+} from '@core/auth/second-factor/second-factor.policy.service';
 import { PaginationArgs } from '@core/pagination';
 import { PaginatedInAppNotifications } from '@core/pagination/paginated.in-app-notification';
 import { AccountDeletionBlockerService } from '@domain/community/user/account-deletion/account.deletion.blocker.service';
@@ -26,6 +31,7 @@ import { CommunityMembershipResult } from './dto/me.membership.result';
 import { NotificationEventsFilterInput } from './dto/me.notification.event.filter.dto.input';
 import { OrganizationApplicationResult } from './dto/me.organization.application.result';
 import { OrganizationInvitationResult } from './dto/me.organization.invitation.result';
+import { MeSecondFactorRequirement } from './dto/me.second.factor.requirement.dto';
 import { MySpaceResults } from './dto/my.journeys.results';
 import { MeService } from './me.service';
 
@@ -38,6 +44,13 @@ const EMPTY_ACCOUNT_DELETION_STATUS: MeAccountDeletionStatus = {
   externalSubscriptionLinked: false,
 };
 
+const EMPTY_SECOND_FACTOR_REQUIREMENT: MeSecondFactorRequirement = {
+  covered: false,
+  deadline: null,
+  satisfied: false,
+  secondWayNeeded: false,
+};
+
 @Resolver(() => MeQueryResults)
 export class MeResolverFields {
   constructor(
@@ -47,6 +60,7 @@ export class MeResolverFields {
     private mcpApiKeyService: McpApiKeyService,
     private accountDeletionBlockerService: AccountDeletionBlockerService,
     private accountLookupService: AccountLookupService,
+    private secondFactorPolicyService: SecondFactorPolicyService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -359,6 +373,29 @@ export class MeResolverFields {
       actorContext.actorID
     );
     return rows.map(toGraphqlMcpApiKey);
+  }
+
+  @ResolveField('secondFactorRequirement', () => MeSecondFactorRequirement, {
+    nullable: false,
+    description:
+      'Whether a second-factor rule covers the current user, its deadline, whether this session meets it, and whether the account needs a second way to pass the second step.',
+  })
+  public async secondFactorRequirement(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<MeSecondFactorRequirement> {
+    // Only a person's sign-in (cookie session or Hydra bearer) is stamped.
+    if (!actorContext.actorID || !actorContext.secondFactor) {
+      return EMPTY_SECOND_FACTOR_REQUIREMENT;
+    }
+    const { covered, deadline } = await this.secondFactorPolicyService.coverage(
+      actorContext.credentials
+    );
+    return {
+      covered,
+      deadline,
+      satisfied: meetsSecondFactorRule(actorContext.secondFactor),
+      secondWayNeeded: covered && secondWayNeeded(actorContext.secondFactor),
+    };
   }
 
   @ResolveField('accountDeletion', () => MeAccountDeletionStatus, {

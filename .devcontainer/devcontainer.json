@@ -44,9 +44,9 @@
     "4455": { "label": "Oathkeeper Proxy" },
     "4456": { "label": "Oathkeeper API" },
     "8008": { "label": "Synapse Matrix" },
-    "1025": { "label": "Mailslurper SMTP" },
-    "4436": { "label": "Mailslurper Web" },
-    "4437": { "label": "Mailslurper API" }
+    "1025": { "label": "Swarmail SMTP" },
+    "4436": { "label": "Swarmail UI and API" },
+    "4437": { "label": "Swarmail MailSlurper API" }
   },
   "initializeCommand": "DOCKER_BUILDKIT=0 docker build -t alkemio-server-devcontainer -f .devcontainer/Dockerfile .devcontainer && rm -rf node_modules 2>/dev/null || true",
   "postCreateCommand": "pnpm install",

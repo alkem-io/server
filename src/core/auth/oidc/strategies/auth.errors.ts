@@ -28,3 +28,12 @@ export class CookieSessionInvalidError extends Error {
     this.name = 'CookieSessionInvalidError';
   }
 }
+
+// Thrown by the two sign-in strategies when a second-factor rule refuses the
+// actor. The session is valid, so the cookie is never cleared for it.
+export class SecondFactorRequiredError extends Error {
+  constructor() {
+    super('second_factor_required');
+    this.name = 'SecondFactorRequiredError';
+  }
+}

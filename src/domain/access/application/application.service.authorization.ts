@@ -34,8 +34,11 @@ export class ApplicationAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    // get the user
-    const user = await this.applicationService.getActor(application.id);
+    // The applicant: already on a new, not yet persisted application;
+    // otherwise loaded from the stored one.
+    const user =
+      application.user ??
+      (await this.applicationService.getActor(application.id));
 
     // also grant the user privileges to manage their own application
     // Note: the GRANT privilege iS NOT assigned to the user; that is what is actually used to approve the application

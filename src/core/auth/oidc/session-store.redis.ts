@@ -29,8 +29,19 @@ export type AlkemioSessionPayload = {
   // buildSessionRenewalMiddleware). Distinct from `last_refreshed_at`, which
   // tracks OIDC token rotation.
   last_extended_at?: number | null;
+  // The sign-in's start (the pre-auth cookie's `issued_at`), not the
+  // callback's time: the subject-revocation check rejects every sign-in that
+  // began at or before a revocation, however late it completed.
   created_at: number;
   client_id: string;
+  // The sign-in's assurance level, written once at sign-in and never by a
+  // refresh. `'aal2'` means a second factor was completed at this sign-in.
+  // A payload written before this field existed reads as `null`.
+  acr: 'aal1' | 'aal2' | null;
+  // How many ways to pass the second step the identity held at sign-in, read
+  // from Kratos once and never by a refresh. A payload written before this
+  // field existed has none.
+  second_factor_ways?: number;
   // RESERVED — declared with the original OIDC session layer as a slot for
   // per-request display name / email, and never populated by anything since.
   // It is set to `null` at login and read only defensively (revocation scrubs
@@ -259,7 +270,8 @@ export function buildSessionStore(redis: Redis): SessionStoreHandle {
     async get(sessionId) {
       const raw = await redis.get(SESSION_KEY_PREFIX + sessionId);
       if (raw === null) return null;
-      return JSON.parse(raw) as AlkemioSessionPayload;
+      const payload = JSON.parse(raw) as AlkemioSessionPayload;
+      return { ...payload, acr: payload.acr ?? null };
     },
     async destroy(sessionId) {
       await redis.del(SESSION_KEY_PREFIX + sessionId);
@@ -308,6 +320,7 @@ export function buildSessionStore(redis: Redis): SessionStoreHandle {
         last_refreshed_at: base.last_refreshed_at ?? null,
         created_at: base.created_at ?? now,
         client_id: base.client_id ?? context?.client_id ?? '',
+        acr: null,
         request_context_cache: null,
         terminated_at: now,
         terminated_reason: reason,

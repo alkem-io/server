@@ -16,6 +16,7 @@ import {
 } from '@common/exceptions';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { SecondFactorAuditService } from '@core/auth/second-factor/second-factor.audit.service';
 import { OrganizationFilterInput } from '@core/filtering';
 import { applyOrganizationFilter } from '@core/filtering/filters/organizationFilter';
 import { PaginationArgs } from '@core/pagination';
@@ -77,6 +78,7 @@ export class OrganizationService {
     private storageAggregatorService: StorageAggregatorService,
     private profileAvatarService: ProfileAvatarService,
     private roleSetService: RoleSetService,
+    private secondFactorAuditService: SecondFactorAuditService,
     @InjectRepository(Organization)
     private organizationRepository: Repository<Organization>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -257,6 +259,10 @@ export class OrganizationService {
         // Note: not currently used but will be near term.
         contributionRolesPubliclyVisible: true,
       },
+      security: {
+        secondFactorRequired: false,
+        secondFactorRequiredSince: null,
+      },
     };
     return settings;
   }
@@ -294,15 +300,36 @@ export class OrganizationService {
       );
   }
 
+  /**
+   * Saves the settings; a switch of the second-factor rule is recorded in the
+   * same transaction, so neither commits without the other.
+   */
   public async updateOrganizationSettings(
     organization: IOrganization,
-    settingsData: UpdateOrganizationSettingsEntityInput
+    settingsData: UpdateOrganizationSettingsEntityInput,
+    actorContext: ActorContext
   ): Promise<IOrganization> {
-    organization.settings = this.organizationSettingsService.updateSettings(
-      organization.settings,
-      settingsData
-    );
-    return await this.save(organization);
+    const { settings, transition } =
+      this.organizationSettingsService.updateSettings(
+        organization.settings,
+        settingsData
+      );
+    organization.settings = settings;
+    return this.organizationRepository.manager.transaction(async manager => {
+      const saved = await manager.save(Organization, organization);
+      if (transition) {
+        await this.secondFactorAuditService.recordRuleTransition(
+          manager,
+          actorContext,
+          {
+            scope: 'organization',
+            organizationId: organization.id,
+            ...transition,
+          }
+        );
+      }
+      return saved;
+    });
   }
 
   async updateOrganization(

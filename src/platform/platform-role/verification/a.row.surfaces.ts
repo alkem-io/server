@@ -551,6 +551,19 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       gate: { requires: AuthorizationPrivilege.PLATFORM_USERS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_USERS_ADMIN],
     },
+    // The support reset of a member's second factor: user-credential
+    // lifecycle, shared with Platform Support, which takes the request.
+    {
+      file: 'src/platform-admin/domain/user/second-factor/admin.user.second.factor.resolver.mutations.ts',
+      member: 'adminResetUserSecondFactor',
+      kind: 'graphql-mutation',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_SECOND_FACTOR_RESET },
+      intendedOwners: [
+        AuthorizationCredential.PLATFORM_SUPPORT,
+        AuthorizationCredential.PLATFORM_USERS_ADMIN,
+      ],
+    },
   ],
 
   // ===== A6 — create / delete an organization =====
@@ -1081,6 +1094,16 @@ export const A_ROW_SURFACES: Record<ARowId, readonly SurfaceRef[]> = {
       file: 'src/services/api/notification-recipients/notification.recipients.resolver.queries.ts',
       member: 'notificationRecipients',
       kind: 'graphql-query',
+      tree: 'platform',
+      gate: { requires: AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN },
+      intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],
+    },
+    // `PlatformSettings.security` — the second-factor rule, read back only
+    // by the role that switches it; null to every other reader.
+    {
+      file: 'src/platform/platform-settings/platform.settings.resolver.fields.ts',
+      member: 'security',
+      kind: 'graphql-field',
       tree: 'platform',
       gate: { requires: AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN },
       intendedOwners: [AuthorizationCredential.PLATFORM_SETTINGS_ADMIN],

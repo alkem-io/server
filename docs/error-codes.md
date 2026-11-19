@@ -85,24 +85,26 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 | 11116 | LOGIN_FLOW_INIT                     | Login flow initialization failed.       | Try again or clear browser cache                  |
 | 11117 | SESSION_REFRESH_REQUIRED            | Please sign in again to continue.       | Re-authenticate, then retry the action            |
 | 11118 | PLATFORM_SUPPORT_SELF_TARGET        | You can't do this to your own account.  | Ask another Platform Support user or an org admin |
+| 11119 | SECOND_FACTOR_REQUIRED              | Please complete two-step verification.  | Raised by `AuthInterceptor`: the sign-in must complete a second factor; the client routes to `/second-factor` |
 
 ### 12xxx - Validation Errors
 
-| Code  | String Code                   | User Message                      | Resolution                                 |
-| ----- | ----------------------------- | --------------------------------- | ------------------------------------------ |
-| 12101 | BAD_USER_INPUT                | (varies by context)               | Check the error message for details        |
-| 12102 | INPUT VALIDATION_ERROR        | Invalid input provided.           | Review input against requirements          |
-| 12103 | INVALID_UUID                  | Invalid identifier format.        | Use valid UUID format                      |
-| 12104 | FORMAT_NOT_SUPPORTED          | Format not supported.             | Use a supported format                     |
-| 12105 | INVALID_STATE_TRANSITION      | This is not allowed as next step. | Follow the allowed workflow sequence       |
-| 12106 | INVALID_TEMPLATE_TYPE         | Invalid template type.            | Use a supported template type              |
-| 12107 | GROUP_NOT_INITIALIZED         | Group not properly initialized.   | Contact support - data integrity issue     |
-| 12108 | ENTITY_NOT_INITIALIZED        | Entity not properly initialized.  | Contact support - data integrity issue     |
-| 12109 | RELATION_NOT_LOADED           | Related data not available.       | Contact support - data loading issue       |
-| 12110 | PAGINATION_INPUT_OUT_OF_BOUND | Pagination out of bounds.         | Adjust pagination parameters               |
-| 12111 | PAGINATION_PARAM_NOT_FOUND    | Pagination parameter not found.   | Provide required pagination parameters     |
-| 12113 | FORUM_DISCUSSION_CATEGORY     | Invalid discussion category.      | Use a valid discussion category            |
-| 12114 | NOT_SUPPORTED                 | Not supported.                    | Check documentation for supported features |
+| Code  | String Code                   | User Message                        | Resolution                                                                            |
+| ----- | ----------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------- |
+| 12101 | BAD_USER_INPUT                | (varies by context)                 | Check the error message for details                                                   |
+| 12102 | INPUT VALIDATION_ERROR        | Invalid input provided.             | Review input against requirements                                                     |
+| 12103 | INVALID_UUID                  | Invalid identifier format.          | Use valid UUID format                                                                 |
+| 12104 | FORMAT_NOT_SUPPORTED          | Format not supported.               | Use a supported format                                                                |
+| 12105 | INVALID_STATE_TRANSITION      | This is not allowed as next step.   | Follow the allowed workflow sequence                                                  |
+| 12106 | INVALID_TEMPLATE_TYPE         | Invalid template type.              | Use a supported template type                                                         |
+| 12107 | GROUP_NOT_INITIALIZED         | Group not properly initialized.     | Contact support - data integrity issue                                                |
+| 12108 | ENTITY_NOT_INITIALIZED        | Entity not properly initialized.    | Contact support - data integrity issue                                                |
+| 12109 | RELATION_NOT_LOADED           | Related data not available.         | Contact support - data loading issue                                                  |
+| 12110 | PAGINATION_INPUT_OUT_OF_BOUND | Pagination out of bounds.           | Adjust pagination parameters                                                          |
+| 12111 | PAGINATION_PARAM_NOT_FOUND    | Pagination parameter not found.     | Provide required pagination parameters                                                |
+| 12112 | VISUAL_URI_NOT_ALLOWED        | Visual must be an uploaded picture. | Upload the picture through the visual upload, or send an empty address for no picture |
+| 12113 | FORUM_DISCUSSION_CATEGORY     | Invalid discussion category.        | Use a valid discussion category                                                       |
+| 12114 | NOT_SUPPORTED                 | Not supported.                      | Check documentation for supported features                                            |
 
 ### 13xxx - Operations Errors
 

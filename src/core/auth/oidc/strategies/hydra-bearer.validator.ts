@@ -15,6 +15,8 @@ export type HydraBearerContext = {
   sub: string;
   alkemio_actor_id: string;
   client_id: string;
+  /** The sign-in's assurance level, as the token carries it. */
+  acr?: string;
 };
 
 export type HydraBearerValidationResult = {
@@ -109,7 +111,12 @@ export class HydraBearerValidator {
     const actorContext = await this.authService.createActorContext(actorId);
     return {
       actorContext,
-      ctx: { sub, alkemio_actor_id: actorId, client_id: clientId },
+      ctx: {
+        sub,
+        alkemio_actor_id: actorId,
+        client_id: clientId,
+        ...(typeof payload.acr === 'string' ? { acr: payload.acr } : {}),
+      },
     };
   }
 

@@ -15,7 +15,6 @@ import { PlatformInvitationEmailBudgetService } from '@domain/access/invitation.
 import { PlatformInvitationResendThrottleService } from '@domain/access/invitation.platform/platform.invitation.resend.throttle.service';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -32,7 +31,6 @@ import { type Mock } from 'vitest';
 import { RoleSetEligibleLanguageGuard } from './role.set.eligible.language.guard';
 import { RoleSetResolverMutationsMembership } from './role.set.resolver.mutations.membership';
 import { RoleSetService } from './role.set.service';
-import { RoleSetAuthorizationService } from './role.set.service.authorization';
 import { RoleSetCacheService } from './role.set.service.cache';
 
 describe('RoleSetResolverMutationsMembership', () => {
@@ -43,12 +41,10 @@ describe('RoleSetResolverMutationsMembership', () => {
   let invitationService: InvitationService;
   let roleSetCacheService: RoleSetCacheService;
   let lifecycleService: LifecycleService;
-  let roleSetAuthorizationService: RoleSetAuthorizationService;
   let actorLookupService: ActorLookupService;
   let userLookupService: UserLookupService;
   let organizationLookupService: OrganizationLookupService;
   let communityResolverService: CommunityResolverService;
-  let authorizationPolicyService: AuthorizationPolicyService;
   let eligibleLanguageGuard: RoleSetEligibleLanguageGuard;
   let notificationOrganizationAdapter: NotificationOrganizationAdapter;
   let notificationAdapterSpace: NotificationSpaceAdapter;
@@ -93,9 +89,6 @@ describe('RoleSetResolverMutationsMembership', () => {
     invitationService = module.get<InvitationService>(InvitationService);
     roleSetCacheService = module.get<RoleSetCacheService>(RoleSetCacheService);
     lifecycleService = module.get<LifecycleService>(LifecycleService);
-    roleSetAuthorizationService = module.get<RoleSetAuthorizationService>(
-      RoleSetAuthorizationService
-    );
     actorLookupService = module.get<ActorLookupService>(ActorLookupService);
     userLookupService = module.get<UserLookupService>(UserLookupService);
     organizationLookupService = module.get<OrganizationLookupService>(
@@ -126,9 +119,6 @@ describe('RoleSetResolverMutationsMembership', () => {
     (emailBudgetService.claim as Mock).mockResolvedValue('ok');
     communityResolverService = module.get<CommunityResolverService>(
       CommunityResolverService
-    );
-    authorizationPolicyService = module.get<AuthorizationPolicyService>(
-      AuthorizationPolicyService
     );
     eligibleLanguageGuard = module.get<RoleSetEligibleLanguageGuard>(
       RoleSetEligibleLanguageGuard
@@ -332,9 +322,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (applicationService.getApplicationOrFail as Mock).mockResolvedValue(
         mockApplication
       );
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
 
       const result = await resolver.applyForEntryRoleOnRoleSet(actorContext, {
         roleSetID: 'rs-1',
@@ -402,9 +389,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (applicationService.getApplicationOrFail as Mock).mockResolvedValue(
         mockApplication
       );
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
 
       const result = await resolver.applyForEntryRoleOnRoleSet(actorContext, {
         roleSetID: 'rs-1',
@@ -449,9 +433,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         (userLookupService.usersWithCredentials as Mock).mockResolvedValue([
           { id: 'admin-1' },
         ]);
-        (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
 
         const result = await resolver.applyForEntryRoleOnRoleSet(actorContext, {
           roleSetID: 'org-rs-1',
@@ -519,9 +500,6 @@ describe('RoleSetResolverMutationsMembership', () => {
           mockApplication
         );
         (userLookupService.usersWithCredentials as Mock).mockResolvedValue([]);
-        (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
 
         await resolver.applyForEntryRoleOnRoleSet(actorContext, {
           roleSetID: 'org-rs-1',
@@ -585,10 +563,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -639,10 +613,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -679,10 +649,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
         existingInvitation,
       ]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -722,10 +688,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         existingApplication
       );
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -768,10 +730,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
       (roleSetService.isMember as Mock).mockResolvedValue(true);
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -830,12 +788,6 @@ describe('RoleSetResolverMutationsMembership', () => {
           );
           (invitationService.getInvitationsOrFail as Mock).mockResolvedValue(
             []
-          );
-          (
-            roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-          ).mockResolvedValue([]);
-          (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
-            undefined
           );
           (
             organizationLookupService.getOrganizationForRoleSetOrFail as Mock
@@ -1193,9 +1145,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         );
         (roleSetService.isMember as Mock).mockResolvedValue(false);
         (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-        (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
 
         const result = await resolver.inviteForEntryRoleOnRoleSet(
           actorContext,
@@ -1259,9 +1208,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
           mockInvitation,
         ]);
-        (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
         (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
           'user'
         );
@@ -1379,10 +1325,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -1423,10 +1365,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -1466,10 +1404,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
       (roleSetService.isMember as Mock).mockResolvedValue(false);
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -1524,10 +1458,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         { id: 'inv-1', invitedActorID: 'org-1' },
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
@@ -1569,12 +1499,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         );
         (roleSetService.isMember as Mock).mockResolvedValue(false);
         (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-        (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
-        (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
-          undefined
-        );
         (
           communityResolverService.getCommunityForRoleSet as Mock
         ).mockResolvedValue({ id: 'comm-1' });
@@ -1720,12 +1644,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         );
         (roleSetService.isMember as Mock).mockResolvedValue(false);
         (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
-        (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
-          undefined
-        );
-        (
           communityResolverService.getCommunityForRoleSet as Mock
         ).mockResolvedValue({ id: 'comm-1' });
         (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
@@ -1822,10 +1740,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([
         mockInvitation,
       ]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -1944,10 +1858,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         { id: 'inv-2', invitedActorID: 'user-2' },
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
@@ -2054,10 +1964,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -2098,10 +2004,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -2141,10 +2043,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
       (roleSetService.isMember as Mock).mockResolvedValue(false);
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -2199,10 +2097,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         { id: 'inv-1', invitedActorID: 'org-1' },
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
@@ -2244,12 +2138,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         );
         (roleSetService.isMember as Mock).mockResolvedValue(false);
         (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-        (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
-        (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
-          undefined
-        );
         (
           communityResolverService.getCommunityForRoleSet as Mock
         ).mockResolvedValue({ id: 'comm-1' });
@@ -2395,12 +2283,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         );
         (roleSetService.isMember as Mock).mockResolvedValue(false);
         (
-          roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-        ).mockResolvedValue([]);
-        (authorizationPolicyService.saveAll as Mock).mockResolvedValue(
-          undefined
-        );
-        (
           communityResolverService.getCommunityForRoleSet as Mock
         ).mockResolvedValue({ id: 'comm-1' });
         (roleSetService.getRoleDefinition as Mock).mockResolvedValue({
@@ -2498,10 +2380,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
@@ -2582,10 +2460,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         { id: 'inv-2', invitedActorID: 'user-2' },
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
@@ -2642,10 +2516,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockPlatformInvitation
       );
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -2709,10 +2579,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         ActorType.USER
       );
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -2768,10 +2634,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
         ActorType.USER
       );
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -2830,10 +2692,6 @@ describe('RoleSetResolverMutationsMembership', () => {
       ).mockResolvedValue(existingPInv);
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -2883,10 +2741,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         mockInvitation,
       ]);
       (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
-      (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
 
@@ -2928,10 +2782,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         platformInvitationServiceMock.getExistingPlatformInvitationForRoleSet as Mock
       ).mockResolvedValue(undefined);
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-1' });
@@ -4007,10 +3857,6 @@ describe('RoleSetResolverMutationsMembership', () => {
         undefined
       );
       (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
-      (
-        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
-      ).mockResolvedValue([]);
-      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
       (
         communityResolverService.getCommunityForRoleSet as Mock
       ).mockResolvedValue({ id: 'comm-fan' });

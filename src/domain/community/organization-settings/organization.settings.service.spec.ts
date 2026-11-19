@@ -46,7 +46,7 @@ describe('OrganizationSettingsService', () => {
         privacy: { contributionRolesPubliclyVisible: true },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.privacy.contributionRolesPubliclyVisible).toBe(true);
     });
@@ -57,7 +57,7 @@ describe('OrganizationSettingsService', () => {
         membership: { allowUsersMatchingDomainToJoin: true },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
     });
@@ -71,7 +71,7 @@ describe('OrganizationSettingsService', () => {
         },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowSpaceInvitations).toBe(false);
     });
@@ -87,7 +87,7 @@ describe('OrganizationSettingsService', () => {
         membership: { allowUsersMatchingDomainToJoin: true },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowSpaceInvitations).toBe(false);
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
@@ -102,7 +102,7 @@ describe('OrganizationSettingsService', () => {
         },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowApplications).toBe(false);
     });
@@ -119,7 +119,7 @@ describe('OrganizationSettingsService', () => {
         membership: { allowUsersMatchingDomainToJoin: true },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowApplications).toBe(false);
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
@@ -141,7 +141,7 @@ describe('OrganizationSettingsService', () => {
         membership: { allowApplications: null },
       } as unknown as UpdateOrganizationSettingsEntityInput;
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowApplications).toBe(false);
     });
@@ -160,7 +160,7 @@ describe('OrganizationSettingsService', () => {
         membership: { allowSpaceInvitations: false },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
       expect(result.membership.allowSpaceInvitations).toBe(false);
@@ -174,7 +174,7 @@ describe('OrganizationSettingsService', () => {
         membership: { allowUsersMatchingDomainToJoin: true },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.privacy.contributionRolesPubliclyVisible).toBe(true);
     });
@@ -187,7 +187,7 @@ describe('OrganizationSettingsService', () => {
         privacy: { contributionRolesPubliclyVisible: false },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
     });
@@ -199,7 +199,7 @@ describe('OrganizationSettingsService', () => {
         membership: { allowUsersMatchingDomainToJoin: true },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.privacy.contributionRolesPubliclyVisible).toBe(true);
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(true);
@@ -209,7 +209,7 @@ describe('OrganizationSettingsService', () => {
       const settings = buildSettings();
       const updateData: UpdateOrganizationSettingsEntityInput = {};
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result.privacy.contributionRolesPubliclyVisible).toBe(false);
       expect(result.membership.allowUsersMatchingDomainToJoin).toBe(false);
@@ -221,9 +221,89 @@ describe('OrganizationSettingsService', () => {
         privacy: { contributionRolesPubliclyVisible: true },
       };
 
-      const result = service.updateSettings(settings, updateData);
+      const { settings: result } = service.updateSettings(settings, updateData);
 
       expect(result).toBe(settings);
     });
+  });
+});
+
+describe('OrganizationSettingsService — the second-factor rule switch', () => {
+  const service = new OrganizationSettingsService({} as never);
+  const STORED_SINCE = '2026-10-01T08:00:00Z';
+  const withRule = (on: boolean, since: string | null): IOrganizationSettings =>
+    ({
+      privacy: { contributionRolesPubliclyVisible: false },
+      membership: {
+        allowUsersMatchingDomainToJoin: false,
+        allowSpaceInvitations: true,
+        allowApplications: true,
+      },
+      security: { secondFactorRequired: on, secondFactorRequiredSince: since },
+    }) as IOrganizationSettings;
+  const turn = (on: boolean) => ({ security: { secondFactorRequired: on } });
+
+  it('records now as the switch-on time on off→on, with the transition', () => {
+    const before = Date.now();
+
+    const { settings, transition } = service.updateSettings(
+      withRule(false, null),
+      turn(true)
+    );
+
+    const since = settings.security.secondFactorRequiredSince;
+    expect(settings.security.secondFactorRequired).toBe(true);
+    expect(new Date(since as string).getTime()).toBeGreaterThanOrEqual(before);
+    expect(transition).toEqual({ from: false, to: true, since });
+  });
+
+  it('keeps the stored switch-on time exactly on on→on, with no transition', () => {
+    const { settings, transition } = service.updateSettings(
+      withRule(true, STORED_SINCE),
+      turn(true)
+    );
+
+    expect(settings.security).toEqual({
+      secondFactorRequired: true,
+      secondFactorRequiredSince: STORED_SINCE,
+    });
+    expect(transition).toBeUndefined();
+  });
+
+  it('keeps the stored switch-on time on on→off, with the transition', () => {
+    const { settings, transition } = service.updateSettings(
+      withRule(true, STORED_SINCE),
+      turn(false)
+    );
+
+    expect(settings.security).toEqual({
+      secondFactorRequired: false,
+      secondFactorRequiredSince: STORED_SINCE,
+    });
+    expect(transition).toEqual({ from: true, to: false, since: STORED_SINCE });
+  });
+
+  it('leaves the rule intact on a privacy-only update', () => {
+    const { settings, transition } = service.updateSettings(
+      withRule(true, STORED_SINCE),
+      { privacy: { contributionRolesPubliclyVisible: true } }
+    );
+
+    expect(settings.privacy.contributionRolesPubliclyVisible).toBe(true);
+    expect(settings.security).toEqual({
+      secondFactorRequired: true,
+      secondFactorRequiredSince: STORED_SINCE,
+    });
+    expect(transition).toBeUndefined();
+  });
+
+  it('ignores an explicit null for the switch', () => {
+    const { settings, transition } = service.updateSettings(
+      withRule(true, STORED_SINCE),
+      { security: { secondFactorRequired: null as unknown as boolean } }
+    );
+
+    expect(settings.security.secondFactorRequired).toBe(true);
+    expect(transition).toBeUndefined();
   });
 });

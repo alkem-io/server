@@ -54,6 +54,19 @@ export class ActorContext {
   issuedAt?: number;
 
   /**
+   * Whether this request's sign-in completed a second factor. Request-scoped:
+   * set only on the per-request copy, never on the cached instance, and only
+   * by the two sign-in strategies (BFF cookie session, Hydra bearer). Absent
+   * for every other credential, which no second-factor rule evaluates.
+   *
+   * `satisfied` says the sign-in used a second factor. `ways` is how many
+   * ways to pass the second step the account held at that sign-in; only the
+   * cookie session carries it, and a session written before it was recorded
+   * has none.
+   */
+  secondFactor?: { satisfied: boolean; ways?: number };
+
+  /**
    * Assistant attribution (004-web-ai-assistant, FR-016/FR-019). Present on the
    * two MCP-host assistant auth paths, both of which attribute the action to the
    * `virtual-assistant` actor:

@@ -73,9 +73,9 @@ export class OrganizationResolverMutations {
 
     organization = await this.organizationService.updateOrganizationSettings(
       organization,
-      settingsData.settings
+      settingsData.settings,
+      actorContext
     );
-    organization = await this.organizationService.save(organization);
     // As the settings may update the authorization for the Space, the authorization policy will need to be reset
 
     const updatedAuthorizations =

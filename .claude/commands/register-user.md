@@ -1,5 +1,5 @@
 ---
-description: Register and verify a new user via Kratos self-service API + MailSlurper, then create Alkemio profile
+description: Register and verify a new user via Kratos self-service API + Swarmail (MailSlurper-compatible API), then create Alkemio profile
 arguments:
   - name: email
     description: Email address for the new user (e.g., user@example.com)

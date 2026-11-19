@@ -1,3 +1,4 @@
+import { SecondFactorWaysService } from '@core/auth/second-factor/second-factor.ways.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -117,7 +118,17 @@ function makeSession(
 ) {
   const session: any = { ...initial };
   session.regenerate = vi.fn((cb: (err?: unknown) => void) => cb());
-  session.save = vi.fn((cb: (err?: unknown) => void) => cb());
+  // What the session held each time it was saved: a value set after save()
+  // never reaches the store.
+  const saved: Record<string, unknown>[] = [];
+  Object.defineProperty(session, 'saved', { value: saved });
+  session.save = vi.fn((cb: (err?: unknown) => void) => {
+    saved.push({
+      sub: session.sub,
+      second_factor_ways: session.second_factor_ways,
+    });
+    cb();
+  });
   session.destroy = vi.fn((cb: () => void) => {
     if (opts?.destroyClearsSub !== false) {
       delete session.sub;
@@ -147,6 +158,8 @@ async function buildController(opts?: {
   oidcServiceOverrides?: Record<string, unknown>;
   /** FR-004 — an unmapped domain means app mode is unavailable. */
   cookieDomain?: string;
+  /** How `SecondFactorWaysService.count` settles; two ways by default. */
+  secondFactorWaysCount?: () => Promise<number>;
 }) {
   const fakeClient = {
     metadata: { client_id: 'alkemio-web', redirect_uris: ['https://cb'] },
@@ -166,10 +179,15 @@ async function buildController(opts?: {
     ...opts?.oidcServiceOverrides,
   };
 
+  const secondFactorWays = {
+    count: vi.fn(opts?.secondFactorWaysCount ?? (() => Promise.resolve(2))),
+  };
+
   const providers: any[] = [
     MockWinstonProvider,
     OidcController,
     { provide: OidcService, useValue: oidcService },
+    { provide: SecondFactorWaysService, useValue: secondFactorWays },
     {
       provide: ConfigService,
       useValue: {
@@ -198,7 +216,12 @@ async function buildController(opts?: {
     providers,
   }).compile();
 
-  return { controller: module.get(OidcController), oidcService, fakeClient };
+  return {
+    controller: module.get(OidcController),
+    oidcService,
+    fakeClient,
+    secondFactorWays,
+  };
 }
 
 // Lets fire-and-forget microtask chains settle without fake timers.
@@ -1311,5 +1334,365 @@ describe('OidcController — GET /app-handoff redeems in the WebView (FR-008…F
       .join('\n');
     expect(logged).not.toContain(APP_VERIFIER);
     expect(logged).not.toContain(code);
+  });
+});
+
+describe('OidcController — sign-in assurance and the sign-in start on the session', () => {
+  async function webCallback(opts: {
+    claimsAcr?: unknown;
+    issuedAgoS?: number;
+    challenge?: string;
+    redis?: any;
+    secondFactorWaysCount?: () => Promise<number>;
+  }) {
+    const redis = opts.redis ?? makeHandoffRedis().redis;
+    const { controller, fakeClient, secondFactorWays } = await buildController({
+      redis,
+      secondFactorWaysCount: opts.secondFactorWaysCount,
+    });
+    const nonce = 'nonce-acr';
+    const issuedAt = Math.floor(Date.now() / 1000) - (opts.issuedAgoS ?? 0);
+    const cookie = await signPreAuthCookie(
+      {
+        state: 'state-acr',
+        nonce,
+        code_verifier: 'verifier-acr',
+        returnTo: '/dashboard',
+        issued_at: issuedAt,
+        ...(opts.challenge ? { app_challenge: opts.challenge } : {}),
+      },
+      PRE_AUTH_KEY
+    );
+    const claims: Record<string, unknown> = {
+      sub: 'sub-acr',
+      nonce,
+      alkemio_actor_id: 'actor-acr',
+    };
+    if ('claimsAcr' in opts) claims.acr = opts.claimsAcr;
+    fakeClient.callback.mockResolvedValue({
+      access_token: 'at',
+      id_token: 'idt',
+      refresh_token: 'rt',
+      expires_at: issuedAt + 900,
+      scope: 'openid profile',
+      claims: () => claims,
+    });
+    const req = makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } });
+    const res = makeRes();
+    const { records } = await captureAudit(() =>
+      controller.callback('state-acr', 'auth-code', req, res)
+    );
+    return { controller, req, res, records, issuedAt, secondFactorWays };
+  }
+
+  const loginCompleted = (records: any[]) =>
+    records.find(r => r.event_type === 'auth.login.completed');
+
+  it("writes claims.acr 'aal2' onto the session and the login audit event", async () => {
+    const { req, records } = await webCallback({ claimsAcr: 'aal2' });
+
+    expect(req.session.acr).toBe('aal2');
+    expect(loginCompleted(records).acr).toBe('aal2');
+  });
+
+  it("keeps 'aal1' as it is", async () => {
+    const { req, records } = await webCallback({ claimsAcr: 'aal1' });
+
+    expect(req.session.acr).toBe('aal1');
+    expect(loginCompleted(records).acr).toBe('aal1');
+  });
+
+  it.each([
+    ['an unknown level', 'aal3'],
+    ['a non-string', 2],
+    ['an array', ['aal2']],
+  ])('stores null for an acr that is %s', async (_label, value) => {
+    const { req, records } = await webCallback({ claimsAcr: value });
+
+    expect(req.session.acr).toBeNull();
+    expect(loginCompleted(records).acr).toBeNull();
+  });
+
+  it('stores null when the token carries no acr', async () => {
+    const { req, records } = await webCallback({});
+
+    expect(req.session.acr).toBeNull();
+    expect(loginCompleted(records).acr).toBeNull();
+  });
+
+  it("records the pre-auth cookie's issued_at as created_at, not the callback's time", async () => {
+    const { req, issuedAt } = await webCallback({
+      claimsAcr: 'aal1',
+      issuedAgoS: 300,
+    });
+
+    expect(req.session.created_at).toBe(issuedAt);
+    // The absolute ceiling still counts from the callback.
+    expect(req.session.absolute_expires_at).toBeGreaterThanOrEqual(
+      issuedAt + 300 + COOKIE_CONFIG.absolute_ttl_s
+    );
+  });
+
+  it("app mode stores the handoff with issued_at = the pre-auth cookie's and the bundle's acr", async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { issuedAt } = await webCallback({
+      claimsAcr: 'aal2',
+      issuedAgoS: 300,
+      challenge: APP_CHALLENGE,
+      redis,
+    });
+
+    expect(store.size).toBe(1);
+    const record = JSON.parse([...store.values()][0]);
+    expect(record.issued_at).toBe(issuedAt);
+    expect(record.bundle.acr).toBe('aal2');
+  });
+
+  it("app-handoff establishes the bundle's acr with created_at = the record's issued_at", async () => {
+    const { redis, store } = makeHandoffRedis();
+    const { controller, issuedAt } = await webCallback({
+      claimsAcr: 'aal2',
+      issuedAgoS: 300,
+      challenge: APP_CHALLENGE,
+      redis,
+    });
+    const code = [...store.keys()][0].replace(/^.*:/, '');
+
+    const req = makeReq({
+      query: { code },
+      headers: { [APP_VERIFIER_HEADER.toLowerCase()]: APP_VERIFIER },
+    });
+    const res = makeRes();
+    const { records } = await captureAudit(() =>
+      controller.appHandoff(code, req, res)
+    );
+
+    expect(res.redirectedTo).toBe('/dashboard');
+    expect(req.session.acr).toBe('aal2');
+    expect(req.session.created_at).toBe(issuedAt);
+    expect(loginCompleted(records).acr).toBe('aal2');
+  });
+
+  it('refresh rotates tokens and leaves acr and created_at as they were', async () => {
+    const { controller, fakeClient } = await buildController({
+      redis: makeHandoffRedis().redis,
+    });
+    (fakeClient as any).refresh = vi.fn().mockResolvedValue({
+      access_token: 'at-2',
+      id_token: 'idt-2',
+      refresh_token: 'rt-2',
+      expires_at: Math.floor(Date.now() / 1000) + 600,
+    });
+    const session = makeSession({
+      access_token: 'at-1',
+      id_token: 'idt-1',
+      refresh_token: 'rt-1',
+      sub: 'sub-acr',
+      client_id: 'alkemio-web',
+      acr: 'aal2',
+      second_factor_ways: 1,
+      created_at: 1_800_000_000,
+    });
+    const req = makeReq({ sessionID: 'sid-refresh-acr', session });
+    const res = makeRes();
+
+    await captureAudit(() => controller.refresh(req, res));
+
+    expect(res.statusCode).toBe(204);
+    expect(session.access_token).toBe('at-2');
+    expect(session.acr).toBe('aal2');
+    expect(session.second_factor_ways).toBe(1);
+    expect(session.created_at).toBe(1_800_000_000);
+  });
+});
+
+describe('OidcController — the ways to pass the second step on the session', () => {
+  async function webCallback(secondFactorWaysCount: () => Promise<number>) {
+    const redis = makeHandoffRedis().redis;
+    const { controller, fakeClient, secondFactorWays } = await buildController({
+      redis,
+      secondFactorWaysCount,
+    });
+    const nonce = 'nonce-ways';
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const cookie = await signPreAuthCookie(
+      {
+        state: 'state-ways',
+        nonce,
+        code_verifier: 'verifier-ways',
+        returnTo: '/dashboard',
+        issued_at: issuedAt,
+      },
+      PRE_AUTH_KEY
+    );
+    fakeClient.callback.mockResolvedValue({
+      access_token: 'at',
+      id_token: 'idt',
+      refresh_token: 'rt',
+      expires_at: issuedAt + 900,
+      scope: 'openid profile',
+      claims: () => ({
+        sub: 'sub-ways',
+        nonce,
+        alkemio_actor_id: 'actor-ways',
+        acr: 'aal2',
+      }),
+    });
+    const req = makeReq({
+      cookies: { [PRE_AUTH_COOKIE_NAME]: cookie },
+      session: makeSession({ sub: 'sub-previous', second_factor_ways: 3 }),
+    });
+    const res = makeRes();
+    const { records } = await captureAudit(() =>
+      controller.callback('state-ways', 'auth-code', req, res)
+    );
+    return { req, res, records, secondFactorWays };
+  }
+
+  /** Starts an app-mode flow and returns a handoff code ready to redeem. */
+  async function appHandoff(secondFactorWaysCount: () => Promise<number>) {
+    const { redis, store } = makeHandoffRedis();
+    const { controller, fakeClient, secondFactorWays } = await buildController({
+      redis,
+      secondFactorWaysCount,
+    });
+    const nonce = 'nonce-ways-app';
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const cookie = await signPreAuthCookie(
+      {
+        state: 'state-ways-app',
+        nonce,
+        code_verifier: 'verifier-ways-app',
+        returnTo: '/dashboard',
+        issued_at: issuedAt,
+        app_challenge: APP_CHALLENGE,
+      },
+      PRE_AUTH_KEY
+    );
+    fakeClient.callback.mockResolvedValue({
+      access_token: 'at',
+      id_token: 'idt',
+      refresh_token: 'rt',
+      expires_at: issuedAt + 900,
+      scope: 'openid profile',
+      claims: () => ({
+        sub: 'sub-ways-app',
+        nonce,
+        alkemio_actor_id: 'actor-ways-app',
+        acr: 'aal2',
+      }),
+    });
+    await captureAudit(() =>
+      controller.callback(
+        'state-ways-app',
+        'auth-code',
+        makeReq({ cookies: { [PRE_AUTH_COOKIE_NAME]: cookie } }),
+        makeRes()
+      )
+    );
+    // The auth browser establishes nothing, so it reads nothing either.
+    expect(secondFactorWays.count).not.toHaveBeenCalled();
+
+    const code = [...store.keys()][0].replace(/^.*:/, '');
+    const req = makeReq({
+      query: { code },
+      headers: { [APP_VERIFIER_HEADER.toLowerCase()]: APP_VERIFIER },
+    });
+    const res = makeRes();
+    const { records } = await captureAudit(() =>
+      controller.appHandoff(code, req, res)
+    );
+    return { req, res, records, secondFactorWays };
+  }
+
+  it('reads the count for the signed-in identity and keeps it on the session', async () => {
+    const { req, res, secondFactorWays } = await webCallback(() =>
+      Promise.resolve(1)
+    );
+
+    expect(secondFactorWays.count).toHaveBeenCalledExactlyOnceWith('sub-ways');
+    expect(req.session.saved.at(-1)).toEqual({
+      sub: 'sub-ways',
+      second_factor_ways: 1,
+    });
+    expect(res.redirectedTo).toBe('/dashboard');
+  });
+
+  it('fails the web sign-in through the callback rejection when the count fails, establishing nothing', async () => {
+    const { req, res, records } = await webCallback(() =>
+      Promise.reject(new Error('kratos unavailable'))
+    );
+
+    expect(res.statusCode).toBe(400);
+    expect(res.redirectedTo).toBeUndefined();
+    expect(req.session.regenerate).not.toHaveBeenCalled();
+    expect(req.session.sub).toBe('sub-previous');
+    expect(req.session.second_factor_ways).toBe(3);
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        event_type: 'auth.login.callback_rejected',
+        error_code: 'second_factor_ways_read_failed',
+      })
+    );
+    expect(
+      records.find(r => r.event_type === 'auth.login.completed')
+    ).toBeUndefined();
+  });
+
+  it('app-handoff reads the count at redemption and keeps it on the session', async () => {
+    const { req, res, secondFactorWays } = await appHandoff(() =>
+      Promise.resolve(2)
+    );
+
+    expect(secondFactorWays.count).toHaveBeenCalledExactlyOnceWith(
+      'sub-ways-app'
+    );
+    expect(req.session.saved.at(-1)).toEqual({
+      sub: 'sub-ways-app',
+      second_factor_ways: 2,
+    });
+    expect(res.redirectedTo).toBe('/dashboard');
+  });
+
+  it('app-handoff fails the sign-in when the count fails, establishing nothing', async () => {
+    const { req, res, records } = await appHandoff(() =>
+      Promise.reject(new Error('kratos unavailable'))
+    );
+
+    expect(res.redirectedTo).toBe('/login?app_signin=failed');
+    expect(req.session.regenerate).not.toHaveBeenCalled();
+    expect(req.session.second_factor_ways).toBeUndefined();
+    expect(records).toContainEqual(
+      expect.objectContaining({
+        event_type: 'auth.app_handoff.rejected',
+        error_code: 'session_establish_failed',
+      })
+    );
+  });
+});
+
+describe('OidcController — id-token-hint says whether the sign-in is refused', () => {
+  const sessionWithToken = () =>
+    makeSession({
+      id_token: 'idt',
+      absolute_expires_at: Math.floor(Date.now() / 1000) + 3600,
+    });
+
+  it.each([
+    ['refused', true, true],
+    ['not refused', undefined, false],
+  ])('returns the token and second_factor_required when %s', async (_label, flag, expected) => {
+    const { controller } = await buildController();
+    const req = makeReq({ session: sessionWithToken() });
+    if (flag) req.secondFactorRefused = flag;
+    const res = makeRes();
+
+    await controller.idTokenHint(req, res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.jsonBody).toEqual({
+      id_token: 'idt',
+      second_factor_required: expected,
+    });
   });
 });

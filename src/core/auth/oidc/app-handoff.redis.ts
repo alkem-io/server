@@ -43,6 +43,8 @@ export type MintedSessionBundle = {
   sub: string;
   alkemio_actor_id: string | null;
   client_id: string;
+  /** The sign-in's assurance level; `'aal2'` when a second factor completed. */
+  acr: 'aal1' | 'aal2' | null;
 };
 
 export type AppHandoffRecord = {
@@ -51,6 +53,7 @@ export type AppHandoffRecord = {
   returnTo: string;
   /** Binds the record to the app instance that started the flow (FR-010). */
   app_challenge: string;
+  /** The sign-in's start: the pre-auth cookie's `issued_at`. */
   issued_at: number;
   /**
    * The correlation id of the `/login` → `/callback` flow that minted this

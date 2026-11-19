@@ -5,9 +5,20 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { describe, expect, it, vi } from 'vitest';
+import { SecondFactorPolicyService } from '../../second-factor/second-factor.policy.service';
+import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
 import type { AlkemioSessionPayload } from '../session-store.redis';
+import {
+  CookieSessionInvalidError,
+  SecondFactorRequiredError,
+} from './auth.errors';
 import { SESSION_STORE_HANDLE } from './cookie-session.errors';
 import { CookieSessionStrategy } from './cookie-session.strategy';
+
+const notRefused = {
+  provide: SecondFactorPolicyService,
+  useValue: { assertNotRefused: vi.fn().mockResolvedValue(undefined) },
+};
 
 describe('CookieSessionStrategy session-lifetime stamping', () => {
   const NOW_S = 1_800_000_000;
@@ -23,6 +34,7 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: NOW_S - 3600, // 1h ago, epoch-seconds
+    acr: null,
     client_id: 'alkemio-web',
   });
 
@@ -43,6 +55,7 @@ describe('CookieSessionStrategy session-lifetime stamping', () => {
       providers: [
         MockWinstonProvider,
         CookieSessionStrategy,
+        notRefused,
         {
           provide: SESSION_STORE_HANDLE,
           useValue: sessionStore,
@@ -162,6 +175,7 @@ describe('CookieSessionStrategy — anonymous requests never touch the store (FR
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: NOW_S - 3600,
+    acr: null,
     client_id: 'alkemio-web',
   });
 
@@ -180,6 +194,7 @@ describe('CookieSessionStrategy — anonymous requests never touch the store (FR
       providers: [
         MockWinstonProvider,
         CookieSessionStrategy,
+        notRefused,
         { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
         {
           provide: AuthenticationService,
@@ -262,3 +277,245 @@ describe('CookieSessionStrategy — anonymous requests never touch the store (FR
     expect(result?.isAnonymous).toBe(false);
   });
 });
+
+describe('CookieSessionStrategy — the second factor of the sign-in', () => {
+  const NOW_S = Math.floor(Date.now() / 1000);
+
+  const buildPayload = (
+    overrides: Partial<AlkemioSessionPayload> = {}
+  ): AlkemioSessionPayload => ({
+    access_token: 'at',
+    id_token: 'idt',
+    refresh_token: 'rt',
+    expires_at: NOW_S + 600,
+    absolute_expires_at: NOW_S + 2_592_000,
+    sub: 'kratos-identity-id',
+    alkemio_actor_id: 'actor-1',
+    refresh_failure_count: 0,
+    refresh_failure_streak_started_at: null,
+    created_at: NOW_S - 3600,
+    acr: null,
+    client_id: 'alkemio-web',
+    ...overrides,
+  });
+
+  const build = async (
+    payload: AlkemioSessionPayload,
+    opts: { assertNotRefused?: () => Promise<void>; subRevokedAt?: number } = {}
+  ) => {
+    const cachedContext = Object.assign(new ActorContext(), {
+      actorID: 'actor-1',
+      credentials: [{ type: 'platform-support', resourceID: '' }],
+    });
+    const secondFactorPolicy = {
+      assertNotRefused: vi.fn(
+        opts.assertNotRefused ?? (() => Promise.resolve())
+      ),
+    };
+    const redis = {
+      get: vi.fn(() =>
+        Promise.resolve(
+          opts.subRevokedAt === undefined ? null : String(opts.subRevokedAt)
+        )
+      ),
+      eval: vi.fn(() => Promise.resolve(1)),
+      srem: vi.fn(() => Promise.resolve(1)),
+    };
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MockWinstonProvider,
+        CookieSessionStrategy,
+        {
+          provide: SESSION_STORE_HANDLE,
+          useValue: {
+            get: vi.fn().mockResolvedValue(payload),
+            destroy: vi.fn(),
+            markTerminated: vi.fn(),
+          },
+        },
+        {
+          provide: AuthenticationService,
+          useValue: {
+            createActorContext: vi.fn().mockResolvedValue(cachedContext),
+          },
+        },
+        { provide: ActorContextService, useValue: {} },
+        {
+          provide: ConfigService,
+          useValue: { get: vi.fn().mockReturnValue('alkemio_session') },
+        },
+        { provide: SecondFactorPolicyService, useValue: secondFactorPolicy },
+        { provide: OIDC_REDIS_CLIENT, useValue: redis },
+      ],
+    }).compile();
+    return {
+      strategy: module.get(CookieSessionStrategy),
+      cachedContext,
+      secondFactorPolicy,
+    };
+  };
+
+  const request = () =>
+    ({
+      sessionID: 'sid-1',
+      cookies: { alkemio_session: 's:sid-1.harness-signature' },
+    }) as any;
+
+  const refusalEvents = (records: any[]) =>
+    records.filter(r => r.event_type === 'auth.second_factor.refused');
+
+  it("stamps satisfied for an 'aal2' sign-in on the request copy only", async () => {
+    const { strategy, cachedContext } = await build(
+      buildPayload({ acr: 'aal2' })
+    );
+
+    const result = await strategy.validate(request());
+
+    expect(result?.secondFactor).toEqual({ satisfied: true });
+    expect(cachedContext.secondFactor).toBeUndefined();
+  });
+
+  it.each([
+    ['aal1', 'aal1' as const],
+    ['absent', null],
+  ])('stamps not satisfied when acr is %s', async (_label, acr) => {
+    const { strategy } = await build(buildPayload({ acr }));
+
+    const result = await strategy.validate(request());
+
+    expect(result?.secondFactor).toEqual({ satisfied: false });
+  });
+
+  it.each([0, 1, 2])('stamps the %i ways the session holds', async ways => {
+    const { strategy, cachedContext } = await build(
+      buildPayload({ acr: 'aal2', second_factor_ways: ways })
+    );
+
+    const result = await strategy.validate(request());
+
+    expect(result?.secondFactor).toEqual({ satisfied: true, ways });
+    expect(cachedContext.secondFactor).toBeUndefined();
+  });
+
+  it('stamps no ways for a session written before they were recorded', async () => {
+    const { strategy } = await build(buildPayload({ acr: 'aal2' }));
+
+    const result = await strategy.validate(request());
+
+    expect(result?.secondFactor).not.toHaveProperty('ways');
+  });
+
+  it('keeps issuedAt at the sign-in start, created_at in milliseconds', async () => {
+    const payload = buildPayload();
+    const { strategy } = await build(payload);
+
+    const result = await strategy.validate(request());
+
+    expect(result?.issuedAt).toBe(payload.created_at * 1000);
+  });
+
+  it('asks the policy about the stamped copy and returns it when not refused', async () => {
+    const { strategy, secondFactorPolicy } = await build(
+      buildPayload({ acr: 'aal1' })
+    );
+
+    const { result, records } = await captureStdout(() =>
+      strategy.validate(request())
+    );
+
+    expect(secondFactorPolicy.assertNotRefused).toHaveBeenCalledWith(
+      result,
+      expect.any(Date)
+    );
+    expect(result?.actorID).toBe('actor-1');
+    expect(refusalEvents(records)).toEqual([]);
+  });
+
+  it('throws the refusal and records one refusal event with identifiers only', async () => {
+    const { strategy } = await build(buildPayload(), {
+      assertNotRefused: () => Promise.reject(new SecondFactorRequiredError()),
+    });
+
+    const { error, records } = await captureStdout(() =>
+      strategy.validate(request())
+    );
+
+    expect(error).toBeInstanceOf(SecondFactorRequiredError);
+    const events = refusalEvents(records);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual({
+      event_type: 'auth.second_factor.refused',
+      outcome: 'failure',
+      error_code: 'second_factor_required',
+      sub: 'kratos-identity-id',
+      client_id: 'alkemio-web',
+      correlation_id: expect.any(String),
+      request_id: expect.any(String),
+      timestamp: expect.any(String),
+    });
+  });
+
+  it('rejects with a failed rule read unchanged, and records no refusal', async () => {
+    const failure = new Error('connection terminated');
+    const { strategy } = await build(buildPayload(), {
+      assertNotRefused: () => Promise.reject(failure),
+    });
+
+    const { error, records } = await captureStdout(() =>
+      strategy.validate(request())
+    );
+
+    expect(error).toBe(failure);
+    expect(refusalEvents(records)).toEqual([]);
+  });
+
+  describe('the subject-revocation fence on the sign-in start', () => {
+    const T = NOW_S - 100;
+
+    it('rejects a sign-in that began before the marker', async () => {
+      const { strategy } = await build(buildPayload({ created_at: T - 1 }), {
+        subRevokedAt: T,
+      });
+
+      const { error } = await captureStdout(() => strategy.validate(request()));
+
+      expect(error).toBeInstanceOf(CookieSessionInvalidError);
+      expect((error as CookieSessionInvalidError).errorCode).toBe(
+        'subject_revoked'
+      );
+    });
+
+    it('accepts a sign-in that began after the marker', async () => {
+      const { strategy } = await build(buildPayload({ created_at: T + 1 }), {
+        subRevokedAt: T,
+      });
+
+      const result = await strategy.validate(request());
+
+      expect(result?.actorID).toBe('actor-1');
+    });
+  });
+});
+
+async function captureStdout<T>(
+  run: () => Promise<T>
+): Promise<{ result?: T; error?: unknown; records: any[] }> {
+  const records: any[] = [];
+  const spy = vi
+    .spyOn(process.stdout, 'write')
+    .mockImplementation((chunk: any) => {
+      try {
+        records.push(JSON.parse(String(chunk)));
+      } catch {
+        // Not an audit record.
+      }
+      return true;
+    });
+  try {
+    return { result: await run(), records };
+  } catch (error) {
+    return { error, records };
+  } finally {
+    spy.mockRestore();
+  }
+}

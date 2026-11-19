@@ -56,6 +56,8 @@ export type ManagedPrivilege =
   // list read for spaces / organizations / users. Same disposition — no
   // census gate, grant set spec-covered through `PRIVILEGE_COVERAGE`.
   | AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ
+  // The support reset of a member's second factor (A5's row).
+  | AuthorizationPrivilege.PLATFORM_SECOND_FACTOR_RESET
   // A22 — the platform-promote flag's read + write, platform-anchored.
   | AuthorizationPrivilege.PLATFORM_PROMOTE_MANAGE
   | AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
@@ -174,6 +176,15 @@ export const PRIVILEGE_GRANTS: Record<ManagedPrivilege, PrivilegeGrant> = {
   [AuthorizationPrivilege.PLATFORM_LICENSING_LISTS_READ]: {
     anchor: 'platform',
     owningCredentials: [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+  },
+  // --- One non-cascading rule on the platform policy for the support reset
+  // of a member's second factor.
+  [AuthorizationPrivilege.PLATFORM_SECOND_FACTOR_RESET]: {
+    anchor: 'platform',
+    owningCredentials: [
+      AuthorizationCredential.PLATFORM_SUPPORT,
+      AuthorizationCredential.PLATFORM_USERS_ADMIN,
+    ],
   },
   // --- A22 — one non-cascading rule on the platform policy
   // (`platform.service.authorization.ts`).

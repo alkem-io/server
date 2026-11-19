@@ -1,9 +1,14 @@
 import { LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  type SecondFactorRuleTransition,
+  secondFactorRuleTransition,
+} from '@core/auth/second-factor/second-factor.audit.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdatePlatformSettingsInput } from './dto/platform.settings.dto.update';
 import { IPlatformSettings } from './platform.settings.interface';
+import { platformSecuritySettings } from './platform.settings.security.defaults';
 
 @Injectable()
 export class PlatformSettingsService {
@@ -14,7 +19,10 @@ export class PlatformSettingsService {
   public updateSettings(
     settings: IPlatformSettings,
     updateData: UpdatePlatformSettingsInput
-  ): IPlatformSettings {
+  ): {
+    settings: IPlatformSettings;
+    transition?: SecondFactorRuleTransition;
+  } {
     const updatedSettings = {
       ...settings,
       integration: {
@@ -34,7 +42,20 @@ export class PlatformSettingsService {
           updateData.integration.notificationEmailBlacklist;
       }
     }
-    return updatedSettings;
+
+    const transition = secondFactorRuleTransition(
+      platformSecuritySettings(settings).secondFactorRequiredForPlatformRoles,
+      updateData.security?.secondFactorRequiredForPlatformRoles,
+      settings.security?.secondFactorRequiredForPlatformRolesSince
+    );
+    if (!transition) {
+      return { settings: updatedSettings };
+    }
+    updatedSettings.security = {
+      secondFactorRequiredForPlatformRoles: transition.to,
+      secondFactorRequiredForPlatformRolesSince: transition.since,
+    };
+    return { settings: updatedSettings, transition };
   }
 
   public addIframeAllowedURLOrFail(

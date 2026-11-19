@@ -278,6 +278,56 @@ export interface MatrixSessionAuditDetails {
   deviceId?: string;
 }
 
+/** The Kratos admin step of a second-factor reset that failed. */
+export type SecondFactorResetFailedStep =
+  | 'kratos_password'
+  | 'kratos_credentials'
+  | 'kratos_sessions'
+  | 'application_sessions';
+
+/**
+ * `authentication` category, support reset of a member's second factor: an
+ * intent row, then a completed or failed row with the same correlation id.
+ * An ALLOWLIST of identifiers and counts: never an email, a display name, a
+ * secret or raw error text.
+ */
+export interface SecondFactorResetAuditDetails {
+  kratosIdentityId?: string;
+  removedCredentialTypes?: string[];
+  sessionsRevoked?: number;
+  tokenRevocationFailedCount?: number;
+  /** What the caller asked: make the password unusable. */
+  invalidatePassword?: boolean;
+  /** What happened: a password was replaced. */
+  passwordInvalidated?: boolean;
+  /** The replaced password's last-change time as the identity provider
+   * returned it, unparsed. */
+  passwordLastChangedAt?: string;
+  failedStep?: SecondFactorResetFailedStep;
+}
+
+/** `authentication` category, an off→on or on→off of a second-factor rule. */
+export interface SecondFactorRuleAuditDetails {
+  scope?: 'platform' | 'organization';
+  organizationId?: string;
+  from?: boolean;
+  to?: boolean;
+  /** ISO switch-on time in force after the transition. */
+  since?: string | null;
+}
+
+/**
+ * `authentication` category, a change to a member's own second factor
+ * reported by the identity provider. Holds the user agent and never a client
+ * address: the reported address comes from a header the sender sets.
+ */
+export interface SecondFactorChangeAuditDetails {
+  method?: 'totp' | 'webauthn' | 'lookup_secret';
+  observedAt?: string;
+  sourceFlowId?: string;
+  requestContext?: { userAgent?: string };
+}
+
 /**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
@@ -296,6 +346,9 @@ export type PlatformAuditDetails = EmailChangeAuditDetails &
   McpApiKeyAuditDetails &
   AccountDeletionAuditDetails &
   MatrixSessionAuditDetails &
+  SecondFactorResetAuditDetails &
+  SecondFactorRuleAuditDetails &
+  Omit<SecondFactorChangeAuditDetails, 'requestContext'> &
   // `action` and `reason` are already open strings on other categories; the
   // closed unions are enforced by the organisation-administration writer.
   Partial<Omit<OrganizationAdministrationAuditDetails, 'action' | 'reason'>>;

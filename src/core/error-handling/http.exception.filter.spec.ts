@@ -1,4 +1,5 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { SecondFactorRequiredHttpException } from '@core/auth/second-factor/second-factor-required.http.exception';
 import { vi } from 'vitest';
 import { HttpExceptionFilter } from './http.exception.filter';
 
@@ -112,6 +113,26 @@ describe('HttpExceptionFilter', () => {
       filter.catch(exception, host);
 
       expect(exception.details.userId).toBe('unknown');
+    });
+
+    it('writes the second-factor refusal body unchanged', () => {
+      const jsonFn = vi.fn();
+      const statusFn = vi.fn().mockReturnValue({ json: jsonFn });
+      const host = {
+        getType: () => 'http',
+        switchToHttp: () => ({
+          getResponse: () => ({ status: statusFn }),
+          getRequest: () => ({ user: undefined }),
+        }),
+      } as any;
+
+      filter.catch(new SecondFactorRequiredHttpException() as any, host);
+
+      expect(statusFn).toHaveBeenCalledWith(403);
+      expect(jsonFn).toHaveBeenCalledWith({
+        statusCode: 403,
+        error_code: 'second_factor_required',
+      });
     });
 
     it('should hide details in production', () => {

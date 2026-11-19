@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { describe, expect, it, vi } from 'vitest';
+import { SecondFactorPolicyService } from '../../second-factor/second-factor.policy.service';
 import { OIDC_REDIS_CLIENT } from '../oidc.tokens';
 import { subIndexKey } from '../session-index.redis';
 import type { AlkemioSessionPayload } from '../session-store.redis';
@@ -36,6 +37,7 @@ describe('CookieSessionStrategy self-healing subject index', () => {
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: NOW_S - 3600,
+    acr: null,
     client_id: 'alkemio-web',
     ...overrides,
   });
@@ -102,6 +104,10 @@ describe('CookieSessionStrategy self-healing subject index', () => {
 
     const providers: any[] = [
       CookieSessionStrategy,
+      {
+        provide: SecondFactorPolicyService,
+        useValue: { assertNotRefused: vi.fn().mockResolvedValue(undefined) },
+      },
       MockWinstonProvider,
       {
         provide: SESSION_STORE_HANDLE,

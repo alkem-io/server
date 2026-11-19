@@ -64,4 +64,10 @@ export enum PlatformAuditOutcome {
   FILE_BYTES_CLEANUP_COMPLETED = 'file_bytes_cleanup_completed',
   FILE_BYTES_CLEANUP_FAILED = 'file_bytes_cleanup_failed',
   SESSION_REVOCATION_COMPLETED = 'session_revocation_completed',
+  // Authentication category: the support reset of a member's second factor.
+  // A rule transition reuses `configuration_changed`; a member's own change
+  // reuses `observed` and `security_signal_failed`.
+  SECOND_FACTOR_RESET_STARTED = 'second_factor_reset_started',
+  SECOND_FACTOR_RESET_COMPLETED = 'second_factor_reset_completed',
+  SECOND_FACTOR_RESET_FAILED = 'second_factor_reset_failed',
 }

@@ -13,6 +13,7 @@ export * from './pagination';
 export * from './registration.exception';
 export * from './relationship.not.found.exception';
 export * from './role.set.policy.role.limits.exception';
+export * from './second.factor.required.exception';
 export * from './session.refresh.required.exception';
 export * from './session-store-unavailable.exception';
 export * from './subscription';

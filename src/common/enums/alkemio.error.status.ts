@@ -45,6 +45,9 @@ export enum AlkemioErrorStatus {
   PAGINATION_INPUT_OUT_OF_BOUND = 'PAGINATION_INPUT_OUT_OF_BOUND',
   PAGINATION_NOT_FOUND = 'PAGINATION_NOT_FOUND',
   PAGINATION_PARAM_NOT_FOUND = 'PAGINATION_PARAM_NOT_FOUND',
+  // Raised by updateVisual when the submitted address is neither empty nor a
+  // platform storage document address: the caller must upload the picture instead.
+  VISUAL_URI_NOT_ALLOWED = 'VISUAL_URI_NOT_ALLOWED',
   ROLE_SET_POLICY_ROLE_LIMITS_VIOLATED = 'ROLESET_POLICY_ROLE_LIMITS_VIOLATED',
   ROLE_SET_ROLE = 'ROLESET_ROLE',
   ROLE_SET_OPEN_APPLICATION_EXISTS = 'ROLESET_OPEN_APPLICATION_EXISTS',
@@ -98,6 +101,10 @@ export enum AlkemioErrorStatus {
   // their own account (self-invite, self-approve, self-promote, ...). Distinct
   // from FORBIDDEN_POLICY so the client can tell it apart from missing rights.
   PLATFORM_SUPPORT_SELF_TARGET = 'PLATFORM_SUPPORT_SELF_TARGET',
+  // A sign-in covered by a second-factor rule past its deadline completed no
+  // second factor. Distinct from FORBIDDEN_POLICY so the client routes to the
+  // second-factor page instead of showing a toast.
+  SECOND_FACTOR_REQUIRED = 'SECOND_FACTOR_REQUIRED',
   // Self-account deletion: the account still holds a blocking resource (or is
   // the sole owner of an organization). The client re-runs the pre-flight
   // read on this code and renders the itemized blocked dialog from the fresh

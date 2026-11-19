@@ -90,7 +90,7 @@ docker compose -f quickstart-services.yml --env-file .env.docker config -q
 
 The repo already ships a one-shot reset script that wipes volumes, runs
 migrations, starts the dev server on the host (`:4000`), and registers the admin
-user via Kratos + MailSlurper:
+user via Kratos + Swarmail (the local mail sink):
 
 ```bash
 # Requires a .env file with AUTH_ADMIN_PASSWORD (the script reads it from .env,
@@ -195,11 +195,11 @@ authorization bypassed) — see "Assumptions / risks".
 to do it by hand:
 
 ```bash
-# Register + verify via Kratos + MailSlurper (the helper reads the password from
+# Register + verify via Kratos + Swarmail (the helper reads the password from
 # a temp file to avoid shell-escaping the '!'):
 echo -n 'password' > /tmp/.register-password
 .scripts/register-user.sh 'tester@alkem.io' 'Test' 'User'
-# MailSlurper UI (verification mails): http://localhost:4436
+# Swarmail UI (verification mails, `default` inbox): http://localhost:4436
 ```
 
 `register-user.sh` only registers + verifies the Kratos identity and creates the
