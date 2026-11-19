@@ -21,6 +21,7 @@ import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
 import {
   GraphqlExceptionFilter,
   HttpExceptionFilter,
+  isErrorResponseDebugEnabled,
   sanitizeGraphQLFormattedError,
   UnhandledExceptionFilter,
 } from '@core/error-handling';
@@ -199,6 +200,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           fieldResolverEnhancers: ['guards', 'filters'],
           plugins: [ApmApolloPlugin],
           formatError: sanitizeGraphQLFormattedError,
+          includeStacktraceInErrorResponses: isErrorResponseDebugEnabled(),
           sortSchema: true,
           persistedQueries: false,
           /***
