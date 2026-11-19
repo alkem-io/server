@@ -118,10 +118,7 @@ import { CreateCalendarEventOnCalendarInput } from '@domain/timeline/calendar/dt
 import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
-import {
-  NotificationEmailAddressInput,
-  UpdatePlatformSettingsInput,
-} from '@platform/platform-settings';
+import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
 import { ConversionVcSpaceToVcKnowledgeBaseInput } from '@services/api/conversion/dto/conversion.dto.vc.space.to.vc.kb';
 import { ConvertSpaceL1ToSpaceL0Input } from '@services/api/conversion/dto/convert.dto.space.l1.to.space.l0.input';
 import { ConvertSpaceL1ToSpaceL2Input } from '@services/api/conversion/dto/convert.dto.space.l1.to.space.l2.input';
@@ -221,7 +218,6 @@ export class BaseHandler extends AbstractHandler {
       UpdateVirtualContributorSettingsInput,
       UpdateVirtualContributorSettingsPrivacyInput,
       UpdatePlatformSettingsInput,
-      NotificationEmailAddressInput,
       UpdateUserSettingsEntityInput,
       UpdateUserSettingsInput,
       UpdateUserSettingsCommunicationInput,

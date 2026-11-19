@@ -7,36 +7,10 @@ import { plainToInstance } from 'class-transformer';
 import { describe, expect, it } from 'vitest';
 import { BaseHandler } from './base.handler';
 
-// The handler's allowlist is opt-in: an input absent from `types[]` is never
-// validated, so the decorators on it never run. These specs drive the handler
-// the way the validation pipe does (plainToInstance, then handle).
+// Drives the handler the way the validation pipe does (plainToInstance, then
+// handle).
 describe('BaseHandler — notification email blacklist inputs', () => {
   const handler = new BaseHandler();
-
-  describe('NotificationEmailAddressInput', () => {
-    const input = (email: string) =>
-      plainToInstance(NotificationEmailAddressInput, { email });
-
-    it('accepts a valid email address', async () => {
-      await expect(
-        handler.handle(
-          input('Someone@Example.com'),
-          NotificationEmailAddressInput
-        )
-      ).resolves.toBeNull();
-    });
-
-    it.each([
-      'not-an-email',
-      'someone@example.com\r\n',
-      'someone@example.com\nsomeone-else@example.com',
-      'someone@exa\rmple.com',
-    ])('rejects %j', async email => {
-      await expect(
-        handler.handle(input(email), NotificationEmailAddressInput)
-      ).rejects.toThrow(ValidationException);
-    });
-  });
 
   describe('UpdatePlatformSettingsInput', () => {
     const input = (notificationEmailBlacklist: string[]) =>
@@ -56,13 +30,31 @@ describe('BaseHandler — notification email blacklist inputs', () => {
       ).resolves.toBeNull();
     });
 
-    it('rejects a list containing one invalid entry', async () => {
+    it.each([
+      'not-an-email',
+      'b@example.com\r\n',
+      '"b\r\nc"@example.com',
+      '"b\rc"@example.com',
+      '"b\nc"@example.com',
+    ])('rejects a list containing %j', async entry => {
       await expect(
         handler.handle(
-          input(['a@example.com', 'b@example.com\r\n']),
+          input(['a@example.com', entry]),
           UpdatePlatformSettingsInput
         )
       ).rejects.toThrow(ValidationException);
+    });
+  });
+
+  describe('NotificationEmailAddressInput', () => {
+    it('lets removal reach the service with an entry already stored', async () => {
+      const value = plainToInstance(NotificationEmailAddressInput, {
+        email: 'someone@example.com\r\n',
+      });
+
+      await expect(
+        handler.handle(value, NotificationEmailAddressInput)
+      ).resolves.toBeNull();
     });
   });
 });

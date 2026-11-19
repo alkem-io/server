@@ -1,4 +1,7 @@
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  ValidationException,
+} from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { IPlatformSettingsIntegration } from '@platform/platform-settings/platform.settings.integrations.interface';
 import { IPlatformSettings } from '@platform/platform-settings/platform.settings.interface';
@@ -103,6 +106,24 @@ describe('PlatformSettingsService - notification email blacklist', () => {
         'Blacklist limit of 250 entries reached. Remove entries before adding new ones.'
       );
     });
+
+    it.each([
+      'not-an-email',
+      'example.com',
+      'user@example.com\r\n',
+      'user@example.com\nother@example.com',
+      'user@exa\rmple.com',
+      '"user\r\nname"@example.com',
+      '"user\rname"@example.com',
+      '"user\nname"@example.com',
+    ])('rejects %j before it is stored', email => {
+      const settings = createSettings();
+
+      expect(() =>
+        service.addNotificationEmailToBlacklistOrFail(settings, email)
+      ).toThrow(ValidationException);
+      expect(settings.integration.notificationEmailBlacklist).toEqual([]);
+    });
   });
 
   describe('removeNotificationEmailFromBlacklistOrFail', () => {
@@ -114,6 +135,22 @@ describe('PlatformSettingsService - notification email blacklist', () => {
       const result = service.removeNotificationEmailFromBlacklistOrFail(
         settings,
         'User@example.com'
+      );
+
+      expect(result).toEqual(['other@example.com']);
+    });
+
+    it('removes an entry stored before format validation applied', () => {
+      const settings = createSettings({
+        notificationEmailBlacklist: [
+          'user@example.com\r\n',
+          'other@example.com',
+        ],
+      });
+
+      const result = service.removeNotificationEmailFromBlacklistOrFail(
+        settings,
+        'user@example.com\r\n'
       );
 
       expect(result).toEqual(['other@example.com']);
