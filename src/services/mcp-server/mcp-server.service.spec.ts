@@ -34,13 +34,15 @@ describe('McpServerService registered tool schema rejection', () => {
     const edit = new EditWhiteboardElementsTool(
       whiteboard as any,
       {} as any,
-      executor as any
+      executor as any,
+      {} as any
     );
     const editExecute = vi.spyOn(edit, 'execute');
     const importer = new ImportWhiteboardSceneTool(
       whiteboard as any,
       {} as any,
-      executor as any
+      executor as any,
+      {} as any
     );
     const importExecute = vi.spyOn(importer, 'execute');
     const other = {
@@ -988,6 +990,42 @@ describe('McpServerService — a named target that is missing or refused', () =>
       },
     ]);
     expect(results[0].text).toMatch(UNSPECIFIED_TEXT);
+  });
+
+  it.each([
+    ['import_whiteboard_scene', ImportWhiteboardSceneTool],
+    ['edit_whiteboard_elements', EditWhiteboardElementsTool],
+  ])('%s: a storage failure while loading the board leaves the tool as the unspecified text', async (name, Tool: any) => {
+    const tool = new Tool(
+      {
+        getWhiteboardOrFail: vi.fn().mockRejectedValue(new Error('db down')),
+      },
+      realAuthorizationService(),
+      { execute: vi.fn() },
+      makeLogger()
+    );
+    const args =
+      name === 'import_whiteboard_scene'
+        ? {
+            whiteboardId: '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
+            scene: {
+              type: 'excalidraw',
+              version: 2,
+              elements: [{ type: 'rectangle', id: 'r' }],
+            },
+          }
+        : {
+            whiteboardId: '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
+            operations: [{ op: 'addText', text: 'hello' }],
+          };
+
+    const { results, logger } = await answers([{ tool, name, args }]);
+
+    expect(results[0].text).toMatch(UNSPECIFIED_TEXT);
+    expect(results[0].entries).toEqual([
+      expect.objectContaining({ exceptionName: 'Error', operation: name }),
+    ]);
+    expect(loudLogText(logger)).not.toContain('db down');
   });
 
   it('navigate_templates details: a missing, a refused and a policy-less template alike', async () => {
