@@ -38,6 +38,7 @@ function livePayload(
     refresh_failure_count: 0,
     refresh_failure_streak_started_at: null,
     created_at: nowS,
+    acr: null,
     client_id: CLIENT_ID,
     request_context_cache: {
       display_name: FIXTURE_DISPLAY_NAME,

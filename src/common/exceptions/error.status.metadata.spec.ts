@@ -1,4 +1,4 @@
-import { AlkemioErrorStatus } from '@common/enums';
+import { AlkemioErrorStatus, ErrorCategory } from '@common/enums';
 import {
   computeNumericCode,
   FALLBACK_METADATA,
@@ -65,6 +65,21 @@ describe('ErrorStatusMetadata', () => {
         expect(categoryPrefix).toBeGreaterThanOrEqual(10);
         expect(categoryPrefix).toBeLessThanOrEqual(99);
       }
+    });
+  });
+
+  describe('SECOND_FACTOR_REQUIRED', () => {
+    it('is an AUTHORIZATION code 119 with numeric code 11119', () => {
+      const metadata = getMetadataForStatus(
+        AlkemioErrorStatus.SECOND_FACTOR_REQUIRED
+      );
+
+      expect(metadata.category).toBe(ErrorCategory.AUTHORIZATION);
+      expect(metadata.specificCode).toBe(119);
+      expect(computeNumericCode(metadata)).toBe(11119);
+      expect(metadata.userMessage).toBe(
+        'userMessages.authorization.secondFactorRequired'
+      );
     });
   });
 

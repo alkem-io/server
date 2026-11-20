@@ -217,15 +217,16 @@ describe('KratosService', () => {
       expect(result).toEqual([AuthenticationType.PASSKEY]);
     });
 
-    it('should return PASSKEY for legacy webauthn credentials', () => {
+    it('does not report a security key used as a second factor as a sign-in method', () => {
       const identity = {
         credentials: {
-          webauthn: { type: 'webauthn', identifiers: ['legacy-key'] },
+          password: { type: 'password' },
+          webauthn: { type: 'webauthn', identifiers: ['security-key'] },
         },
       } as unknown as Identity;
 
       const result = service.mapAuthenticationType(identity);
-      expect(result).toEqual([AuthenticationType.PASSKEY]);
+      expect(result).toEqual([AuthenticationType.EMAIL]);
     });
 
     it('should include PASSKEY alongside oidc and password (issue #9773 follow-up)', () => {
@@ -813,6 +814,300 @@ describe('KratosService', () => {
         id: 'id-1',
       } as Identity);
       expect(result).toBeUndefined();
+    });
+  });
+});
+
+describe('KratosService — second-factor admin calls', () => {
+  let service: KratosService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        KratosService,
+        MockWinstonProvider,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((key: string) =>
+              key === 'identity.authentication.providers.ory'
+                ? {
+                    kratos_public_base_url_server: 'http://kratos-public:4433',
+                    kratos_admin_base_url_server: 'http://kratos-admin:4434',
+                    admin_service_account: {
+                      username: 'admin',
+                      password: 'password',
+                    },
+                  }
+                : 'http://kratos-public:4433'
+            ),
+          },
+        },
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    service = module.get(KratosService);
+  });
+
+  describe('deleteIdentityCredential', () => {
+    it('deletes the given type with the per-call timeout', async () => {
+      const spy = vi
+        .spyOn(service.kratosIdentityClient, 'deleteIdentityCredentials')
+        .mockResolvedValue({} as any);
+
+      await expect(
+        service.deleteIdentityCredential('identity-1', 'lookup_secret', {
+          timeoutMs: 5000,
+        })
+      ).resolves.toBe(true);
+
+      expect(spy).toHaveBeenCalledWith(
+        { id: 'identity-1', type: 'lookup_secret' },
+        { timeout: 5000 }
+      );
+    });
+
+    it('resolves when the credential is already absent (404)', async () => {
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'deleteIdentityCredentials'
+      ).mockRejectedValue({ response: { status: 404 } });
+
+      await expect(
+        service.deleteIdentityCredential('identity-1', 'totp')
+      ).resolves.toBe(false);
+    });
+
+    it.each([
+      [
+        'a timeout',
+        Object.assign(new Error('timeout of 5000ms exceeded'), {
+          code: 'ECONNABORTED',
+        }),
+      ],
+      [
+        'an HTTP error',
+        { response: { status: 500 }, message: 'Request failed' },
+      ],
+    ])('rethrows %s', async (_label, failure) => {
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'deleteIdentityCredentials'
+      ).mockRejectedValue(failure);
+
+      await expect(
+        service.deleteIdentityCredential('identity-1', 'webauthn')
+      ).rejects.toBe(failure);
+    });
+  });
+
+  describe('replacePasswordWithUnusableSecret', () => {
+    const identity = (password?: { updated_at?: string }) =>
+      ({
+        id: 'identity-1',
+        schema_id: 'default',
+        state: 'active',
+        traits: { email: 'member@example.com', name: { first: 'M' } },
+        metadata_public: { alkemio_actor_id: 'actor-1' },
+        metadata_admin: { note: 'kept' },
+        credentials: password
+          ? { password: { type: 'password', ...password } }
+          : { oidc: { type: 'oidc' } },
+      }) as unknown as Identity;
+
+    const arrange = (reads: Array<Identity | Error | object>) => {
+      const getIdentity = vi
+        .spyOn(service.kratosIdentityClient, 'getIdentity')
+        .mockImplementation(async () => {
+          const next = reads.shift();
+          if (next instanceof Error || (next as any)?.response) throw next;
+          return { data: next } as any;
+        });
+      const updateIdentity = vi
+        .spyOn(service.kratosIdentityClient, 'updateIdentity')
+        .mockResolvedValue({
+          data: identity({ updated_at: '0001-01-01T00:00:00Z' }),
+        } as any);
+      return { getIdentity, updateIdentity };
+    };
+
+    const sentPassword = (updateIdentity: { mock: { calls: any[][] } }) =>
+      updateIdentity.mock.calls.at(-1)?.[0].updateIdentityBody.credentials
+        .password.config.password as string;
+
+    it('makes no update when the identity has no password', async () => {
+      const { updateIdentity } = arrange([identity()]);
+
+      await expect(
+        service.replacePasswordWithUnusableSecret('identity-1')
+      ).resolves.toBeNull();
+      expect(updateIdentity).not.toHaveBeenCalled();
+    });
+
+    it('makes no update when the identity is gone (404)', async () => {
+      const { updateIdentity } = arrange([{ response: { status: 404 } }]);
+
+      await expect(
+        service.replacePasswordWithUnusableSecret('identity-1')
+      ).resolves.toBeNull();
+      expect(updateIdentity).not.toHaveBeenCalled();
+    });
+
+    it('carries the identity as read, with a fresh long secret each call, and the timeout', async () => {
+      const { getIdentity, updateIdentity } = arrange([
+        identity({ updated_at: 'a' }),
+        identity({ updated_at: 'b' }),
+        identity({ updated_at: 'c' }),
+        identity({ updated_at: 'd' }),
+      ]);
+
+      await service.replacePasswordWithUnusableSecret('identity-1', {
+        timeoutMs: 5000,
+      });
+      const first = sentPassword(updateIdentity);
+      await service.replacePasswordWithUnusableSecret('identity-1');
+      const second = sentPassword(updateIdentity);
+
+      const read = identity();
+      expect(updateIdentity.mock.calls[0]).toEqual([
+        {
+          id: 'identity-1',
+          updateIdentityBody: {
+            schema_id: read.schema_id,
+            state: 'active',
+            traits: read.traits,
+            metadata_public: read.metadata_public,
+            metadata_admin: read.metadata_admin,
+            external_id: undefined,
+            credentials: { password: { config: { password: first } } },
+          },
+        },
+        { timeout: 5000 },
+      ]);
+      expect(getIdentity).toHaveBeenNthCalledWith(
+        1,
+        { id: 'identity-1', includeCredential: ['password'] },
+        { timeout: 5000 }
+      );
+      expect(first.length).toBeGreaterThanOrEqual(43);
+      expect(second.length).toBeGreaterThanOrEqual(43);
+      expect(second).not.toBe(first);
+    });
+
+    it('logs the secret nowhere', async () => {
+      const { updateIdentity } = arrange([
+        identity({ updated_at: 'a' }),
+        identity({ updated_at: 'b' }),
+      ]);
+      const logger = (service as any).logger;
+
+      await service.replacePasswordWithUnusableSecret('identity-1');
+
+      const secret = sentPassword(updateIdentity);
+      const logged = JSON.stringify(
+        ['verbose', 'warn', 'error', 'log', 'debug'].map(
+          level => logger[level]?.mock?.calls ?? []
+        )
+      );
+      expect(logged).not.toContain(secret);
+    });
+
+    it('resolves the following read’s time unchanged and ignores the update’s answer', async () => {
+      const readTime = '2026-11-11T10:00:00.123456789Z';
+      const { getIdentity } = arrange([
+        identity({ updated_at: '2026-01-01T00:00:00Z' }),
+        identity({ updated_at: readTime }),
+      ]);
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'updateIdentity'
+      ).mockResolvedValue({
+        data: identity({ updated_at: '2026-11-11T09:59:59Z' }),
+      } as any);
+
+      await expect(
+        service.replacePasswordWithUnusableSecret('identity-1', {
+          timeoutMs: 5000,
+        })
+      ).resolves.toEqual({ lastChangedAt: readTime });
+      expect(getIdentity).toHaveBeenCalledTimes(2);
+      expect(getIdentity).toHaveBeenNthCalledWith(
+        2,
+        { id: 'identity-1', includeCredential: ['password'] },
+        { timeout: 5000 }
+      );
+    });
+
+    it('resolves an undefined time when the read carries none', async () => {
+      arrange([identity({ updated_at: 'a' }), identity({})]);
+
+      await expect(
+        service.replacePasswordWithUnusableSecret('identity-1')
+      ).resolves.toEqual({ lastChangedAt: undefined });
+    });
+
+    it.each([
+      [
+        'a timeout',
+        Object.assign(new Error('timeout of 5000ms exceeded'), {
+          code: 'ECONNABORTED',
+        }),
+      ],
+      [
+        'an HTTP error',
+        Object.assign(new Error('Request failed'), {
+          response: { status: 500 },
+        }),
+      ],
+    ])('rethrows %s of the update', async (_label, failure) => {
+      arrange([identity({ updated_at: 'a' })]);
+      vi.spyOn(
+        service.kratosIdentityClient,
+        'updateIdentity'
+      ).mockRejectedValue(failure);
+
+      await expect(
+        service.replacePasswordWithUnusableSecret('identity-1')
+      ).rejects.toBe(failure);
+    });
+
+    it('rethrows a failed read other than 404', async () => {
+      const failure = Object.assign(new Error('Request failed'), {
+        response: { status: 503 },
+      });
+      arrange([failure]);
+
+      await expect(
+        service.replacePasswordWithUnusableSecret('identity-1')
+      ).rejects.toBe(failure);
+    });
+  });
+
+  describe('invalidateAllIdentitySessions', () => {
+    it('passes the per-call timeout', async () => {
+      const spy = vi
+        .spyOn(service.kratosIdentityClient, 'deleteIdentitySessions')
+        .mockResolvedValue({} as any);
+
+      await service.invalidateAllIdentitySessions('identity-1', {
+        timeoutMs: 5000,
+      });
+
+      expect(spy).toHaveBeenCalledWith({ id: 'identity-1' }, { timeout: 5000 });
+    });
+
+    it('sets no timeout for existing callers', async () => {
+      const spy = vi
+        .spyOn(service.kratosIdentityClient, 'deleteIdentitySessions')
+        .mockResolvedValue({} as any);
+
+      await service.invalidateAllIdentitySessions('identity-1');
+
+      expect(spy).toHaveBeenCalledWith(
+        { id: 'identity-1' },
+        { timeout: undefined }
+      );
     });
   });
 });

@@ -15,6 +15,8 @@ import { SESSION_STORE_HANDLE } from '@core/auth/oidc/strategies/cookie-session.
 import { cookieSessionStoreUnavailableMiddleware } from '@core/auth/oidc/strategies/cookie-session.exception-filter';
 import { CookieSessionStrategy } from '@core/auth/oidc/strategies/cookie-session.strategy';
 import { AUTH_STRATEGY_OIDC_COOKIE_SESSION } from '@core/auth/oidc/strategies/strategy.names';
+import { SecondFactorPolicyService } from '@core/auth/second-factor/second-factor.policy.service';
+import { SecondFactorWaysService } from '@core/auth/second-factor/second-factor.ways.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -231,6 +233,7 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
           existing?.refresh_failure_streak_started_at ?? null,
         last_refreshed_at: existing?.last_refreshed_at ?? null,
         created_at: existing?.created_at ?? Date.now(),
+        acr: null,
         client_id: existing?.client_id ?? context?.client_id ?? '',
         request_context_cache: null,
         terminated_at: Date.now(),
@@ -349,6 +352,14 @@ export async function createOidcHarness(
         },
       },
       CookieSessionStrategy,
+      {
+        provide: SecondFactorPolicyService,
+        useValue: { assertNotRefused: () => Promise.resolve() },
+      },
+      {
+        provide: SecondFactorWaysService,
+        useValue: { count: () => Promise.resolve(2) },
+      },
       ...(opts.appMode
         ? [{ provide: OIDC_REDIS_CLIENT, useValue: redis }]
         : []),

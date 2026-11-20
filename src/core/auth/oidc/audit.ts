@@ -20,6 +20,9 @@ export type AuditEvent = {
   // server#6315 — closed-set cause of a subject-scoped revocation. Present only
   // on the `session.revocation.*` / `session.revoked` event types.
   reason?: SessionRevocationReason | null;
+  // The served sign-in's assurance level. Present only on
+  // `auth.login.completed`.
+  acr?: 'aal1' | 'aal2' | null;
 };
 
 export type AuditEventType =
@@ -60,7 +63,10 @@ export type AuditEventType =
   // workspace#079-app-sso-handoff FR-014 — native sign-in handoff refused.
   // Success needs no member: it goes through establishSession() like a web
   // login and already emits session.regenerated + auth.login.completed.
-  | 'auth.app_handoff.rejected';
+  | 'auth.app_handoff.rejected'
+  // A sign-in strategy refused a request because a second-factor rule covers
+  // the actor past its deadline and the sign-in completed no second factor.
+  | 'auth.second_factor.refused';
 
 export type AuditInput = Omit<AuditEvent, 'timestamp'> & { timestamp?: string };
 

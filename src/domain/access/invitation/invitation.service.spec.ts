@@ -155,7 +155,7 @@ describe('InvitationService', () => {
   });
 
   describe('createInvitation', () => {
-    it('should create invitation with authorization policy and lifecycle', async () => {
+    it('should build an invitation with authorization policy and lifecycle without persisting it', async () => {
       const invitationData = {
         invitedActorID: 'contributor-1',
         createdBy: 'user-1',
@@ -175,12 +175,10 @@ describe('InvitationService', () => {
 
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
-      // a single save, with the lifecycle already attached: the row is never
-      // persisted without one
-      expect(invitationRepository.save).toHaveBeenCalledTimes(1);
-      expect(invitationRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ lifecycle: mockLifecycle })
-      );
+      // Persisted by the caller in a single save, once the policy has been
+      // applied (#6763): the row is never stored without its lifecycle, nor
+      // with a policy that has no credential rules
+      expect(invitationRepository.save).not.toHaveBeenCalled();
     });
   });
 

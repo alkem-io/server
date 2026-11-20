@@ -1,3 +1,4 @@
+import { SecondFactorWaysService } from '@core/auth/second-factor/second-factor.ways.service';
 import {
   Controller,
   Get,
@@ -158,6 +159,7 @@ export class OidcController {
     // transports or APM.
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private readonly secondFactorWays: SecondFactorWaysService,
     // FR-022c — sessionStore optional because some test harnesses replace
     // OidcController via custom providers and don't wire SESSION_STORE_HANDLE.
     // When absent, tearDownSession falls back to legacy destroy-only behaviour
@@ -543,6 +545,7 @@ export class OidcController {
       sub,
       alkemio_actor_id: alkemioActorId,
       client_id: clientId,
+      acr: toAssuranceLevel(claims.acr),
     };
 
     if (appMode) {
@@ -554,7 +557,7 @@ export class OidcController {
           bundle,
           returnTo: targetReturnTo,
           app_challenge: appMode.challenge,
-          issued_at: now,
+          issued_at: preAuth.issued_at,
           correlation_id: correlationId,
         });
       } catch {
@@ -586,10 +589,25 @@ export class OidcController {
       return;
     }
 
+    // Read before anything is established, so a failed read leaves the
+    // browser's current session as it was and fails this sign-in.
+    let secondFactorWays: number;
+    try {
+      secondFactorWays = await this.secondFactorWays.count(bundle.sub);
+    } catch {
+      return rejectCallback(
+        res,
+        correlationId,
+        rpId,
+        'second_factor_ways_read_failed'
+      );
+    }
+
     await this.establishSession(req, res, bundle, {
-      createdAt: now,
+      createdAt: preAuth.issued_at,
       correlationId,
       rpId,
+      secondFactorWays,
     });
 
     res.redirect(302, targetReturnTo);
@@ -679,10 +697,16 @@ export class OidcController {
       // FR-011 — the SAME path a web login takes, with `created_at` pinned to
       // the handoff's issue time so subject-scoped revocation windows bind to
       // when the user actually authenticated.
+      // The ways are read at redemption, when the session is created; a
+      // failed read fails the sign-in like any other failure here.
+      const secondFactorWays = await this.secondFactorWays.count(
+        record.bundle.sub
+      );
       await this.establishSession(req, res, record.bundle, {
         createdAt: record.issued_at,
         correlationId,
         rpId,
+        secondFactorWays,
       });
     } catch {
       // The code was burned in step 1, so the user's retry has to come from a
@@ -697,12 +721,21 @@ export class OidcController {
    * Regenerate, populate, persist, re-index and announce a session — the whole
    * "the user is now signed in" step, shared verbatim by the web `/callback`
    * and the app `/app-handoff` (FR-011). The caller owns the redirect.
+   *
+   * `secondFactorWays` is read by the caller from the identity provider, each
+   * inside its own handler's failure path, and is kept on the session for the
+   * second-factor rule.
    */
   private async establishSession(
     req: Request,
     res: Response,
     bundle: MintedSessionBundle,
-    ctx: { createdAt: number; correlationId: string; rpId: string | null }
+    ctx: {
+      createdAt: number;
+      correlationId: string;
+      rpId: string | null;
+      secondFactorWays: number;
+    }
   ): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
 
@@ -735,6 +768,8 @@ export class OidcController {
         s.refresh_failure_streak_started_at = null;
         s.created_at = ctx.createdAt;
         s.client_id = bundle.client_id;
+        s.acr = bundle.acr;
+        s.second_factor_ways = ctx.secondFactorWays;
         s.request_context_cache = null;
         req.session.save(saveErr => (saveErr ? reject(saveErr) : resolve()));
       });
@@ -777,6 +812,7 @@ export class OidcController {
       request_id: ctx.correlationId,
       granted_scope: bundle.scope,
       rp_id: ctx.rpId,
+      acr: bundle.acr,
     });
   }
 
@@ -1030,7 +1066,13 @@ export class OidcController {
       return;
     }
     res.setHeader('Cache-Control', 'no-store');
-    res.status(200).json({ id_token: idToken });
+    // The token stays even when refused: the client's logout leg sends it.
+    res.status(200).json({
+      id_token: idToken,
+      second_factor_required:
+        (req as Request & { secondFactorRefused?: boolean })
+          .secondFactorRefused === true,
+    });
   }
 
   @Get('logout')
@@ -1172,6 +1214,11 @@ export class OidcController {
     url.searchParams.set('post_logout_redirect_uri', effectivePostLogout);
     res.redirect(302, url.toString());
   }
+}
+
+/** Only the two levels the broker issues count; anything else is `null`, never `'aal2'`. */
+function toAssuranceLevel(acr: unknown): 'aal1' | 'aal2' | null {
+  return acr === 'aal1' || acr === 'aal2' ? acr : null;
 }
 
 function constantTimeStringEqual(a: string, b: string): boolean {

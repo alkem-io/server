@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -24,6 +25,7 @@ const createResolver = () => {
   const documentService = {
     saveDocument: vi.fn(),
     getPubliclyAccessibleURL: vi.fn(),
+    isPubliclyAccessibleURL: vi.fn(),
   } as unknown as Mocked<DocumentService>;
 
   const authorizationPolicyService = {
@@ -55,8 +57,9 @@ const createResolver = () => {
 describe('VisualResolverMutations', () => {
   describe('updateVisual', () => {
     it('authorizes and delegates to visualService.updateVisual', async () => {
-      const { resolver, authorizationService, visualService } =
+      const { resolver, authorizationService, visualService, documentService } =
         createResolver();
+      documentService.isPubliclyAccessibleURL.mockReturnValueOnce(true);
       const actorContext = new ActorContext();
       actorContext.actorID = 'user-1';
 
@@ -81,6 +84,88 @@ describe('VisualResolverMutations', () => {
       );
       expect(visualService.updateVisual).toHaveBeenCalledWith(updateData);
       expect(result).toBe(updatedVisual);
+    });
+
+    const outsideUri = 'https://host-you-control.example/a.png';
+
+    test.each([
+      'avatar',
+      'banner',
+    ])('refuses an outside address on a %s visual', async name => {
+      const { resolver, visualService, documentService } = createResolver();
+      const visual = {
+        id: 'vis-1',
+        name,
+        authorization: { id: 'auth-1' },
+      } as unknown as IVisual;
+      visualService.getVisualOrFail.mockResolvedValueOnce(visual);
+      documentService.isPubliclyAccessibleURL.mockReturnValueOnce(false);
+
+      await expect(
+        resolver.updateVisual(new ActorContext(), {
+          visualID: 'vis-1',
+          uri: outsideUri,
+        })
+      ).rejects.toMatchObject({
+        extensions: {
+          code: 'VISUAL_URI_NOT_ALLOWED',
+          numericCode: 12112,
+          userMessage: 'userMessages.validation.visualUriNotAllowed',
+        },
+      });
+      expect(documentService.isPubliclyAccessibleURL).toHaveBeenCalledWith(
+        outsideUri
+      );
+      expect(visualService.updateVisual).not.toHaveBeenCalled();
+    });
+
+    it('delegates an empty address without checking it', async () => {
+      const { resolver, visualService, documentService } = createResolver();
+      const visual = {
+        id: 'vis-1',
+        authorization: { id: 'auth-1' },
+      } as unknown as IVisual;
+      visualService.getVisualOrFail.mockResolvedValueOnce(visual);
+      visualService.updateVisual.mockResolvedValueOnce(visual);
+
+      const updateData = { visualID: 'vis-1', uri: '' };
+      const result = await resolver.updateVisual(
+        new ActorContext(),
+        updateData
+      );
+
+      expect(documentService.isPubliclyAccessibleURL).not.toHaveBeenCalled();
+      expect(visualService.updateVisual).toHaveBeenCalledTimes(1);
+      expect(visualService.updateVisual).toHaveBeenCalledWith(updateData);
+      expect(result).toBe(visual);
+    });
+
+    it('refuses on missing rights before checking the address', async () => {
+      const { resolver, authorizationService, visualService, documentService } =
+        createResolver();
+      const visual = {
+        id: 'vis-1',
+        authorization: { id: 'auth-1' },
+      } as unknown as IVisual;
+      visualService.getVisualOrFail.mockResolvedValueOnce(visual);
+      const forbidden = new ForbiddenAuthorizationPolicyException(
+        'Authorization: unable to grant privilege',
+        AuthorizationPrivilege.UPDATE,
+        'auth-1',
+        'user-1'
+      );
+      authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
+        throw forbidden;
+      });
+
+      await expect(
+        resolver.updateVisual(new ActorContext(), {
+          visualID: 'vis-1',
+          uri: outsideUri,
+        })
+      ).rejects.toBe(forbidden);
+      expect(documentService.isPubliclyAccessibleURL).not.toHaveBeenCalled();
+      expect(visualService.updateVisual).not.toHaveBeenCalled();
     });
   });
 

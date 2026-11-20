@@ -60,17 +60,17 @@ describe('messaging notifications configuration defaults', () => {
     expect(result.notifications.messaging.enabled).toBe(true);
   });
 
-  it('ships the D-20 quiet periods and delay caps for all four tracks', async () => {
+  it('ships the server#6757 push windows and the D-20 email windows', async () => {
     const factory = await loadConfiguration();
     const { digest } = factory().notifications.messaging;
 
     expect(digest.push.direct).toEqual({
-      quiet_period_seconds: 60,
-      max_delay_seconds: 300,
+      quiet_period_seconds: 5,
+      max_delay_seconds: 60,
     });
     expect(digest.push.group).toEqual({
-      quiet_period_seconds: 300,
-      max_delay_seconds: 900,
+      quiet_period_seconds: 5,
+      max_delay_seconds: 120,
     });
     expect(digest.email.direct).toEqual({
       quiet_period_seconds: 300,
@@ -82,11 +82,11 @@ describe('messaging notifications configuration defaults', () => {
     });
   });
 
-  it('defaults the sweep to 10s and the dispatch retry to 3 attempts / 60s backoff', async () => {
+  it('defaults the sweep to 1s and the dispatch retry to 3 attempts / 60s backoff', async () => {
     const factory = await loadConfiguration();
     const { digest } = factory().notifications.messaging;
 
-    expect(digest.sweep_interval_seconds).toBe(10);
+    expect(digest.sweep_interval_seconds).toBe(1);
     expect(digest.max_dispatch_attempts).toBe(3);
     expect(digest.retry_backoff_seconds).toBe(60);
   });

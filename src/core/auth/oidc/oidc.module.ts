@@ -1,5 +1,6 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { NonInteractiveLoginModule } from '@core/auth/non-interactive-login/non-interactive-login.module';
+import { SecondFactorModule } from '@core/auth/second-factor/second-factor.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Logger, Module } from '@nestjs/common';
@@ -39,6 +40,7 @@ import {
     NonInteractiveLoginModule,
     AuthorizationModule,
     PlatformAuthorizationPolicyModule,
+    SecondFactorModule,
   ],
   controllers: [
     OidcController,
