@@ -303,7 +303,8 @@ if (code === 'FORBIDDEN_POLICY' || code === 'ENTITY_NOT_FOUND') {
 }
 
 // Or by numeric code:
-if (error.extensions?.numericCode === 11104) {
+const numericCode = error.extensions?.numericCode;
+if (numericCode === 11104 || numericCode === 10101) {
   // Not available to this caller
 }
 ```
