@@ -174,6 +174,28 @@ describe('GraphqlExceptionFilter', () => {
     expect(logged.errorId).toBe(result.extensions.errorId);
   });
 
+  it('answers an email-change error with its own code, message and errorId', () => {
+    setMode('production');
+    const exception = new UserEmailChangeException(
+      UserEmailChangeErrorCode.EMAIL_CHANGE_CONFLICT,
+      'The new email is already in use.',
+      LogContext.COMMUNITY
+    );
+
+    const result = filter.catch(
+      exception as unknown as BaseException,
+      createMockHost() as any
+    ) as GraphQLError;
+
+    expect(result.message).toBe('The new email is already in use.');
+    expect(result.extensions).toEqual({
+      code: UserEmailChangeErrorCode.EMAIL_CHANGE_CONFLICT,
+      errorId: exception.errorId,
+    });
+    const [logged] = (logger.error as Mock).mock.calls[0];
+    expect(logged.errorId).toBe(exception.errorId);
+  });
+
   describe.each(hostKinds)('public shape on a %s', kind => {
     it('carries only the public keys with the switch unset and NODE_ENV=dev', () => {
       setMode('dev');

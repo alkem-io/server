@@ -5,6 +5,10 @@ import {
   getMetadataForStatus,
 } from '@common/exceptions/error.status.metadata';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import {
+  UserEmailChangeErrorCode,
+  UserEmailChangeException,
+} from '@domain/community/user-email-change/user.email.change.errors';
 import { randomUUID } from 'crypto';
 import { isErrorResponseDebugEnabled } from './error.response.debug';
 
@@ -24,9 +28,10 @@ const UUID_PATTERN =
   /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 export interface PublicErrorResult {
-  code: AlkemioErrorStatus;
-  numericCode: number;
-  userMessage: string;
+  code: AlkemioErrorStatus | UserEmailChangeErrorCode;
+  /** Absent for an email-change error, which has no Alkemio status. */
+  numericCode?: number;
+  userMessage?: string;
   message: string;
   errorId: string;
 }
@@ -66,6 +71,11 @@ const resultFor = (
  * a caller projects once and uses that result for both the log and the answer.
  */
 export const toPublicErrorResult = (error: unknown): PublicErrorResult => {
+  // Email-change codes are ones a client acts on, and the class keeps its
+  // messages free of request data, so the error is answered as it was raised.
+  if (error instanceof UserEmailChangeException) {
+    return { code: error.code, message: error.message, errorId: error.errorId };
+  }
   const isAlkemio = error instanceof BaseException;
   const code = (error as { code?: AlkemioErrorStatus } | null | undefined)
     ?.code;

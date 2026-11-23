@@ -13,6 +13,10 @@ import {
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
+import {
+  UserEmailChangeErrorCode,
+  UserEmailChangeException,
+} from '@domain/community/user-email-change/user.email.change.errors';
 import { QueryFailedError } from 'typeorm';
 import {
   NEUTRAL_ERROR_MESSAGE,
@@ -205,6 +209,23 @@ describe('toPublicErrorResult', () => {
       userMessage: metadata.userMessage,
       message: 'Internal Server Error',
       errorId: expect.stringMatching(UUID_V4),
+    });
+  });
+
+  it.each(
+    Object.values(UserEmailChangeErrorCode)
+  )('keeps the email-change code %s, its message and its errorId', code => {
+    delete process.env.ERROR_RESPONSE_DEBUG;
+    const error = new UserEmailChangeException(
+      code,
+      'The new email is already in use.',
+      LogContext.COMMUNITY
+    );
+
+    expect(toPublicErrorResult(error)).toEqual({
+      code,
+      message: 'The new email is already in use.',
+      errorId: error.errorId,
     });
   });
 });
