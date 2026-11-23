@@ -11,10 +11,7 @@ import {
   DataSourceStubProvider,
   EntityManagerStubProvider,
 } from '@src/schema-bootstrap/stubs/db.stub';
-import { existsSync, mkdtempSync, unlinkSync, writeFileSync } from 'fs';
 import { buildSchema, GraphQLSchema, parse, print, printSchema } from 'graphql';
-import { tmpdir } from 'os';
-import { join } from 'path';
 import { DataSource, EntityManager } from 'typeorm';
 
 function normalizeSDL(schema: GraphQLSchema): string {
@@ -76,34 +73,6 @@ async function captureSchema(
 // requires additional Vitest configuration or workaround.
 // See: https://github.com/vitest-dev/vitest/issues/2073
 describe.skip('Schema bootstrap parity', () => {
-  let cleanupTlsFile: (() => void) | undefined;
-
-  beforeAll(() => {
-    if (!process.env.WINGBACK_TLS_CERT_PATH) {
-      const tempDir = mkdtempSync(join(tmpdir(), 'schema-parity-'));
-      const tlsPath = join(tempDir, 'tls.crt');
-      writeFileSync(tlsPath, '');
-      process.env.WINGBACK_TLS_CERT_PATH = tlsPath;
-      cleanupTlsFile = () => {
-        if (existsSync(tlsPath)) {
-          unlinkSync(tlsPath);
-        }
-      };
-    } else if (!existsSync(process.env.WINGBACK_TLS_CERT_PATH)) {
-      const tlsPath = process.env.WINGBACK_TLS_CERT_PATH as string;
-      writeFileSync(tlsPath, '');
-      cleanupTlsFile = () => {
-        if (existsSync(tlsPath)) {
-          unlinkSync(tlsPath);
-        }
-      };
-    }
-  });
-
-  afterAll(() => {
-    cleanupTlsFile?.();
-  });
-
   vi.setConfig({ testTimeout: 45000 });
 
   it('emits identical SDL across light and full bootstrap', async ({
