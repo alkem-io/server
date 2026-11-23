@@ -99,13 +99,16 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
       ...exception.details,
       userId: userID,
     };
+    // One projection per failure: the log and the answer carry the same errorId.
+    const result = toPublicGraphQLError(exception);
     const loggableException = {
       ...exception,
       stack: String(exception.stack),
       extensions: undefined, // we do not need it
+      errorId: result.extensions.errorId,
     };
     this.logger.error(loggableException);
     // something needs to be returned so the default ExceptionsHandler is not triggered
-    return toPublicGraphQLError(exception);
+    return result;
   }
 }

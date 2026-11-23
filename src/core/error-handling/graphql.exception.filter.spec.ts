@@ -11,6 +11,10 @@ import { SecondFactorRequiredException } from '@common/exceptions/second.factor.
 import { SessionStoreUnavailableException } from '@common/exceptions/session-store-unavailable.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { CalloutFormErrorCode } from '@domain/collaboration/callout-form/callout.form.error.codes';
+import {
+  UserEmailChangeErrorCode,
+  UserEmailChangeException,
+} from '@domain/community/user-email-change/user.email.change.errors';
 import { LoggerService } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -152,6 +156,22 @@ describe('GraphqlExceptionFilter', () => {
     filter.catch(exception, host as any);
 
     expect(exception.details?.userId).toBe('unknown');
+  });
+
+  it('logs the errorId it returns for an error outside BaseException', () => {
+    const exception = new UserEmailChangeException(
+      UserEmailChangeErrorCode.EMAIL_CHANGE_ALKEMIO_WRITE_FAILED,
+      'write failed',
+      LogContext.COMMUNITY
+    );
+
+    const result = filter.catch(
+      exception as unknown as BaseException,
+      createMockHost() as any
+    ) as GraphQLError;
+
+    const [logged] = (logger.error as Mock).mock.calls[0];
+    expect(logged.errorId).toBe(result.extensions.errorId);
   });
 
   describe.each(hostKinds)('public shape on a %s', kind => {
