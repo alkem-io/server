@@ -110,8 +110,7 @@ export class ConversationAuthorizationService {
       updatedAuthorizations.push(roomAuthorization);
     }
 
-    // Conversation storage inherits the participant policy, not the generic
-    // storage-aggregator policy that grants registered/anonymous access.
+    // Conversation storage inherits the participant policy and nothing else.
     const storageAggregator = conversation.storageAggregator;
     if (storageAggregator?.directStorage && storageAggregator.authorization) {
       storageAggregator.authorization = this.authorizationPolicyService.reset(
