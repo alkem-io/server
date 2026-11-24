@@ -326,7 +326,14 @@ export class WhiteboardAuthorizationService {
             AuthorizationPrivilege.CONTRIBUTE,
             POLICY_RULE_WHITEBOARD_CONTENT_UPDATE
           );
-        privilegeRules.push(updateContentPrivilegeContributors);
+        privilegeRules.push(
+          updateContentPrivilegeContributors,
+          new AuthorizationPolicyRulePrivilege(
+            [AuthorizationPrivilege.UPDATE_CONTENT],
+            AuthorizationPrivilege.UPDATE,
+            POLICY_RULE_WHITEBOARD_CONTENT_UPDATE
+          )
+        );
         break;
       }
     }
