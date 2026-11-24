@@ -135,6 +135,80 @@ describe('HttpExceptionFilter', () => {
       });
     });
 
+    describe('debug detail', () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      const originalDebug = process.env.ERROR_RESPONSE_DEBUG;
+      afterEach(() => {
+        process.env.NODE_ENV = originalNodeEnv;
+        if (originalDebug === undefined) {
+          delete process.env.ERROR_RESPONSE_DEBUG;
+        } else {
+          process.env.ERROR_RESPONSE_DEBUG = originalDebug;
+        }
+      });
+
+      const respond = () => {
+        const jsonFn = vi.fn();
+        const statusFn = vi.fn().mockReturnValue({ json: jsonFn });
+        const exception = {
+          name: 'BadRequest',
+          message: 'Bad request',
+          details: { reason: 'internal' },
+          context: LogContext.API,
+          code: AlkemioErrorStatus.BAD_USER_INPUT,
+          numericCode: 1000,
+          userMessage: 'Error',
+          errorId: 'err-4',
+          getStatus: vi.fn().mockReturnValue(400),
+          stack: 'Error: Bad request\n    at somewhere.ts:1:1',
+        } as any;
+        const host = {
+          getType: () => 'http',
+          switchToHttp: () => ({
+            getResponse: () => ({ status: statusFn }),
+            getRequest: () => ({ user: { actorID: 'actor-77' } }),
+          }),
+        } as any;
+        filter.catch(exception, host);
+        return JSON.parse(JSON.stringify(jsonFn.mock.calls[0][0]));
+      };
+
+      it('returns only the public fields with the switch unset, whatever NODE_ENV', () => {
+        process.env.NODE_ENV = 'dev';
+        delete process.env.ERROR_RESPONSE_DEBUG;
+
+        const body = respond();
+
+        expect(Object.keys(body).sort()).toEqual(
+          [
+            'statusCode',
+            'code',
+            'numericCode',
+            'userMessage',
+            'timestamp',
+            'message',
+            'errorId',
+          ].sort()
+        );
+        expect(body.message).toBe('Bad request');
+        expect(JSON.stringify(body)).not.toContain('actor-77');
+      });
+
+      it('adds context, details and stack with the switch on', () => {
+        process.env.NODE_ENV = 'production';
+        process.env.ERROR_RESPONSE_DEBUG = 'true';
+
+        const body = respond();
+
+        expect(body.message).toBe('Bad request');
+        expect(body.context).toBe(LogContext.API);
+        expect(body.details).toEqual(
+          expect.objectContaining({ reason: 'internal' })
+        );
+        expect(body.stack).toContain('somewhere.ts');
+      });
+    });
+
     it('should hide details in production', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';

@@ -159,54 +159,38 @@ export class TemplateNavigatorTool implements McpTool {
       LogContext.MCP_SERVER
     );
 
-    try {
-      switch (action) {
-        case 'list':
-          return await this.listTemplates(
-            agentInfo,
-            templateType,
-            innovationPackId,
-            outputMode,
-            effectiveLimit
-          );
+    switch (action) {
+      case 'list':
+        return await this.listTemplates(
+          agentInfo,
+          templateType,
+          innovationPackId,
+          outputMode,
+          effectiveLimit
+        );
 
-        case 'search':
-          if (!searchQuery) {
-            return this.errorResult(
-              'Search query is required for search action'
-            );
-          }
-          return await this.searchTemplates(
-            agentInfo,
-            searchQuery,
-            templateType,
-            outputMode,
-            effectiveLimit
-          );
+      case 'search':
+        if (!searchQuery) {
+          return this.errorResult('Search query is required for search action');
+        }
+        return await this.searchTemplates(
+          agentInfo,
+          searchQuery,
+          templateType,
+          outputMode,
+          effectiveLimit
+        );
 
-        case 'details':
-          if (!templateId) {
-            return this.errorResult(
-              'Template ID is required for details action'
-            );
-          }
-          return await this.getTemplateDetails(agentInfo, templateId);
+      case 'details':
+        if (!templateId) {
+          return this.errorResult('Template ID is required for details action');
+        }
+        return await this.getTemplateDetails(agentInfo, templateId);
 
-        default:
-          return this.errorResult(
-            `Unknown action: ${action}. Use "list", "search", or "details".`
-          );
-      }
-    } catch (error) {
-      this.logger.error?.(
-        `Template navigator error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : undefined,
-        LogContext.MCP_SERVER
-      );
-
-      return this.errorResult(
-        error instanceof Error ? error.message : 'Failed to navigate templates'
-      );
+      default:
+        return this.errorResult(
+          `Unknown action: ${action}. Use "list", "search", or "details".`
+        );
     }
   }
 
@@ -401,17 +385,12 @@ export class TemplateNavigatorTool implements McpTool {
       },
     });
 
-    // Check authorization
-    if (template.authorization) {
-      const hasAccess = this.authorizationService.isAccessGranted(
-        agentInfo,
-        template.authorization,
-        AuthorizationPrivilege.READ
-      );
-      if (!hasAccess) {
-        return this.errorResult('You do not have access to this template');
-      }
-    }
+    this.authorizationService.grantAccessOrFail(
+      agentInfo,
+      template.authorization,
+      AuthorizationPrivilege.READ,
+      'read template details'
+    );
 
     // Get type-specific content summary
     const contentSummary = await this.getTemplateContentSummary(template);

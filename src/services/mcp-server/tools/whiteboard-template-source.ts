@@ -20,33 +20,21 @@ export async function resolveTemplateWhiteboardId(
   templateId: string,
   actorContext: ActorContext
 ): Promise<{ whiteboardId: string } | { error: string }> {
-  let template: Awaited<ReturnType<TemplateService['getTemplateOrFail']>>;
-  try {
-    template = await templateService.getTemplateOrFail(templateId, {
-      relations: { authorization: true },
-    });
-  } catch {
-    return { error: `Template not found: ${templateId}` };
-  }
+  const template = await templateService.getTemplateOrFail(templateId, {
+    relations: { authorization: true },
+  });
+  // Before the type test, so the type is told only to a caller who may read it.
+  authorizationService.grantAccessOrFail(
+    actorContext,
+    template.authorization,
+    AuthorizationPrivilege.READ,
+    'read whiteboard template'
+  );
 
   if (template.type !== TemplateType.WHITEBOARD) {
     return {
       error: `Template ${templateId} is not a whiteboard template (type: ${template.type}). Only whiteboard templates can seed a whiteboard.`,
     };
-  }
-
-  if (template.authorization) {
-    const canRead = authorizationService.isAccessGranted(
-      actorContext,
-      template.authorization,
-      AuthorizationPrivilege.READ
-    );
-    if (!canRead) {
-      return {
-        error:
-          'Access denied: you do not have permission to read this template.',
-      };
-    }
   }
 
   let templateWhiteboard: Awaited<ReturnType<TemplateService['getWhiteboard']>>;
