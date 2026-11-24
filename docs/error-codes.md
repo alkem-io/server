@@ -133,6 +133,7 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 | 13123 | ROLESET_JOIN_NOT_ELIGIBLE                | You can't join directly.                  | Apply or ask an admin for an invitation           |
 | 13124 | ROLESET_INVITATION_RESEND_THROTTLED      | Invitation was resent recently.           | Wait before resending the invitation              |
 | 13125 | ROLESET_INVITATION_EMAIL_BUDGET_EXCEEDED | Too many invitation emails sent.          | Wait and try again later                          |
+| 13126 | MESSAGE_SEND_LIMIT_REACHED               | You can send up to 20 messages an hour.   | A member's sends to people have reached 20 within the last 60 minutes; send again later |
 
 ### 14xxx - System/Infrastructure Errors
 

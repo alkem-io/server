@@ -378,6 +378,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 118,
     userMessage: 'userMessages.operations.forumDiscussionCategoryNotEmpty',
   },
+  [AlkemioErrorStatus.MESSAGE_SEND_LIMIT_REACHED]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 126,
+    userMessage: 'userMessages.operations.messageSendLimitReached',
+  },
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 14xxx - SYSTEM: Infrastructure errors
