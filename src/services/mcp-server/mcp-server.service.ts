@@ -410,6 +410,21 @@ export class McpServerService implements OnModuleInit {
       return;
     }
 
+    // A session opens only for an authenticated actor.
+    if (!actorContext?.actorID || actorContext.isAnonymous) {
+      res.statusCode = 401;
+      res.setHeader('WWW-Authenticate', 'Bearer');
+      res.setHeader('Content-Type', 'application/json');
+      res.end(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          error: { code: -32001, message: 'Authentication required.' },
+          id: null,
+        })
+      );
+      return;
+    }
+
     // No session ID — this is an initialization request. Create a dedicated
     // transport + McpServer for the new session.
     const transport = new StreamableHTTPServerTransport({
@@ -419,7 +434,7 @@ export class McpServerService implements OnModuleInit {
 
     const session: McpSession = {
       transport,
-      actorContext: actorContext ?? this.createAnonymousActorContext(),
+      actorContext,
       scopes,
       apiKeyId,
     } as McpSession;
@@ -479,7 +494,7 @@ export class McpServerService implements OnModuleInit {
    * Resolve, authorize, and read a resource. Read access is enforced via the
    * provider's authorization policy and the platform AuthorizationService: the
    * MCP resource surface MUST NOT return content the acting identity cannot
-   * read (anonymous sessions only see publicly-readable resources).
+   * read.
    */
   async readResource(
     uri: string,
@@ -564,15 +579,5 @@ export class McpServerService implements OnModuleInit {
       cleanup();
       throw error;
     }
-  }
-
-  /**
-   * Create an anonymous ActorContext for unauthenticated requests
-   */
-  private createAnonymousActorContext(): ActorContext {
-    const actorContext = new ActorContext();
-    actorContext.isAnonymous = true;
-    actorContext.credentials = [];
-    return actorContext;
   }
 }

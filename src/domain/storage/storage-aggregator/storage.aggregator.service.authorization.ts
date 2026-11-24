@@ -1,4 +1,4 @@
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -47,11 +47,6 @@ export class StorageAggregatorAuthorizationService {
       this.authorizationPolicyService.inheritParentAuthorization(
         storageAggregator.authorization,
         parentAuthorization
-      );
-    storageAggregator.authorization =
-      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
-        storageAggregator.authorization,
-        AuthorizationPrivilege.READ
       );
     updatedAuthorizations.push(storageAggregator.authorization);
 
