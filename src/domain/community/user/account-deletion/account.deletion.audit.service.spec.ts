@@ -23,7 +23,7 @@ describe('AccountDeletionAuditService', () => {
       subjectUserId: 'user-1',
       initiatorRole: PlatformAuditInitiatorRole.SELF,
       accountID: 'account-1',
-      externalSubscriptionID: 'wingback-1',
+      externalSubscriptionID: 'ext-sub-1',
       documentCount: 3,
     });
 
@@ -35,7 +35,7 @@ describe('AccountDeletionAuditService', () => {
         details: expect.objectContaining({
           accountID: 'account-1',
           blockerCheck: 'pass',
-          externalSubscriptionID: 'wingback-1',
+          externalSubscriptionID: 'ext-sub-1',
           documentCount: 3,
         }),
       }),
