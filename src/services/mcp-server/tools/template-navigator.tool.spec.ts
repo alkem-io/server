@@ -1,4 +1,9 @@
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { TemplateType } from '@common/enums/template.type';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { ForbiddenException } from '@common/exceptions/forbidden.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ITemplate } from '@domain/template/template/template.interface';
@@ -7,6 +12,11 @@ import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity'
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks';
+import {
+  policyGranting,
+  realAuthorizationService,
+  testActor,
+} from '@test/utils/authorization.refusal';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Mock, vi } from 'vitest';
 import { TemplateNavigatorTool } from './template-navigator.tool';
@@ -418,26 +428,64 @@ describe('TemplateNavigatorTool', () => {
       expect(content).toHaveProperty('usage');
     });
 
-    it('should return error when user lacks access', async () => {
-      const mockTemplate = createMockTemplate({
-        id: 'template-123',
-        authorization: { id: 'auth-1' } as any,
+    describe('a template that is missing or not readable', () => {
+      const realCheck = () =>
+        vi
+          .mocked(authorizationService.grantAccessOrFail)
+          .mockImplementation((...args) =>
+            realAuthorizationService().grantAccessOrFail(...args)
+          );
+      const details = () =>
+        tool.execute(
+          { action: 'details', templateId: 'template-123' },
+          testActor()
+        );
+
+      it('rejects with the not-found of a missing template', async () => {
+        realCheck();
+        const missing = new EntityNotFoundException(
+          'Template not found',
+          LogContext.TEMPLATES
+        );
+        vi.mocked(templateService.getTemplateOrFail).mockRejectedValue(missing);
+
+        await expect(details()).rejects.toBe(missing);
       });
 
-      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
-        mockTemplate
-      );
-      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(false);
+      it('rejects with the refusal for a template the actor may not read', async () => {
+        realCheck();
+        vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
+          createMockTemplate({ authorization: policyGranting([]) })
+        );
 
-      const agentInfo = createMockActorContext();
-      const result = await tool.execute(
-        { action: 'details', templateId: 'template-123' },
-        agentInfo
-      );
+        await expect(details()).rejects.toBeInstanceOf(
+          ForbiddenAuthorizationPolicyException
+        );
+      });
 
-      expect(result.isError).toBe(true);
-      const content = parseResultContent(result);
-      expect(content.error).toContain('do not have access');
+      it('rejects a template loaded with no policy', async () => {
+        realCheck();
+        vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
+          createMockTemplate({ authorization: undefined })
+        );
+
+        await expect(details()).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('gives the details of a template the actor may read', async () => {
+        realCheck();
+        vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
+          createMockTemplate({
+            id: 'template-123',
+            authorization: policyGranting([AuthorizationPrivilege.READ]),
+          })
+        );
+
+        const result = await details();
+
+        expect(result.isError).toBeFalsy();
+        expect(parseResultContent(result).id).toBe('template-123');
+      });
     });
 
     it('should surface whiteboard template metadata (hasContent + apply hint), NOT the scene', async () => {
@@ -510,20 +558,19 @@ describe('TemplateNavigatorTool', () => {
       expect(content.error).toContain('Unknown action');
     });
 
-    it('should handle service errors gracefully', async () => {
+    it('lets a service error propagate to the caller', async () => {
+      const failure = new Error('Database error');
       innovationPackRepository.createQueryBuilder.mockReturnValue({
         leftJoinAndSelect: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         andWhere: vi.fn().mockReturnThis(),
-        getMany: vi.fn().mockRejectedValue(new Error('Database error')),
+        getMany: vi.fn().mockRejectedValue(failure),
       });
 
       const agentInfo = createMockActorContext();
-      const result = await tool.execute({ action: 'list' }, agentInfo);
-
-      expect(result.isError).toBe(true);
-      const content = parseResultContent(result);
-      expect(content.error).toBe('Database error');
+      await expect(tool.execute({ action: 'list' }, agentInfo)).rejects.toBe(
+        failure
+      );
     });
   });
 

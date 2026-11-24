@@ -1,4 +1,7 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { grantAccessRefusal } from '@test/utils/authorization.refusal';
 import { vi } from 'vitest';
 import {
   AssistantCapabilityGateService,
@@ -43,7 +46,7 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
           : vi
               .fn()
               .mockRejectedValue(
-                new Error('Authorization: unable to access Callout')
+                grantAccessRefusal(AuthorizationPrivilege.CONTRIBUTE)
               ),
       };
       const contributionRepository = {
@@ -90,16 +93,15 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
       expect(result.isError).toBeFalsy();
     });
 
-    it("an UNPERMITTED user's delegated create is REFUSED with a reason (FR-012)", async () => {
+    it("an UNPERMITTED user's delegated create is REFUSED (FR-012)", async () => {
       const { tool } = buildTool(false);
 
-      const result = await tool.execute(
-        { calloutId, displayName: 'My board' },
-        delegatedUserContext()
-      );
-
-      expect(result.isError).toBe(true);
-      expect(result.content[0].text).toMatch(/Could not create whiteboard/);
+      await expect(
+        tool.execute(
+          { calloutId, displayName: 'My board' },
+          delegatedUserContext()
+        )
+      ).rejects.toBeInstanceOf(ForbiddenAuthorizationPolicyException);
     });
   });
 });

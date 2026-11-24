@@ -1,4 +1,8 @@
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { grantAccessRefusal } from '@test/utils/authorization.refusal';
 import { vi } from 'vitest';
 import { CreateWhiteboardInSpaceTool } from './create-whiteboard-in-space.tool';
 
@@ -77,23 +81,54 @@ describe('create_whiteboard_in_space — space id/nameID resolution', () => {
     ).toHaveBeenCalledTimes(2);
   });
 
-  it('returns a guidance error when neither resolution finds the space', async () => {
+  it('rejects with the not-found of a missing space and creates nothing', async () => {
     const { tool, spaceLookupService, calloutsSetResolverMutations } =
       buildTool();
-    spaceLookupService.getSpaceByIdOrNameIdOrFail.mockRejectedValue(
-      new Error('L0 Space not found')
+    const missing = new EntityNotFoundException(
+      'Space not found',
+      LogContext.SPACES
     );
+    spaceLookupService.getSpaceByIdOrNameIdOrFail.mockRejectedValue(missing);
 
-    const result = await tool.execute(
-      { spaceId: 'no-such-space', displayName: 'Test board' },
-      actor()
-    );
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain('Space not found: no-such-space');
-    expect(result.content[0].text).toContain('nameID');
+    await expect(
+      tool.execute(
+        { spaceId: 'no-such-space', displayName: 'Test board' },
+        actor()
+      )
+    ).rejects.toBe(missing);
     expect(
       calloutsSetResolverMutations.createCalloutOnCalloutsSet
     ).not.toHaveBeenCalled();
+  });
+
+  it('rejects with a storage failure of the lookup as it is', async () => {
+    const { tool, spaceLookupService } = buildTool();
+    const failure = new Error('db down');
+    spaceLookupService.getSpaceByIdOrNameIdOrFail.mockRejectedValue(failure);
+
+    await expect(
+      tool.execute({ spaceId: SPACE_UUID, displayName: 'Test board' }, actor())
+    ).rejects.toBe(failure);
+  });
+
+  it('rejects with the refusal of the callout creation', async () => {
+    const { tool, calloutsSetResolverMutations } = buildTool();
+    const refusal = grantAccessRefusal(AuthorizationPrivilege.CREATE_CALLOUT);
+    calloutsSetResolverMutations.createCalloutOnCalloutsSet.mockRejectedValue(
+      refusal
+    );
+
+    await expect(
+      tool.execute({ spaceId: SPACE_UUID, displayName: 'Test board' }, actor())
+    ).rejects.toBe(refusal);
+  });
+
+  it('keeps the identifier advice in the spaceId description', () => {
+    const { tool } = buildTool();
+    const description = (tool.getDefinition().inputSchema.properties as any)
+      .spaceId.description as string;
+
+    expect(description).toContain('UUID');
+    expect(description).toContain('nameID');
   });
 });

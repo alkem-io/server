@@ -1,3 +1,5 @@
+import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Test } from '@nestjs/testing';
@@ -13,7 +15,7 @@ describe('ActorResolverQueries', () => {
 
   beforeEach(async () => {
     actorLookupService = {
-      getFullActorById: vi.fn(),
+      getFullActorByIdOrFail: vi.fn(),
     };
 
     authorizationService = {
@@ -32,11 +34,17 @@ describe('ActorResolverQueries', () => {
   });
 
   describe('actor', () => {
-    it('should return null when actor not found', async () => {
-      actorLookupService.getFullActorById.mockResolvedValue(null);
+    it('rejects with the not-found of a missing actor', async () => {
+      const missing = new EntityNotFoundException(
+        'Actor not found',
+        LogContext.COMMUNITY,
+        { actorID: 'actor-1' }
+      );
+      actorLookupService.getFullActorByIdOrFail.mockRejectedValue(missing);
 
-      const result = await resolver.actor(mockActorContext, 'actor-1');
-      expect(result).toBeNull();
+      await expect(resolver.actor(mockActorContext, 'actor-1')).rejects.toBe(
+        missing
+      );
       expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
     });
 
@@ -45,7 +53,7 @@ describe('ActorResolverQueries', () => {
         id: 'actor-1',
         authorization: { id: 'auth-1' },
       };
-      actorLookupService.getFullActorById.mockResolvedValue(actor);
+      actorLookupService.getFullActorByIdOrFail.mockResolvedValue(actor);
 
       const result = await resolver.actor(mockActorContext, 'actor-1');
 

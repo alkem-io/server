@@ -16,6 +16,7 @@ import { CommunicationResolverFields } from './communication.resolver.fields';
 import { CommunicationResolverMutations } from './communication.resolver.mutations';
 import { CommunicationService } from './communication.service';
 import { CommunicationAuthorizationService } from './communication.service.authorization';
+import { MessageSendAllowanceService } from './message.send.allowance.service';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { CommunicationAuthorizationService } from './communication.service.autho
     CommunicationResolverMutations,
     CommunicationResolverFields,
     CommunicationAuthorizationService,
+    MessageSendAllowanceService,
   ],
   exports: [CommunicationService, CommunicationAuthorizationService],
 })

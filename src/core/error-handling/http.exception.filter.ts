@@ -13,6 +13,7 @@ import { HttpContext } from '@src/types';
 import { ContextTypeWithGraphQL } from '@src/types/context.type';
 import { Response } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { isErrorResponseDebugEnabled } from './error.response.debug';
 import { RestErrorResponse } from './rest.error.response';
 
 @Catch(HttpException)
@@ -58,6 +59,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return exception;
     }
 
+    const debug = isErrorResponseDebugEnabled();
     response.status(status).json({
       statusCode: status,
       code: exception.code,
@@ -66,12 +68,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       message: exception.message,
       errorId: exception.errorId,
-      context:
-        process.env.NODE_ENV !== 'production' ? exception.context : undefined,
-      details:
-        process.env.NODE_ENV !== 'production' ? exception.details : undefined,
-      stack:
-        process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
+      context: debug ? exception.context : undefined,
+      details: debug ? exception.details : undefined,
+      stack: debug ? exception.stack : undefined,
     } satisfies RestErrorResponse);
     // something needs to be returned so the default ExceptionsHandler is not triggered
     return exception;

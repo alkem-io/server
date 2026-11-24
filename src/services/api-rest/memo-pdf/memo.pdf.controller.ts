@@ -2,15 +2,14 @@ import { CurrentActor } from '@common/decorators';
 import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { LogContext } from '@common/enums/logging.context';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
-import {
-  EntityNotFoundException,
-  ForbiddenAuthorizationPolicyException,
-  ForbiddenException,
-  ValidationException,
-} from '@common/exceptions';
+import { ValidationException } from '@common/exceptions';
 import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavailable.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RestGuard } from '@core/authorization/rest.guard';
+import {
+  toErrorLogEntry,
+  toPublicErrorResult,
+} from '@core/error-handling/public.error.result';
 import { MemoPdfDownloadService } from '@domain/common/memo/memo.pdf.download.service';
 import {
   Controller,
@@ -68,19 +67,33 @@ export class MemoPdfController {
       return response.send(pdf);
     } catch (error) {
       if (abort.signal.aborted) return;
-      return this.sendKnownError(error, response);
+      return this.sendKnownError(error, response, actor);
     }
   }
 
-  private sendKnownError(error: unknown, response: Response): Response {
-    if (error instanceof EntityNotFoundException)
-      return response.sendStatus(404);
-    if (
-      error instanceof ForbiddenException ||
-      error instanceof ForbiddenAuthorizationPolicyException ||
-      (error as { code?: string })?.code === AlkemioErrorStatus.FORBIDDEN_POLICY
-    )
-      return response.sendStatus(403);
+  private sendKnownError(
+    error: unknown,
+    response: Response,
+    actor: ActorContext
+  ): Response {
+    const result = toPublicErrorResult(error);
+    // A missing memo and one the actor may not read answer alike.
+    if (result.code === AlkemioErrorStatus.FORBIDDEN_POLICY) {
+      this.logger.error(
+        {
+          ...toErrorLogEntry(error, result.errorId),
+          operation: 'memo pdf download',
+          actorID: actor.actorID,
+        },
+        undefined,
+        LogContext.MEMOS
+      );
+      return response.status(404).json({
+        statusCode: 404,
+        ...result,
+        timestamp: new Date().toISOString(),
+      });
+    }
     if (error instanceof ValidationException)
       return response.status(422).json({ message: error.message });
     if (error instanceof MemoPdfUnavailableException)

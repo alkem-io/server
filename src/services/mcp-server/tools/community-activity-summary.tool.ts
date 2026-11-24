@@ -150,89 +150,72 @@ export class CommunityActivitySummaryTool implements McpTool {
       LogContext.MCP_SERVER
     );
 
-    try {
-      // Get spaces the user is a member of
-      const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
-      const userSpaces = await this.getAuthorizedSpaces(
-        agentInfo,
-        credentialMap
-      );
+    // Get spaces the user is a member of
+    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const userSpaces = await this.getAuthorizedSpaces(agentInfo, credentialMap);
 
-      if (userSpaces.length === 0) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                message: 'You are not a member of any communities yet.',
-                hint: 'Join spaces to see activity summaries.',
-              }),
-            },
-          ],
-        };
-      }
-
-      // Parse activity type filter
-      const activityTypes = this.parseActivityTypes(types);
-
-      // Fetch activities for all user spaces
-      const activitiesBySpace = await this.fetchActivitiesForSpaces(
-        userSpaces,
-        agentInfo,
-        effectiveLimit,
-        activityTypes,
-        effectiveDaysBack
-      );
-
-      // Generate analysis based on type
-      let result: Record<string, unknown>;
-
-      switch (analysisType) {
-        case 'detailed':
-          result = this.generateDetailedAnalysis(
-            activitiesBySpace,
-            agentInfo,
-            credentialMap
-          );
-          break;
-        case 'semantic':
-          result = this.generateSemanticAnalysis(
-            activitiesBySpace,
-            agentInfo,
-            credentialMap
-          );
-          break;
-        case 'summary':
-        default:
-          result = this.generateSummaryAnalysis(
-            activitiesBySpace,
-            agentInfo,
-            credentialMap
-          );
-          break;
-      }
-
+    if (userSpaces.length === 0) {
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(result),
+            text: JSON.stringify({
+              message: 'You are not a member of any communities yet.',
+              hint: 'Join spaces to see activity summaries.',
+            }),
           },
         ],
       };
-    } catch (error) {
-      this.logger.error?.(
-        `Failed to generate community activity summary: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error instanceof Error ? error.stack : undefined,
-        LogContext.MCP_SERVER
-      );
-
-      return this.errorResult(
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate activity summary'
-      );
     }
+
+    // Parse activity type filter
+    const activityTypes = this.parseActivityTypes(types);
+
+    // Fetch activities for all user spaces
+    const activitiesBySpace = await this.fetchActivitiesForSpaces(
+      userSpaces,
+      agentInfo,
+      effectiveLimit,
+      activityTypes,
+      effectiveDaysBack
+    );
+
+    // Generate analysis based on type
+    let result: Record<string, unknown>;
+
+    switch (analysisType) {
+      case 'detailed':
+        result = this.generateDetailedAnalysis(
+          activitiesBySpace,
+          agentInfo,
+          credentialMap
+        );
+        break;
+      case 'semantic':
+        result = this.generateSemanticAnalysis(
+          activitiesBySpace,
+          agentInfo,
+          credentialMap
+        );
+        break;
+      case 'summary':
+      default:
+        result = this.generateSummaryAnalysis(
+          activitiesBySpace,
+          agentInfo,
+          credentialMap
+        );
+        break;
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(result),
+        },
+      ],
+    };
   }
 
   /**

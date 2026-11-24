@@ -16,18 +16,18 @@ export class ActorResolverQueries {
 
   @Query(() => IActorFull, {
     nullable: true,
-    description: 'Get an Actor by ID. Returns null if not found.',
+    description:
+      'Get an Actor by ID. Null, with an error, when the Actor is not available to the caller.',
   })
   async actor(
     @CurrentActor() actorContext: ActorContext,
     @Args('id', { type: () => UUID }) id: string
   ): Promise<IActorFull | null> {
-    // Must use getFullActorById (queries the child table) instead of
+    // Must use the full actor lookup (queries the child table) instead of
     // getActorOrNull (queries only the parent actor table) so that
     // child-specific fields (email, firstName, contactEmail, etc.)
     // are loaded for GraphQL inline fragments.
-    const actor = await this.actorLookupService.getFullActorById(id);
-    if (!actor) return null;
+    const actor = await this.actorLookupService.getFullActorByIdOrFail(id);
 
     this.authorizationService.grantAccessOrFail(
       actorContext,

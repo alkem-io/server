@@ -133,21 +133,10 @@ export class SearchContentTool implements McpTool {
       LogContext.MCP_SERVER
     );
 
-    let results: ISearchResults;
-    try {
-      results = await this.searchService.search(
-        { terms, filters } as SearchInput,
-        actorContext
-      );
-    } catch (error) {
-      this.logger.warn?.(
-        `search_content failed: ${error instanceof Error ? error.message : 'unknown error'}`,
-        LogContext.MCP_SERVER
-      );
-      return this.errorResult(
-        `Search failed (is Elasticsearch configured?): ${error instanceof Error ? error.message : 'unknown error'}`
-      );
-    }
+    const results: ISearchResults = await this.searchService.search(
+      { terms, filters } as SearchInput,
+      actorContext
+    );
 
     const groups = [
       results.spaceResults,

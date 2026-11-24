@@ -198,6 +198,11 @@ jobs:
           CALENDAR_SUBSPACE_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
         run: pnpm exec vitest run test/integration/calendar-event-subspace.postgres.spec.ts --maxWorkers=1
 
+      - name: Test storage read rules in PostgreSQL
+        env:
+          STORAGE_AUTHORIZATION_TEST_DATABASE_URL: postgres://migration_test:migration_test@localhost:5432/migration_test
+        run: pnpm exec vitest run test/integration/storage-read-follows-space.postgres.spec.ts --maxWorkers=1
+
   sonarqube:
     needs: test
     runs-on: ubuntu-latest

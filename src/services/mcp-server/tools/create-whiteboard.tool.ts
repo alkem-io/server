@@ -132,64 +132,54 @@ export class CreateWhiteboardTool implements McpTool {
       sendNotification: true,
     };
 
-    try {
-      // Delegates auth (CONTRIBUTE) + full orchestration to the same path the
-      // GraphQL mutation uses.
-      const contribution =
-        await this.calloutResolverMutations.createContributionOnCallout(
-          actorContext,
-          input
+    // Delegates auth (CONTRIBUTE) + full orchestration to the same path the
+    // GraphQL mutation uses.
+    const contribution =
+      await this.calloutResolverMutations.createContributionOnCallout(
+        actorContext,
+        input
+      );
+
+    // The resolver's return value doesn't eager-load the whiteboard relation,
+    // so reload it to surface the new whiteboard's id/name to the caller.
+    const reloaded = await this.contributionRepository.findOne({
+      where: { id: contribution.id },
+      relations: { whiteboard: { profile: true } },
+    });
+    const whiteboard = reloaded?.whiteboard ?? contribution.whiteboard;
+    // Real, browser-openable web URL via the platform's own UrlGeneratorService.
+    // Best-effort: omit the link if it cannot be resolved rather than failing.
+    let url: string | undefined;
+    if (whiteboard) {
+      try {
+        url = await this.urlGeneratorService.getWhiteboardUrlPath(
+          whiteboard.id,
+          whiteboard.nameID
         );
-
-      // The resolver's return value doesn't eager-load the whiteboard relation,
-      // so reload it to surface the new whiteboard's id/name to the caller.
-      const reloaded = await this.contributionRepository.findOne({
-        where: { id: contribution.id },
-        relations: { whiteboard: { profile: true } },
-      });
-      const whiteboard = reloaded?.whiteboard ?? contribution.whiteboard;
-      // Real, browser-openable web URL via the platform's own UrlGeneratorService.
-      // Best-effort: omit the link if it cannot be resolved rather than failing.
-      let url: string | undefined;
-      if (whiteboard) {
-        try {
-          url = await this.urlGeneratorService.getWhiteboardUrlPath(
-            whiteboard.id,
-            whiteboard.nameID
-          );
-        } catch (urlError) {
-          this.logger.verbose?.(
-            `create_whiteboard: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
-            LogContext.MCP_SERVER
-          );
-        }
+      } catch (urlError) {
+        this.logger.verbose?.(
+          `create_whiteboard: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
+          LogContext.MCP_SERVER
+        );
       }
-      const result = {
-        created: true,
-        calloutId,
-        contributionId: contribution.id,
-        whiteboard: whiteboard
-          ? {
-              id: whiteboard.id,
-              nameID: whiteboard.nameID,
-              displayName: whiteboard.profile?.displayName ?? displayName,
-              url,
-            }
-          : null,
-      };
-
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result) }],
-      };
-    } catch (error) {
-      this.logger.warn?.(
-        `create_whiteboard failed for callout ${calloutId}: ${error instanceof Error ? error.message : 'unknown error'}`,
-        LogContext.MCP_SERVER
-      );
-      return this.errorResult(
-        `Could not create whiteboard: ${error instanceof Error ? error.message : 'unknown error'}`
-      );
     }
+    const result = {
+      created: true,
+      calloutId,
+      contributionId: contribution.id,
+      whiteboard: whiteboard
+        ? {
+            id: whiteboard.id,
+            nameID: whiteboard.nameID,
+            displayName: whiteboard.profile?.displayName ?? displayName,
+            url,
+          }
+        : null,
+    };
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result) }],
+    };
   }
 
   private errorResult(message: string): McpToolResult {

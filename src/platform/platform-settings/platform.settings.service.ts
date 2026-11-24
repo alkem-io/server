@@ -1,11 +1,16 @@
 import { LogContext } from '@common/enums';
-import { EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  ValidationException,
+} from '@common/exceptions';
 import {
   type SecondFactorRuleTransition,
   secondFactorRuleTransition,
 } from '@core/auth/second-factor/second-factor.audit.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { isEmail } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { NOTIFICATION_EMAIL_FORMAT } from './dto/notification-email-blacklist.input';
 import { UpdatePlatformSettingsInput } from './dto/platform.settings.dto.update';
 import { IPlatformSettings } from './platform.settings.interface';
 import { platformSecuritySettings } from './platform.settings.security.defaults';
@@ -109,6 +114,13 @@ export class PlatformSettingsService {
     // Reject wildcard characters
     if (email.includes('*') || email.includes('?')) {
       throw new Error('Wildcard characters are not allowed in email addresses');
+    }
+
+    if (!isEmail(email, NOTIFICATION_EMAIL_FORMAT)) {
+      throw new ValidationException(
+        'Notification blacklist entry is not a valid email address',
+        LogContext.PLATFORM
+      );
     }
 
     // Lowercase for canonical storage and comparison
