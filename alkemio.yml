@@ -423,8 +423,12 @@ storage:
 
   # Collabora / WOPI service configuration
   collabora:
-    # URL of the WOPI service (token issuance endpoint)
-    wopi_service_url: ${WOPI_SERVICE_URL}:http://localhost:3000
+    # URL of the WOPI service (token issuance endpoint). The server calls it
+    # directly and sets X-Alkemio-Actor-Id itself, so it must not go through
+    # Traefik: its /wopi route strips that header and wopi-service answers 401.
+    # Local default is the wopi-service container's loopback port from
+    # quickstart-services.yml; clusters set WOPI_SERVICE_URL to the service.
+    wopi_service_url: ${WOPI_SERVICE_URL}:http://localhost:8090
 
 
   # Redis configuration

@@ -959,7 +959,10 @@ services:
     networks:
       - alkemio_dev_net
     ports:
-      - 8080
+      # Fixed loopback port: the server on the host calls wopi-service directly
+      # (alkemio.yml `wopi_service_url`), not through Traefik, whose /wopi route
+      # strips the X-Alkemio-Actor-Id header the server sets.
+      - '127.0.0.1:8090:8080'
 
   collabora:
     extra_hosts:
