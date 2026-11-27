@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { ArrayNotEmpty, IsArray, IsEmail, IsUrl } from 'class-validator';
+import { NOTIFICATION_EMAIL_FORMAT } from './notification-email-blacklist.input';
 
 @InputType()
 export class UpdatePlatformSettingsIntegrationInput {
@@ -19,6 +20,6 @@ export class UpdatePlatformSettingsIntegrationInput {
       'Update the list of email addresses blocked from receiving notifications.',
   })
   @IsArray()
-  @IsEmail({}, { each: true })
+  @IsEmail(NOTIFICATION_EMAIL_FORMAT, { each: true })
   notificationEmailBlacklist?: string[];
 }

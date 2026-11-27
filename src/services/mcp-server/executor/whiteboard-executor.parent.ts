@@ -1,9 +1,11 @@
 import { ChildProcess, fork } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { LogContext } from '@common/enums';
-import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { ForbiddenException } from '@common/exceptions/forbidden.exception';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import {
+  toErrorLogEntry,
+  toPublicErrorResult,
+} from '@core/error-handling/public.error.result';
 import type { SemanticOperation } from '@excalidraw-yjs/excalidraw/headless';
 import {
   Inject,
@@ -53,7 +55,11 @@ export function executorConfig(env: NodeJS.ProcessEnv) {
     deadlineMs: integer('MCP_WHITEBOARD_EXECUTOR_DEADLINE_MS', 1),
   };
 }
-export type JobOutcome = { outcome: ExecutorOutcome; result?: ExecutorResult };
+export type JobOutcome = {
+  outcome: ExecutorOutcome;
+  result?: ExecutorResult;
+  errorId?: string;
+};
 export interface ImportPreparation {
   prepare(context: {
     signal: AbortSignal;
@@ -136,6 +142,7 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
       'preparing';
     const afterGo = () => phase === 'go' || phase === 'published';
     let stopped: ExecutorOutcome | undefined;
+    let errorId: string | undefined;
     let stopChild: ((outcome: ExecutorOutcome) => void) | undefined;
     const stop = (outcome: ExecutorOutcome) => {
       stopped ??= outcome;
@@ -164,10 +171,27 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
           };
           if (!validImport(payload.import)) stop('invalid');
         } catch (error) {
+          const result = toPublicErrorResult(error);
+          // A file-service status is about the server's own storage call, not
+          // a source the caller named.
+          const refused =
+            !(error instanceof FileServiceAdapterException) &&
+            result.code === AlkemioErrorStatus.FORBIDDEN_POLICY;
+          if (!stopped && refused) {
+            this.logger.error?.(
+              {
+                ...toErrorLogEntry(error, result.errorId),
+                operation: 'import whiteboard scene: sources',
+                actorID: actorId,
+              },
+              undefined,
+              LogContext.MCP_SERVER
+            );
+            errorId = result.errorId;
+          }
           stop(
             stopped ??
-              (error instanceof ForbiddenAuthorizationPolicyException ||
-              error instanceof ForbiddenException
+              (refused
                 ? 'forbidden'
                 : error instanceof StorageServiceUnavailableException ||
                     (error instanceof FileServiceAdapterException &&
@@ -179,7 +203,7 @@ export class WhiteboardExecutorParent implements OnModuleDestroy {
         }
       }
       if (Date.now() >= deadline) stop('timeout-before-go');
-      if (stopped) return { outcome: stopped };
+      if (stopped) return { outcome: stopped, errorId };
       let child: ChildProcess;
       phase = 'joining';
       try {

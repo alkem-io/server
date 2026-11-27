@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
@@ -8,9 +9,14 @@ import {
   ForbiddenException,
   ValidationException,
 } from '@common/exceptions';
+import {
+  computeNumericCode,
+  getMetadataForStatus,
+} from '@common/exceptions/error.status.metadata';
 import { MemoPdfUnavailableException } from '@common/exceptions/memo.pdf.unavailable.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RestGuard } from '@core/authorization/rest.guard';
+import { NEUTRAL_ERROR_MESSAGE } from '@core/error-handling/public.error.result';
 import { GUARDS_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { StorageServiceUnavailableException } from '@services/adapters/file-service-adapter/file.service.adapter.exception';
 import { MemoPdfController } from './memo.pdf.controller';
@@ -87,27 +93,76 @@ describe('MemoPdfController', () => {
     expect(response.send).toHaveBeenCalledWith(pdf);
   });
 
-  it.each([
-    [new EntityNotFoundException('missing', LogContext.MEMOS), 404],
-    [new ForbiddenException('denied', LogContext.MEMOS), 403],
-    [
-      new ForbiddenAuthorizationPolicyException(
-        'denied',
-        AuthorizationPrivilege.READ,
-        'memo-auth',
-        'actor-1'
-      ),
-      403,
-    ],
-    [{ code: 'FORBIDDEN_POLICY' }, 403],
-  ])('maps %o to HTTP %s with no body', async (error, status) => {
-    const { controller, response } = setup(() => Promise.reject(error));
+  describe('a memo that is missing or refused', () => {
+    const neutral = getMetadataForStatus(AlkemioErrorStatus.FORBIDDEN_POLICY);
+    const cases = () =>
+      [
+        [
+          'missing',
+          new EntityNotFoundException(
+            `Memo ${memoId} not found`,
+            LogContext.MEMOS
+          ),
+        ],
+        ['forbidden', new ForbiddenException('denied', LogContext.MEMOS)],
+        [
+          'refused',
+          new ForbiddenAuthorizationPolicyException(
+            `denied ${memoId}`,
+            AuthorizationPrivilege.READ,
+            'memo-auth',
+            'actor-1'
+          ),
+        ],
+        ['coded', { code: 'FORBIDDEN_POLICY' }],
+      ] as const;
 
-    await controller.download(memoId, actor, response as any);
+    it('answers each with 404 and the same neutral body, and logs which it was', async () => {
+      const bodies: any[] = [];
+      for (const [, error] of cases()) {
+        const { controller, response, logger } = setup(() =>
+          Promise.reject(error)
+        );
 
-    expect(response.sendStatus).toHaveBeenCalledWith(status);
-    expect(response.set).not.toHaveBeenCalled();
-    expect(response.send).not.toHaveBeenCalled();
+        await controller.download(memoId, actor, response as any);
+
+        expect(response.status).toHaveBeenCalledWith(404);
+        expect(response.sendStatus).not.toHaveBeenCalled();
+        const body = (response.json.mock.calls[0] as any[])[0];
+        expect(body).toEqual({
+          statusCode: 404,
+          code: AlkemioErrorStatus.FORBIDDEN_POLICY,
+          numericCode: computeNumericCode(neutral),
+          userMessage: neutral.userMessage,
+          message: NEUTRAL_ERROR_MESSAGE,
+          errorId: expect.any(String),
+          timestamp: expect.any(String),
+        });
+        expect(JSON.stringify(body)).not.toContain(memoId);
+        expect(logger.error).toHaveBeenCalledOnce();
+        const entry = logger.error.mock.calls[0][0];
+        expect(entry).toMatchObject({
+          errorId: body.errorId,
+          operation: 'memo pdf download',
+          actorID: actor.actorID,
+        });
+        expect(JSON.stringify(logger.error.mock.calls)).not.toContain(memoId);
+        expect(entry).not.toHaveProperty('message');
+        const { errorId: _e, timestamp: _t, ...rest } = body;
+        bodies.push({ rest, entry });
+      }
+      for (const { rest } of bodies) expect(rest).toEqual(bodies[0].rest);
+      expect(bodies.slice(0, 3).map(b => b.entry.exceptionName)).toEqual([
+        'EntityNotFoundException',
+        'ForbiddenException',
+        'ForbiddenAuthorizationPolicyException',
+      ]);
+      expect(bodies.slice(0, 3).map(b => b.entry.code)).toEqual([
+        'ENTITY_NOT_FOUND',
+        'FORBIDDEN',
+        'FORBIDDEN_POLICY',
+      ]);
+    });
   });
 
   it('maps a validation failure to 422 with its neutral message', async () => {

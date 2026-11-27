@@ -24,6 +24,7 @@ import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communicati
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { CommunicationSendMessageToUsersInput } from './dto/communication.dto.send.message.users';
 import { DirectMessageDeliveryResult } from './dto/direct.message.delivery.result';
+import { MessageSendAllowanceService } from './message.send.allowance.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -38,6 +39,7 @@ export class CommunicationResolverMutations {
     private readonly conversationService: ConversationService,
     private readonly messagingService: MessagingService,
     private readonly userService: UserService,
+    private readonly messageSendAllowanceService: MessageSendAllowanceService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -58,9 +60,18 @@ export class CommunicationResolverMutations {
       'send direct chat message'
     );
 
+    const recipients = [...new Set(messageData.receiverIDs)].filter(
+      id => id !== actorContext.actorID
+    );
+    await this.messageSendAllowanceService.claim(
+      actorContext.actorID,
+      recipients.length,
+      'sendDirectMessageToUsers'
+    );
+
     return await this.messagingService.sendDirectMessageToUsers(
       actorContext.actorID,
-      messageData.receiverIDs,
+      recipients,
       messageData.message
     );
   }
@@ -79,7 +90,14 @@ export class CommunicationResolverMutations {
       `send user message from: ${actorContext.actorID}`
     );
 
-    for (const receiverId of messageData.receiverIds) {
+    const recipients = [...new Set(messageData.receiverIds)];
+    await this.messageSendAllowanceService.claim(
+      actorContext.actorID,
+      recipients.length,
+      'sendMessageToUsers'
+    );
+
+    for (const receiverId of recipients) {
       // Check if the receiving user allows messages from other users
       const receivingUser = await this.userService.getUserByIdOrFail(
         receiverId,
@@ -134,6 +152,11 @@ export class CommunicationResolverMutations {
       AuthorizationPrivilege.READ_USERS,
       `send message to organization ${messageData.organizationId} from: ${actorContext.actorID}`
     );
+    await this.messageSendAllowanceService.claim(
+      actorContext.actorID,
+      1,
+      'sendMessageToOrganization'
+    );
 
     const notificationInput: NotificationInputOrganizationMessage = {
       triggeredBy: actorContext.actorID,
@@ -160,6 +183,11 @@ export class CommunicationResolverMutations {
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
       `send message to community ${messageData.communityId} from: ${actorContext.actorID}`
+    );
+    await this.messageSendAllowanceService.claim(
+      actorContext.actorID,
+      1,
+      'sendMessageToCommunityLeads'
     );
 
     const notificationInput: NotificationInputCommunicationLeadsMessage = {

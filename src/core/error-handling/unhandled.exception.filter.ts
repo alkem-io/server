@@ -10,6 +10,8 @@ import { ContextTypeWithGraphQL } from '@src/types/context.type';
 import { randomUUID } from 'crypto';
 import { GraphQLError } from 'graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { isErrorResponseDebugEnabled } from './error.response.debug';
+import { INTERNAL_SERVER_ERROR_MESSAGE } from './public.error.result';
 
 @Catch(Error)
 export class UnhandledExceptionFilter implements ExceptionFilter {
@@ -32,6 +34,7 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
      */
     this.logger.error(exception, secondParam, thirdParam);
 
+    const debug = isErrorResponseDebugEnabled();
     const contextType = host.getType<ContextTypeWithGraphQL>();
     // If we are in an http context respond something so the browser doesn't stay hanging.
     if (contextType === 'http') {
@@ -42,27 +45,19 @@ export class UnhandledExceptionFilter implements ExceptionFilter {
         statusCode: 500,
         timestamp: new Date().toISOString(),
         errorId: secondParam.errorId,
-        name:
-          process.env.NODE_ENV !== 'production' ? exception.name : undefined,
-        message:
-          process.env.NODE_ENV !== 'production'
-            ? exception.message
-            : 'Internal Server Error',
-        stack:
-          process.env.NODE_ENV !== 'production' ? exception.stack : undefined,
+        name: debug ? exception.name : undefined,
+        message: debug ? exception.message : INTERNAL_SERVER_ERROR_MESSAGE,
+        stack: debug ? exception.stack : undefined,
       });
     } else if (contextType === 'graphql') {
-      if (process.env.NODE_ENV === 'production') {
-        // return a new error with only the message and the id
-        // that way we are not exposing any internal information
-        return new GraphQLError(exception.message, {
+      if (!debug) {
+        return new GraphQLError(INTERNAL_SERVER_ERROR_MESSAGE, {
           extensions: {
             errorId: secondParam.errorId,
             code: AlkemioErrorStatus.UNSPECIFIED,
           },
         });
       }
-      // if not in PROD, return everything
       return new GraphQLError(exception.message, {
         originalError: exception,
         extensions: {

@@ -1,10 +1,16 @@
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  toErrorLogEntry,
+  toPublicErrorResult,
+} from '@core/error-handling/public.error.result';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import Ajv from 'ajv';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
 import { WhiteboardExecutorParent } from '../executor/whiteboard-executor.parent';
 import {
@@ -75,7 +81,9 @@ export class ImportWhiteboardSceneTool implements McpTool {
   constructor(
     private readonly whiteboardService: WhiteboardService,
     private readonly authorizationService: AuthorizationService,
-    private readonly executor: WhiteboardExecutorParent
+    private readonly executor: WhiteboardExecutorParent,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   getDefinition(): McpToolDefinition {
@@ -111,18 +119,26 @@ export class ImportWhiteboardSceneTool implements McpTool {
         input.whiteboardId,
         { relations: { authorization: true, profile: { storageBucket: true } } }
       );
-    } catch {
-      return render('invalid');
-    }
-    if (
-      !board.authorization ||
-      !this.authorizationService.isAccessGranted(
+      this.authorizationService.grantAccessOrFail(
         actorContext,
         board.authorization,
-        AuthorizationPrivilege.UPDATE_CONTENT
-      )
-    )
-      return render('forbidden');
+        AuthorizationPrivilege.UPDATE_CONTENT,
+        'import whiteboard scene'
+      );
+    } catch (error) {
+      const result = toPublicErrorResult(error);
+      if (result.code !== AlkemioErrorStatus.FORBIDDEN_POLICY) throw error;
+      this.logger.error?.(
+        {
+          ...toErrorLogEntry(error, result.errorId),
+          operation: 'import_whiteboard_scene',
+          actorID: actorContext.actorID,
+        },
+        undefined,
+        LogContext.MCP_SERVER
+      );
+      return render('forbidden', { errorId: result.errorId });
+    }
     const bucketID = board.profile?.storageBucket?.id;
     if (!bucketID) return render('invalid');
     const { files: _files, ...metadata } = input.scene;
@@ -149,7 +165,7 @@ export class ImportWhiteboardSceneTool implements McpTool {
       outcome.outcome,
       outcome.outcome === 'durable-success'
         ? { whiteboardId: input.whiteboardId, ...outcome.result }
-        : {}
+        : { errorId: outcome.errorId }
     );
   }
 }

@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { grantAccessRefusal } from '@test/utils/authorization.refusal';
 import { IncomingMessage } from 'http';
 import { vi } from 'vitest';
 import { McpServerService } from '../mcp-server.service';
@@ -197,7 +198,10 @@ describe('MCP delegation — entity access is bound to the user (SC-003)', () =>
       getProvider: vi.fn().mockReturnValue(provider),
     };
     const authorizationService = {
-      isAccessGranted: vi.fn().mockReturnValue(granted),
+      grantAccessOrFail: vi.fn(() => {
+        if (!granted) throw grantAccessRefusal(AuthorizationPrivilege.READ);
+        return true;
+      }),
     };
     const logger = { warn: vi.fn(), verbose: vi.fn(), error: vi.fn() };
     const capabilityGateService = {
@@ -221,19 +225,20 @@ describe('MCP delegation — entity access is bound to the user (SC-003)', () =>
 
     const result = await service.readResource(uri, ctx);
 
-    expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
+    expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
       ctx,
       policy,
-      AuthorizationPrivilege.READ
+      AuthorizationPrivilege.READ,
+      'read MCP resource'
     );
     expect(result.contents[0].text).toBe('{"ok":true}');
   });
 
-  it('access-denied for an entity the user CANNOT read, never calling read()', async () => {
+  it('refuses an entity the user CANNOT read, never calling read()', async () => {
     const { service, provider } = setup(false);
     await expect(
       service.readResource(uri, delegatedUserContext())
-    ).rejects.toThrow(/Access denied/);
+    ).rejects.toThrow(/^\[FORBIDDEN_POLICY\] /);
     expect(provider.read).not.toHaveBeenCalled();
   });
 });

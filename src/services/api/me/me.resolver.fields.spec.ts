@@ -493,7 +493,7 @@ describe('MeResolverFields', () => {
     it('maps the stored externalSubscriptionID to a boolean linkage flag', async () => {
       accountLookupServiceMock.getAccountOrFail.mockResolvedValue({
         id: 'account-1',
-        externalSubscriptionID: 'wingback-1',
+        externalSubscriptionID: 'ext-sub-1',
       } as any);
 
       const result = await resolver.accountDeletion(actorContext);

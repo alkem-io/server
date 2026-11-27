@@ -59,6 +59,16 @@ describe('SearchContentTool — per-category size stays within the platform cap'
   const totalSize = (search: ReturnType<typeof vi.fn>) =>
     filtersOf(search).reduce((sum, f) => sum + f.size, 0);
 
+  it('lets a search failure propagate instead of turning it into text', async () => {
+    const { tool, search } = buildTool(40);
+    const failure = new Error('search down');
+    search.mockRejectedValue(failure);
+
+    await expect(tool.execute({ query: 'sprint' }, actorContext)).rejects.toBe(
+      failure
+    );
+  });
+
   it('default (no limit) never exceeds the configured max across categories', async () => {
     const { tool, search } = buildTool(40);
     const res = await tool.execute({ query: 'sprint' }, actorContext);

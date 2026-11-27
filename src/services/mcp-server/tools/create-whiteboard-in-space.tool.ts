@@ -133,18 +133,11 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
     // callouts are created). The lookup service owns the id-or-nameID policy:
     // a UUID resolves any level; anything else is a top-level space nameID
     // (the URL slug) — the id the model most often has at hand.
-    let calloutsSetId: string | undefined;
-    try {
-      const space = await this.spaceLookupService.getSpaceByIdOrNameIdOrFail(
-        spaceId,
-        { relations: { collaboration: { calloutsSet: true } } }
-      );
-      calloutsSetId = space.collaboration?.calloutsSet?.id;
-    } catch {
-      return this.errorResult(
-        `Space not found: ${spaceId}. Pass a space/subspace UUID, or a top-level space nameID (URL slug); subspaces require the UUID.`
-      );
-    }
+    const space = await this.spaceLookupService.getSpaceByIdOrNameIdOrFail(
+      spaceId,
+      { relations: { collaboration: { calloutsSet: true } } }
+    );
+    const calloutsSetId = space.collaboration?.calloutsSet?.id;
     if (!calloutsSetId) {
       return this.errorResult(
         `Space ${spaceId} has no collaboration/callouts set to create a whiteboard in.`
@@ -169,63 +162,53 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
       },
     } as CreateCalloutOnCalloutsSetInput;
 
-    try {
-      // Delegates auth (CREATE_CALLOUT on the CalloutsSet) + full orchestration to
-      // the same path the GraphQL mutation uses.
-      const callout =
-        await this.calloutsSetResolverMutations.createCalloutOnCalloutsSet(
-          actorContext,
-          calloutData
+    // Delegates auth (CREATE_CALLOUT on the CalloutsSet) + full orchestration to
+    // the same path the GraphQL mutation uses.
+    const callout =
+      await this.calloutsSetResolverMutations.createCalloutOnCalloutsSet(
+        actorContext,
+        calloutData
+      );
+
+    // The resolver's return doesn't eager-load the framing whiteboard, so reload
+    // it to surface the new board's id/name/url to the caller.
+    const reloaded = await this.calloutRepository.findOne({
+      where: { id: callout.id },
+      relations: { framing: { whiteboard: { profile: true } } },
+    });
+    const whiteboard = reloaded?.framing?.whiteboard;
+
+    let url: string | undefined;
+    if (whiteboard) {
+      try {
+        url = await this.urlGeneratorService.getWhiteboardUrlPath(
+          whiteboard.id,
+          whiteboard.nameID
         );
-
-      // The resolver's return doesn't eager-load the framing whiteboard, so reload
-      // it to surface the new board's id/name/url to the caller.
-      const reloaded = await this.calloutRepository.findOne({
-        where: { id: callout.id },
-        relations: { framing: { whiteboard: { profile: true } } },
-      });
-      const whiteboard = reloaded?.framing?.whiteboard;
-
-      let url: string | undefined;
-      if (whiteboard) {
-        try {
-          url = await this.urlGeneratorService.getWhiteboardUrlPath(
-            whiteboard.id,
-            whiteboard.nameID
-          );
-        } catch (urlError) {
-          this.logger.verbose?.(
-            `create_whiteboard_in_space: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
-            LogContext.MCP_SERVER
-          );
-        }
+      } catch (urlError) {
+        this.logger.verbose?.(
+          `create_whiteboard_in_space: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
+          LogContext.MCP_SERVER
+        );
       }
-
-      const result = {
-        created: true,
-        spaceId,
-        calloutId: callout.id,
-        whiteboard: whiteboard
-          ? {
-              id: whiteboard.id,
-              nameID: whiteboard.nameID,
-              displayName: whiteboard.profile?.displayName ?? displayName,
-              url,
-            }
-          : null,
-      };
-      return {
-        content: [{ type: 'text', text: JSON.stringify(result) }],
-      };
-    } catch (error) {
-      this.logger.warn?.(
-        `create_whiteboard_in_space failed for space ${spaceId}: ${error instanceof Error ? error.message : 'unknown error'}`,
-        LogContext.MCP_SERVER
-      );
-      return this.errorResult(
-        `Could not create whiteboard in space: ${error instanceof Error ? error.message : 'unknown error'}`
-      );
     }
+
+    const result = {
+      created: true,
+      spaceId,
+      calloutId: callout.id,
+      whiteboard: whiteboard
+        ? {
+            id: whiteboard.id,
+            nameID: whiteboard.nameID,
+            displayName: whiteboard.profile?.displayName ?? displayName,
+            url,
+          }
+        : null,
+    };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result) }],
+    };
   }
 
   private errorResult(message: string): McpToolResult {

@@ -55,46 +55,71 @@ describe('UnhandledExceptionFilter', () => {
       );
     });
 
-    it('should include error details in non-production mode', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+    describe('debug detail', () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      const originalDebug = process.env.ERROR_RESPONSE_DEBUG;
+      afterEach(() => {
+        process.env.NODE_ENV = originalNodeEnv;
+        if (originalDebug === undefined) {
+          delete process.env.ERROR_RESPONSE_DEBUG;
+        } else {
+          process.env.ERROR_RESPONSE_DEBUG = originalDebug;
+        }
+      });
 
-      const error = new Error('dev error');
-      error.name = 'TestError';
-      const host = createMockHost('http');
+      it('includes the error name, message and stack with the switch on', () => {
+        process.env.ERROR_RESPONSE_DEBUG = 'true';
 
-      filter.catch(error, host as any);
+        const error = new Error('dev error');
+        error.name = 'TestError';
+        const host = createMockHost('http');
 
-      const jsonArg = host.mockResponse.json.mock.calls[0][0];
-      expect(jsonArg.name).toBe('TestError');
-      expect(jsonArg.message).toBe('dev error');
-      expect(jsonArg.stack).toBeDefined();
+        filter.catch(error, host as any);
 
-      process.env.NODE_ENV = originalEnv;
-    });
+        const jsonArg = host.mockResponse.json.mock.calls[0][0];
+        expect(jsonArg.name).toBe('TestError');
+        expect(jsonArg.message).toBe('dev error');
+        expect(jsonArg.stack).toBeDefined();
+      });
 
-    it('should hide error details in production mode', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      it.each([
+        'dev',
+        'production',
+      ])('returns only the public fields with the switch unset and NODE_ENV=%s', nodeEnv => {
+        process.env.NODE_ENV = nodeEnv;
+        delete process.env.ERROR_RESPONSE_DEBUG;
 
-      const error = new Error('secret error');
-      const host = createMockHost('http');
+        const error = new Error('secret error');
+        const host = createMockHost('http');
 
-      filter.catch(error, host as any);
+        filter.catch(error, host as any);
 
-      const jsonArg = host.mockResponse.json.mock.calls[0][0];
-      expect(jsonArg.name).toBeUndefined();
-      expect(jsonArg.message).toBe('Internal Server Error');
-      expect(jsonArg.stack).toBeUndefined();
-
-      process.env.NODE_ENV = originalEnv;
+        const body = JSON.parse(
+          JSON.stringify(host.mockResponse.json.mock.calls[0][0])
+        );
+        expect(Object.keys(body).sort()).toEqual(
+          ['errorId', 'message', 'statusCode', 'timestamp'].sort()
+        );
+        expect(body.statusCode).toBe(500);
+        expect(body.message).toBe('Internal Server Error');
+      });
     });
   });
 
   describe('catch - graphql context', () => {
-    it('should return GraphQLError with original error in non-production', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalDebug = process.env.ERROR_RESPONSE_DEBUG;
+    afterEach(() => {
+      process.env.NODE_ENV = originalNodeEnv;
+      if (originalDebug === undefined) {
+        delete process.env.ERROR_RESPONSE_DEBUG;
+      } else {
+        process.env.ERROR_RESPONSE_DEBUG = originalDebug;
+      }
+    });
+
+    it('returns the original error with the switch on', () => {
+      process.env.ERROR_RESPONSE_DEBUG = 'true';
 
       const error = new Error('graphql error');
       const host = createMockHost('graphql');
@@ -108,27 +133,25 @@ describe('UnhandledExceptionFilter', () => {
       );
       expect((result as GraphQLError).extensions.errorId).toBeDefined();
       expect((result as GraphQLError).originalError).toBe(error);
-
-      process.env.NODE_ENV = originalEnv;
     });
 
-    it('should return GraphQLError without original error in production', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+    it.each([
+      'dev',
+      'production',
+    ])('returns the fixed text with the switch unset and NODE_ENV=%s', nodeEnv => {
+      process.env.NODE_ENV = nodeEnv;
+      delete process.env.ERROR_RESPONSE_DEBUG;
 
       const error = new Error('secret graphql error');
       const host = createMockHost('graphql');
 
-      const result = filter.catch(error, host as any);
+      const result = filter.catch(error, host as any) as GraphQLError;
 
       expect(result).toBeInstanceOf(GraphQLError);
-      expect((result as GraphQLError).message).toBe('secret graphql error');
-      expect((result as GraphQLError).extensions.code).toBe(
-        AlkemioErrorStatus.UNSPECIFIED
-      );
-      expect((result as GraphQLError).originalError).toBeUndefined();
-
-      process.env.NODE_ENV = originalEnv;
+      expect(result.message).toBe('Internal Server Error');
+      expect(result.extensions.code).toBe(AlkemioErrorStatus.UNSPECIFIED);
+      expect(result.extensions.stacktrace).toBeUndefined();
+      expect(result.originalError).toBeUndefined();
     });
   });
 

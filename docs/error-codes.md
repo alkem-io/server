@@ -52,7 +52,7 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 
 | Code  | String Code                   | User Message                             | Resolution                                    |
 | ----- | ----------------------------- | ---------------------------------------- | --------------------------------------------- |
-| 10101 | ENTITY_NOT_FOUND              | Couldn't find what you were looking for. | Verify the ID exists and you have access      |
+| 10101 | ENTITY_NOT_FOUND              | Internal; reaches callers as `FORBIDDEN_POLICY`. | Verify the ID exists and you have access |
 | 10102 | NOT_FOUND                     | Resource not found.                      | Check the URL or resource identifier          |
 | 10103 | ACCOUNT_NOT_FOUND             | Account not found.                       | Verify the account exists                     |
 | 10104 | LICENSE_NOT_FOUND             | License not found.                       | Contact support - license configuration issue |
@@ -69,8 +69,8 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 | ----- | ----------------------------------- | --------------------------------------- | ------------------------------------------------- |
 | 11101 | UNAUTHENTICATED                     | You might not be logged in.             | Log in and try again                              |
 | 11102 | UNAUTHORIZED                        | You are not authorized for this action. | Request appropriate permissions                   |
-| 11103 | FORBIDDEN                           | Access denied.                          | Contact space admin for access                    |
-| 11104 | FORBIDDEN_POLICY                    | You don't have the correct rights.      | Request elevated permissions                      |
+| 11103 | FORBIDDEN                           | Internal; reaches callers as `FORBIDDEN_POLICY`. | Contact space admin for access           |
+| 11104 | FORBIDDEN_POLICY                    | Not available: it may not exist, or you may not have access to it. | Check the ID, or request access |
 | 11105 | FORBIDDEN_LICENSE_POLICY            | License does not permit this action.    | Upgrade license or contact support                |
 | 11106 | AUTHORIZATION_INVALID_POLICY        | Invalid authorization policy.           | Contact support - configuration issue             |
 | 11107 | AUTHORIZATION_RESET                 | Authorization has been reset.           | Re-authenticate and try again                     |
@@ -133,6 +133,7 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 | 13123 | ROLESET_JOIN_NOT_ELIGIBLE                | You can't join directly.                  | Apply or ask an admin for an invitation           |
 | 13124 | ROLESET_INVITATION_RESEND_THROTTLED      | Invitation was resent recently.           | Wait before resending the invitation              |
 | 13125 | ROLESET_INVITATION_EMAIL_BUDGET_EXCEEDED | Too many invitation emails sent.          | Wait and try again later                          |
+| 13126 | MESSAGE_SEND_LIMIT_REACHED               | You can send up to 20 messages an hour.   | A member's sends to people have reached 20 within the last 60 minutes; send again later |
 
 ### 14xxx - System/Infrastructure Errors
 
@@ -175,6 +176,53 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 
 ---
 
+## What a Caller Receives
+
+### Not available: one public code
+
+`ENTITY_NOT_FOUND`, `FORBIDDEN` and `FORBIDDEN_POLICY` are internal statuses. Server code
+still raises and branches on all three, but every one of them reaches a caller as the same
+public outcome:
+
+| Field         | Value                                                                         |
+| ------------- | ----------------------------------------------------------------------------- |
+| `code`        | `FORBIDDEN_POLICY`                                                            |
+| `numericCode` | `11104`                                                                       |
+| `userMessage` | `userMessages.authorization.forbiddenPolicy`                                  |
+| `message`     | `This is not available. It may not exist, or you may not have access to it.` |
+| `errorId`     | per response; the server log entry under it says which case it was           |
+
+The message never names the actor, the privilege, the policy or the entity. Recognise the
+outcome by `code`, never by message text. A status with its own client-actionable meaning
+(for example `CALLOUT_CLOSED` or `PLATFORM_SUPPORT_SELF_TARGET`) keeps its own code.
+
+### Messages carry no identifiers
+
+Every other Alkemio error keeps its code and its message, with every UUID removed from the
+message. Put dynamic data in the exception's `details`, never in its message.
+
+### Debug detail
+
+Stack traces and full `details` are returned only when the server runs with
+`ERROR_RESPONSE_DEBUG=true` (exactly that string). Unset, or any other value, means off,
+and no shared environment turns it on. The switch adds detail; the `code` and `message`
+are the same either way.
+
+| Surface | Switch off                                                                 | Switch on adds                                    |
+| ------- | -------------------------------------------------------------------------- | ------------------------------------------------- |
+| GraphQL | `message`; `code`, `numericCode`, `userMessage`, `errorId`, form `details` | `extensions.stacktrace`, the full `details`       |
+| REST    | `statusCode`, `code`, `numericCode`, `userMessage`, `timestamp`, `message`, `errorId` | `context`, `details`, `stack`          |
+| MCP     | `[<code>] <message> errorId=<id>`                                          | ` detail=` and the original error's own message  |
+
+An error with no Alkemio code is `UNSPECIFIED` with the message `Internal Server Error`.
+
+### Failed authentication
+
+A failed authentication on GraphQL keeps its HTTP status, 401 (`UNAUTHENTICATED`, with
+`extensions.error_code` when the server gives a reason) or 503
+(`SESSION_STORE_UNAVAILABLE`), with the switch on or off. No other extension key of an
+exception is returned.
+
 ## API Response Format
 
 ### GraphQL Error Response
@@ -183,10 +231,11 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 {
   "errors": [
     {
-      "message": "Entity not found",
+      "message": "This is not available. It may not exist, or you may not have access to it.",
       "extensions": {
-        "code": "ENTITY_NOT_FOUND",
-        "numericCode": 10101,
+        "code": "FORBIDDEN_POLICY",
+        "numericCode": 11104,
+        "userMessage": "userMessages.authorization.forbiddenPolicy",
         "errorId": "550e8400-e29b-41d4-a716-446655440000"
       }
     }
@@ -198,13 +247,20 @@ Each code is `category * 1000 + specificCode` as defined in `STATUS_METADATA` (`
 
 ```json
 {
-  "statusCode": 404,
-  "code": "ENTITY_NOT_FOUND",
-  "numericCode": 10101,
+  "statusCode": 400,
+  "code": "BAD_USER_INPUT",
+  "numericCode": 12101,
+  "userMessage": "userMessages.validation.badUserInput",
   "timestamp": "2026-01-22T10:30:00.000Z",
-  "message": "Entity not found",
+  "message": "Invalid input",
   "errorId": "550e8400-e29b-41d4-a716-446655440000"
 }
+```
+
+### MCP Failure Text
+
+```text
+[FORBIDDEN_POLICY] This is not available. It may not exist, or you may not have access to it. errorId=550e8400-e29b-41d4-a716-446655440000
 ```
 
 ## Frontend Usage Examples
@@ -237,17 +293,20 @@ try {
 
 ### Backward Compatibility
 
-Existing code checking the string `code` field continues to work unchanged:
+Clients branch on the string `code` field or the numeric code. A missing entity now arrives
+as `FORBIDDEN_POLICY`; a client that may still talk to an earlier server treats
+`ENTITY_NOT_FOUND` the same way:
 
 ```typescript
-// This still works!
-if (error.extensions?.code === 'ENTITY_NOT_FOUND') {
-  // Handle not found
+const code = error.extensions?.code;
+if (code === 'FORBIDDEN_POLICY' || code === 'ENTITY_NOT_FOUND') {
+  // Not available to this caller
 }
 
-// New code can also use numeric codes:
-if (error.extensions?.numericCode === 10101) {
-  // Handle not found
+// Or by numeric code:
+const numericCode = error.extensions?.numericCode;
+if (numericCode === 11104 || numericCode === 10101) {
+  // Not available to this caller
 }
 ```
 

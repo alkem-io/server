@@ -884,7 +884,7 @@ describe('RegistrationService', () => {
       const user = { id: 'user-1', email: 'Gone@Example.com' };
       const account = {
         id: 'account-1',
-        externalSubscriptionID: 'wingback-1',
+        externalSubscriptionID: 'ext-sub-1',
       };
       const deletedUser = { id: 'user-1' };
       userService.getUserByIdOrFail.mockResolvedValue(user);
@@ -987,7 +987,7 @@ describe('RegistrationService', () => {
           subjectUserId: 'user-1',
           initiatorRole: 'self',
           accountID: 'account-1',
-          externalSubscriptionID: 'wingback-1',
+          externalSubscriptionID: 'ext-sub-1',
           documentCount: 2,
         })
       );

@@ -1,3 +1,4 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -38,6 +39,15 @@ describe('WhiteboardAuthorizationService', () => {
     profileAuthorizationService = module.get(ProfileAuthorizationService);
     whiteboardGuestAccessService = module.get(WhiteboardGuestAccessService);
   });
+
+  const updateContentSourcePrivileges = () =>
+    (
+      authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+    ).mock.calls[0][1]
+      .filter((rule: any) =>
+        rule.grantedPrivileges.includes(AuthorizationPrivilege.UPDATE_CONTENT)
+      )
+      .map((rule: any) => rule.sourcePrivilege);
 
   const createWhiteboard = (overrides: any = {}) => ({
     id: 'wb-1',
@@ -195,16 +205,9 @@ describe('WhiteboardAuthorizationService', () => {
 
       await service.applyAuthorizationPolicy('wb-1', undefined);
 
-      expect(
-        authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).toHaveBeenCalledWith(
-        whiteboard.authorization,
-        expect.arrayContaining([
-          expect.objectContaining({
-            grantedPrivileges: expect.any(Array),
-          }),
-        ])
-      );
+      expect(updateContentSourcePrivileges()).toEqual([
+        AuthorizationPrivilege.UPDATE,
+      ]);
     });
 
     it('should handle CONTRIBUTORS content update policy with privilege rules', async () => {
@@ -236,9 +239,42 @@ describe('WhiteboardAuthorizationService', () => {
 
       await service.applyAuthorizationPolicy('wb-1', undefined);
 
-      expect(
-        authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).toHaveBeenCalled();
+      expect(updateContentSourcePrivileges()).toEqual([
+        AuthorizationPrivilege.CONTRIBUTE,
+        AuthorizationPrivilege.UPDATE,
+      ]);
+    });
+
+    it('should add no UPDATE_CONTENT privilege rule for OWNER content update policy', async () => {
+      const whiteboard = createWhiteboard({
+        contentUpdatePolicy: ContentUpdatePolicy.OWNER,
+      });
+
+      (whiteboardService.getWhiteboardOrFail as Mock).mockResolvedValue(
+        whiteboard
+      );
+      (
+        whiteboardGuestAccessService.isGuestAccessEnabled as Mock
+      ).mockReturnValue(false);
+      (
+        authorizationPolicyService.inheritParentAuthorization as Mock
+      ).mockReturnValue(whiteboard.authorization);
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as Mock
+      ).mockReturnValue(whiteboard.authorization);
+      (
+        authorizationPolicyService.appendPrivilegeAuthorizationRules as Mock
+      ).mockReturnValue(whiteboard.authorization);
+      (authorizationPolicyService.createCredentialRule as Mock).mockReturnValue(
+        { name: 'rule' }
+      );
+      (
+        profileAuthorizationService.applyAuthorizationPolicy as Mock
+      ).mockResolvedValue([]);
+
+      await service.applyAuthorizationPolicy('wb-1', undefined);
+
+      expect(updateContentSourcePrivileges()).toEqual([]);
     });
 
     it('should re-enable guest access when it was enabled before reset and space settings allow it', async () => {

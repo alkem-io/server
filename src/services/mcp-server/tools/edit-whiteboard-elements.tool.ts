@@ -1,8 +1,14 @@
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import {
+  toErrorLogEntry,
+  toPublicErrorResult,
+} from '@core/error-handling/public.error.result';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
 import { WhiteboardExecutorParent } from '../executor/whiteboard-executor.parent';
 import {
@@ -16,7 +22,9 @@ export class EditWhiteboardElementsTool implements McpTool {
   constructor(
     private readonly whiteboardService: WhiteboardService,
     private readonly authorizationService: AuthorizationService,
-    private readonly executor: WhiteboardExecutorParent
+    private readonly executor: WhiteboardExecutorParent,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   getDefinition(): McpToolDefinition {
@@ -61,18 +69,26 @@ export class EditWhiteboardElementsTool implements McpTool {
         whiteboardId,
         { relations: { authorization: true } }
       );
-    } catch {
-      return this.failure('invalid');
-    }
-    if (
-      !whiteboard.authorization ||
-      !this.authorizationService.isAccessGranted(
+      this.authorizationService.grantAccessOrFail(
         actorContext,
         whiteboard.authorization,
-        AuthorizationPrivilege.UPDATE_CONTENT
-      )
-    )
-      return this.failure('unauthorized');
+        AuthorizationPrivilege.UPDATE_CONTENT,
+        'edit whiteboard elements'
+      );
+    } catch (error) {
+      const result = toPublicErrorResult(error);
+      if (result.code !== AlkemioErrorStatus.FORBIDDEN_POLICY) throw error;
+      this.logger.error?.(
+        {
+          ...toErrorLogEntry(error, result.errorId),
+          operation: 'edit_whiteboard_elements',
+          actorID: actorContext.actorID,
+        },
+        undefined,
+        LogContext.MCP_SERVER
+      );
+      return this.failure('unauthorized', result.errorId);
+    }
     const outcome = await this.executor.execute(
       whiteboardId,
       actorContext.actorID,
@@ -100,9 +116,9 @@ export class EditWhiteboardElementsTool implements McpTool {
     };
   }
 
-  private failure(outcome: string): McpToolResult {
+  private failure(outcome: string, errorId?: string): McpToolResult {
     return {
-      content: [{ type: 'text', text: JSON.stringify({ outcome }) }],
+      content: [{ type: 'text', text: JSON.stringify({ outcome, errorId }) }],
       isError: true,
     };
   }

@@ -1,5 +1,13 @@
 import { randomUUID } from 'node:crypto';
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
+import {
+  policyGranting,
+  realAuthorizationService,
+  testActor,
+} from '@test/utils/authorization.refusal';
 import { vi } from 'vitest';
 import { EditWhiteboardElementsTool } from './edit-whiteboard-elements.tool';
 
@@ -11,30 +19,110 @@ describe('EditWhiteboardElementsTool executor boundary', () => {
         result: { addedElementIds: ['created'], summary: [] },
       }),
     };
+    const policy = policyGranting(
+      allowed ? [AuthorizationPrivilege.UPDATE_CONTENT] : []
+    );
     const whiteboard = {
-      getWhiteboardOrFail: vi.fn().mockResolvedValue({ authorization: {} }),
+      getWhiteboardOrFail: vi.fn().mockResolvedValue({ authorization: policy }),
     };
-    const authorization = { isAccessGranted: vi.fn().mockReturnValue(allowed) };
+    const logger = { error: vi.fn(), warn: vi.fn(), verbose: vi.fn() };
     const tool = new EditWhiteboardElementsTool(
       whiteboard as any,
-      authorization as any,
-      executor as any
+      realAuthorizationService(),
+      executor as any,
+      logger as any
     );
-    const actor = Object.assign(new ActorContext(), { actorID: randomUUID() });
+    const actor = testActor();
     const args = {
       whiteboardId: randomUUID(),
       operations: [{ op: 'addText', text: 'hello' }],
     };
-    return { tool, actor, args, executor, whiteboard };
+    return { tool, actor, args, executor, whiteboard, logger, policy };
   };
+  const outcomeOf = (result: { content: Array<{ text?: string }> }) =>
+    JSON.parse(result.content[0].text!);
+
   it('authorization refusal never admits or spawns', async () => {
     const h = setup(false);
     const result = await h.tool.execute(h.args, h.actor);
     expect(result.isError).toBe(true);
     expect(h.executor.execute).not.toHaveBeenCalled();
-    expect(JSON.parse(result.content[0].text!)).toEqual({
+    const outcome = outcomeOf(result);
+    expect(outcome).toEqual({
       outcome: 'unauthorized',
+      errorId: expect.any(String),
     });
+    expect(h.logger.error).toHaveBeenCalledOnce();
+    expect(h.logger.error.mock.calls[0][0]).toEqual({
+      errorId: outcome.errorId,
+      exceptionName: 'ForbiddenAuthorizationPolicyException',
+      code: 'FORBIDDEN_POLICY',
+      privilege: AuthorizationPrivilege.UPDATE_CONTENT,
+      policyId: h.policy.id,
+      operation: 'edit_whiteboard_elements',
+      actorID: h.actor.actorID,
+    });
+  });
+  it('answers a missing board like a refused one, and logs which it was', async () => {
+    const h = setup();
+    const missing = new EntityNotFoundException(
+      'Whiteboard not found',
+      LogContext.COLLABORATION
+    );
+    h.whiteboard.getWhiteboardOrFail.mockRejectedValue(missing);
+
+    const result = await h.tool.execute(h.args, h.actor);
+
+    expect(outcomeOf(result)).toEqual({
+      outcome: 'unauthorized',
+      errorId: missing.errorId,
+    });
+    expect(h.logger.error).toHaveBeenCalledOnce();
+    expect(h.logger.error.mock.calls[0][0]).toEqual({
+      errorId: missing.errorId,
+      exceptionName: 'EntityNotFoundException',
+      code: 'ENTITY_NOT_FOUND',
+      operation: 'edit_whiteboard_elements',
+      actorID: h.actor.actorID,
+    });
+    expect(h.executor.execute).not.toHaveBeenCalled();
+  });
+  it('lets a storage failure while loading the board propagate', async () => {
+    const h = setup();
+    const failure = new Error('db down');
+    h.whiteboard.getWhiteboardOrFail.mockRejectedValue(failure);
+
+    await expect(h.tool.execute(h.args, h.actor)).rejects.toBe(failure);
+    expect(h.logger.error).not.toHaveBeenCalled();
+  });
+  it('answers a board with no policy with unauthorized', async () => {
+    const h = setup();
+    h.whiteboard.getWhiteboardOrFail.mockResolvedValue({
+      authorization: undefined,
+    });
+
+    const result = await h.tool.execute(h.args, h.actor);
+
+    expect(outcomeOf(result)).toEqual({
+      outcome: 'unauthorized',
+      errorId: expect.any(String),
+    });
+  });
+  it('keeps invalid input and an invalid actor without an errorId', async () => {
+    const h = setup();
+
+    const invalid = await h.tool.execute(
+      { whiteboardId: 'nope', operations: [] },
+      h.actor
+    );
+    const unauthorized = await h.tool.execute(
+      h.args,
+      Object.assign(new ActorContext(), { actorID: 'not-a-uuid' })
+    );
+
+    expect(outcomeOf(invalid)).toEqual({ outcome: 'invalid' });
+    expect(outcomeOf(unauthorized)).toEqual({ outcome: 'unauthorized' });
+    expect(h.logger.error).not.toHaveBeenCalled();
   });
   it('invalid schema never admits or spawns', async () => {
     const h = setup();

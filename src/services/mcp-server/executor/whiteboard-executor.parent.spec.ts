@@ -248,7 +248,7 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         undefined,
         preparation
       )
-    ).toEqual({ outcome: 'forbidden' });
+    ).toEqual({ outcome: 'forbidden', errorId: expect.any(String) });
     expect(h.children).toHaveLength(0);
   });
   it('releases admission after preparation failure without spawning or logging the exception', async () => {
@@ -319,7 +319,11 @@ describe('whiteboard-executor parent admission and lifecycle', () => {
         undefined,
         { prepare }
       )
-    ).toEqual({ outcome });
+    ).toEqual(
+      outcome === 'forbidden'
+        ? { outcome, errorId: (error as ForbiddenException).errorId }
+        : { outcome }
+    );
     expect(prepare).toHaveBeenCalledOnce();
     expect(h.children).toHaveLength(0);
     const next = h.execute(randomUUID(), actor, operations);
